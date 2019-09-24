@@ -18,10 +18,12 @@ ng_module(
         "@npm//@angular/core",
         "@npm//@angular/platform-browser",
         "@org_xprof//frontend/app/common/angular:angular_platform-browser_animation",
+        "@org_xprof//frontend/app/common/classes",
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/components/empty_page",
         "@org_xprof//frontend/app/components/main_page",
+        "@org_xprof//frontend/app/pipes",
         "@org_xprof//frontend/app/services/data_service",
     ],
 )

@@ -4,14 +4,14 @@ load("@io_bazel_rules_sass//:defs.bzl", "sass_binary")
 package(default_visibility = ["//frontend:__subpackages__"])
 
 ng_module(
-    name = "empty_page",
+    name = "memory_viewer",
     srcs = [
-        "empty_page.ts",
-        "empty_page_module.ts",
+        "memory_viewer.ts",
+        "memory_viewer_module.ts",
     ],
     assets = [
-        ":empty_page_css",
-        "empty_page.ng.html",
+        ":memory_viewer_css",
+        "memory_viewer.ng.html",
     ],
     deps = [
         "@npm//@angular/core",
@@ -20,7 +20,7 @@ ng_module(
 )
 
 sass_binary(
-    name = "empty_page_css",
-    src = "empty_page.scss",
+    name = "memory_viewer_css",
+    src = "memory_viewer.scss",
     sourcemap = False,
 )

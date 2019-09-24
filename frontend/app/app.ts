@@ -1,5 +1,5 @@
 import {Component, OnInit} from '@angular/core';
-
+import {compareTagNames} from 'org_xprof/frontend/app/common/classes/sorting';
 import {Tool} from 'org_xprof/frontend/app/common/interfaces/tool';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
 
@@ -11,7 +11,8 @@ import {DataService} from 'org_xprof/frontend/app/services/data_service/data_ser
   providers: [DataService]
 })
 export class App implements OnInit {
-  dataNotFound = false;
+  loading = true;
+  dataFound = false;
   datasets: Tool[] = [];
 
   constructor(private readonly dataService: DataService) {}
@@ -23,8 +24,9 @@ export class App implements OnInit {
       for (let i = 0; i < keys.length; i++) {
         this.datasets.push({name: keys[i], activeTools: values[i] || []});
       };
-      this.datasets.sort((a, b) => (a.name > b.name) ? 1 : -1);
-      this.dataNotFound = this.datasets.length === 0;
+      this.datasets.sort((a, b) => -compareTagNames(a.name, b.name));
+      this.dataFound = this.datasets.length !== 0;
+      this.loading = false;
     });
   }
 }

@@ -1,8 +1,10 @@
 import {NgModule} from '@angular/core';
+import {MatCardModule} from '@angular/material/card';
 
 import {Overview} from './overview';
 
-/** A overview page module. */
-@NgModule({declarations: [Overview], imports: [], exports: [Overview]})
+/** An overview page module. */
+@NgModule(
+    {declarations: [Overview], imports: [MatCardModule], exports: [Overview]})
 export class OverviewModule {
 }

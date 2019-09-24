@@ -14,7 +14,12 @@ ng_module(
         "trace_viewer.ng.html",
     ],
     deps = [
+        "@org_xprof//frontend/app/common/angular:angular_common_http",
         "@npm//@angular/core",
+        "@npm//@angular/router",
+        "@org_xprof//frontend/app/common/constants",
+        "@org_xprof//frontend/app/common/interfaces",
+        "@org_xprof//frontend/app/pipes",
     ],
 )
 

@@ -1,5 +1,13 @@
-<sidenav></sidenav>
-
-<div>
-  <router-outlet></router-outlet>
-</div>
+<mat-sidenav-container fullscreen>
+  <mat-sidenav mode="side" opened>
+    <sidenav [datasets]="datasets" (update)="updateTool($event)"></sidenav>
+  </mat-sidenav>
+  <mat-sidenav-content>
+    <div class="progress-container" [hidden]="!loading">
+      <mat-progress-bar color="primary" mode="indeterminate"></mat-progress-bar>
+    </div>
+    <div class="full-height" [hidden]="loading">
+      <router-outlet></router-outlet>
+    </div>
+  </mat-sidenav-content>
+</mat-sidenav-container>

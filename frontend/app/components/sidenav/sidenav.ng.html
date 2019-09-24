@@ -1,3 +1,53 @@
-<div>
-  SideNav
+<div class="button-container horizontal-center">
+  <button mat-raised-button>{{captureButtonLabel | uppercase}}</button>
 </div>
+
+<mat-divider></mat-divider>
+
+<div class="item-container">
+  <div [ngClass]="{'mat-subheading-2': true, 'disabled': !runs.length}">
+    Runs ({{runs.length}})
+  </div>
+
+  <mat-form-field class="full-width">
+    <mat-select [(value)]="selectedRun" [disabled]="!runs.length" (selectionChange)="updateTags()">
+      <mat-option *ngFor="let run of runs" [value]="run">
+        {{run}}
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+</div>
+
+<mat-divider></mat-divider>
+
+<div class="item-container">
+  <div [ngClass]="{'mat-subheading-2': true, 'disabled': !tags.length}">
+    Tools ({{tags.length}})
+  </div>
+
+  <mat-form-field class="full-width">
+    <mat-select [(value)]="selectedTag" [disabled]="!tags.length" (selectionChange)="updateHosts()">
+      <mat-option *ngFor="let tag of tags" [value]="tag">
+        {{tag}}
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+</div>
+
+<mat-divider></mat-divider>
+
+<div class="item-container">
+  <div [ngClass]="{'mat-subheading-2': true, 'disabled': !hosts.length}">
+    Hosts ({{hosts.length}})
+  </div>
+
+  <mat-form-field class="full-width">
+    <mat-select [(value)]="selectedHost" [disabled]="!hosts.length" (selectionChange)="emitUpdateEvent()">
+      <mat-option *ngFor="let host of hosts" [value]="host">
+        {{host}}
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+</div>
+
+<mat-divider></mat-divider>

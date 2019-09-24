@@ -1,7 +1,9 @@
-<div *ngIf="dataNotFound">
-  <empty-page></empty-page>
-</div>
+<div *ngIf="!loading">
+  <div *ngIf="dataFound; else emptypage">
+    <main-page [datasets]="datasets"></main-page>
+  </div>
 
-<div *ngIf="!dataNotFound">
-  <main-page></main-page>
+  <ng-template #emptypage>
+    <empty-page></empty-page>
+  </ng-template>
 </div>

@@ -4,14 +4,14 @@ load("@io_bazel_rules_sass//:defs.bzl", "sass_binary")
 package(default_visibility = ["//frontend:__subpackages__"])
 
 ng_module(
-    name = "empty_page",
+    name = "pod_viewer",
     srcs = [
-        "empty_page.ts",
-        "empty_page_module.ts",
+        "pod_viewer.ts",
+        "pod_viewer_module.ts",
     ],
     assets = [
-        ":empty_page_css",
-        "empty_page.ng.html",
+        ":pod_viewer_css",
+        "pod_viewer.ng.html",
     ],
     deps = [
         "@npm//@angular/core",
@@ -20,7 +20,7 @@ ng_module(
 )
 
 sass_binary(
-    name = "empty_page_css",
-    src = "empty_page.scss",
+    name = "pod_viewer_css",
+    src = "pod_viewer.scss",
     sourcemap = False,
 )

@@ -1,1 +1,6 @@
-/** CSS for a empty page component. */
+/** CSS for an empty page component. */
+
+:host {
+  display: block;
+  padding: 20px 20px 20px 10px;
+}

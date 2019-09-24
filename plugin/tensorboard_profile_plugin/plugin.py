@@ -29,6 +29,8 @@ from werkzeug import wrappers
 from tensorboard.backend import http_util
 from tensorboard.backend.event_processing import plugin_asset_util
 from tensorboard.plugins import base_plugin
+from tensorboard.plugins.profile import trace_events_json
+from tensorboard.plugins.profile import trace_events_pb2
 from tensorboard.util import tb_logging
 
 logger = tb_logging.get_logger()
@@ -40,7 +42,9 @@ INDEX_JS_ROUTE = '/index.js'
 INDEX_HTML_ROUTE = '/index.html'
 BUNDLE_JS_ROUTE = '/bundle.js'
 STYLES_CSS_ROUTE = '/styles.css'
+DATA_ROUTE = '/data'
 TOOLS_ROUTE = '/tools'
+HOSTS_ROUTE = '/hosts'
 
 TOOLS = {
     'trace_viewer': 'trace',
@@ -52,6 +56,20 @@ TOOLS = {
     'pod_viewer': 'pod_viewer.json',
     'google_chart_demo': 'google_chart_demo.json',
 }
+
+# Tools that consume raw data.
+_RAW_DATA_TOOLS = frozenset(['input_pipeline_analyzer',
+                             'op_profile',
+                             'overview_page',
+                             'memory_viewer',
+                             'pod_viewer',
+                             'google_chart_demo',])
+
+def process_raw_trace(raw_trace):
+  """Processes raw trace data and returns the UI data."""
+  trace = trace_events_pb2.Trace()
+  trace.ParseFromString(raw_trace)
+  return ''.join(trace_events_json.TraceEventsJsonStream(trace))
 
 class DynamicProfile(base_plugin.TBPlugin):
   plugin_name = PLUGIN_NAME
@@ -104,6 +122,8 @@ class DynamicProfile(base_plugin.TBPlugin):
       BUNDLE_JS_ROUTE: self.static_file_route,
       STYLES_CSS_ROUTE: self.static_file_route,
       TOOLS_ROUTE: self.tools_route,
+      HOSTS_ROUTE: self.hosts_route,
+      DATA_ROUTE: self.data_route,
     }
 
   def frontend_metadata(self):
@@ -134,6 +154,119 @@ class DynamicProfile(base_plugin.TBPlugin):
     run_to_tools = dict(self.generate_run_to_tools())
     return http_util.Respond(request, run_to_tools, 'application/json')
 
+  def host_impl(self, run, tool):
+    """Returns available hosts for the run and tool in the log directory.
+
+    In the plugin log directory, each directory contains profile data for a
+    single run (identified by the directory name), and files in the run
+    directory contains data for different tools and hosts. The file that
+    contains profile for a specific tool "x" will have a prefix name TOOLS["x"].
+
+    Example:
+      log/
+        run1/
+          plugins/
+            profile/
+              host1.trace
+              host2.trace
+        run2/
+          plugins/
+            profile/
+              host1.trace
+              host2.trace
+
+    Returns:
+      A list of host names e.g.
+        {"host1", "host2", "host3"} for the example.
+    """
+    hosts = {}
+    run_dir = self._run_dir(run)
+    if not run_dir:
+      logger.warn("Cannot find asset directory for: %s", run)
+      return hosts
+    tool_pattern = '*' + TOOLS[tool]
+    try:
+      files = tf.io.gfile.glob(os.path.join(run_dir, tool_pattern))
+      hosts = [os.path.basename(f).replace(TOOLS[tool], '') for f in files]
+    except tf.errors.OpError as e:
+      logger.warn("Cannot read asset directory: %s, OpError %s",
+                      run_dir, e)
+    return hosts
+
+  @wrappers.Request.application
+  def hosts_route(self, request):
+    run = request.args.get('run')
+    tool = request.args.get('tag')
+    hosts = self.host_impl(run, tool)
+    return http_util.Respond(request, hosts, 'application/json')
+
+  def data_impl(self, request):
+    """Retrieves and processes the tool data for a run and a host.
+    Args:
+      request: XMLHttpRequest
+    Returns:
+      A string that can be served to the frontend tool or None if tool,
+        run or host is invalid.
+    """
+    run = request.args.get('run')
+    tool = request.args.get('tag')
+    host = request.args.get('host')
+    run_dir = self._run_dir(run)
+    # Profile plugin "run" is the last component of run dir.
+    profile_run = os.path.basename(run_dir)
+
+    if tool not in TOOLS:
+      return None
+
+    self.start_grpc_stub_if_necessary()
+    if tool == 'trace_viewer@' and self.stub is not None:
+      from tensorflow.core.profiler import profiler_analysis_pb2
+      grpc_request = profiler_analysis_pb2.ProfileSessionDataRequest()
+      grpc_request.repository_root = os.path.dirname(run_dir)
+      grpc_request.session_id = profile_run
+      grpc_request.tool_name = 'trace_viewer'
+      # Remove the trailing dot if present
+      grpc_request.host_name = host.rstrip('.')
+
+      grpc_request.parameters['resolution'] = request.args.get('resolution')
+      if request.args.get('start_time_ms') is not None:
+        grpc_request.parameters['start_time_ms'] = request.args.get(
+            'start_time_ms')
+      if request.args.get('end_time_ms') is not None:
+        grpc_request.parameters['end_time_ms'] = request.args.get('end_time_ms')
+      grpc_response = self.stub.GetSessionToolData(grpc_request)
+      return grpc_response.output
+
+    if tool not in TOOLS:
+      return None
+    tool_name = str(host) + TOOLS[tool]
+    asset_path = os.path.join(run_dir, tool_name)
+    raw_data = None
+    try:
+      with tf.io.gfile.GFile(asset_path, 'rb') as f:
+        raw_data = f.read()
+    except tf.errors.NotFoundError:
+      logger.warn('Asset path %s not found', asset_path)
+    except tf.errors.OpError as e:
+      logger.warn("Couldn't read asset path: %s, OpError %s", asset_path, e)
+
+    if raw_data is None:
+      return None
+    if tool == 'trace_viewer':
+      return process_raw_trace(raw_data)
+    if tool in _RAW_DATA_TOOLS:
+      return raw_data
+    return None
+
+  @wrappers.Request.application
+  def data_route(self, request):
+    # params
+    #   request: XMLHTTPRequest.
+    data = self.data_impl(request)
+    if data is None:
+      return http_util.Respond(request, '404 Not Found', 'text/plain', code=404)
+    return http_util.Respond(request, data, 'application/json')
+
   def start_grpc_stub_if_necessary(self):
     # We will enable streaming trace viewer on two conditions:
     # 1. user specify the flags master_tpu_unsecure_channel to the ip address of
@@ -151,6 +284,88 @@ class DynamicProfile(base_plugin.TBPlugin):
         tpu_profiler_port = self.master_tpu_unsecure_channel + ':8466'
         channel = grpc.insecure_channel(tpu_profiler_port, options)
         self.stub = profiler_analysis_pb2_grpc.ProfileAnalysisStub(channel)
+
+  def _run_dir(self, run):
+    """Helper that maps a frontend run name to a profile "run" directory.
+
+    The frontend run name consists of the TensorBoard run name (aka the relative
+    path from the logdir root to the directory containing the data) path-joined
+    to the Profile plugin's "run" concept (which is a subdirectory of the
+    plugins/profile directory representing an individual run of the tool), with
+    the special case that TensorBoard run is the logdir root (which is the run
+    named '.') then only the Profile plugin "run" name is used, for backwards
+    compatibility.
+
+    To convert back to the actual run directory, we apply the following
+    transformation:
+    - If the run name doesn't contain '/', prepend './'
+    - Split on the rightmost instance of '/'
+    - Assume the left side is a TensorBoard run name and map it to a directory
+      path using EventMultiplexer.RunPaths(), then map that to the profile
+      plugin directory via PluginDirectory()
+    - Assume the right side is a Profile plugin "run" and path-join it to
+      the preceding path to get the final directory
+
+    Args:
+      run: the frontend run name, as described above, e.g. train/run1.
+
+    Returns:
+      The resolved directory path, e.g. /logdir/train/plugins/profile/run1.
+    """
+    run = run.rstrip('/')
+    if '/' not in run:
+      run = './' + run
+    tb_run_name, _, profile_run_name = run.rpartition('/')
+    tb_run_directory = self.multiplexer.RunPaths().get(tb_run_name)
+    if tb_run_directory is None:
+      # Check if logdir is a directory to handle case where it's actually a
+      # multipart directory spec, which this plugin does not support.
+      if tb_run_name == '.' and tf.io.gfile.isdir(self.logdir):
+        tb_run_directory = self.logdir
+      else:
+        raise RuntimeError("No matching run directory for run %s" % run)
+    plugin_directory = plugin_asset_util.PluginDirectory(
+        tb_run_directory, PLUGIN_NAME)
+    return os.path.join(plugin_directory, profile_run_name)
+
+  def _run_dir(self, run):
+    """Helper that maps a frontend run name to a profile "run" directory.
+    The frontend run name consists of the TensorBoard run name (aka the relative
+    path from the logdir root to the directory containing the data) path-joined
+    to the Profile plugin's "run" concept (which is a subdirectory of the
+    plugins/profile directory representing an individual run of the tool), with
+    the special case that TensorBoard run is the logdir root (which is the run
+    named '.') then only the Profile plugin "run" name is used, for backwards
+    compatibility.
+    To convert back to the actual run directory, we apply the following
+    transformation:
+    - If the run name doesn't contain '/', prepend './'
+    - Split on the rightmost instance of '/'
+    - Assume the left side is a TensorBoard run name and map it to a directory
+      path using EventMultiplexer.RunPaths(), then map that to the profile
+      plugin directory via PluginDirectory()
+    - Assume the right side is a Profile plugin "run" and path-join it to
+      the preceding path to get the final directory
+    Args:
+      run: the frontend run name, as described above, e.g. train/run1.
+    Returns:
+      The resolved directory path, e.g. /logdir/train/plugins/profile/run1.
+    """
+    run = run.rstrip('/')
+    if '/' not in run:
+      run = './' + run
+    tb_run_name, _, profile_run_name = run.rpartition('/')
+    tb_run_directory = self.multiplexer.RunPaths().get(tb_run_name)
+    if tb_run_directory is None:
+      # Check if logdir is a directory to handle case where it's actually a
+      # multipart directory spec, which this plugin does not support.
+      if tb_run_name == '.' and tf.io.gfile.isdir(self.logdir):
+        tb_run_directory = self.logdir
+      else:
+        raise RuntimeError("No matching run directory for run %s" % run)
+    plugin_directory = plugin_asset_util.PluginDirectory(
+        tb_run_directory, PLUGIN_NAME)
+    return os.path.join(plugin_directory, profile_run_name)
 
   def generate_run_to_tools(self):
     """Generator for pairs of "run name" and a list of tools for that run.

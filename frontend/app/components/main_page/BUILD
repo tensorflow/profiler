@@ -15,8 +15,16 @@ ng_module(
     ],
     deps = [
         "@npm//@angular/core",
+        "@org_xprof//frontend/app/common/angular:angular_material_progress_bar",
+        "@org_xprof//frontend/app/common/angular:angular_material_sidenav",
         "@npm//@angular/router",
+        "@org_xprof//frontend/app/common/constants",
+        "@org_xprof//frontend/app/common/interfaces",
+        "@org_xprof//frontend/app/components/empty_page",
+        "@org_xprof//frontend/app/components/memory_viewer",
+        "@org_xprof//frontend/app/components/op_profile",
         "@org_xprof//frontend/app/components/overview",
+        "@org_xprof//frontend/app/components/pod_viewer",
         "@org_xprof//frontend/app/components/sidenav",
         "@org_xprof//frontend/app/components/trace_viewer",
     ],
@@ -26,4 +34,7 @@ sass_binary(
     name = "main_page_css",
     src = "main_page.scss",
     sourcemap = False,
+    deps = [
+        "@org_xprof//frontend/app/styles:common",
+    ],
 )
