@@ -28,6 +28,8 @@ ng_module(
     ],
 )
 
+
+
 sass_binary(
     name = "app_css",
     src = "app.scss",

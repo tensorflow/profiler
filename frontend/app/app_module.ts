@@ -5,6 +5,7 @@ import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
 import {EmptyPageModule} from 'org_xprof/frontend/app/components/empty_page/empty_page_module';
 import {MainPageModule} from 'org_xprof/frontend/app/components/main_page/main_page_module';
 import {PipesModule} from 'org_xprof/frontend/app/pipes/pipes_module';
+import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
 
 import {App} from './app';
 
@@ -15,7 +16,7 @@ import {App} from './app';
     BrowserModule, HttpClientModule, EmptyPageModule, MainPageModule,
     BrowserAnimationsModule, PipesModule
   ],
-  providers: [],
+  providers: [DataService],
   bootstrap: [App]
 })
 export class AppModule {

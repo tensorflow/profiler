@@ -8,7 +8,6 @@ import {DataService} from 'org_xprof/frontend/app/services/data_service/data_ser
   selector: 'app',
   templateUrl: './app.ng.html',
   styleUrls: ['./app.css'],
-  providers: [DataService]
 })
 export class App implements OnInit {
   loading = true;
@@ -23,7 +22,7 @@ export class App implements OnInit {
       const values = Object.values(tools);
       for (let i = 0; i < keys.length; i++) {
         this.datasets.push({name: keys[i], activeTools: values[i] || []});
-      };
+      }
       this.datasets.sort((a, b) => -compareTagNames(a.name, b.name));
       this.dataFound = this.datasets.length !== 0;
       this.loading = false;
