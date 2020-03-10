@@ -1,0 +1,58 @@
+# Copyright 2020 The TensorFlow Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+"""Install and run the TensorBoard plugin for performance analysis.
+
+   Usage: python3 install_and_run.py --envdir ENVDIR --logdir LOGDIR
+"""
+
+# Lint as: python3
+
+import argparse
+import os
+import subprocess
+
+
+def run(*args):
+  """Runs a shell command."""
+  subprocess.run(' '.join(args), shell=True, check=True)
+
+
+class VirtualEnv(object):
+  """Creates and runs programs in a virtual environment."""
+
+  def __init__(self, envdir):
+    self.envdir = envdir
+    run('virtualenv', '--system-site-packages', '-p', 'python3', self.envdir)
+
+  def run(self, program, *args):
+    run(os.path.join(self.envdir, 'bin', program), *args)
+
+
+def main():
+  parser = argparse.ArgumentParser(description=__doc__)
+  parser.add_argument('--envdir', help='Virtual environment', required=True)
+  parser.add_argument('--logdir', help='TensorBoard logdir', required=True)
+  args = parser.parse_args()
+  venv = VirtualEnv(args.envdir)
+  venv.run('pip3', 'uninstall', '-q', '-y', 'tensorboard')
+  venv.run('pip3', 'uninstall', '-q', '-y', 'tensorflow')
+  venv.run('pip3', 'install', '-q', '-U', 'tf-nightly')
+  venv.run('pip3', 'install', '-q', '-U', 'tb-nightly')
+  venv.run('pip3', 'install', '-q', '-U', 'tensorboard_plugin_profile')
+  venv.run('tensorboard', '--logdir=' + args.logdir, '--bind_all')
+
+
+if __name__ == '__main__':
+  main()
