@@ -33,8 +33,8 @@ $ mkdir profile_env
 $ mkdir profile_data
 $ python3 profiler/install_and_run.py --envdir=profile_env --logdir=profile_data
 ```
-Go to localhost:6006/#profile of your browser, you should now see TensorBoard profile dashboard show up.
-[Empty Dashboard](docs/empty_dashboard.png)
+Go to `localhost:6006/#profile` of your browser, you should now see TensorBoard profile dashboard show up.
+![Empty Dashboard](docs/empty_dashboard.png)
 
 ## Next Steps
 * Colab Tutorial: https://www.tensorflow.org/tensorboard/tensorboard_profiling_keras
