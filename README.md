@@ -1,5 +1,5 @@
 # TensorFlow Profiler
-The TensorFlow Profiler includes a suite of tools. These tools help you understand, debug and optimize TensorFlow programs to run on CPUs, GPUs and TPUs.
+The profiler includes a suite of tools. These tools help you understand, debug and optimize TensorFlow programs to run on CPUs, GPUs and TPUs.
 
 ## Prerequisites
 * TensorFlow >= 2.2.0 
