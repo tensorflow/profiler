@@ -1,0 +1,22 @@
+/** CSS for a step-time graph view component. */
+
+@import 'frontend/app/styles/common';
+
+:host {
+  @include border-bottom-gray;
+  @include border-right-gray;
+}
+
+mat-card {
+  @include overview-card;
+  @include overview-card-height;
+}
+
+mat-card-title {
+  @include overview-card-title;
+}
+
+.chart {
+  margin: 0 auto;
+  max-width: 800px;
+}
