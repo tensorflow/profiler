@@ -47,3 +47,6 @@ Congratulations! You're now ready to capture a profile.
 * GPU Profiling Guide:  https://tensorflow.org/guide/profiler
 * Cloud TPU Profiling Guide: https://cloud.google.com/tpu/docs/cloud-tpu-tools
 * Colab Tutorial: https://www.tensorflow.org/tensorboard/tensorboard_profiling_keras
+
+## Known Issues
+Multi-GPU Profiling does not work with CUDA 10.1. While CUDA 10.2 is not officially supported by TF, profiling on CUDA 10.2 is known to work on some configurations.
