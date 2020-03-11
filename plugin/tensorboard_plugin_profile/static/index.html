@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>ProfilePlugin</title>
+  <base href="/data/plugin/profile/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="stylesheet" href="styles.css">
+  <script src="zone.js"></script>
+</head>
+<body>
+  <app></app>
+  <script>
+    function loadBundle() {
+      const script = document.createElement('script');
+      script.src = 'bundle.js';
+      document.body.appendChild(script);
+      return script;
+    }
+
+    function loadChart(domain) {
+      const script = document.createElement('script');
+      script.src = `https://${domain}/charts/loader.js`;
+      document.body.appendChild(script);
+      script.onload = () => {
+        loadBundle();
+      }
+      return script;
+    }
+
+    function setReloadOfIFrame() {
+      try {
+        const tfTensorboard =
+              window.parent.document.querySelector('tf-tensorboard');
+        const iFrame = tfTensorboard.shadowRoot.querySelector(
+          'div[data-dashboard="profile"] > iframe');
+        iFrame.reload = () => {
+          if (tfTensorboard.autoReloadEnabled) {
+            document.dispatchEvent(new Event('tensorboard-reload'));
+          } else {
+            document.location.href = document.location.origin +
+              '/data/plugin/profile/index.html';
+          }
+        };
+      } catch (err) {
+      }
+      document.addEventListener('plugin-reload', () => {
+          document.location.href = document.location.origin +
+              '/data/plugin/profile/index.html';
+      });
+    }
+
+    const script = loadChart('www.gstatic.com');
+    script.onerror = () => {
+      script.onerror = null;
+      document.body.removeChild(script);
+
+      loadChart('www.gstatic.cn');
+    }
+    setReloadOfIFrame();
+  </script>
+</body>
+</html>
