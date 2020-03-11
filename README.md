@@ -9,7 +9,7 @@ First time user? Come and check out this [Colab Demo](https://colab.research.goo
 * TensorBoard >= 2.2.0 (or tb-nightly)
 * tensorboard-plugin-profile >= 2.2.0rc0
 
-To profile on the GPU, the following NVIDIA software must be installed on your system
+To profile on the GPU, the following NVIDIA software must be installed on your system:
 1. NVIDIA GPU drivers
     *   CUDA 10.2 requires 440.33 (Linux) / 441.22 (Windows) and higher. (recommended)
     *   CUDA 10.1 requires 418.x and higher.
