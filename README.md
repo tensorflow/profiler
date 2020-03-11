@@ -1,6 +1,9 @@
 # TensorFlow Profiler
 The profiler includes a suite of tools. These tools help you understand, debug and optimize TensorFlow programs to run on CPUs, GPUs and TPUs.
 
+## Demo
+First time user? Come and check out this [Colab Demo](https://colab.research.google.com/github/tensorflow/tensorboard/blob/master/docs/tensorboard_profiling_keras.ipynb).
+
 ## Prerequisites
 * TensorFlow >= 2.2.0rc0 
 * TensorBoard >= 2.2.0 (or tb-nightly)
@@ -41,6 +44,6 @@ Go to `localhost:6006/#profile` of your browser, you should now see TensorBoard 
 Congratulations! You're now ready to capture a profile.
 
 ## Next Steps
+* GPU Profiling Guide:  https://tensorflow.org/guide/profiler
+* Cloud TPU Profiling Guide: https://cloud.google.com/tpu/docs/cloud-tpu-tools
 * Colab Tutorial: https://www.tensorflow.org/tensorboard/tensorboard_profiling_keras
-* Guide:  https://tensorflow.org/guide/profiler
-* Cloud TPU Profiling Tutorial: https://cloud.google.com/tpu/docs/cloud-tpu-tools
