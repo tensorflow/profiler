@@ -41,6 +41,6 @@ Go to `localhost:6006/#profile` of your browser, you should now see TensorBoard 
 Congratulations! You're now ready to capture a profile.
 
 ## Next Steps
-* [Colab Tutorial](https://colab.research.google.com/github/tensorflow/profiler/blob/master/docs/tensorboard_profiling_keras.ipynb) 
+* Colab Tutorial: https://www.tensorflow.org/tensorboard/tensorboard_profiling_keras
 * Guide:  https://tensorflow.org/guide/profiler
 * Cloud TPU Profiling Tutorial: https://cloud.google.com/tpu/docs/cloud-tpu-tools
