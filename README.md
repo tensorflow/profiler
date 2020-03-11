@@ -14,7 +14,7 @@ To profile on the GPU, the following NVIDIA software must be installed on your s
     *   CUDA 10.2 requires 440.33 (Linux) / 441.22 (Windows) and higher. (recommended)
     *   CUDA 10.1 requires 418.x and higher.
 
-2. Ensure CUPTI exists on the path.
+2. Ensure that CUPTI exists on the path.
 
     *   Run `ldconfig -p | grep libcupti`
     *   If you don't have CUPTI on the path, run:
