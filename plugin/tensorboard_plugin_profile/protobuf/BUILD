@@ -11,6 +11,7 @@ proto_library(
     name = "protos_all",
     srcs = [
         "input_pipeline.proto",
+        "kernel_stats.proto",
         "overview_page.proto",
         "tf_stats.proto",
         "trace_events.proto",
@@ -22,6 +23,7 @@ py_proto_library(
     name = "protos_all_py_pb2",
     srcs = [
         "input_pipeline.proto",
+        "kernel_stats.proto",
         "overview_page.proto",
         "tf_stats.proto",
         "trace_events.proto",

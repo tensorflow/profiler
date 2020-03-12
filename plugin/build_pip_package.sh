@@ -18,6 +18,12 @@ if [ -z "${RUNFILES}" ]; then
   RUNFILES="$(CDPATH= cd -- "$0.runfiles" && pwd)"
 fi
 
+if [ "$(uname)" = "Darwin" ]; then
+  sedi="sed -i ''"
+else
+  sedi="sed -i"
+fi
+
 PLUGIN_RUNFILE_DIR="${RUNFILES}/org_xprof/plugin"
 FRONTEND_RUNFILE_DIR="${RUNFILES}/org_xprof/frontend"
 
@@ -34,6 +40,10 @@ find . -name '*.py' | cpio -updL $dest
 cd $dest
 chmod -R 755 .
 cp ${BUILD_WORKSPACE_DIRECTORY}/bazel-bin/plugin/tensorboard_plugin_profile/protobuf/*_pb2.py tensorboard_plugin_profile/protobuf/
+
+find tensorboard_plugin_profile/protobuf -name \*.py -exec $sedi -e '
+    s/^from plugin.tensorboard_plugin_profile/from tensorboard_plugin_profile/
+  ' {} +
 
 # Copy static files.
 cd tensorboard_plugin_profile
