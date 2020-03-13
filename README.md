@@ -38,7 +38,7 @@ $ git clone https://github.com/tensorflow/profiler.git profiler
 $ mkdir profile_env
 $ python3 profiler/install_and_run.py --envdir=profile_env --logdir=profiler/demo
 ```
-Go to `localhost:6006/#profile` of your browser, you should now see the Overview Page tool of our profile demo showing up.
+Go to `localhost:6006/#profile` of your browser, you should now see the demo overview page show up.
 ![Overview Page](docs/images/overview_page.png)
 Congratulations! You're now ready to capture a profile.
 
