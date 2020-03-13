@@ -36,11 +36,10 @@ Install the profiler by downloading and running the `install_and_run.py` script 
 ```
 $ git clone https://github.com/tensorflow/profiler.git profiler
 $ mkdir profile_env
-$ mkdir profile_data
-$ python3 profiler/install_and_run.py --envdir=profile_env --logdir=profile_data
+$ python3 profiler/install_and_run.py --envdir=profile_env --logdir=profiler/demo
 ```
-Go to `localhost:6006/#profile` of your browser, you should now see TensorBoard profile dashboard show up.
-![Empty Dashboard](docs/images/empty_dashboard.png)
+Go to `localhost:6006/#profile` of your browser, you should now see the Overview Page tool of our profile demo showing up.
+![Overview Page](docs/images/overview_page.png)
 Congratulations! You're now ready to capture a profile.
 
 ## Next Steps
