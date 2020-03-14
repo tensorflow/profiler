@@ -2,7 +2,7 @@
 The profiler includes a suite of tools. These tools help you understand, debug and optimize TensorFlow programs to run on CPUs, GPUs and TPUs.
 
 ## Demo
-First time user? Come and check out this [Colab Demo](https://colab.research.google.com/github/tensorflow/tensorboard/blob/master/docs/tensorboard_profiling_keras.ipynb).
+First time user? Come and check out this [Colab Demo](https://www.tensorflow.org/tensorboard/tensorboard_profiling_keras).
 
 ## Prerequisites
 * TensorFlow >= 2.2.0rc0 
