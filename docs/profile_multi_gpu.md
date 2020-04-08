@@ -1,4 +1,4 @@
-# Profile multiple GPUs with `TF 2.2`:
+# Profile multiple GPUs with TensorFlow 2.2.0:
 
 ## Software requirements
 
