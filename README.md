@@ -9,7 +9,7 @@ First time user? Come and check out this [Colab Demo](https://www.tensorflow.org
 * TensorBoard >= 2.2.0
 * tensorboard-plugin-profile >= 2.2.0
 
-To profile on a single GPU system, the following NVIDIA software must be installed on your system:
+To profile on a **single GPU** system, the following NVIDIA software must be installed on your system:
 
 1. NVIDIA GPU drivers and CUDA Toolkit:
     * CUDA 10.1 requires 418.x and higher.
@@ -26,7 +26,7 @@ To profile on a single GPU system, the following NVIDIA software must be install
    ```
    Run the ldconfig command above again to verify that the CUPTI 10.1 library is found.
 
-To profile a multi-gpu system, see this [guide](docs/profile_multi_gpu.md) for details.
+To profile a system with **multiple GPUs**, see this [guide](docs/profile_multi_gpu.md) for details.
 
 To profile multi-worker GPU configurations, profile individual workers independently.
 
