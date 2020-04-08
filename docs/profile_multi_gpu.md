@@ -36,8 +36,8 @@ NVIDIA® `CUDA 10.2` must be installed on your system:
    TensorFlow 2.2 looks for those strings unless you build your own pip package with [TF_CUDA_VERSION=10.2](https://raw.githubusercontent.com/tensorflow/tensorflow/34bec1ebd4c7a2bc2cea5ea0491acf7615f8875e/tensorflow/tools/ci_build/release/ubuntu_16/gpu_py36_full/pip.sh).
 
    ```shell
-   $ ln -s /usr/local/cuda/lib64/libcudart.so.10.2 /usr/local/cuda/lib64/libcudart.so.10.1
-   $ ln -s /usr/local/cuda/extras/CUPTI/lib64/libcupti.so.10.2 /usr/local/cuda/extras/CUPTI/lib64/libcupti.so.10.1
+   $ sudo ln -s /usr/local/cuda/lib64/libcudart.so.10.2 /usr/local/cuda/lib64/libcudart.so.10.1
+   $ sudo ln -s /usr/local/cuda/extras/CUPTI/lib64/libcupti.so.10.2 /usr/local/cuda/extras/CUPTI/lib64/libcupti.so.10.1
    ```
 4. Run the model again and look for `Successfully opened dynamic library libcupti.so.10.1` in the logs. Your setup is now complete. 
 
