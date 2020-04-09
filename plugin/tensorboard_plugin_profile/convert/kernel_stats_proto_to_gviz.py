@@ -69,10 +69,10 @@ def get_kernel_reports_table_args(kernel_reports):
         kernel.is_kernel_using_tensor_core,
         kernel.op_name,
         kernel.occurrences,
-        kernel.total_duration_ns * 1000,
-        kernel.total_duration_ns / kernel.occurrences * 1000,
-        kernel.min_duration_ns * 1000,
-        kernel.max_duration_ns * 1000,
+        kernel.total_duration_ns / 1000,
+        (kernel.total_duration_ns / kernel.occurrences) / 1000,
+        kernel.min_duration_ns / 1000,
+        kernel.max_duration_ns / 1000,
     ]
     data.append(row)
     rank += 1

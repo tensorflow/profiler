@@ -131,10 +131,10 @@ class ProtoToGvizTest(tf.test.TestCase):
             MockValues.IS_KERNEL_USING_TENSOR_CORE,
             MockValues.OP_NAME,
             int(MockValues.OCCURRENCES),
-            int(MockValues.TOTAL_DURATION_NS) * 1000,
-            int(MockValues.AVG_DURATION_NS) * 1000,
-            int(MockValues.MIN_DURATION_NS) * 1000,
-            int(MockValues.MAX_DURATION_NS) * 1000,
+            int(MockValues.TOTAL_DURATION_NS) / 1000,
+            int(MockValues.AVG_DURATION_NS) / 1000,
+            int(MockValues.MIN_DURATION_NS) / 1000,
+            int(MockValues.MAX_DURATION_NS) / 1000,
         ]
 
         for (cc, cell_str) in enumerate(row_values):
