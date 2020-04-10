@@ -17,35 +17,56 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from setuptools import setup
+import setuptools
 
-project_name = 'tensorboard_profile_plugin'
+PROJECT_NAME = 'tensorboard_plugin_profile'
+VERSION = '0.1.0'
+REQUIRED_PACKAGES = [
+    'gviz_api >= 1.9.0',
+    'protobuf >= 3.6.0',
+    'setuptools >= 41.0.0',
+    'six >= 1.10.0',
+    'werkzeug >= 0.11.15',
+]
+
 
 def get_readme():
   with open('README.rst') as f:
     return f.read()
 
-def get_version():
-  version_ns = {}
-  with open('version.py') as f:
-   exec(f.read(), {}, version_ns)
-  return version_ns['VERSION']
 
-setup(
-  name=project_name,
-  version=get_version(),
-  description='Profile Tensorboard Plugin',
-  long_description=get_readme(),
-  author='Google Inc.',
-  author_email='packages@tensorflow.org',
-  url='https://github.com/tensorflow/tensorboard/tree/master/tensorboard/plugins/profile',
-  packages=['tensorboard_profile_plugin'],
-  package_data={
-    'tensorboard_profile_plugin': ['static/**'],
-  },
-  entry_points={
-    'tensorboard_plugins': [
-      'dynamic_profile = tensorboard_profile_plugin.plugin:DynamicProfile',
+setuptools.setup(
+    name=PROJECT_NAME,
+    version=VERSION,
+    description='Profile Tensorboard Plugin',
+    long_description=get_readme(),
+    author='Google Inc.',
+    author_email='packages@tensorflow.org',
+    url='https://github.com/tensorflow/tensorboard/tree/master/tensorboard/plugins/profile',
+    packages=setuptools.find_packages(),
+    package_data={
+        'tensorboard_plugin_profile': ['static/**'],
+    },
+    entry_points={
+        'tensorboard_plugins': [
+            'profile = tensorboard_plugin_profile.profile_plugin_loader:ProfilePluginLoader',
+        ],
+    },
+    python_requires='>= 2.7, != 3.0.*, != 3.1.*',
+    install_requires=REQUIRED_PACKAGES,
+    tests_require=REQUIRED_PACKAGES,
+    # PyPI package information.
+    classifiers=[
+        'Intended Audience :: Developers',
+        'Intended Audience :: Education',
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved :: Apache Software License',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 3',
+        'Topic :: Scientific/Engineering :: Mathematics',
+        'Topic :: Software Development :: Libraries :: Python Modules',
+        'Topic :: Software Development :: Libraries',
     ],
-  },
+    license='Apache 2.0',
+    keywords='tensorflow tensorboard xprof profile plugin',
 )

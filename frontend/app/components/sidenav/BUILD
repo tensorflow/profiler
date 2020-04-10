@@ -15,16 +15,22 @@ ng_module(
     ],
     deps = [
         "@npm//@angular/core",
-        "@org_xprof//frontend/app/common/angular:angular_material_button",
         "@org_xprof//frontend/app/common/angular:angular_material_core",
-        "@org_xprof//frontend/app/common/angular:angular_material_divider",
         "@org_xprof//frontend/app/common/angular:angular_material_form_field",
         "@org_xprof//frontend/app/common/angular:angular_material_select",
+        "@npm//@ngrx/store",
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",
+        "@org_xprof//frontend/app/components/capture_profile",
+        "@org_xprof//frontend/app/components/memory_viewer/buffer_details",
+        "@org_xprof//frontend/app/components/op_profile/op_details",
+        "@org_xprof//frontend/app/components/pod_viewer/pod_viewer_details",
         "@org_xprof//frontend/app/services/data_service",
+        "@org_xprof//frontend/app/store",
     ],
 )
+
+
 
 sass_binary(
     name = "sidenav_css",

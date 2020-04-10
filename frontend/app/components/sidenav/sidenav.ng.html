@@ -1,8 +1,6 @@
 <div class="button-container horizontal-center">
-  <button mat-raised-button>{{captureButtonLabel | uppercase}}</button>
+  <capture-profile></capture-profile>
 </div>
-
-<mat-divider></mat-divider>
 
 <div class="item-container">
   <div [ngClass]="{'mat-subheading-2': true, 'disabled': !runs.length}">
@@ -18,8 +16,6 @@
   </mat-form-field>
 </div>
 
-<mat-divider></mat-divider>
-
 <div class="item-container">
   <div [ngClass]="{'mat-subheading-2': true, 'disabled': !tags.length}">
     Tools ({{tags.length}})
@@ -28,13 +24,11 @@
   <mat-form-field class="full-width">
     <mat-select [(value)]="selectedTag" [disabled]="!tags.length" (selectionChange)="updateHosts()">
       <mat-option *ngFor="let tag of tags" [value]="tag">
-        {{tag}}
+        {{getDisplayTagName(tag)}}
       </mat-option>
     </mat-select>
   </mat-form-field>
 </div>
-
-<mat-divider></mat-divider>
 
 <div class="item-container">
   <div [ngClass]="{'mat-subheading-2': true, 'disabled': !hosts.length}">
@@ -50,4 +44,17 @@
   </mat-form-field>
 </div>
 
-<mat-divider></mat-divider>
+<div [hidden]="selectedTag != 'memory_viewer'">
+  <buffer-details></buffer-details>
+</div>
+
+<div [hidden]="selectedTag != 'op_profile'">
+  <op-details></op-details>
+</div>
+
+<div [hidden]="selectedTag != 'pod_viewer'">
+  <pod-viewer-details></pod-viewer-details>
+</div>
+
+<br>
+

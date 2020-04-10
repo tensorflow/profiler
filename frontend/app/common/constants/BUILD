@@ -4,5 +4,8 @@ package(default_visibility = ["//frontend:__subpackages__"])
 
 ts_library(
     name = "constants",
-    srcs = ["constants.ts"],
+    srcs = [
+        "constants.ts",
+        "enums.ts",
+    ],
 )

@@ -5,7 +5,7 @@ The profiler includes a suite of tools. These tools help you understand, debug a
 First time user? Come and check out this [Colab Demo](https://www.tensorflow.org/tensorboard/tensorboard_profiling_keras).
 
 ## Prerequisites
-* TensorFlow >= 2.2.0 
+* TensorFlow >= 2.2.0
 * TensorBoard >= 2.2.0
 * tensorboard-plugin-profile >= 2.2.0
 

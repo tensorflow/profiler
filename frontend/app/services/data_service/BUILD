@@ -14,5 +14,8 @@ ng_module(
         "@npm//@angular/core",
         "@npm//rxjs",
         "@org_xprof//frontend/app/common/constants",
+        "@org_xprof//frontend/app/common/interfaces",
     ],
 )
+
+

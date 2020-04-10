@@ -15,12 +15,27 @@ ng_module(
     ],
     deps = [
         "@npm//@angular/core",
-        "@org_xprof//frontend/app/common/angular:angular_material_card",
+        "@org_xprof//frontend/app/common/angular:angular_material_divider",
+        "@org_xprof//frontend/app/common/angular:angular_material_slider",
+        "@npm//@angular/router",
+        "@npm//@ngrx/store",
+        "@org_xprof//frontend/app/common/constants",
+        "@org_xprof//frontend/app/common/interfaces",
+        "@org_xprof//frontend/app/common/utils",
+        "@org_xprof//frontend/app/components/pod_viewer/stack_bar_chart",
+        "@org_xprof//frontend/app/components/pod_viewer/topology_graph",
+        "@org_xprof//frontend/app/services/data_service",
+        "@org_xprof//frontend/app/store",
     ],
 )
+
+
 
 sass_binary(
     name = "pod_viewer_css",
     src = "pod_viewer.scss",
     sourcemap = False,
+    deps = [
+        "@org_xprof//frontend/app/styles:common",
+    ],
 )

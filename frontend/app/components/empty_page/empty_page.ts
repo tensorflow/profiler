@@ -7,5 +7,5 @@ import {Component} from '@angular/core';
   styleUrls: ['./empty_page.css']
 })
 export class EmptyPage {
-  title = 'Empty Page WIP';
+  inColab = !!(window.parent.TENSORBOARD_ENV || {}).IN_COLAB;
 }

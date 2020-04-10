@@ -18,17 +18,24 @@ ng_module(
         "@org_xprof//frontend/app/common/angular:angular_material_progress_bar",
         "@org_xprof//frontend/app/common/angular:angular_material_sidenav",
         "@npm//@angular/router",
+        "@npm//@ngrx/store",
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/components/empty_page",
+        "@org_xprof//frontend/app/components/input_pipeline",
+        "@org_xprof//frontend/app/components/kernel_stats",
         "@org_xprof//frontend/app/components/memory_viewer",
         "@org_xprof//frontend/app/components/op_profile",
         "@org_xprof//frontend/app/components/overview",
         "@org_xprof//frontend/app/components/pod_viewer",
         "@org_xprof//frontend/app/components/sidenav",
+        "@org_xprof//frontend/app/components/tensorflow_stats",
         "@org_xprof//frontend/app/components/trace_viewer",
+        "@org_xprof//frontend/app/store",
     ],
 )
+
+
 
 sass_binary(
     name = "main_page_css",

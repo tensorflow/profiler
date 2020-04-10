@@ -15,12 +15,18 @@ ng_module(
     ],
     deps = [
         "@npm//@angular/core",
-        "@org_xprof//frontend/app/common/angular:angular_material_card",
+        "@org_xprof//frontend/app/common/interfaces",
+        "@org_xprof//frontend/app/components/capture_profile",
     ],
 )
+
+
 
 sass_binary(
     name = "empty_page_css",
     src = "empty_page.scss",
     sourcemap = False,
+    deps = [
+        "@org_xprof//frontend/app/styles:common",
+    ],
 )

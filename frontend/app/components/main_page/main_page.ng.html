@@ -4,9 +4,10 @@
   </mat-sidenav>
   <mat-sidenav-content>
     <div class="progress-container" [hidden]="!loading">
+      <div class="loading-message">{{loadingMessage}}</div>
       <mat-progress-bar color="primary" mode="indeterminate"></mat-progress-bar>
     </div>
-    <div class="full-height" [hidden]="loading">
+    <div [className]="loading ? 'hidden-content' : 'full-height'">
       <router-outlet></router-outlet>
     </div>
   </mat-sidenav-content>

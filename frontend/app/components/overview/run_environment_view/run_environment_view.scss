@@ -1,0 +1,22 @@
+/** CSS for a run environment view component. */
+
+@import 'frontend/app/styles/common';
+
+:host {
+  @include border-bottom-gray;
+  @include border-right-gray;
+  flex-grow: 1;
+}
+
+mat-card {
+  @include overview-card;
+  @include overview-card-height;
+}
+
+mat-card-title {
+  @include overview-card-title;
+}
+
+b {
+  font-weight: 500;
+}

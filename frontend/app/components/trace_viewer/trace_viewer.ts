@@ -14,8 +14,8 @@ import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigati
 export class TraceViewer {
   url = '';
 
-  constructor(private readonly route: ActivatedRoute) {
-    this.route.params.subscribe(params => {
+  constructor(route: ActivatedRoute) {
+    route.params.subscribe(params => {
       this.update(params as NavigationEvent);
     });
   }

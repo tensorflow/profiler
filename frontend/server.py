@@ -4,30 +4,17 @@ Also provides /healthz support so that test can wait for the server to start.
 """
 
 from __future__ import print_function
-from BaseHTTPServer import HTTPServer
+
 import os
-from SimpleHTTPServer import SimpleHTTPRequestHandler
-import socket
-from google3.pyglib import app
-from google3.pyglib import flags
-from google3.pyglib import resources
 
-FLAGS = flags.FLAGS
-flags.DEFINE_string("port", "4200", "default port")
+import http.server
+import socketserver
 
+PORT = 4200
 
-class HTTPServerV6(HTTPServer):
-  address_family = socket.AF_INET6
+Handler = http.server.SimpleHTTPRequestHandler
 
-
-def main(unused_args):
-  os.chdir(resources.GetRunfilesDir() + "/google3/frontend")
-
-  port = FLAGS.port
-  print("Listening on port %s" % port)
-  server = HTTPServerV6(("::", int(port)), SimpleHTTPRequestHandler)
-  server.serve_forever()
-
-
-if __name__ == "__main__":
-  app.run()
+with socketserver.TCPServer(("", PORT), Handler) as httpd:
+  os.chdir(os.getcwd() + "/frontend")
+  print("Listening on port %s" % PORT)
+  httpd.serve_forever()
