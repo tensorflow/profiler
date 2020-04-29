@@ -27,6 +27,7 @@ ng_module(
 sass_binary(
     name = "self_time_chart_css",
     src = "self_time_chart.scss",
+    sass_stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

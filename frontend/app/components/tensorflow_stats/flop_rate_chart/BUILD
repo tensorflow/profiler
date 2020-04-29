@@ -26,5 +26,6 @@ ng_module(
 sass_binary(
     name = "flop_rate_chart_css",
     src = "flop_rate_chart.scss",
+    sass_stack = False,
     sourcemap = False,
 )

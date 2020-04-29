@@ -34,6 +34,7 @@ ng_module(
 sass_binary(
     name = "pod_viewer_css",
     src = "pod_viewer.scss",
+    sass_stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

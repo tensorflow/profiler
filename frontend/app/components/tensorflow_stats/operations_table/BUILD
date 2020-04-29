@@ -26,6 +26,7 @@ ng_module(
 sass_binary(
     name = "operations_table_css",
     src = "operations_table.scss",
+    sass_stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

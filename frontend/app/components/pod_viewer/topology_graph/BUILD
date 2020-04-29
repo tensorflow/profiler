@@ -32,6 +32,7 @@ ng_module(
 sass_binary(
     name = "topology_graph_css",
     src = "topology_graph.scss",
+    sass_stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",
