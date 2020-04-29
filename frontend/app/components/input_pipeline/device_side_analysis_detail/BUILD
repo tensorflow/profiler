@@ -25,7 +25,7 @@ ng_module(
 sass_binary(
     name = "device_side_analysis_detail_css",
     src = "device_side_analysis_detail.scss",
-    sass_stack = False,
+
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

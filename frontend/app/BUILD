@@ -35,6 +35,6 @@ ng_module(
 sass_binary(
     name = "app_css",
     src = "app.scss",
-    sass_stack = False,
+
     sourcemap = False,
 )

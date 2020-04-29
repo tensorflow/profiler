@@ -29,7 +29,7 @@ ng_module(
 sass_binary(
     name = "recommendation_result_view_css",
     src = "recommendation_result_view.scss",
-    sass_stack = False,
+
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

@@ -28,6 +28,6 @@ ng_module(
 sass_binary(
     name = "op_table_css",
     src = "op_table.scss",
-    sass_stack = False,
+
     sourcemap = False,
 )

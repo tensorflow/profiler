@@ -32,7 +32,7 @@ ng_module(
 sass_binary(
     name = "capture_profile_dialog_css",
     src = "capture_profile_dialog.scss",
-    sass_stack = False,
+
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

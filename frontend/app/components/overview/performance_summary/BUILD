@@ -26,7 +26,7 @@ ng_module(
 sass_binary(
     name = "performance_summary_css",
     src = "performance_summary.scss",
-    sass_stack = False,
+
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

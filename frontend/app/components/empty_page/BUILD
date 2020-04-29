@@ -25,7 +25,7 @@ ng_module(
 sass_binary(
     name = "empty_page_css",
     src = "empty_page.scss",
-    sass_stack = False,
+
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

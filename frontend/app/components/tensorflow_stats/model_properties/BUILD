@@ -24,6 +24,6 @@ ng_module(
 sass_binary(
     name = "model_properties_css",
     src = "model_properties.scss",
-    sass_stack = False,
+
     sourcemap = False,
 )

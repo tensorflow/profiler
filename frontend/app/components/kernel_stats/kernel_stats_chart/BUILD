@@ -25,6 +25,6 @@ ng_module(
 sass_binary(
     name = "kernel_stats_chart_css",
     src = "kernel_stats_chart.scss",
-    sass_stack = False,
+
     sourcemap = False,
 )

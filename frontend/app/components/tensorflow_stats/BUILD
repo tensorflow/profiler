@@ -38,7 +38,7 @@ ng_module(
 sass_binary(
     name = "tensorflow_stats_css",
     src = "tensorflow_stats.scss",
-    sass_stack = False,
+
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

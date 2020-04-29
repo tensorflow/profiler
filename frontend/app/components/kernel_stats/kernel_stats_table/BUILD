@@ -28,7 +28,7 @@ ng_module(
 sass_binary(
     name = "kernel_stats_table_css",
     src = "kernel_stats_table.scss",
-    sass_stack = False,
+
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

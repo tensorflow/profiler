@@ -28,6 +28,6 @@ ng_module(
 sass_binary(
     name = "trace_viewer_css",
     src = "trace_viewer.scss",
-    sass_stack = False,
+
     sourcemap = False,
 )
