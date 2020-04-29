@@ -36,6 +36,7 @@ ng_module(
 sass_binary(
     name = "overview_css",
     src = "overview.scss",
+    sass_stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

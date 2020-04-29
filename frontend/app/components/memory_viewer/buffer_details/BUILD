@@ -28,6 +28,7 @@ ng_module(
 sass_binary(
     name = "buffer_details_css",
     src = "buffer_details.scss",
+    sass_stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

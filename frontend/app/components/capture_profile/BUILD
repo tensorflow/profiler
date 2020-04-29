@@ -35,6 +35,7 @@ ng_module(
 sass_binary(
     name = "capture_profile_css",
     src = "capture_profile.scss",
+    sass_stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",
