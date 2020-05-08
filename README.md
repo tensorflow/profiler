@@ -28,7 +28,7 @@ To profile on a **single GPU** system, the following NVIDIA software must be ins
 
 To profile a system with **multiple GPUs**, see this [guide](docs/profile_multi_gpu.md) for details.
 
-To profile multi-worker GPU configurations, profile individual workers independently.
+Multi-worker GPU profiling is not supported yet, and we're working on it.
 
 To profile cloud TPUs, you must have access to Google Cloud TPUs.
 
