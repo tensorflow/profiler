@@ -134,14 +134,14 @@ export function flameColor(
  * Computes a Flops color.
  */
 export function flopsColor(fraction: number): string {
-  return flameColor(fraction, 0.7, 1, Math.sqrt);
+  return flameColor(Math.min(fraction, 1), 0.7, 1, Math.sqrt);
 }
 
 /**
  * Computes a memory bandwidth color.
  */
 export function bwColor(fraction: number): string {
-  return flameColor(1 - fraction, 0.7, 1, Math.sqrt);
+  return flameColor(Math.max(1 - fraction, 0), 0.7, 1, Math.sqrt);
 }
 
 /**
@@ -184,10 +184,11 @@ export function hasMemoryUtilization(node: OpProfileNode): boolean {
  */
 export function percent(fraction: number): string {
   if (isNaN(fraction)) return '-';
-  return fraction >= 0.995 ?
-      '100%' :
-      fraction < 0.00001 ? '0.00%' :
-                           (fraction * 100).toPrecision(2).toString() + '%';
+  return fraction >= 1.995 ?
+      '200%' :
+      fraction < 0.00001 ?
+      '0.00%' :
+      Number((fraction * 100).toPrecision(2)).toString() + '%';
 }
 
 /**
