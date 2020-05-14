@@ -1,4 +1,5 @@
 import * as hloProto from 'org_xprof/frontend/app/common/interfaces/hlo.proto';
+import * as memoryProfileProto from 'org_xprof/frontend/app/common/interfaces/memory_profile.proto';
 import * as opProfileProto from 'org_xprof/frontend/app/common/interfaces/op_profile.proto';
 
 /** The base interface for a cell.  */
@@ -40,6 +41,7 @@ export declare interface SimpleDataTable {
 /** The data table type for data table without perperty or null. */
 export type SimpleDataTableOrNull = SimpleDataTable|null;
 
+/* tslint:disable enforce-name-casing */
 /** The base interface for a property of general analysis. */
 declare interface GeneralAnalysisProperty {
   device_idle_time_percent?: string;
@@ -227,6 +229,7 @@ declare interface TensorflowStatsProperty {
   host_tf_pprof_link?: string;
   task_type?: string;
 }
+/* tslint:enable */
 
 /** The base interface for a tensorflow stats. */
 export declare interface TensorflowStatsData {
@@ -329,6 +332,12 @@ export type TensorflowStatsDataOrNull = TensorflowStatsData|null;
 /** The data table type for a HloProto or null. */
 export type HloProtoOrNull = (hloProto.HloProto)|null;
 
+/** The data table type for a MemoryProfile or null. */
+export type MemoryProfileProtoOrNull = (memoryProfileProto.MemoryProfile)|null;
+
+/** The data table type for a MemoryProfileSnapshot. */
+export type MemoryProfileSnapshot = memoryProfileProto.MemoryProfileSnapshot;
+
 /** The data table type for a Profile or null. */
 export type ProfileOrNull = (opProfileProto.Profile)|null;
 
@@ -347,6 +356,7 @@ export type PodViewerDatabaseOrNull = PodViewerDatabase|null;
 export type PrimitiveTypeNumberStringOrUndefined = number|string|undefined;
 
 /** All data table type. */
-export type DataTable = OverviewDataTable[]|InputPipelineDataTable[]|
-                        TensorflowStatsData[]|hloProto.HloProto|
-                        opProfileProto.Profile|PodViewerDatabase|null;
+export type DataTable =
+    OverviewDataTable[]|InputPipelineDataTable[]|TensorflowStatsData[]|
+    hloProto.HloProto|memoryProfileProto.MemoryProfile|opProfileProto.Profile|
+    PodViewerDatabase|null;

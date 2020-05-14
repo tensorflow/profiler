@@ -54,6 +54,7 @@ const SHUFFLED_MATERIAL_COLORS = [
 
 const KNOWN_TOOLS = [
   'input_pipeline_analyzer',
+  'memory_profile',
   'memory_viewer',
   'op_profile',
   'pod_viewer',

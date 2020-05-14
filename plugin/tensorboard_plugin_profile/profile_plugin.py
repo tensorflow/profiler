@@ -71,6 +71,7 @@ TOOLS = {
     'pod_viewer': 'pod_viewer.json',
     'tensorflow_stats': 'tensorflow_stats.pb',
     'kernel_stats': 'kernel_stats.pb',
+    'memory_profile': 'memory_profile.json.gz',
 }
 
 _EXTENSION_TO_TOOL = {extension: tool for tool, extension in TOOLS.items()}
@@ -433,6 +434,10 @@ class ProfilePlugin(base_plugin.TBPlugin):
         data = kernel_stats_proto_to_gviz.to_csv(raw_data)
       else:
         data = kernel_stats_proto_to_gviz.to_json(raw_data)
+    elif tool == 'memory_profile':
+      logger.info('Accessing memory_profile data')
+      data = raw_data
+      content_encoding = 'gzip'
     elif tool in _RAW_DATA_TOOLS:
       data = raw_data
       if tool[-1] == '#':

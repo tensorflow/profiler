@@ -812,6 +812,124 @@ export const DATA_PLUGIN_PROFILE_TENSORFLOW_STATS_DATA = [
   },
 ];
 
+/* tslint:disable no-any */
+/** Mock data for data API with memory_profile tag */
+export const DATA_PLUGIN_PROFILE_MEMORY_PROFILE_DATA = {
+  'memoryIds': ['0', '1', '2'],
+  'memoryProfilePerAllocator': {
+    '0': {
+      'activeAllocations': [
+        {'numOccurrences': '1', 'snapshotIndex': '-1', 'specialIndex': '0'},
+        {'numOccurrences': '1', 'snapshotIndex': '-2', 'specialIndex': '1'},
+        {'numOccurrences': '1', 'snapshotIndex': '2', 'specialIndex': '-1'}
+      ],
+      'memoryProfileSnapshots': [
+        {
+          'activityMetadata': {
+            'address': '222333',
+            'allocationBytes': '256',
+            'dataType': 'float',
+            'memoryActivity': 'ALLOCATION' as any,
+            'regionType': 'output',
+            'requestedBytes': '200',
+            'stepId': '0',
+            'tensorShape': '[3, 3, 512, 512]',
+            'tfOpName': 'foo/bar'
+          },
+          'aggregationStats': {
+            'fragmentation': 0.1,
+            'freeMemoryBytes': '5000',
+            'heapAllocatedBytes': '3000',
+            'peakBytesInUse': '8500',
+            'stackReservedBytes': '2000'
+          },
+          'timeOffsetPs': '40000000'
+        },
+        {
+          'activityMetadata': {
+            'address': '222333',
+            'allocationBytes': '256',
+            'dataType': 'float',
+            'memoryActivity': 'DEALLOCATION' as any,
+            'regionType': 'output',
+            'requestedBytes': '200',
+            'stepId': '0',
+            'tensorShape': '[3, 3, 512, 512]',
+            'tfOpName': 'foo/bar'
+          },
+          'aggregationStats': {
+            'fragmentation': 0.08,
+            'freeMemoryBytes': '5256',
+            'heapAllocatedBytes': '2744',
+            'peakBytesInUse': '8500',
+            'stackReservedBytes': '2000'
+          },
+          'timeOffsetPs': '50000000'
+        },
+        {
+          'activityMetadata': {
+            'address': '345678',
+            'allocationBytes': '300',
+            'dataType': 'int64',
+            'memoryActivity': 'ALLOCATION',
+            'regionType': 'temp',
+            'requestedBytes': '300',
+            'stepId': '0',
+            'tensorShape': '[]',
+            'tfOpName': 'mul_grad/Sum'
+          },
+          'aggregationStats': {
+            'fragmentation': 0.8,
+            'freeMemoryBytes': '3000',
+            'heapAllocatedBytes': '5000',
+            'peakBytesInUse': '9500',
+            'stackReservedBytes': '2000'
+          },
+          'timeOffsetPs': '70000000'
+        }
+      ],
+      'profileSummary': {
+        'memoryCapacity': '10000',
+        'peakBytesUsageLifetime': '9500',
+        'peakStats': {
+          'fragmentation': 0.8,
+          'freeMemoryBytes': '3000',
+          'heapAllocatedBytes': '5000',
+          'peakBytesInUse': '7000',
+          'stackReservedBytes': '2000'
+        },
+        'peakStatsTimePs': '70000000'
+      },
+      'specialAllocations': [
+        {
+          'address': '0',
+          'allocationBytes': '4700',
+          'dataType': 'INVALID',
+          'memoryActivity': 'ALLOCATION' as any,
+          'regionType': 'persist',
+          'requestedBytes': '4700',
+          'stepId': '0',
+          'tensorShape': 'unknown',
+          'tfOpName': 'preallocated/unknown'
+        },
+        {
+          'address': '0',
+          'allocationBytes': '2000',
+          'dataType': 'INVALID',
+          'memoryActivity': 'ALLOCATION',
+          'regionType': 'stack',
+          'requestedBytes': '2000',
+          'stepId': '0',
+          'tensorShape': 'unknown',
+          'tfOpName': 'stack'
+        }
+      ]
+    }
+  },
+  'numHosts': 1,
+  'stepCount': {'-38490': '1', '-93746': '3'}
+};
+
 /** Mock data for data API with memory_viewer tag */
 export const DATA_PLUGIN_PROFILE_MEMORY_VIEWER_DATA = {
   'hloModule': {
@@ -1072,6 +1190,7 @@ export const DATA_PLUGIN_PROFILE_MEMORY_VIEWER_DATA = {
     ],
   },
 };
+/* tslint:enable */
 
 /** Mock data for data API with op_profile tag */
 export const DATA_PLUGIN_PROFILE_OP_PROFILE_DATA = {

@@ -1,0 +1,17 @@
+<div class="section-container">
+  <div class="row">
+    <div>
+      <div class="mat-headline">Memory Profile</div>
+    </div>
+    <div class="flex-space"></div>
+  </div>
+
+  <div [className]="hasMemoryData ? 'full-height' : 'hidden-content'">
+    <br>
+    <memory-timeline-graph [memoryProfileProtoOrNull]="data"></memory-timeline-graph>
+  </div>
+</div>
+
+<div class="section-container" [hidden]="hasMemoryData">
+  There is no memory profile to display because there were no memory activity data in the captured duration.
+</div>

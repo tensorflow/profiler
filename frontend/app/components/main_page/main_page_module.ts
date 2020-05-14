@@ -8,6 +8,8 @@ import {InputPipeline} from 'org_xprof/frontend/app/components/input_pipeline/in
 import {InputPipelineModule} from 'org_xprof/frontend/app/components/input_pipeline/input_pipeline_module';
 import {KernelStats} from 'org_xprof/frontend/app/components/kernel_stats/kernel_stats';
 import {KernelStatsModule} from 'org_xprof/frontend/app/components/kernel_stats/kernel_stats_module';
+import {MemoryProfile} from 'org_xprof/frontend/app/components/memory_profile/memory_profile';
+import {MemoryProfileModule} from 'org_xprof/frontend/app/components/memory_profile/memory_profile_module';
 import {MemoryViewer} from 'org_xprof/frontend/app/components/memory_viewer/memory_viewer';
 import {MemoryViewerModule} from 'org_xprof/frontend/app/components/memory_viewer/memory_viewer_module';
 import {OpProfile} from 'org_xprof/frontend/app/components/op_profile/op_profile';
@@ -32,6 +34,7 @@ export const routes: Routes = [
   {path: 'input_pipeline_analyzer', component: InputPipeline},
   {path: 'input_pipeline_analyzer@', component: InputPipeline},
   {path: 'kernel_stats', component: KernelStats},
+  {path: 'memory_profile', component: MemoryProfile},
   {path: 'memory_viewer', component: MemoryViewer},
   {path: 'op_profile', component: OpProfile},
   {path: 'pod_viewer', component: PodViewer},
@@ -54,6 +57,7 @@ export const routes: Routes = [
     OverviewModule,
     InputPipelineModule,
     KernelStatsModule,
+    MemoryProfileModule,
     MemoryViewerModule,
     OpProfileModule,
     PodViewerModule,

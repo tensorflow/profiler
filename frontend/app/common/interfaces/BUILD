@@ -32,6 +32,16 @@ genrule(
     ],
 )
 
+genrule(
+    name = "memory_profile_proto_ts",
+    srcs = ["memory_profile.proto.ts.gz"],
+    outs = ["memory_profile.proto.ts"],
+    cmd = "gzip -d -c $(SRCS) > $(OUTS)",
+    visibility = [
+        "//frontend:__subpackages__", "//plugin:__subpackages__",
+    ],
+)
+
 ts_library(
     name = "op_profile_proto_defs",
     srcs = [
@@ -48,6 +58,13 @@ ts_library(
 )
 
 ts_library(
+    name = "memory_profile_proto_defs",
+    srcs = [
+        ":memory_profile.proto.ts",
+    ],
+)
+
+ts_library(
     name = "interfaces",
     srcs = [
         "buffer_allocation_info.ts",
@@ -60,6 +77,7 @@ ts_library(
         "window.ts",
     ],
     deps = [
+        ":memory_profile_proto_defs",
         ":op_profile_proto_defs",
         ":xla_proto_defs",
     ],

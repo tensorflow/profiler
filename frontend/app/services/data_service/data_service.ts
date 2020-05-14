@@ -77,6 +77,9 @@ export class DataService {
       } else if (tag === 'kernel_stats') {
         return of(mockData.DATA_PLUGIN_PROFILE_KERNEL_STATS_DATA)
             .pipe(delay(DELAY_TIME_MS));
+      } else if (tag === 'memory_profile') {
+        return of(mockData.DATA_PLUGIN_PROFILE_MEMORY_PROFILE_DATA)
+            .pipe(delay(DELAY_TIME_MS));
       } else {
         return of([]).pipe(delay(DELAY_TIME_MS));
       }
