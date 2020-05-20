@@ -17,6 +17,8 @@ export class MemoryProfile {
   run = '';
   host = '';
   hasMemoryData = false;
+  memoryIds: string[] = [];
+  selectedMemoryId = '';
 
   constructor(
       route: ActivatedRoute, private readonly dataService: DataService,
@@ -51,6 +53,10 @@ export class MemoryProfile {
           if (data && data.memoryIds && data.numHosts) {
             if (data.numHosts > 0 && data.memoryIds.length > 0) {
               this.hasMemoryData = true;
+              this.memoryIds = data.memoryIds;
+              if (this.selectedMemoryId === '') {
+                this.selectedMemoryId = data.memoryIds[0];
+              }
             }
           }
         });

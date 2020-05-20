@@ -1,0 +1,58 @@
+/** CSS for a memory profile summary view component. */
+
+@import 'frontend/app/styles/common';
+
+:host {
+  @include border-bottom-gray;
+  @include border-right-gray;
+}
+
+mat-card {
+  @include overview-card;
+  @include overview-card-height;
+}
+
+mat-card-title {
+  @include overview-card-title;
+}
+
+b {
+  font-weight: 500;
+}
+
+ul {
+  @include ul-flat;
+}
+
+table ul {
+  margin: 0;
+}
+
+.item-container {
+  margin-bottom: 16px;
+}
+
+.item-container > table {
+  border-spacing: 0;
+}
+
+.item-container > td {
+  padding: 0;
+}
+
+.item-value {
+  padding-left: 1px;
+  min-width: 80px;
+  width: 20%;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.item-description {
+  margin-left: 20px;
+}
+
+.flops-utilization-tooltip-target {
+  color: #e8710a;
+  border-bottom: 1px dotted #e8710a;
+}

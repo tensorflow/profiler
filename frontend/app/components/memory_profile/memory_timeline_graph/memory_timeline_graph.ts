@@ -15,6 +15,9 @@ export class MemoryTimelineGraph implements AfterViewInit, OnChanges {
   /** The memory profile data. */
   @Input() memoryProfileProtoOrNull: MemoryProfileProtoOrNull = null;
 
+  /** The selected memory ID to show memory profile for. */
+  @Input() memoryId: string = '';
+
   @ViewChild('chart', {static: false}) chartRef!: ElementRef;
 
   title = 'Memory Timeline Graph';
@@ -27,8 +30,10 @@ export class MemoryTimelineGraph implements AfterViewInit, OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    this.width = 0;
-    this.drawChart();
+    setTimeout(() => {
+      this.width = 0;
+      this.drawChart();
+    }, 100);
   }
 
   @HostListener('window:resize')
@@ -55,11 +60,8 @@ export class MemoryTimelineGraph implements AfterViewInit, OnChanges {
       return;
     }
 
-    /* Shows the memory list and chart only if there is memory data*/
-    const memoryId =
-        Object.keys(this.memoryProfileProtoOrNull.memoryProfilePerAllocator)[0];
     const snapshots =
-        this.memoryProfileProtoOrNull.memoryProfilePerAllocator[memoryId]
+        this.memoryProfileProtoOrNull.memoryProfilePerAllocator[this.memoryId]
             .memoryProfileSnapshots;
 
     if (!snapshots) return;
@@ -117,12 +119,12 @@ export class MemoryTimelineGraph implements AfterViewInit, OnChanges {
 
   bytesToGiBs(stat: string|number|undefined) {
     if (!stat) return 0;
-    return Number(stat) / 1.0 / 1024 / 1024 / 1024;
+    return Number(stat) / Math.pow(2, 30);
   }
 
   picoToMilli(timePs: string|undefined) {
     if (!timePs) return 0;
-    return Number(timePs) / 1.0 / 1e9;
+    return Number(timePs) / Math.pow(10, 9);
   }
 
   getMetadataTooltip(snapshot: MemoryProfileSnapshot|undefined) {
