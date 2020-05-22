@@ -23,6 +23,7 @@ ng_module(
         "@npm//@ngrx/store",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/interfaces:memory_profile_proto_defs",
+        "@org_xprof//frontend/app/components/memory_profile/memory_breakdown_table",
         "@org_xprof//frontend/app/components/memory_profile/memory_profile_summary",
         "@org_xprof//frontend/app/components/memory_profile/memory_timeline_graph",
         "@org_xprof//frontend/app/services/data_service",
