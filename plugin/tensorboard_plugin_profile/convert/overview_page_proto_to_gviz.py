@@ -209,6 +209,14 @@ def generate_recommendation_table(overview_page_recommendation):
   return gviz_api.DataTable(table_description, data, custom_properties)
 
 
+def generate_error_table(errors):
+  table_description = [("error", "string", "error")]
+  data = []
+  for error in errors:
+    data.append([error])
+  return gviz_api.DataTable(table_description, data)
+
+
 def generate_all_chart_tables(overview_page):
   """Converts a OverviewPage proto to gviz DataTables."""
   return [
@@ -217,6 +225,7 @@ def generate_all_chart_tables(overview_page):
           overview_page.input_analysis),
       generate_run_environment_table(overview_page.run_environment),
       generate_recommendation_table(overview_page.recommendation),
+      generate_error_table(overview_page.errors),
   ]
 
 
