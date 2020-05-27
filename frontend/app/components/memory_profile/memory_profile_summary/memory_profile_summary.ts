@@ -1,5 +1,4 @@
-import {AfterViewInit, Component, Input, OnChanges, SimpleChanges} from '@angular/core';
-
+import {AfterViewInit, ChangeDetectorRef, Component, Input, OnChanges, SimpleChanges} from '@angular/core';
 import {MemoryProfileProtoOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 /** A memory profile summary view component. */
@@ -15,16 +14,15 @@ export class MemoryProfileSummary implements AfterViewInit, OnChanges {
   /** The selected memory ID to show memory profile for. */
   @Input() memoryId: string = '';
 
+  constructor(private readonly changeDetector: ChangeDetectorRef) {}
+
   ngAfterViewInit() {
-    setTimeout(() => {
-      this.memoryProfileSummary();
-    }, 100);
+    this.memoryProfileSummary();
+    this.changeDetector.detectChanges();
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    setTimeout(() => {
-      this.memoryProfileSummary();
-    }, 100);
+    this.memoryProfileSummary();
   }
 
   memoryProfileSummary() {
