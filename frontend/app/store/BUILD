@@ -1,6 +1,9 @@
 load("@npm_angular_bazel//:index.bzl", "ng_module")
 
-package(default_visibility = ["//frontend:__subpackages__"])
+package(default_visibility = [
+    
+    "//frontend:__subpackages__",
+])
 
 ng_module(
     name = "store",
