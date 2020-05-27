@@ -14,6 +14,7 @@
   <div>
     <mat-radio-group
                      aria-label="address type"
+                     i18n-aria-label="Radio buttons to select address type"
                      [(ngModel)]="addressType"
                      (ngModelChange)="addressTypeChanged($event)">
       Address Type:
@@ -41,6 +42,40 @@
              type="number"
              placeholder="Automatically retry N times when no trace event is collected"
              [(ngModel)]="numRetry" />
+    </mat-form-field>
+  </div>
+
+  <div>
+    <mat-form-field>
+      <mat-label>Host Trace (TraceMe) Level</mat-label>
+      <mat-select matTooltip="{{hostTracerTooltip}}"
+                  matTooltipPosition="above"
+                  [(ngModel)]="hostTracerLevel">
+        <mat-option value="0">disable</mat-option>
+        <mat-option value="1">critical</mat-option>
+        <mat-option value="2">info</mat-option>
+        <mat-option value="3">verbose</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <div>
+    <mat-form-field>
+      <mat-label>Device Trace Level</mat-label>
+      <mat-select [(ngModel)]="deviceTracerLevel">
+        <mat-option value="0">disable</mat-option>
+        <mat-option value="1">enable</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <div>
+    <mat-form-field>
+      <mat-label>Python Trace Level</mat-label>
+      <mat-select [(ngModel)]="pythonTracerLevel">
+        <mat-option value="0">disable</mat-option>
+        <mat-option value="1">enable</mat-option>
+      </mat-select>
     </mat-form-field>
   </div>
 

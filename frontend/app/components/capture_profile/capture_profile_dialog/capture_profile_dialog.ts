@@ -16,6 +16,12 @@ export class CaptureProfileDialog {
   duration = 1000;
   numRetry = 3;
   workerList = '';
+  hostTracerLevel = '2';
+  hostTracerTooltip = 'lower trace level to reduce amount of host traces ' +
+      'collected, some tools will not function well when the host tracer ' +
+      'level is less than info';
+  deviceTracerLevel = '1';
+  pythonTracerLevel = '0';
 
   constructor(private readonly dialogRef: MatDialogRef<CaptureProfileDialog>) {}
 
@@ -34,6 +40,9 @@ export class CaptureProfileDialog {
       duration: this.duration,
       numRetry: this.numRetry,
       workerList: this.workerList,
+      hostTracerLevel: Number(this.hostTracerLevel),
+      deviceTracerLevel: Number(this.deviceTracerLevel),
+      pythonTracerLevel: Number(this.pythonTracerLevel),
     });
   }
 

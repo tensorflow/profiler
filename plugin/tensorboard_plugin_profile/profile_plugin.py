@@ -31,6 +31,7 @@ from werkzeug import wrappers
 from tensorboard.backend.event_processing import plugin_asset_util
 from tensorboard.plugins import base_plugin
 from tensorflow.python.profiler import profiler_client  # pylint: disable=g-direct-tensorflow-import
+from tensorflow.python.profiler import profiler_v2 as profiler  # pylint: disable=g-direct-tensorflow-import
 from tensorboard_plugin_profile.convert import input_pipeline_proto_to_gviz
 from tensorboard_plugin_profile.convert import kernel_stats_proto_to_gviz
 from tensorboard_plugin_profile.convert import overview_page_proto_to_gviz
@@ -343,13 +344,13 @@ class ProfilePlugin(base_plugin.TBPlugin):
     """
     run_dir = self._run_dir(run)
     if not run_dir:
-      logger.warn('Cannot find asset directory for: %s', run)
+      logger.warning('Cannot find asset directory for: %s', run)
       return []
     tool_pattern = _make_filename('*', tool)
     try:
       filenames = tf.io.gfile.glob(os.path.join(run_dir, tool_pattern))
     except tf.errors.OpError as e:
-      logger.warn('Cannot read asset directory: %s, OpError %s', run_dir, e)
+      logger.warning('Cannot read asset directory: %s, OpError %s', run_dir, e)
     filenames = [os.path.basename(f) for f in filenames]
     return sorted(_get_hosts(filenames))
 
@@ -411,9 +412,9 @@ class ProfilePlugin(base_plugin.TBPlugin):
       with tf.io.gfile.GFile(asset_path, 'rb') as f:
         raw_data = f.read()
     except tf.errors.NotFoundError:
-      logger.warn('Asset path %s not found', asset_path)
+      logger.warning('Asset path %s not found', asset_path)
     except tf.errors.OpError as e:
-      logger.warn("Couldn't read asset path: %s, OpError %s", asset_path, e)
+      logger.warning("Couldn't read asset path: %s, OpError %s", asset_path, e)
 
     if raw_data is None:
       return None, None
@@ -460,6 +461,15 @@ class ProfilePlugin(base_plugin.TBPlugin):
     is_tpu_name = request.args.get('is_tpu_name') == 'true'
     worker_list = request.args.get('worker_list')
     num_tracing_attempts = int(request.args.get('num_retry', '0')) + 1
+    options = None
+    try:
+      options = profiler.ProfilerOptions(
+          host_tracer_level=int(request.args.get('host_tracer_level', '2')),
+          device_tracer_level=int(request.args.get('device_tracer_level', '1')),
+          python_tracer_level=int(request.args.get('python_tracer_level', '0'))
+      )
+    except AttributeError:
+      logger.warning('ProfilerOptions are available after tensorflow 2.3')
 
     if is_tpu_name:
       try:
@@ -483,13 +493,22 @@ class ProfilePlugin(base_plugin.TBPlugin):
       # Set the master TPU for streaming trace viewer.
       self.master_tpu_unsecure_channel = master_ip
     try:
-      profiler_client.trace(
-          service_addr,
-          self.logdir,
-          duration,
-          worker_list,
-          num_tracing_attempts,
-      )
+      if options:
+        profiler_client.trace(
+            service_addr,
+            self.logdir,
+            duration,
+            worker_list,
+            num_tracing_attempts,
+            options=options)
+      else:
+        profiler_client.trace(
+            service_addr,
+            self.logdir,
+            duration,
+            worker_list,
+            num_tracing_attempts,
+        )
       return respond(
           {'result': 'Capture profile successfully. Please refresh.'},
           'application/json',
@@ -645,8 +664,8 @@ class ProfilePlugin(base_plugin.TBPlugin):
     try:
       filenames = tf.io.gfile.listdir(profile_run_dir)
     except tf.errors.NotFoundError as e:
-      logger.warn('Cannot read asset directory: %s, NotFoundError %s',
-                  profile_run_dir, e)
+      logger.warning('Cannot read asset directory: %s, NotFoundError %s',
+                     profile_run_dir, e)
       return []
     tools = _get_tools(filenames)
     if 'trace_viewer@' in tools:
