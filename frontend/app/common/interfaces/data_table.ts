@@ -24,7 +24,7 @@ declare interface DataTableColumn {
 }
 
 /** The base interface for a row value. */
-declare interface DataTableRaw {
+declare interface DataTableRow {
   c?: DataTableCell[];
 }
 
@@ -34,7 +34,7 @@ declare interface EmptyProperty {}
 /** The base interface for data table without perperty. */
 export declare interface SimpleDataTable {
   cols?: DataTableColumn[];
-  rows?: DataTableRaw[];
+  rows?: DataTableRow[];
   p?: EmptyProperty;
 }
 
@@ -58,7 +58,7 @@ declare interface GeneralAnalysisProperty {
 /** The base interface for a general analysis. */
 export declare interface GeneralAnalysis {
   cols?: DataTableColumn[];
-  rows?: DataTableRaw[];
+  rows?: DataTableRow[];
   p?: GeneralAnalysisProperty;
 }
 
@@ -102,7 +102,7 @@ declare interface InputPipelineAnalysisProperty {
 /** The base interface for an input pipeline analysis. */
 export declare interface InputPipelineAnalysis {
   cols?: DataTableColumn[];
-  rows?: DataTableRaw[];
+  rows?: DataTableRow[];
   p?: InputPipelineAnalysisProperty;
 }
 
@@ -129,7 +129,7 @@ declare interface RunEnvironmentProperty {
 /** The base interface for a run environment. */
 export declare interface RunEnvironment {
   cols?: DataTableColumn[];
-  rows?: DataTableRaw[];
+  rows?: DataTableRow[];
   p?: RunEnvironmentProperty;
 }
 
@@ -150,7 +150,7 @@ declare interface RecommendationResultProperty {
 /** The base interface for a recommendation result. */
 export declare interface RecommendationResult {
   cols?: DataTableColumn[];
-  rows?: DataTableRaw[];
+  rows?: DataTableRow[];
   p?: RecommendationResultProperty;
 }
 
@@ -177,7 +177,7 @@ declare interface NormalizedAcceleratorPerformanceProperty {
 /** The base interface for a normalized accelerator performance. */
 export declare interface NormalizedAcceleratorPerformance {
   cols?: DataTableColumn[];
-  rows?: DataTableRaw[];
+  rows?: DataTableRow[];
   p?: NormalizedAcceleratorPerformanceProperty;
 }
 
@@ -204,7 +204,7 @@ declare interface InputPipelineHostAnalysisProperty {
 /** The base interface for an input pipeline host-side analysis. */
 export declare interface InputPipelineHostAnalysis {
   cols?: DataTableColumn[];
-  rows?: DataTableRaw[];
+  rows?: DataTableRow[];
   p?: InputPipelineHostAnalysisProperty;
 }
 
@@ -234,7 +234,7 @@ declare interface TensorflowStatsProperty {
 /** The base interface for a tensorflow stats. */
 export declare interface TensorflowStatsData {
   cols?: DataTableColumn[];
-  rows?: DataTableRaw[];
+  rows?: DataTableRow[];
   p?: TensorflowStatsProperty;
 }
 
