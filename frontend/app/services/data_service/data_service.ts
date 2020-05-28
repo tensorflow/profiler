@@ -33,7 +33,10 @@ export class DataService {
             .set('is_tpu_name', options.isTpuName.toString())
             .set('duration', options.duration.toString())
             .set('num_retry', options.numRetry.toString())
-            .set('worker_list', options.workerList);
+            .set('worker_list', options.workerList)
+            .set('host_tracer_level', options.hostTracerLevel.toString())
+            .set('device_tracer_level', options.deviceTracerLevel.toString())
+            .set('python_tracer_level', options.pythonTracerLevel.toString());
     return this.httpClient.get(CAPTURE_PROFILE_API, {params});
   }
 

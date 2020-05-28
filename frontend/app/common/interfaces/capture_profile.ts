@@ -11,4 +11,7 @@ export interface CaptureProfileOptions {
   duration: number;
   numRetry: number;
   workerList: string;
+  hostTracerLevel: number;
+  deviceTracerLevel: number;
+  pythonTracerLevel: number;
 }

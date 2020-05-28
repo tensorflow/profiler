@@ -22,6 +22,8 @@ ng_module(
         "@org_xprof//frontend/app/common/angular:angular_material_form_field",
         "@org_xprof//frontend/app/common/angular:angular_material_input",
         "@org_xprof//frontend/app/common/angular:angular_material_radio",
+        "@org_xprof//frontend/app/common/angular:angular_material_select",
+        "@org_xprof//frontend/app/common/angular:angular_material_tooltip",
         "@npm//@angular/platform-browser",
         "@org_xprof//frontend/app/common/interfaces",
     ],
