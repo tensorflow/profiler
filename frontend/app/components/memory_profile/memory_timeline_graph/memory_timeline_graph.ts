@@ -21,7 +21,7 @@ export class MemoryTimelineGraph implements AfterViewInit, OnChanges {
   @ViewChild('chart', {static: false}) chartRef!: ElementRef;
 
   title = 'Memory Timeline Graph';
-  height = 450;
+  height = 465;
   width = 0;
   chart: google.visualization.AreaChart|null = null;
 
