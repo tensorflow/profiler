@@ -42,7 +42,7 @@ setuptools.setup(
     long_description=get_readme(),
     author='Google Inc.',
     author_email='packages@tensorflow.org',
-    url='https://github.com/tensorflow/tensorboard/tree/master/tensorboard/plugins/profile',
+    url='https://github.com/tensorflow/profiler',
     packages=setuptools.find_packages(),
     package_data={
         'tensorboard_plugin_profile': ['static/**'],
