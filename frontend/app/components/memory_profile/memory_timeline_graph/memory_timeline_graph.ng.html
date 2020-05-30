@@ -1,7 +1,8 @@
 <mat-card>
   <mat-card-title>{{ title }}</mat-card-title>
   <mat-card-content>
-    <div [style.display]="true">
+    <div class="loading-message" [hidden]="!isLoading">Loading graph...</div>
+    <div [hidden]="isLoading">
       Tips: Zoom in: left click and drag; Zoom out: right click; Metadata: click on heap data point.
     </div>
     <div #chart class="chart" [style.height]="height + 'px'"></div>

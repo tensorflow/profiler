@@ -1,4 +1,4 @@
-import {AfterViewInit, Component, ElementRef, HostListener, Input, OnChanges, SimpleChanges, ViewChild} from '@angular/core';
+import {AfterViewInit, ChangeDetectorRef, Component, ElementRef, HostListener, Input, OnChanges, SimpleChanges, ViewChild} from '@angular/core';
 
 import {MemoryProfileProtoOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {MemoryProfileSnapshot} from 'org_xprof/frontend/app/common/interfaces/data_table';
@@ -24,12 +24,18 @@ export class MemoryTimelineGraph implements AfterViewInit, OnChanges {
   height = 465;
   width = 0;
   chart: google.visualization.AreaChart|null = null;
+  isLoading: boolean = false;
+
+  constructor(private readonly changeDetector: ChangeDetectorRef) {}
 
   ngAfterViewInit() {
+    this.isLoading = true;
     this.loadGoogleChart();
+    this.changeDetector.detectChanges();
   }
 
   ngOnChanges(changes: SimpleChanges) {
+    this.isLoading = true;
     setTimeout(() => {
       this.width = 0;
       this.drawChart();
@@ -115,6 +121,7 @@ export class MemoryTimelineGraph implements AfterViewInit, OnChanges {
     };
 
     this.chart.draw(dataTable, options);
+    this.isLoading = false;
   }
 
   bytesToGiBs(stat: string|number|undefined) {
