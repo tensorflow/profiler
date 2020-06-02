@@ -20,6 +20,12 @@ If WebComponents V0 are not available, show a warning before any Polymer or
 Trace Viewer scripts can run.
 -->
 <style>
+  html, body {
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
+  }
+
   .no-webcomponents-container.hidden {
     display: none;
   }
@@ -141,6 +147,11 @@ dashboard would integrate trace viewer app using iframe.
   Polymer({
     is: 'tf-trace-viewer',
     properties: {
+      // The URL of hosts data. Provided by caller via URL parameter.
+      hostsDataUrl: {
+        type: String,
+        value: null,
+      },
       // The URL of trace data. Provided by caller via URL parameter.
       traceDataUrl: {
         type: String,
@@ -194,6 +205,8 @@ dashboard would integrate trace viewer app using iframe.
             this.traceDataUrl = decodeURIComponent(components[1]);
           } else if (components[0] == 'is_streaming') {
             this._isStreaming = components[1] === 'true';
+          } else if (components[0] == 'hosts_data_url') {
+            this.hostsDataUrl = decodeURIComponent(components[1]);
           }
         }
       }
@@ -202,7 +215,73 @@ dashboard would integrate trace viewer app using iframe.
         this._displayOverlay('Trace data URL is not provided.', 'Trace Viewer');
         return null;
       }
-      this._loadTrace();
+      if (this._isStreaming) {
+        this._loadHosts();
+      } else {
+        this._loadTrace(null, /*replaceModel=*/true);
+      }
+    },
+
+    _createFilters: function(hosts) {
+      hosts = hosts || [];
+      const hostSelector = document.createElement('select');
+      hostSelector.setAttribute('name', 'host');
+      hostSelector.setAttribute('id', 'host_selector');
+
+      const option = document.createElement('option');
+      option.setAttribute('value', '');
+      option.innerText = 'All hosts';
+      hostSelector.appendChild(option);
+
+      hosts.forEach(host => {
+        const option = document.createElement('option');
+        option.setAttribute('value', host);
+        option.innerText = host;
+        hostSelector.appendChild(option);
+      });
+
+      if (hostSelector.children.length <= 2) {
+        hostSelector.hidden = true;
+      } else {
+        // children[0] is all hosts.
+        hostSelector.children[1].selected = 'selected';
+      }
+      hostSelector.addEventListener("change", () => {
+        this._loadTrace(null, /*replaceModel=*/true);  // reload data.
+      });
+
+      Polymer.dom(this._traceViewer.leftControls).appendChild(hostSelector);
+
+      const detailsSelector = document.createElement('tr-ui-b-dropdown');
+      detailsSelector.setAttribute('id', 'details_selector');
+      detailsSelector.style.display = 'none';
+      Polymer.dom(this._traceViewer.leftControls).appendChild(detailsSelector);
+    },
+
+    _loadHosts: function() {
+      if (!this.hostsDataUrl) {
+        this._createFilters([]);
+        this._loadTrace(null, /*replaceModel=*/true);
+        return;
+      }
+
+      const req = new XMLHttpRequest();
+      req.open('GET', this.hostsDataUrl, true);
+
+      req.onreadystatechange = (event) => {
+        if (req.readyState !== 4) {
+          return;
+        }
+        window.setTimeout(() => {
+          if (req.status === 200) {
+            this._createFilters(JSON.parse(req.responseText));
+            this._loadTrace(null, /*replaceModel=*/true);
+          } else {
+            this._displayOverlay(req.status, 'Failed to fetch data');
+          }
+        }, 0);
+      };
+      req.send(null);
     },
 
     _loadTrace: function(requestedRange, replaceModel) {
@@ -322,6 +401,7 @@ dashboard would integrate trace viewer app using iframe.
         xhr.send();
       });
     },
+
     // Decodes the JSON trace events, removes all events that were loaded before
     // and serializes to JSON again.
     _filterKnownTraceEvents: function(data) {
@@ -355,6 +435,38 @@ dashboard would integrate trace viewer app using iframe.
         // accumulates them.
         delete data['metadata'];
         delete data['displayTimeUnit'];
+      }
+
+      // Populate and show "details" selector.
+      if (data['details']) {
+        const detailsSelector = document.getElementById('details_selector');
+        detailsSelector.label = "Details";
+        const detailsDialog = detailsSelector.getElementsByTagName('dialog')[0];
+        data['details'].forEach(detail => {
+          let checkbox = detailsDialog.querySelector('#' + detail.name);
+          if (checkbox) {
+            checkbox.checked = detail.value;
+            return;
+          }
+          const checkboxDiv = document.createElement('div');
+          checkbox = document.createElement('input');
+          checkbox.setAttribute('type', 'checkbox');
+          checkbox.setAttribute('id', detail.name);
+          checkbox.setAttribute('name', detail.name);
+          checkbox.checked = detail.value;
+          checkbox.addEventListener('change', () => {
+            this._loadTrace(null, /*replaceModel=*/true);  // reload data.
+          });
+          checkboxDiv.appendChild(checkbox);
+          const checkboxLabel = document.createElement('label');
+          checkboxLabel.setAttribute('for', detail.name);
+          checkboxLabel.style.textTransform = 'capitalize';
+          checkboxLabel.innerText = detail.name.replace(/_/g, ' ');
+          checkboxDiv.appendChild(checkboxLabel);
+          detailsDialog.appendChild(checkboxDiv);
+        });
+        detailsSelector.style.display = 'flex';
+        delete data['details'];
       }
 
       data = this._filterKnownTraceEvents(data);
@@ -421,7 +533,18 @@ dashboard would integrate trace viewer app using iframe.
     // Builds a base URL for fetching json data. The URL will be assembled with
     // all filtering URL parameters, except resolution and range.
     _buildBaseURL: function() {
-      var requestURL = new URL(this.traceDataUrl, window.location.href);
+      const requestURL = new URL(this.traceDataUrl, window.location.href);
+      const hostSelector = document.getElementById("host_selector");
+      const host = hostSelector.options[hostSelector.selectedIndex];
+      // Don't set "host" parameter for "all hosts".
+      if (host.value) requestURL.searchParams.set(hostSelector.name, host.value);
+      const detailsSelector = document.getElementById("details_selector");
+      const detailsDialog = detailsSelector.getElementsByTagName('dialog')[0];
+      const checkboxDivs = detailsDialog.getElementsByTagName('div');
+      for (let i = 0; i < checkboxDivs.length; ++i) {
+        const checkbox = checkboxDivs[i].getElementsByTagName('input')[0];
+        requestURL.searchParams.set(checkbox.name, checkbox.checked);
+      }
       return requestURL;
     },
 
