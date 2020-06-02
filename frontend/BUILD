@@ -7,6 +7,13 @@ package(default_visibility = ["//frontend:__subpackages__", "//plugin:__subpacka
 
 licenses(["notice"])
 
+package_group(
+    name = "internal",
+    packages = [
+      "//frontend/...",
+    ],
+)
+
 ng_module(
     name = "main",
     srcs = [

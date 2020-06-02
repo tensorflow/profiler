@@ -1,6 +1,6 @@
 load("@npm_bazel_typescript//:index.bzl", "ts_library")
 
-package(default_visibility = ["//frontend:__subpackages__"])
+package(default_visibility = ["//frontend:internal"])
 
 genrule(
     name = "hlo_proto_ts",
@@ -8,8 +8,7 @@ genrule(
     outs = ["hlo.proto.ts"],
     cmd = "gzip -d -c $(SRCS) > $(OUTS)",
     visibility = [
-        "//frontend:__subpackages__",
-        "//plugin:__subpackages__",
+        "//frontend:__subpackages__", "//plugin:__subpackages__",
     ],
 )
 
@@ -19,8 +18,7 @@ genrule(
     outs = ["op_profile.proto.ts"],
     cmd = "gzip -d -c $(SRCS) > $(OUTS)",
     visibility = [
-        "//frontend:__subpackages__",
-        "//plugin:__subpackages__",
+        "//frontend:__subpackages__", "//plugin:__subpackages__",
     ],
 )
 
@@ -30,8 +28,7 @@ genrule(
     outs = ["xla_data.proto.ts"],
     cmd = "gzip -d -c $(SRCS) > $(OUTS)",
     visibility = [
-        "//frontend:__subpackages__",
-        "//plugin:__subpackages__",
+        "//frontend:__subpackages__", "//plugin:__subpackages__",
     ],
 )
 
@@ -41,8 +38,7 @@ genrule(
     outs = ["memory_profile.proto.ts"],
     cmd = "gzip -d -c $(SRCS) > $(OUTS)",
     visibility = [
-        "//frontend:__subpackages__",
-        "//plugin:__subpackages__",
+        "//frontend:__subpackages__", "//plugin:__subpackages__",
     ],
 )
 

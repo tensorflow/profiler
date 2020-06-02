@@ -1,7 +1,7 @@
 load("@npm_angular_bazel//:index.bzl", "ng_module")
 load("@io_bazel_rules_sass//:defs.bzl", "sass_binary")
 
-package(default_visibility = ["//frontend:__subpackages__"])
+package(default_visibility = ["//frontend:internal"])
 
 ng_module(
     name = "model_properties",

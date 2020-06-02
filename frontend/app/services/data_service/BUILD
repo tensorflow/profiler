@@ -1,6 +1,6 @@
 load("@npm_angular_bazel//:index.bzl", "ng_module")
 
-package(default_visibility = ["//frontend:__subpackages__"])
+package(default_visibility = ["//frontend:internal"])
 
 ng_module(
     name = "data_service",
