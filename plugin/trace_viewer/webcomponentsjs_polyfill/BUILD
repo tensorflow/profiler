@@ -1,6 +1,6 @@
 load("@org_tensorflow_tensorboard//tensorboard/defs:web.bzl", "tf_web_library")
 
-package(default_visibility = ["//plugin:__subpackages__"])
+package(default_visibility = ["//plugin:internal"])
 
 licenses(["notice"])  # Apache 2.0
 

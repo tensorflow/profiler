@@ -1,4 +1,4 @@
-package(default_visibility = ["//plugin:__subpackages__"])
+package(default_visibility = ["//plugin:internal"])
 
 load("@io_bazel_rules_closure//closure:defs.bzl", "web_library")
 
