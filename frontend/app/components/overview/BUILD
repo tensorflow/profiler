@@ -7,6 +7,7 @@ ng_module(
     name = "overview",
     srcs = [
         "overview.ts",
+        "overview_common.ts",
         "overview_module.ts",
     ],
     assets = [

@@ -355,6 +355,13 @@ export type OverviewDataTable =
     GeneralAnalysis|InputPipelineAnalysis|RecommendationResult|RunEnvironment|
     ErrorMessageTable|NormalizedAcceleratorPerformance;
 
+/** All overview page data tuple type. */
+export type OverviewDataTuple = [
+  GeneralAnalysisOrNull, InputPipelineAnalysisOrNull, RunEnvironmentOrNull,
+  RecommendationResultOrNull, SimpleDataTable,
+  NormalizedAcceleratorPerformanceOrNull, ErrorMessageTableOrNull
+];
+
 /** All input pipeline page data table type. */
 export type InputPipelineDataTable =
     InputPipelineDeviceAnalysis|InputPipelineHostAnalysis|SimpleDataTable;
