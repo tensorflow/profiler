@@ -1,5 +1,6 @@
 import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
+import {ErrorMsgModule} from 'org_xprof/frontend/app/components/error_msg/error_msg_module';
 import {NormalizedAcceleratorPerformanceViewModule} from 'org_xprof/frontend/app/components/overview/normalized_accelerator_performance_view/normalized_accelerator_performance_view_module';
 import {PerformanceSummaryModule} from 'org_xprof/frontend/app/components/overview/performance_summary/performance_summary_module';
 import {RecommendationResultViewModule} from 'org_xprof/frontend/app/components/overview/recommendation_result_view/recommendation_result_view_module';
@@ -14,6 +15,7 @@ import {Overview} from './overview';
   declarations: [Overview],
   imports: [
     CommonModule,
+    ErrorMsgModule,
     PerformanceSummaryModule,
     RecommendationResultViewModule,
     RunEnvironmentViewModule,

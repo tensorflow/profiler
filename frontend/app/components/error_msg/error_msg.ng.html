@@ -1,0 +1,12 @@
+<div *ngIf="errors?.length" class="callout is-critical">
+<header>Errors</header>
+  <li *ngFor="let error of errors">
+      {{ error }}
+  </li>
+</div>
+<div *ngIf="warnings?.length" class="callout is-important">
+<header>Warnings</header>
+  <li *ngFor="let warning of warnings">
+      {{ warning }}
+  </li>
+</div>

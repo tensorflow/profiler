@@ -6,15 +6,6 @@
   display: block;
 }
 
-.error-message {
-  color: red;
-  font-size: 0.5cm;
-  font-weight: bolder;
-  margin-top: 0.5cm;
-  margin-bottom: 0.5cm;
-  text-align: center;
-}
-
 .container {
   display: flex;
   flex-wrap: wrap;
@@ -45,7 +36,8 @@
 }
 
 @media screen and (max-width: 1140px) {
-  .left-column, .right-column {
+  .left-column,
+  .right-column {
     width: 100%;
   }
 }

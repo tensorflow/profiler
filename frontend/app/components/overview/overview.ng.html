@@ -11,29 +11,27 @@
 -->
 
 <div>
-  <div class="error-message" [hidden]="!errorMessage">{{errorMessage}}</div>
-  <div [hidden]="errorMessage">
-    <div class="container">
-      <div class="left-column">
-        <performance-summary
-            [generalAnalysis]="generalAnalysis"
-            [inputPipelineAnalysis]="inputPipelineAnalysis">
-        </performance-summary>
-        <run-environment-view [runEnvironment]="runEnvironment"></run-environment-view>
-      </div>
+  <error-msg [errors]="errors"></error-msg>
+  <div class="container">
+    <div class="left-column">
+      <performance-summary
+          [generalAnalysis]="generalAnalysis"
+          [inputPipelineAnalysis]="inputPipelineAnalysis">
+      </performance-summary>
+      <run-environment-view [runEnvironment]="runEnvironment"></run-environment-view>
+    </div>
 
-      <div class="right-column">
-        <step-time-graph [inputPipelineAnalysis]="inputPipelineAnalysis"></step-time-graph>
-        <recommendation-result-view [recommendationResult]="recommendationResult">
-        </recommendation-result-view>
-      </div>
+    <div class="right-column">
+      <step-time-graph [inputPipelineAnalysis]="inputPipelineAnalysis"></step-time-graph>
+      <recommendation-result-view [recommendationResult]="recommendationResult">
+      </recommendation-result-view>
+    </div>
 
-      <div class="full-column">
-        <top-ops-table
-            [generalAnalysis]="generalAnalysis"
-            [inputPipelineAnalysis]="inputPipelineAnalysis">
-        </top-ops-table>
-      </div>
+    <div class="full-column">
+      <top-ops-table
+          [generalAnalysis]="generalAnalysis"
+          [inputPipelineAnalysis]="inputPipelineAnalysis">
+      </top-ops-table>
     </div>
   </div>
 </div>

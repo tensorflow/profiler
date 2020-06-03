@@ -225,6 +225,8 @@ def generate_all_chart_tables(overview_page):
           overview_page.input_analysis),
       generate_run_environment_table(overview_page.run_environment),
       generate_recommendation_table(overview_page.recommendation),
+      "",
+      "",
       generate_error_table(overview_page.errors),
   ]
 
@@ -234,5 +236,5 @@ def to_json(raw_data):
   overview_page = overview_page_pb2.OverviewPage()
   overview_page.ParseFromString(raw_data)
   all_chart_tables = generate_all_chart_tables(overview_page)
-  json_join = ",".join(x.ToJSon() for x in all_chart_tables)
+  json_join = ",".join(x.ToJSon() if x else "{}" for x in all_chart_tables)
   return "[" + json_join + "]"

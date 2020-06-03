@@ -1,7 +1,7 @@
 import {Component, ElementRef} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {Store} from '@ngrx/store';
-import {GeneralAnalysisOrNull, InputPipelineAnalysisOrNull, NormalizedAcceleratorPerformanceOrNull, OverviewDataTable, RecommendationResultOrNull, RunEnvironmentOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {ErrorMessageTableOrNull, GeneralAnalysisOrNull, InputPipelineAnalysisOrNull, NormalizedAcceleratorPerformanceOrNull, OverviewDataTable, RecommendationResultOrNull, RunEnvironmentOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
 import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
@@ -11,6 +11,7 @@ const INPUT_PIPELINE_ANALYSIS_INDEX = 1;
 const RUN_ENVIRONMENT_INDEX = 2;
 const RECOMMENDATION_RESULT_INDEX = 3;
 const NORMALIZED_ACCELERATOR_PERFORMANCE_INDEX = 5;
+const ERROR_INDEX = 6;
 
 /** An overview page component. */
 @Component({
@@ -19,14 +20,13 @@ const NORMALIZED_ACCELERATOR_PERFORMANCE_INDEX = 5;
   styleUrls: ['./overview.css']
 })
 export class Overview {
-  errorMessage: string = '';
+  errors: string[] = [];
   generalAnalysis: GeneralAnalysisOrNull = null;
   inputPipelineAnalysis: InputPipelineAnalysisOrNull = null;
   recommendationResult: RecommendationResultOrNull = null;
   runEnvironment: RunEnvironmentOrNull = null;
   normalizedAcceleratorPerformance: NormalizedAcceleratorPerformanceOrNull =
       null;
-
   constructor(
       route: ActivatedRoute, private readonly dataService: DataService,
       private readonly store: Store<{}>,
@@ -48,7 +48,6 @@ export class Overview {
       }
     }));
 
-    this.errorMessage = '';
     this.dataService.getData(run, tag, host).subscribe(data => {
       this.store.dispatch(setLoadingStateAction({
         loadingState: {
@@ -63,9 +62,7 @@ export class Overview {
       this.inputPipelineAnalysis =
           data[INPUT_PIPELINE_ANALYSIS_INDEX] as InputPipelineAnalysisOrNull;
       this.runEnvironment = data[RUN_ENVIRONMENT_INDEX] as RunEnvironmentOrNull;
-      if (this.runEnvironment && this.runEnvironment.p) {
-        this.errorMessage = this.runEnvironment.p.error_message || '';
-      }
+      this.errors = this.errorMessageTableToArray(data[ERROR_INDEX]);
       this.recommendationResult =
           data[RECOMMENDATION_RESULT_INDEX] as RecommendationResultOrNull;
       this.normalizedAcceleratorPerformance =
@@ -93,6 +90,11 @@ export class Overview {
       color = 'orange';
     }
     this.elementRef.nativeElement.style.setProperty('--summary-color', color);
+  }
+
+  errorMessageTableToArray(errorData: ErrorMessageTableOrNull): string[] {
+    if (!errorData || !errorData.rows || !errorData.rows.length) return [];
+    return errorData.rows.map(row => row.c![0].v! as string);
   }
 }
 
