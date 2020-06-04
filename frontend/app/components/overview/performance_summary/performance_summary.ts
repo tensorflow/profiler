@@ -35,9 +35,6 @@ export class PerformanceSummary {
     analysis = analysis || {};
     analysis.p = analysis.p || {};
     this.isTpu = (analysis.p.hardware_type || 'TPU') === 'TPU';
-    this.computeMsAverage = analysis.p.compute_ms_average || '';
-    this.idleMsAverage = analysis.p.idle_ms_average || '';
-    this.inputMsAverage = analysis.p.input_ms_average || '';
     this.steptimeMsAverage = analysis.p.steptime_ms_average || '';
     this.steptimeMsStddev = analysis.p.steptime_ms_standard_deviation || '';
     this.otherTimeMsAvg = analysis.p.other_time_ms_avg || '';
@@ -60,11 +57,11 @@ export class PerformanceSummary {
     this.deviceComputeTimeMsSdv = analysis.p.device_compute_time_ms_sdv || '';
   }
 
+  /** The addition property values from parent component. */
+  @Input() propertyValues?: string[];
+
   title = 'Performance Summary';
   isTpu = true;
-  computeMsAverage = '';
-  idleMsAverage = '';
-  inputMsAverage = '';
   deviceIdleTimePercent = '';
   hostIdleTimePercent = '';
   mxuUtilizationPercent = '';

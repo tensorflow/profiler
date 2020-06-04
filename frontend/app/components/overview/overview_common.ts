@@ -17,6 +17,7 @@ export class OverviewCommon implements OnDestroy {
   runEnvironment: RunEnvironmentOrNull = null;
   normalizedAcceleratorPerformance: NormalizedAcceleratorPerformanceOrNull =
       null;
+  averageStepTimePropertyValues: string[] = [];
   statement = '';
   timer = 0;
 

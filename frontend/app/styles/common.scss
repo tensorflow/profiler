@@ -5,6 +5,9 @@ $button-focus-color: #777;
 $border-color: #eee;
 $content-primary-color: #4a4a4a;
 $content-secondary-color: #5f6368;
+$dark-theme-card-title-background-color: #3f51b5;
+$dark-theme-card-title-focus-background-color: #7885cb;
+$dark-theme-card-title-color: #fff;
 
 .horizontal-center {
   text-align: center;
@@ -39,6 +42,13 @@ $content-secondary-color: #5f6368;
 
 @mixin overview-card {
   box-shadow: none !important;
+  margin: 8px;
+  @media screen and (max-width: 1140px) {
+    min-width: 500px;
+  }
+}
+
+@mixin overview-card-dark-theme {
   margin: 8px;
   @media screen and (max-width: 1140px) {
     min-width: 500px;
@@ -86,4 +96,3 @@ $content-secondary-color: #5f6368;
   border-radius: 0;
   padding: 0;
 }
-

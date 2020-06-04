@@ -24,6 +24,17 @@ export class Overview extends OverviewCommon {
     });
   }
 
+  parseAverageStepTimeDetail() {
+    const p = ((this.inputPipelineAnalysis || {}).p || {});
+
+    this.averageStepTimePropertyValues.push(
+        `Idle: ${p.idle_ms_average || ''} ms`);
+    this.averageStepTimePropertyValues.push(
+        `Input: ${p.input_ms_average || ''} ms`);
+    this.averageStepTimePropertyValues.push(
+        `Compute: ${p.compute_ms_average || ''} ms`);
+  }
+
   parseStatements() {
     const p = ((this.recommendationResult || {}).p || {});
     this.statement = p.statement || '';
@@ -51,6 +62,7 @@ export class Overview extends OverviewCommon {
 
       /** Transfer data to Overview DataTable type */
       this.parseOverviewData((data || []) as OverviewDataTuple);
+      this.parseAverageStepTimeDetail();
       this.parseStatements();
       this.updateStyle();
     });

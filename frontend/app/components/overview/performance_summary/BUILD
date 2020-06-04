@@ -14,6 +14,7 @@ ng_module(
         "performance_summary.ng.html",
     ],
     deps = [
+        "@npm//@angular/common",
         "@npm//@angular/core",
         "@org_xprof//frontend/app/common/angular:angular_material_card",
         "@org_xprof//frontend/app/common/angular:angular_material_tooltip",

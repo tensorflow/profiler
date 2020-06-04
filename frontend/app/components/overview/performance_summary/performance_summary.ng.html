@@ -18,9 +18,7 @@
     </div>
     <div [hidden]="!isTpu">
       <ul>
-        <li class="primary-content">Idle: {{idleMsAverage}} ms</li>
-        <li class="primary-content">Input: {{inputMsAverage}} ms</li>
-        <li class="primary-content">Compute: {{computeMsAverage}} ms</li>
+        <li class="primary-content" *ngFor="let value of propertyValues">{{value}}</li>
       </ul>
       <div class="item-container">
         <table>
@@ -71,6 +69,7 @@
         <li class="primary-content">Utilization of TPU Matrix Units: {{mxuUtilizationPercent}}</li>
         <li class="primary-content">
           Compared to Program's Optimal FLOPS: {{flopRateUtilizationRelativeToRoofline}}
+          <ng-content></ng-content>
         </li>
       </ul>
       <div class="item-container">

@@ -7,8 +7,13 @@
   @include border-right-gray;
 }
 
+:host:not(.dark-theme) {
+  mat-card {
+    @include overview-card;
+  }
+}
+
 mat-card {
-  @include overview-card;
   @include overview-card-height;
 }
 
@@ -55,4 +60,19 @@ table ul {
 .flops-utilization-tooltip-target {
   color: #e8710a;
   border-bottom: 1px dotted #e8710a;
+}
+
+:host.dark-theme {
+  border: none;
+
+  mat-card {
+    @include overview-card-dark-theme;
+  }
+
+  mat-card-title {
+    background-color: $dark-theme-card-title-background-color;
+    color: $dark-theme-card-title-color;
+    padding: 16px;
+    margin: -16px -16px 16px;
+  }
 }
