@@ -7,8 +7,10 @@
   @include border-right-gray;
 }
 
-mat-card {
-  @include overview-card;
+:host:not(.dark-theme) {
+  mat-card {
+    @include overview-card;
+  }
 }
 
 mat-card-title {
@@ -21,4 +23,19 @@ b {
 
 ul {
   @include ul-flat;
+}
+
+:host.dark-theme {
+  border: none;
+
+  mat-card {
+    @include overview-card-dark-theme;
+  }
+
+  mat-card-title {
+    background-color: $dark-theme-card-title-background-color;
+    color: $dark-theme-card-title-color;
+    padding: 16px;
+    margin: -16px -16px 0;
+  }
 }
