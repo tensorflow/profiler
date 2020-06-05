@@ -25,6 +25,7 @@ export class PodViewer {
   channelDbForChart?: ChannelInfo[];
   channelChartData?: PrimitiveTypeNumberStringOrUndefined[][];
   coreIdToReplicaIdMap?: {[key: /* uint32 */ string]: /* uint32 */ number};
+  warnings: string[] = [];
   podStatsPerCore?: {[key: string]: PodStatsRecord};
   podStatsForChart?: PodStatsRecord[];
   podStatsChartData?: PrimitiveTypeNumberStringOrUndefined[][];
@@ -77,7 +78,8 @@ export class PodViewer {
       this.podStatsPerCore = undefined;
       return;
     }
-    this.selectedStep = step.toString();
+    // Negative step number indicates incomplete step.
+    this.selectedStep = step >> 0 > 0 ? step.toString() : 'incomplete step';
     this.allReduceOpDb =
         (podStats.allReduceOpDb || [])
             .slice(0)
@@ -176,6 +178,11 @@ export class PodViewer {
     }));
   }
 
+  getWarningMessages(data: PodViewerDatabaseOrNull): string[] {
+    if (!data || !data.summary || !data.summary.warnings) return [];
+    return data.summary.warnings;
+  }
+
   update(event: NavigationEvent) {
     this.store.dispatch(setLoadingStateAction({
       loadingState: {
@@ -194,6 +201,7 @@ export class PodViewer {
           }));
 
           this.data = data as PodViewerDatabaseOrNull;
+          this.warnings = this.getWarningMessages(this.data);
           this.updateSteps();
           this.runEnvironment =
               this.data ? this.data.runEnvironment : undefined;

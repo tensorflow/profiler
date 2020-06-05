@@ -328,11 +328,17 @@ export declare interface PodViewerRunEnvironment {
   topology?: SystemTopology;
 }
 
+/** The base interface for a pod viewer summary. */
+export declare interface PodViewerSummary {
+  warnings?: string[];
+}
+
 /** The base interface for a pod viewer database. */
 export declare interface PodViewerDatabase {
   podStatsSequence?: PodStatsSequence;
   runEnvironment?: PodViewerRunEnvironment;
   hloInfoMap?: {[key: string]: HloInfo};
+  summary?: PodViewerSummary;
 }
 
 /** The data table type for a tensorflow stats or null. */

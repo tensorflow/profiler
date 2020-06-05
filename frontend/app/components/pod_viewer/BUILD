@@ -22,6 +22,7 @@ ng_module(
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/utils",
+        "@org_xprof//frontend/app/components/error_msg",
         "@org_xprof//frontend/app/components/pod_viewer/stack_bar_chart",
         "@org_xprof//frontend/app/components/pod_viewer/topology_graph",
         "@org_xprof//frontend/app/services/data_service",

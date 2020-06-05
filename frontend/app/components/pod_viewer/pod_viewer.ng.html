@@ -1,7 +1,8 @@
+<error-msg [warnings]="warnings"></error-msg>
 <div class="section-container">
   <div class="mat-headline">Pod Viewer</div>
   <div class="control">Selected step: {{selectedStep}}</div>
-  <div>
+  <div [className]="minStep == maxStep ? 'hidden-content' : 'full-height'">
     <mat-slider
                 [min]="minStep"
                 [max]="maxStep"
