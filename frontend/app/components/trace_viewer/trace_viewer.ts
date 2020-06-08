@@ -1,8 +1,8 @@
+import {PlatformLocation} from '@angular/common';
 import {HttpParams} from '@angular/common/http';
 import {Component} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
-
-import {DATA_API, TRACE_VIEWER_URL} from 'org_xprof/frontend/app/common/constants/constants';
+import {API_PREFIX, DATA_API, PLUGIN_NAME, TRACE_VIEWER_URL} from 'org_xprof/frontend/app/common/constants/constants';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 
 /** A trace viewer component. */
@@ -13,8 +13,13 @@ import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigati
 })
 export class TraceViewer {
   url = '';
+  pathPrefix = '';
 
-  constructor(route: ActivatedRoute) {
+  constructor(platformLocation: PlatformLocation, route: ActivatedRoute) {
+    if (String(platformLocation.pathname).includes(API_PREFIX + PLUGIN_NAME)) {
+      this.pathPrefix =
+          String(platformLocation.pathname).split(API_PREFIX + PLUGIN_NAME)[0];
+    }
     route.params.subscribe(params => {
       this.update(params as NavigationEvent);
     });
@@ -25,7 +30,8 @@ export class TraceViewer {
                        .set('run', event.run)
                        .set('tag', event.tag)
                        .set('host', event.host);
-    this.url = TRACE_VIEWER_URL +
-        encodeURIComponent(DATA_API + '?' + params.toString());
+    this.url = this.pathPrefix + TRACE_VIEWER_URL +
+        encodeURIComponent(
+                   this.pathPrefix + DATA_API + '?' + params.toString());
   }
 }

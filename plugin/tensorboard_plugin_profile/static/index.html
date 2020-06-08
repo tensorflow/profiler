@@ -3,7 +3,17 @@
 <head>
   <meta charset="utf-8">
   <title>ProfilePlugin</title>
-  <base href="/data/plugin/profile/" />
+  <script>
+    const base = document.createElement("base");
+    const defaultPath = '/data/plugin/profile';
+    let newPath = defaultPath + '/';
+    if (document.location.pathname.includes(defaultPath)) {
+      newPath = document.location.pathname.split(defaultPath)[0] + defaultPath + '/';
+    }
+    base.setAttribute("href", newPath);
+    const header = document.getElementsByTagName("head")[0];
+    header.insertBefore(base, header.firstChild);
+  </script>
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -40,15 +50,23 @@
           if (tfTensorboard.autoReloadEnabled) {
             document.dispatchEvent(new Event('tensorboard-reload'));
           } else {
-            document.location.href = document.location.origin +
-              '/data/plugin/profile/index.html';
+            const defaultPath = '/data/plugin/profile';
+            let newPath = defaultPath + '/';
+            if (document.location.pathname.includes(defaultPath)) {
+              newPath = document.location.pathname.split(defaultPath)[0] + defaultPath + '/';
+            }
+            document.location.href = document.location.origin + newPath + 'index.html';
           }
         };
       } catch (err) {
       }
       document.addEventListener('plugin-reload', () => {
-          document.location.href = document.location.origin +
-              '/data/plugin/profile/index.html';
+          const defaultPath = '/data/plugin/profile';
+          let newPath = defaultPath + '/';
+          if (document.location.pathname.includes(defaultPath)) {
+            newPath = document.location.pathname.split(defaultPath)[0] + defaultPath + '/';
+          }
+          document.location.href = document.location.origin + newPath + 'index.html';
       });
     }
 

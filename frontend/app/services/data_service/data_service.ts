@@ -1,7 +1,7 @@
 import {PlatformLocation} from '@angular/common';
 import {HttpClient, HttpParams} from '@angular/common/http';
 import {Injectable} from '@angular/core';
-import {CAPTURE_PROFILE_API, DATA_API, HOSTS_API, LOCAL_URL, TOOLS_API} from 'org_xprof/frontend/app/common/constants/constants';
+import {API_PREFIX, CAPTURE_PROFILE_API, DATA_API, HOSTS_API, LOCAL_URL, PLUGIN_NAME, TOOLS_API} from 'org_xprof/frontend/app/common/constants/constants';
 import {CaptureProfileOptions, CaptureProfileResponse} from 'org_xprof/frontend/app/common/interfaces/capture_profile';
 import {DataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {Observable, of} from 'rxjs';
@@ -16,10 +16,15 @@ const DELAY_TIME_MS = 1000;
 @Injectable()
 export class DataService {
   isLocalDevelopment = false;
+  pathPrefix = '';
 
   constructor(
       private readonly httpClient: HttpClient, platformLocation: PlatformLocation) {
     this.isLocalDevelopment = platformLocation.pathname === LOCAL_URL;
+    if (String(platformLocation.pathname).includes(API_PREFIX + PLUGIN_NAME)) {
+      this.pathPrefix =
+          String(platformLocation.pathname).split(API_PREFIX + PLUGIN_NAME)[0];
+    }
   }
 
   captureProfile(options: CaptureProfileOptions):
@@ -37,14 +42,14 @@ export class DataService {
             .set('host_tracer_level', options.hostTracerLevel.toString())
             .set('device_tracer_level', options.deviceTracerLevel.toString())
             .set('python_tracer_level', options.pythonTracerLevel.toString());
-    return this.httpClient.get(CAPTURE_PROFILE_API, {params});
+    return this.httpClient.get(this.pathPrefix + CAPTURE_PROFILE_API, {params});
   }
 
   getTools() {
     if (this.isLocalDevelopment) {
       return of(mockData.DATA_PLUGIN_PROFILE_TOOLS);
     }
-    return this.httpClient.get(TOOLS_API);
+    return this.httpClient.get(this.pathPrefix + TOOLS_API);
   }
 
   getHosts(run: string, tag: string) {
@@ -52,7 +57,7 @@ export class DataService {
       return of(mockData.DATA_PLUGIN_PROFILE_HOSTS).pipe(delay(DELAY_TIME_MS));
     }
     const params = new HttpParams().set('run', run).set('tag', tag);
-    return this.httpClient.get(HOSTS_API, {params});
+    return this.httpClient.get(this.pathPrefix + HOSTS_API, {params});
   }
 
   getData(run: string, tag: string, host: string): Observable<DataTable> {
@@ -89,7 +94,8 @@ export class DataService {
     }
     const params =
         new HttpParams().set('run', run).set('tag', tag).set('host', host);
-    return this.httpClient.get(DATA_API, {params}) as Observable<DataTable>;
+    return this.httpClient.get(this.pathPrefix + DATA_API, {params}) as
+        Observable<DataTable>;
   }
 
   exportDataAsCSV(run: string, tag: string, host: string) {
@@ -101,6 +107,6 @@ export class DataService {
                        .set('tag', tag)
                        .set('host', host)
                        .set('tqx', 'out:csv;');
-    window.open(DATA_API + '?' + params.toString(), '_blank');
+    window.open(this.pathPrefix + DATA_API + '?' + params.toString(), '_blank');
   }
 }
