@@ -10,6 +10,7 @@ package(
 py_library(
     name = "all_libs",
     deps = [
+        ":diagnostics",
         ":input_pipeline_proto_to_gviz",
         ":kernel_stats_proto_to_gviz",
         ":overview_page_proto_to_gviz",
@@ -19,10 +20,35 @@ py_library(
 )
 
 py_library(
+    name = "diagnostics",
+    srcs = ["diagnostics.py"],
+    srcs_version = "PY2AND3",
+    deps = [
+        requirement("gviz_api"),
+    ],
+)
+
+py_test(
+    name = "diagnostics_test",
+    size = "small",
+    srcs = ["diagnostics_test.py"],
+    python_version = "PY3",
+    srcs_version = "PY2AND3",
+    deps = [
+        ":diagnostics",
+        "@org_tensorflow_tensorboard//tensorboard:expect_tensorflow_installed",
+        "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
+    ],
+)
+
+py_library(
     name = "input_pipeline_proto_to_gviz",
     srcs = ["input_pipeline_proto_to_gviz.py"],
     srcs_version = "PY2AND3",
-    deps = [requirement("gviz_api")],
+    deps = [
+        ":diagnostics",
+        requirement("gviz_api"),
+    ],
 )
 
 py_test(
@@ -46,6 +72,7 @@ py_library(
     srcs = ["overview_page_proto_to_gviz.py"],
     srcs_version = "PY2AND3",
     deps = [
+        ":diagnostics",
         ":input_pipeline_proto_to_gviz",
         requirement("gviz_api"),
     ],

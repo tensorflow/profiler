@@ -26,6 +26,7 @@ from __future__ import print_function
 import datetime
 import gviz_api
 
+from tensorboard_plugin_profile.convert import diagnostics as diag
 from tensorboard_plugin_profile.convert import input_pipeline_proto_to_gviz
 from tensorboard_plugin_profile.protobuf import overview_page_pb2
 
@@ -209,14 +210,6 @@ def generate_recommendation_table(overview_page_recommendation):
   return gviz_api.DataTable(table_description, data, custom_properties)
 
 
-def generate_error_table(errors):
-  table_description = [("error", "string", "error")]
-  data = []
-  for error in errors:
-    data.append([error])
-  return gviz_api.DataTable(table_description, data)
-
-
 def generate_all_chart_tables(overview_page):
   """Converts a OverviewPage proto to gviz DataTables."""
   return [
@@ -227,7 +220,7 @@ def generate_all_chart_tables(overview_page):
       generate_recommendation_table(overview_page.recommendation),
       "",
       "",
-      generate_error_table(overview_page.errors),
+      diag.generate_diagnostics_table(overview_page.diagnostics),
   ]
 
 

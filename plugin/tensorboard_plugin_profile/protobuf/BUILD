@@ -10,6 +10,7 @@ package(
 proto_library(
     name = "protos_all",
     srcs = [
+        "diagnostics.proto",
         "input_pipeline.proto",
         "kernel_stats.proto",
         "overview_page.proto",
@@ -22,6 +23,7 @@ proto_library(
 py_proto_library(
     name = "protos_all_py_pb2",
     srcs = [
+        "diagnostics.proto",
         "input_pipeline.proto",
         "kernel_stats.proto",
         "overview_page.proto",

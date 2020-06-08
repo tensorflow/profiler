@@ -308,16 +308,5 @@ class ProtoToGvizTest(tf.test.TestCase):
 
         self.assertEqual(list(self.mock_tips[rr - 1]), row_values)
 
-  def test_error_simple(self):
-    overview = overview_page_pb2.OverviewPage()
-    overview.errors.append("error1")
-    overview.errors.append("error2")
-    error_table = overview_page_proto_to_gviz.generate_error_table(
-        overview.errors)
-    # There's one error column and two rows.
-    self.assertLen(error_table.columns, 1)
-    self.assertEqual(2, error_table.NumberOfRows(), "Error table has two rows.")
-
-
 if __name__ == "__main__":
   tf.test.main()

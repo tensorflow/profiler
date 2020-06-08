@@ -25,6 +25,7 @@ from __future__ import print_function
 
 import gviz_api
 
+from tensorboard_plugin_profile.convert import diagnostics as diag
 from tensorboard_plugin_profile.protobuf import input_pipeline_pb2
 
 
@@ -286,7 +287,8 @@ def generate_all_chart_tables(ipa):
   return [
       generate_step_breakdown_table(ipa),
       generate_input_op_table(ipa),
-      generate_recommendation_table(ipa)
+      generate_recommendation_table(ipa),
+      diag.generate_diagnostics_table(ipa.diagnostics),
   ]
 
 
