@@ -364,7 +364,7 @@ export type OverviewDataTable =
 /** All overview page data tuple type. */
 export type OverviewDataTuple = [
   GeneralAnalysisOrNull, InputPipelineAnalysisOrNull, RunEnvironmentOrNull,
-  RecommendationResultOrNull, SimpleDataTable,
+  RecommendationResultOrNull, SimpleDataTableOrNull,
   NormalizedAcceleratorPerformanceOrNull, ErrorMessageTableOrNull
 ];
 
