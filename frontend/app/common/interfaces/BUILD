@@ -70,6 +70,7 @@ ts_library(
         "buffer_allocation_info.ts",
         "capture_profile.ts",
         "data_table.ts",
+        "diagnostics.ts",
         "heap_object.ts",
         "navigation_event.ts",
         "op_profile_node.ts",

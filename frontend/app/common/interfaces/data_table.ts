@@ -1,4 +1,5 @@
 import * as hloProto from 'org_xprof/frontend/app/common/interfaces/hlo.proto';
+import * as diagnosticsProto from 'org_xprof/frontend/app/common/interfaces/diagnostics.proto';
 import * as memoryProfileProto from 'org_xprof/frontend/app/common/interfaces/memory_profile.proto';
 import * as opProfileProto from 'org_xprof/frontend/app/common/interfaces/op_profile.proto';
 
@@ -156,15 +157,6 @@ export declare interface RecommendationResult {
 
 /** The data table type for a recommendation result or null. */
 export type RecommendationResultOrNull = RecommendationResult|null;
-
-/** The base interface for error messages. */
-export declare interface ErrorMessageTable {
-  cols?: DataTableColumn[];
-  rows?: DataTableRow[];
-}
-
-/** The data table type for error messages or null. */
-export type ErrorMessageTableOrNull = ErrorMessageTable|null;
 
 /** The base interface for a property of normalized accelerator performance. */
 declare interface NormalizedAcceleratorPerformanceProperty {
@@ -339,6 +331,7 @@ export declare interface PodViewerDatabase {
   runEnvironment?: PodViewerRunEnvironment;
   hloInfoMap?: {[key: string]: HloInfo};
   summary?: PodViewerSummary;
+  diagnostics?: diagnosticsProto.Diagnostics;
 }
 
 /** The data table type for a tensorflow stats or null. */
@@ -359,13 +352,17 @@ export type ProfileOrNull = (opProfileProto.Profile)|null;
 /** All overview page data table type. */
 export type OverviewDataTable =
     GeneralAnalysis|InputPipelineAnalysis|RecommendationResult|RunEnvironment|
-    ErrorMessageTable|NormalizedAcceleratorPerformance;
+    SimpleDataTable|NormalizedAcceleratorPerformance;
 
 /** All overview page data tuple type. */
 export type OverviewDataTuple = [
-  GeneralAnalysisOrNull, InputPipelineAnalysisOrNull, RunEnvironmentOrNull,
-  RecommendationResultOrNull, SimpleDataTable,
-  NormalizedAcceleratorPerformanceOrNull, ErrorMessageTableOrNull
+  GeneralAnalysisOrNull,
+  InputPipelineAnalysisOrNull,
+  RunEnvironmentOrNull,
+  RecommendationResultOrNull,
+  SimpleDataTable,
+  NormalizedAcceleratorPerformanceOrNull,
+  SimpleDataTableOrNull,
 ];
 
 /** All input pipeline page data table type. */

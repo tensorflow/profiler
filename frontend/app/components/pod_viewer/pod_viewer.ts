@@ -3,6 +3,7 @@ import {ActivatedRoute} from '@angular/router';
 import {Store} from '@ngrx/store';
 import {POD_STATS_RECORD_PROPERTY_MAP} from 'org_xprof/frontend/app/common/constants/constants';
 import {AllReduceOpInfo, ChannelInfo, PodStatsRecord, PodViewerDatabaseOrNull, PodViewerRunEnvironment, PrimitiveTypeNumberStringOrUndefined} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
@@ -25,7 +26,7 @@ export class PodViewer {
   channelDbForChart?: ChannelInfo[];
   channelChartData?: PrimitiveTypeNumberStringOrUndefined[][];
   coreIdToReplicaIdMap?: {[key: /* uint32 */ string]: /* uint32 */ number};
-  warnings: string[] = [];
+  diagnostics: Diagnostics = {info: [], warnings: [], errors: []};
   podStatsPerCore?: {[key: string]: PodStatsRecord};
   podStatsForChart?: PodStatsRecord[];
   podStatsChartData?: PrimitiveTypeNumberStringOrUndefined[][];
@@ -178,9 +179,11 @@ export class PodViewer {
     }));
   }
 
-  getWarningMessages(data: PodViewerDatabaseOrNull): string[] {
-    if (!data || !data.summary || !data.summary.warnings) return [];
-    return data.summary.warnings;
+  setDiagnostics(data: PodViewerDatabaseOrNull) {
+    if (!data || !data.diagnostics) return;
+    this.diagnostics.info = data.diagnostics.info || [];
+    this.diagnostics.warnings = data.diagnostics.warnings || [];
+    this.diagnostics.errors = data.diagnostics.errors || [];
   }
 
   update(event: NavigationEvent) {
@@ -201,7 +204,7 @@ export class PodViewer {
           }));
 
           this.data = data as PodViewerDatabaseOrNull;
-          this.warnings = this.getWarningMessages(this.data);
+          this.setDiagnostics(this.data);
           this.updateSteps();
           this.runEnvironment =
               this.data ? this.data.runEnvironment : undefined;

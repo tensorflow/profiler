@@ -1,4 +1,5 @@
-import {PodStatsRecord} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {PodStatsRecord, SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 import {OpProfileNode} from 'org_xprof/frontend/app/common/interfaces/op_profile_node';
 
 const PRIMITIVE_TYPE_BYTE_SIZE: {[key: string]: number} = {
@@ -257,4 +258,25 @@ export function convertKnownToolToAnchorTag(value: string = ''): string {
     value = value.replace(new RegExp(tool, 'g'), addAnchorTag(tool));
   });
   return value;
+}
+
+/**
+ * Parse diagnostics data table and returns Diagnostics object.
+ */
+export function parseDiagnosticsDataTable(
+    diagnosticsTable: SimpleDataTableOrNull): Diagnostics {
+  const diagnostics: Diagnostics = {info: [], warnings: [], errors: []};
+  if (!diagnosticsTable || !diagnosticsTable.rows) return diagnostics;
+  /** Convert data table to string arrays */
+  diagnosticsTable.rows.forEach(row => {
+    if (String(row.c![0].v!) === 'ERROR') {
+      diagnostics.errors.push(String(row.c![1].v!));
+    } else if (String(row.c![0].v!) === 'WARNING') {
+      diagnostics.warnings.push(String(row.c![1].v!));
+    } else {
+      diagnostics.info.push(String(row.c![1].v!));
+    }
+  });
+  console.log('here2');
+  return diagnostics;
 }

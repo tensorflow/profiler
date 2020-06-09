@@ -4,14 +4,14 @@ load("@io_bazel_rules_sass//:defs.bzl", "sass_binary")
 package(default_visibility = ["//frontend:internal"])
 
 ng_module(
-    name = "error_msg",
+    name = "diagnostics_view",
     srcs = [
-        "error_msg.ts",
-        "error_msg_module.ts",
+        "diagnostics_view.ts",
+        "diagnostics_view_module.ts",
     ],
     assets = [
-        ":error_msg_css",
-        "error_msg.ng.html",
+        ":diagnostics_view_css",
+        "diagnostics_view.ng.html",
     ],
     deps = [
         "@npm//@angular/core",
@@ -23,8 +23,8 @@ ng_module(
 
 
 sass_binary(
-    name = "error_msg_css",
-    src = "error_msg.scss",
+    name = "diagnostics_view_css",
+    src = "diagnostics_view.scss",
 
     sourcemap = False,
     deps = [

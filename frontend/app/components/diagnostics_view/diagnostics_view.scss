@@ -1,4 +1,4 @@
-/** CSS for an error message view component. */
+/** CSS for a diagnostics view component. */
 
 @import 'frontend/app/styles/common';
 
@@ -25,7 +25,7 @@
 }
 
 .callout > :not(:first-child) {
-  padding: 16px 24px;
+  padding: 12px 24px;
 }
 
 .callout.is-critical {

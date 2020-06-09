@@ -2,13 +2,16 @@ import {Component} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {Store} from '@ngrx/store';
 import {InputPipelineDataTable, InputPipelineDeviceAnalysisOrNull, InputPipelineHostAnalysisOrNull, SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
+import {parseDiagnosticsDataTable} from 'org_xprof/frontend/app/common/utils/utils';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
 import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
 
 const COLUMN_ID_DEVICE_ANALYSIS = 'stepnum';
 const COLUMN_ID_HOST_ANALYSIS = 'opName';
 const COLUMN_ID_RECOMMENDATION = 'link';
+const COLUMN_ID_DIAGNOSTICS = 'severity';
 const PROPERTIES_DEVICE_ANALYSIS = [
   'infeed_percent_average',
   'infeed_percent_maximum',
@@ -40,6 +43,7 @@ export class InputPipeline {
   hostAnalysis: InputPipelineHostAnalysisOrNull = null;
   recommendation: SimpleDataTableOrNull = null;
   hasDiviceAanlysisRows = true;
+  diagnostics: Diagnostics = {info: [], warnings: [], errors: []};
 
   constructor(
       route: ActivatedRoute, private readonly dataService: DataService,
@@ -112,6 +116,8 @@ export class InputPipeline {
           this.recommendation =
               this.findAnalysisData(data, COLUMN_ID_RECOMMENDATION) as
               SimpleDataTableOrNull;
+          this.diagnostics = parseDiagnosticsDataTable(
+              this.findAnalysisData(data, COLUMN_ID_DIAGNOSTICS));
           this.updateHasDeviceAanlysisRows();
         });
   }

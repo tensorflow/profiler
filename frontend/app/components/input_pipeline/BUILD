@@ -19,6 +19,8 @@ ng_module(
         "@npm//@angular/router",
         "@npm//@ngrx/store",
         "@org_xprof//frontend/app/common/interfaces",
+        "@org_xprof//frontend/app/common/utils",
+        "@org_xprof//frontend/app/components/diagnostics_view",
         "@org_xprof//frontend/app/components/input_pipeline/analysis_summary",
         "@org_xprof//frontend/app/components/input_pipeline/device_side_analysis_detail",
         "@org_xprof//frontend/app/components/input_pipeline/host_side_analysis_detail",
