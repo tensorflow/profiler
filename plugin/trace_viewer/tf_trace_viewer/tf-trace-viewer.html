@@ -15,9 +15,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
+<link rel="import" href="trace_viewer_full.html" />
+
 <!--
-If WebComponents V0 are not available, show a warning before any Polymer or
-Trace Viewer scripts can run.
+If WebComponents V0 are not available, show a warning regarding Polymer and
+Trace Viewer.
 -->
 <style>
   html, body {
@@ -89,8 +91,6 @@ Trace Viewer scripts can run.
     contentsEl.appendChild(profileDataLink);
   }
 </script>
-
-<link rel="import" href="trace_viewer_full.html" />
 
 <!--
 tf-trace-viewer is the frontend entry point for Trace Viewer on TensorBoard.
