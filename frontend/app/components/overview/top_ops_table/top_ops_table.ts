@@ -17,6 +17,9 @@ export class TopOpsTable implements AfterViewInit, OnChanges {
   /** The input pipeline analyis data. */
   @Input() inputPipelineAnalysis: InputPipelineAnalysis|null = null;
 
+  /** Whether the expansion panel is initially open. */
+  @Input() initiallyExpanded: boolean = true;
+
   @ViewChild('table', {static: false}) tableRef!: ElementRef;
 
   title = 'Top TensorFlow operations on TPU';
