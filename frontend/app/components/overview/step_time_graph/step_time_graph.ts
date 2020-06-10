@@ -48,6 +48,12 @@ export class StepTimeGraph implements AfterViewInit, OnChanges {
   /** The input pipeline analyis data. */
   @Input() inputPipelineAnalysis: InputPipelineAnalysis|null = null;
 
+  /** The default column ids. */
+  @Input() columnIds = COLUMN_IDS_FOR_TPU;
+
+  /** The default column colors. */
+  @Input() columnColors = COLORS_FOR_TPU;
+
   @ViewChild('chart', {static: false}) chartRef!: ElementRef;
 
   title = 'Step-time Graph';
@@ -84,8 +90,8 @@ export class StepTimeGraph implements AfterViewInit, OnChanges {
 
     const dataTable =
         new google.visualization.DataTable(this.inputPipelineAnalysis);
-    let columnsIds = COLUMN_IDS_FOR_TPU;
-    let colors = COLORS_FOR_TPU;
+    let columnsIds = this.columnIds;
+    let colors = this.columnColors;
     this.height = 300;
     this.inputPipelineAnalysis.p = this.inputPipelineAnalysis.p || {};
     if ((this.inputPipelineAnalysis.p.hardware_type || 'TPU') !== 'TPU') {
