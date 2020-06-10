@@ -6,7 +6,10 @@ import {RecommendationResultView} from './recommendation_result_view';
 
 @NgModule({
   declarations: [RecommendationResultView],
-  imports: [CommonModule, MatCardModule],
+  imports: [
+    CommonModule,
+    MatCardModule,
+  ],
   exports: [RecommendationResultView]
 })
 export class RecommendationResultViewModule {

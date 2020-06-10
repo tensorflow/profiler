@@ -3,10 +3,13 @@ load("@io_bazel_rules_sass//:defs.bzl", "sass_binary")
 
 package(default_visibility = ["//frontend:internal"])
 
+licenses(["notice"])
+
 ng_module(
     name = "recommendation_result_view",
     srcs = [
         "recommendation_result_view.ts",
+        "recommendation_result_view_common.ts",
         "recommendation_result_view_module.ts",
     ],
     assets = [
@@ -33,5 +36,19 @@ sass_binary(
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",
+    ],
+)
+
+filegroup(
+    name = "html",
+    srcs = [
+        "recommendation_result_view.ng.html",
+    ],
+)
+
+filegroup(
+    name = "scss",
+    srcs = [
+        "recommendation_result_view.scss",
     ],
 )

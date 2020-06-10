@@ -2,49 +2,21 @@
   <mat-card-title>{{title}}</mat-card-title>
   <mat-card-content class="primary-content">
     <ul>
-      <li class="bottleneck-statement" [hidden]="!statement">
-        {{statement}}
-      </li>
-      <li class="bottleneck-statement" [hidden]="!kernelLaunchStatement">
-        {{kernelLaunchStatement}}
-      </li>
-      <li class="bottleneck-statement" [hidden]="!allOtherStatement">
-        {{allOtherStatement}}
-      </li>
-      <li class="bottleneck-statement" [hidden]="!precisionStatement">
-        {{precisionStatement}}
+      <li *ngFor="let statement of statements"
+          class="bottleneck-statement"
+          [style.color]="statement.color"
+          [innerHtml]="statement.value">
       </li>
     </ul>
-    <div class="bottleneck-tips" [hidden]="!faqTips.length">
+    <div class="bottleneck-tips" *ngFor="let tipInfo of tipInfoArray" [ngStyle]="tipInfo.style">
       <p>
-        <b>Tool troubleshooting / FAQ</b>
+        <b>{{tipInfo.title}}</b>
       </p>
-      <ul>
-        <li *ngFor="let tip of faqTips" [innerHtml]="tip"></li>
+      <ul *ngIf="tipInfo.useClickCallback">
+        <li *ngFor="let tip of tipInfo.tips" (click)="onTipsClick($event)" [innerHtml]="tip"></li>
       </ul>
-    </div>
-    <div class="bottleneck-tips" [hidden]="!hostTips.length">
-      <p>
-        <b>Next tools to use for reducing the input time</b>
-      </p>
-      <ul>
-        <li *ngFor="let tip of hostTips" (click)="onTipsClick($event)" [innerHtml]="tip"></li>
-      </ul>
-    </div>
-    <div class="bottleneck-tips" [hidden]="!deviceTips.length">
-      <p>
-        <b>Next tools to use for reducing the Device time</b>
-      </p>
-      <ul>
-        <li *ngFor="let tip of deviceTips" (click)="onTipsClick($event)" [innerHtml]="tip"></li>
-      </ul>
-    </div>
-    <div class="documentation-tips" [hidden]="!documentationTips.length">
-      <p>
-        <b>Other useful resources</b>
-      </p>
-      <ul>
-        <li *ngFor="let tip of documentationTips" [innerHtml]="tip"></li>
+      <ul *ngIf="!tipInfo.useClickCallback">
+        <li *ngFor="let tip of tipInfo.tips" [innerHtml]="tip"> </li>
       </ul>
     </div>
   </mat-card-content>
