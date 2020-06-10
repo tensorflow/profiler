@@ -360,7 +360,7 @@ export type OverviewDataTuple = [
   InputPipelineAnalysisOrNull,
   RunEnvironmentOrNull,
   RecommendationResultOrNull,
-  SimpleDataTable,
+  SimpleDataTableOrNull,
   NormalizedAcceleratorPerformanceOrNull,
   SimpleDataTableOrNull,
 ];
