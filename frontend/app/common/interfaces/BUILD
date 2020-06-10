@@ -75,6 +75,7 @@ ts_library(
         "navigation_event.ts",
         "op_profile_node.ts",
         "tool.ts",
+        "summary_info.ts",
         "window.ts",
     ],
     deps = [

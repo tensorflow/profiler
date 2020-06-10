@@ -1,4 +1,4 @@
-import {Component, ElementRef} from '@angular/core';
+import {Component} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {Store} from '@ngrx/store';
 import {OverviewDataTuple} from 'org_xprof/frontend/app/common/interfaces/data_table';
@@ -17,8 +17,8 @@ import {OverviewCommon} from './overview_common';
 export class Overview extends OverviewCommon {
   constructor(
       route: ActivatedRoute, private readonly dataService: DataService,
-      private readonly store: Store<{}>, readonly elementRef: ElementRef) {
-    super(elementRef);
+      private readonly store: Store<{}>) {
+    super();
     route.params.subscribe(params => {
       this.update(params as NavigationEvent);
     });
@@ -64,7 +64,6 @@ export class Overview extends OverviewCommon {
       this.parseOverviewData((data || []) as OverviewDataTuple);
       this.parseAverageStepTimeDetail();
       this.parseStatements();
-      this.updateStyle();
     });
   }
 }

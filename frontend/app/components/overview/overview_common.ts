@@ -1,4 +1,3 @@
-import {ElementRef, OnDestroy} from '@angular/core';
 import {GeneralAnalysisOrNull, InputPipelineAnalysisOrNull, NormalizedAcceleratorPerformanceOrNull, OverviewDataTuple, RecommendationResultOrNull, RunEnvironmentOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 import {parseDiagnosticsDataTable} from 'org_xprof/frontend/app/common/utils/utils';
@@ -11,7 +10,9 @@ const NORMALIZED_ACCELERATOR_PERFORMANCE_INDEX = 5;
 const DIAGNOSTICS_INDEX = 6;
 
 /** A common class of overview page component. */
-export class OverviewCommon implements OnDestroy {
+export class OverviewCommon {
+  private propertyValues: string[] = [];
+
   diagnostics: Diagnostics = {info: [], warnings: [], errors: []};
   generalAnalysis: GeneralAnalysisOrNull = null;
   inputPipelineAnalysis: InputPipelineAnalysisOrNull = null;
@@ -19,14 +20,14 @@ export class OverviewCommon implements OnDestroy {
   runEnvironment: RunEnvironmentOrNull = null;
   normalizedAcceleratorPerformance: NormalizedAcceleratorPerformanceOrNull =
       null;
-  averageStepTimePropertyValues: string[] = [];
   statement = '';
-  timer = 0;
 
-  constructor(readonly elementRef: ElementRef) {}
+  get averageStepTimePropertyValues(): string[] {
+    return this.propertyValues;
+  }
 
-  ngOnDestroy() {
-    clearTimeout(this.timer);
+  set averageStepTimePropertyValues(propertyValues: string[]) {
+    this.propertyValues = propertyValues;
   }
 
   parseOverviewData(data: OverviewDataTuple) {
@@ -37,24 +38,5 @@ export class OverviewCommon implements OnDestroy {
     this.normalizedAcceleratorPerformance =
         data[NORMALIZED_ACCELERATOR_PERFORMANCE_INDEX];
     this.diagnostics = parseDiagnosticsDataTable(data[DIAGNOSTICS_INDEX]);
-  }
-
-  updateStyle() {
-    if (!this.elementRef) {
-      this.timer = setTimeout(() => {
-        this.updateStyle();
-      }, 100);
-      return;
-    }
-
-    let color = 'green';
-    if (this.statement.includes('HIGHLY')) {
-      color = 'red';
-    } else if (this.statement.includes('MODERATE')) {
-      color = 'orange';
-    }
-    if (this.elementRef.nativeElement) {
-      this.elementRef.nativeElement.style.setProperty('--summary-color', color);
-    }
   }
 }

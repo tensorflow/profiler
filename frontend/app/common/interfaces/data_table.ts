@@ -9,7 +9,7 @@ declare interface Cell<T> {
 }
 
 /** All cell type. */
-type DataTableCell = Cell<boolean|number|string>;
+export type DataTableCell = Cell<boolean|number|string>;
 
 /** The base interface for a colume role. */
 declare interface ColumeRole {
