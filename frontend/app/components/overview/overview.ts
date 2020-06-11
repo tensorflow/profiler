@@ -35,11 +35,6 @@ export class Overview extends OverviewCommon {
         `Compute: ${p.compute_ms_average || ''} ms`);
   }
 
-  parseStatements() {
-    const p = ((this.recommendationResult || {}).p || {});
-    this.statement = p.statement || '';
-  }
-
   update(event: NavigationEvent) {
     const run = event.run || '';
     const tag = event.tag || 'overview_page';
@@ -63,7 +58,6 @@ export class Overview extends OverviewCommon {
       /** Transfer data to Overview DataTable type */
       this.parseOverviewData((data || []) as OverviewDataTuple);
       this.parseAverageStepTimeDetail();
-      this.parseStatements();
     });
   }
 }

@@ -55,6 +55,7 @@ declare interface GeneralAnalysisProperty {
   remark_color?: string;
   remark_text?: string;
 }
+/* tslint:enable */
 
 /** The base interface for a general analysis. */
 export declare interface GeneralAnalysis {
@@ -66,6 +67,7 @@ export declare interface GeneralAnalysis {
 /** The data table type for a general analysis or null. */
 export type GeneralAnalysisOrNull = GeneralAnalysis|null;
 
+/* tslint:disable enforce-name-casing */
 /** The base interface for a property of input pipeline analysis. */
 declare interface InputPipelineAnalysisProperty {
   hardware_type?: string;
@@ -99,6 +101,7 @@ declare interface InputPipelineAnalysisProperty {
   device_compute_time_ms_avg?: string;
   device_compute_time_ms_sdv?: string;
 }
+/* tslint:enable */
 
 /** The base interface for an input pipeline analysis. */
 export declare interface InputPipelineAnalysis {
@@ -119,6 +122,7 @@ export declare interface TopOpsColumn {
   flopRate: number;
 }
 
+/* tslint:disable enforce-name-casing */
 /** The base interface for a property of run environment. */
 declare interface RunEnvironmentProperty {
   error_message?: string;
@@ -126,6 +130,7 @@ declare interface RunEnvironmentProperty {
   device_core_count?: string;
   device_type?: string;
 }
+/* tslint:enable */
 
 /** The base interface for a run environment. */
 export declare interface RunEnvironment {
@@ -137,6 +142,7 @@ export declare interface RunEnvironment {
 /** The data table type for a run environment or null. */
 export type RunEnvironmentOrNull = RunEnvironment|null;
 
+/* tslint:disable enforce-name-casing */
 /** The base interface for a property of recommendation result. */
 declare interface RecommendationResultProperty {
   bottleneck?: string;
@@ -147,6 +153,7 @@ declare interface RecommendationResultProperty {
   kernel_launch_statement?: string;
   precision_statement?: string;
 }
+/* tslint:enable */
 
 /** The base interface for a recommendation result. */
 export declare interface RecommendationResult {
@@ -158,6 +165,7 @@ export declare interface RecommendationResult {
 /** The data table type for a recommendation result or null. */
 export type RecommendationResultOrNull = RecommendationResult|null;
 
+/* tslint:disable enforce-name-casing */
 /** The base interface for a property of normalized accelerator performance. */
 declare interface NormalizedAcceleratorPerformanceProperty {
   background_link_0?: string;
@@ -174,6 +182,7 @@ declare interface NormalizedAcceleratorPerformanceProperty {
   training_productivity_line_0?: string;
   training_productivity_line_1?: string;
 }
+/* tslint:enable */
 
 /** The base interface for a normalized accelerator performance. */
 export declare interface NormalizedAcceleratorPerformance {
@@ -193,6 +202,7 @@ export type InputPipelineDeviceAnalysis = InputPipelineAnalysis;
 export type InputPipelineDeviceAnalysisOrNull =
     InputPipelineDeviceAnalysis|null;
 
+/* tslint:disable enforce-name-casing */
 /** The base interface for a property of input pipeline host-side anaysis. */
 declare interface InputPipelineHostAnalysisProperty {
   advanced_file_read_us?: string;
@@ -201,6 +211,7 @@ declare interface InputPipelineHostAnalysisProperty {
   preprocessing_us?: string;
   unclassified_nonequeue_us?: string;
 }
+/* tslint:enable */
 
 /** The base interface for an input pipeline host-side analysis. */
 export declare interface InputPipelineHostAnalysis {
@@ -223,6 +234,7 @@ export interface HostOpsColumn {
   category: number;
 }
 
+/* tslint:disable enforce-name-casing */
 /** The base interface for a property of tensorflow stats. */
 declare interface TensorflowStatsProperty {
   architecture_type?: string;

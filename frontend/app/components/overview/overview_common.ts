@@ -20,7 +20,6 @@ export class OverviewCommon {
   runEnvironment: RunEnvironmentOrNull = null;
   normalizedAcceleratorPerformance: NormalizedAcceleratorPerformanceOrNull =
       null;
-  statement = '';
 
   get averageStepTimePropertyValues(): string[] {
     return this.propertyValues;

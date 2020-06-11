@@ -6,7 +6,7 @@ import {setCurrentToolStateAction} from 'org_xprof/frontend/app/store/actions';
 
 import {RecommendationResultViewCommon} from './recommendation_result_view_common';
 
-const STATEMENT_INFOS = [
+const STATEMENT_INFO = [
   {id: 'statement'},
   {id: 'kernel_launch_statement'},
   {id: 'all_other_statement'},
@@ -47,7 +47,7 @@ export class RecommendationResultView extends RecommendationResultViewCommon {
 
   parseStatements() {
     this.statements = [];
-    STATEMENT_INFOS.forEach(info => {
+    STATEMENT_INFO.forEach(info => {
       const prop = this.getRecommendationResultProp(info.id);
       if (prop) {
         this.statements.push({value: prop});
