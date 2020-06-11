@@ -1,5 +1,5 @@
 import * as hloProto from 'org_xprof/frontend/app/common/interfaces/hlo.proto';
-import * as diagnosticsProto from 'org_xprof/frontend/app/common/interfaces/diagnostics.proto';
+import * as diagnosticsProto from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 import * as memoryProfileProto from 'org_xprof/frontend/app/common/interfaces/memory_profile.proto';
 import * as opProfileProto from 'org_xprof/frontend/app/common/interfaces/op_profile.proto';
 
