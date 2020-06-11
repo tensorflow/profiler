@@ -277,6 +277,5 @@ export function parseDiagnosticsDataTable(
       diagnostics.info.push(String(row.c![1].v!));
     }
   });
-  console.log('here2');
   return diagnostics;
 }
