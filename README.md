@@ -9,6 +9,10 @@ First time user? Come and check out this [Colab Demo](https://www.tensorflow.org
 * TensorBoard >= 2.2.0
 * tensorboard-plugin-profile >= 2.2.0
 
+Note: The TensorFlow Profiler requires access to the Internet to load the [Google Chart library](https://developers.google.com/chart/interactive/docs/basic_load_libs#basic-library-loading).
+Some charts and tables may be missing if you run TensorBoard entirely offline on
+your local machine, behind a corporate firewall, or in a datacenter.
+
 To profile on a **single GPU** system, the following NVIDIA software must be installed on your system:
 
 1. NVIDIA GPU drivers and CUDA Toolkit:
