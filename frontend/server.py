@@ -5,9 +5,8 @@ Also provides /healthz support so that test can wait for the server to start.
 
 from __future__ import print_function
 
-import os
-
 import http.server
+import os
 import socketserver
 
 PORT = 4200
