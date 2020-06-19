@@ -388,8 +388,10 @@ class ProfilePlugin(base_plugin.TBPlugin):
       # supported in Cloud TPU. This code is unused when data was produced by
       # open-source TensorFlow. Only import the library when needed.
       # pylint: disable=g-import-not-at-top
-      from third_party.tensorflow.core.profiler import profiler_analysis_pb2
+      # pylint: disable=g-direct-tensorflow-import
+      from tensorflow.core.profiler import profiler_analysis_pb2
       # pylint: enable=g-import-not-at-top
+      # pylint: enable=g-direct-tensorflow-import
       grpc_request = profiler_analysis_pb2.ProfileSessionDataRequest()
       grpc_request.repository_root = os.path.dirname(run_dir)
       grpc_request.session_id = profile_run
