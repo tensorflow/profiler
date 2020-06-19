@@ -64,8 +64,15 @@ export class MemoryBreakdownTable implements OnChanges, OnInit {
       const index = Number(activeAllocations[i].snapshotIndex);
       const specialIndex = Number(activeAllocations[i].specialIndex);
       // Use snapshot index or special index, whichever is positve.
-      const metadata = index >= 0 ? snapshots[index].activityMetadata :
-                                    specialAllocations[specialIndex];
+      let metadata;
+      if (index >= 0) {
+        // It may be dropped depending on the max_num_snapshots query parameter
+        // which is set to 1000 by default.
+        if (!(index in snapshots)) continue;
+        metadata = snapshots[index].activityMetadata;
+      } else {
+        metadata = specialAllocations[specialIndex];
+      }
       if (!metadata) {
         continue;
       }
