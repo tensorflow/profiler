@@ -926,8 +926,7 @@ export const DATA_PLUGIN_PROFILE_MEMORY_PROFILE_DATA = {
       ]
     }
   },
-  'numHosts': 1,
-  'stepCount': {'-38490': '1', '-93746': '3'}
+  'numHosts': 1
 };
 
 /** Mock data for data API with memory_viewer tag */
