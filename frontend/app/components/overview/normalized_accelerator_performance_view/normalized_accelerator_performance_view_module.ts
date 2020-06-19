@@ -1,6 +1,6 @@
 import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
-import {MatCardModule} from '@angular/material/card';
+import {MatExpansionModule} from '@angular/material/expansion';
 
 import {NormalizedAcceleratorPerformanceView} from './normalized_accelerator_performance_view';
 
@@ -9,7 +9,7 @@ import {NormalizedAcceleratorPerformanceView} from './normalized_accelerator_per
   declarations: [NormalizedAcceleratorPerformanceView],
   imports: [
     CommonModule,
-    MatCardModule,
+    MatExpansionModule,
   ],
   exports: [NormalizedAcceleratorPerformanceView]
 })

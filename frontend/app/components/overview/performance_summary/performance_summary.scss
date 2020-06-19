@@ -29,6 +29,10 @@ ul {
   @include ul-flat;
 }
 
+table {
+  width: 100%;
+}
+
 table ul {
   margin: 0;
 }
@@ -63,6 +67,7 @@ table ul {
 }
 
 :host.dark-theme {
+  flex-grow: 1;
   border: none;
 
   mat-card {

@@ -2,19 +2,30 @@
 
 @import 'frontend/app/styles/common';
 
-:host {
-  @include border-bottom-gray;
-  @include border-right-gray;
-}
-
 :host:not(.dark-theme) {
-  mat-card {
+  mat-expansion-panel {
     @include overview-card;
+    margin: 0;
   }
 }
 
-mat-card-title {
+mat-expansion-panel-header {
+  margin: 8px 8px 0;
+}
+
+mat-panel-title {
   @include overview-card-title;
+  background-color: transparent;
+}
+
+mat-expansion-panel-header.cdk-keyboard-focused,
+mat-expansion-panel:not(.mat-expanded) mat-expansion-panel-header:hover {
+  background-color: $card-title-focus-background-color !important;
+}
+
+.mat-expanded mat-expansion-panel-header {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
 b {
@@ -28,14 +39,26 @@ ul {
 :host.dark-theme {
   border: none;
 
-  mat-card {
+  mat-expansion-panel {
     @include overview-card-dark-theme;
   }
 
-  mat-card-title {
-    background-color: $dark-theme-card-title-background-color;
+  mat-panel-title {
+    background-color: transparent;
     color: $dark-theme-card-title-color;
-    padding: 16px;
-    margin: -16px -16px 0;
+  }
+
+  mat-expansion-panel-header {
+    background-color: $dark-theme-card-title-background-color;
+    margin: 0;
+  }
+
+  mat-expansion-panel-header.cdk-keyboard-focused,
+  mat-expansion-panel:not(.mat-expanded) mat-expansion-panel-header:hover {
+    background-color: $dark-theme-card-title-focus-background-color !important;
+  }
+
+  .table {
+    margin-top: 18px;
   }
 }

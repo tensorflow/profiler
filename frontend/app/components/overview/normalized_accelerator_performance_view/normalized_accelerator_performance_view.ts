@@ -41,7 +41,7 @@ export class NormalizedAcceleratorPerformanceView {
         this.computeProductivityInfos.filter(info => !!info);
   }
 
-  title = 'Normalized Accelerator Performance (NAP)';
+  title = 'GCU/NAP Details';
   backgroundInfos: string[] = [];
   totalNapsInfos: string[] = [];
   computeCostInfos: string[] = [];

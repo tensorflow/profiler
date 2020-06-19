@@ -64,6 +64,9 @@ export class PerformanceSummary implements OnChanges {
   /** The addition property values from parent component. */
   @Input() propertyValues?: string[];
 
+  /** The color of average step time value from parent component. */
+  @Input() averageStepTimeValueColor = '';
+
   title = 'Performance Summary';
   isTpu = true;
   summaryInfoAfter: SummaryInfo[] = [];
@@ -155,6 +158,7 @@ export class PerformanceSummary implements OnChanges {
           `(σ = ${inputPipelineProps.steptime_ms_standard_deviation || ''} ms)`,
         ],
         value: `${inputPipelineProps.steptime_ms_average} ms`,
+        valueColor: this.averageStepTimeValueColor,
         propertyValues: [...(this.propertyValues || [])],
       });
     }
@@ -195,6 +199,7 @@ export class PerformanceSummary implements OnChanges {
         `(σ = ${inputPipelineProps.steptime_ms_standard_deviation || ''} ms)`,
       ],
       value: `${inputPipelineProps.steptime_ms_average} ms`,
+      valueColor: this.averageStepTimeValueColor,
     });
 
     GENERIC_SUMMARY_INFO.forEach(info => {
