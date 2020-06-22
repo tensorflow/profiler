@@ -77,6 +77,10 @@ export class PerformanceSummary implements OnChanges {
   remarkColor = '';
   flopsUtilizationTooltipMessage =
       'The first number shows the hardware utilization based on the hardware performance counter. The second one shows the performance compared to the program\'s optimal performance considering the instruction mix (i.e., the ratio of floating-point operations and memory operations).';
+  tfOpPlacementTooltipMessage =
+      'It is based on the number of TF ops executed on the host and device.';
+  opTimeInEagerModeTooltipMessage =
+      'Out of the total op execution time on host (device), excluding idle time, the percentage of which used eager execution.';
 
   ngOnChanges(changes: SimpleChanges) {
     if (!this.generalAnalysis || !this.inputPipelineAnalysis) {
@@ -209,6 +213,24 @@ export class PerformanceSummary implements OnChanges {
         descriptions: [`(σ =  ${this.getInputPipelineProp(info.sdv)} ms)`],
         value: `${this.getInputPipelineProp(info.avg)} ms`,
       });
+    });
+
+    this.summaryInfoBefore.push({
+      title: 'TF Op Placement',
+      descriptions: [],
+      propertyValues: [
+        `Host: ${generalProps.host_tf_op_percent || ''}`,
+        `Device: ${generalProps.device_tf_op_percent || ''}`,
+      ],
+    });
+
+    this.summaryInfoBefore.push({
+      title: 'Op Time Spent on Eager Execution',
+      descriptions: ['lower is better'],
+      propertyValues: [
+        `Host: ${generalProps.host_op_time_eager_percent || ''}`,
+        `Device: ${generalProps.device_op_time_eager_percent || ''}`,
+      ],
     });
 
     this.summaryInfoBefore.push({

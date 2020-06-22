@@ -50,6 +50,10 @@ declare interface GeneralAnalysisProperty {
   host_idle_time_percent?: string;
   memory_bw_utilization_relative_to_hw_limit?: string;
   mxu_utilization_percent?: string;
+  host_tf_op_percent?: string;
+  device_tf_op_percent?: string;
+  host_op_time_eager_percent?: string;
+  device_op_time_eager_percent?: string;
   device_compute_16bit_percent?: string;
   device_compute_32bit_percent?: string;
   remark_color?: string;
