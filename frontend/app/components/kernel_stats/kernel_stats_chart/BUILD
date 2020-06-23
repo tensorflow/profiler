@@ -15,6 +15,9 @@ ng_module(
     ],
     deps = [
         "@npm//@angular/core",
+        "@org_xprof//frontend/app/common/angular:angular_material_form_field",
+        "@org_xprof//frontend/app/common/angular:angular_material_input",
+        "@org_xprof//frontend/app/common/angular:angular_material_slider",
         "@org_xprof//frontend/third_party/google_visualization",
         "@org_xprof//frontend/app/common/interfaces",
     ],
@@ -27,4 +30,7 @@ sass_binary(
     src = "kernel_stats_chart.scss",
 
     sourcemap = False,
+    deps = [
+        "@org_xprof//frontend/app/styles:common",
+    ],
 )

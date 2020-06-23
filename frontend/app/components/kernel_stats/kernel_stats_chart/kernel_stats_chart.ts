@@ -1,5 +1,4 @@
 import {Component, ElementRef, Input, OnChanges, OnInit, SimpleChanges, ViewChild} from '@angular/core';
-
 import {SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 declare interface KernelStatsColumn {
@@ -23,7 +22,10 @@ export class KernelStatsChart implements OnChanges, OnInit {
 
   @ViewChild('chart', {static: false}) chartRef!: ElementRef;
 
-  chart: google.visualization.PieChart|null = null;
+  chart?: google.visualization.PieChart;
+  dataTable?: google.visualization.DataTable;
+  count = 0;
+  total = 0;
 
   ngOnInit() {
     this.loadGoogleChart();
@@ -41,9 +43,13 @@ export class KernelStatsChart implements OnChanges, OnInit {
         '</div>';
   }
 
-  drawChart() {
-    if (!this.chart || !this.kernelStatsData) {
-      return;
+  private getDataTable(): google.visualization.DataTable|null {
+    if (!this.kernelStatsData) {
+      return null;
+    }
+
+    if (this.dataTable) {
+      return this.dataTable;
     }
 
     const dataTable = new google.visualization.DataTable(this.kernelStatsData);
@@ -90,22 +96,40 @@ export class KernelStatsChart implements OnChanges, OnInit {
       p: {'html': true},
     });
 
+    this.total = dataGroup.getNumberOfRows();
+    this.count = Math.min(this.total, 10);
+
+    this.dataTable = new google.visualization.DataView(dataGroup).toDataTable();
+
+    return this.dataTable;
+  }
+
+  drawChart() {
+    if (!this.chart) {
+      return;
+    }
+
+    const dataTable = this.getDataTable();
+    if (!dataTable) {
+      return;
+    }
+
     let totalDurationUs = 0.0;
-    for (let i = 0; i < Math.min(dataGroup.getNumberOfRows(), 10); i++) {
-      totalDurationUs += dataGroup.getValue(i, TOTAL_DURATION_US_COLUMN_INDEX);
+    for (let i = 0; i < this.count; i++) {
+      totalDurationUs += dataTable.getValue(i, TOTAL_DURATION_US_COLUMN_INDEX);
     }
 
-    for (let i = 0; i < dataGroup.getNumberOfRows(); i++) {
+    for (let i = 0; i < this.count; i++) {
       const tooltip = this.makeTooltip(
-          dataGroup.getValue(i, KERNEL_NAME_COLUMN_INDEX),
-          dataGroup.getValue(i, TOTAL_DURATION_US_COLUMN_INDEX),
+          dataTable.getValue(i, KERNEL_NAME_COLUMN_INDEX),
+          dataTable.getValue(i, TOTAL_DURATION_US_COLUMN_INDEX),
           totalDurationUs);
-      dataGroup.setValue(i, TOOLTIP_COLUMN_INDEX, tooltip);
+      dataTable.setCell(i, TOOLTIP_COLUMN_INDEX, tooltip);
     }
 
-    const dataView = new google.visualization.DataView(dataGroup);
-    if (dataView.getNumberOfRows() > 10) {
-      dataView.hideRows(10, dataView.getNumberOfRows() - 1);
+    const dataView = new google.visualization.DataView(dataTable);
+    if (this.total > this.count) {
+      dataView.hideRows(this.count, this.total - 1);
     }
 
     const options = {
@@ -138,5 +162,15 @@ export class KernelStatsChart implements OnChanges, OnInit {
           new google.visualization.PieChart(this.chartRef.nativeElement);
       this.drawChart();
     });
+  }
+
+  updateCount(value: number) {
+    value = Number(value);
+    if (value === this.count) {
+      return;
+    }
+
+    this.count = value;
+    this.drawChart();
   }
 }
