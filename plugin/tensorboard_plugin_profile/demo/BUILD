@@ -3,7 +3,6 @@ load("@python_deps//:requirements.bzl", "requirement")
 # Description:
 #  Demos for profiler plugin.
 package(
-    default_visibility = ["//plugin:internal"],
     licenses = ["notice"],  # Apache 2.0
 )
 
