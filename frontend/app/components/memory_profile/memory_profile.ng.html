@@ -6,11 +6,7 @@
   <div [hidden]="!hasMemoryData">
     <div class="container">
       <div class="left-column">
-        <div>
-          <div [ngClass]="{'mat-subheading-2': true}">
-            Memory ID
-            <div class="description">- show memory profile for selected device</div>
-          </div>
+        <memory-profile-summary [data]="data" [memoryId]="selectedMemoryId">
           <mat-form-field>
             <mat-select [(value)]="selectedMemoryId">
               <mat-option *ngFor="let id of memoryIds" [value]="id">
@@ -18,8 +14,6 @@
               </mat-option>
             </mat-select>
           </mat-form-field>
-        </div>
-        <memory-profile-summary [data]="data" [memoryId]="selectedMemoryId">
         </memory-profile-summary>
       </div>
 

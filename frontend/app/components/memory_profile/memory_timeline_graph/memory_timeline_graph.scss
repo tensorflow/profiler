@@ -5,6 +5,7 @@
 :host {
   @include border-bottom-gray;
   @include border-right-gray;
+  flex-grow: 1;
 }
 
 mat-card {

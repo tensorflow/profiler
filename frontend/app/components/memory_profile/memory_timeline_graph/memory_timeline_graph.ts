@@ -89,7 +89,7 @@ export class MemoryTimelineGraph implements AfterViewInit, OnChanges {
 
     const options = {
       curveType: 'none',
-      chartArea: {left: 50, width: '100%'},
+      chartArea: {left: 100, width: '100%'},
       hAxis: {
         title: 'Timestamp (ms)',
         textStyle: {bold: true},

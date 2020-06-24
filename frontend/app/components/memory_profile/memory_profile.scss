@@ -6,6 +6,11 @@
   display: block;
 }
 
+mat-form-field {
+  width: 80px;
+  margin-left: -10px;
+}
+
 .error-message {
   color: red;
   font-size: 0.5cm;
@@ -24,13 +29,13 @@
 .left-column {
   display: flex;
   flex-direction: column;
-  width: 25%;
+  width: 33.333%;
 }
 
 .right-column {
   display: flex;
   flex-direction: column;
-  width: 75%;
+  width: 66.667%;
 }
 
 .full-column {

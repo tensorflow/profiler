@@ -5,6 +5,7 @@
 :host {
   @include border-bottom-gray;
   @include border-right-gray;
+  flex-grow: 1;
 }
 
 mat-card {
@@ -25,12 +26,12 @@ ul {
   @include ul-flat;
 }
 
-table ul {
-  margin: 0;
+table {
+  width: 100%;
 }
 
 .item-container {
-  margin-bottom: 10px;
+  margin-bottom: 16px;
 }
 
 .item-container > table {
@@ -47,10 +48,6 @@ table ul {
   width: 20%;
   font-size: 18px;
   font-weight: 500;
-}
-
-.item-description {
-  margin-left: 20px;
 }
 
 .flops-utilization-tooltip-target {
