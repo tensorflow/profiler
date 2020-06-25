@@ -3,6 +3,7 @@ export interface SummaryInfo {
   type?: string;
   title: string;
   descriptions?: string[];
+  tooltip?: string;
   value?: string;
   valueColor?: string;
   propertyValues?: string[];

@@ -217,7 +217,7 @@ export class PerformanceSummary implements OnChanges {
 
     this.summaryInfoBefore.push({
       title: 'TF Op Placement',
-      descriptions: [],
+      tooltip: this.tfOpPlacementTooltipMessage,
       propertyValues: [
         `Host: ${generalProps.host_tf_op_percent || ''}`,
         `Device: ${generalProps.device_tf_op_percent || ''}`,
@@ -227,6 +227,7 @@ export class PerformanceSummary implements OnChanges {
     this.summaryInfoBefore.push({
       title: 'Op Time Spent on Eager Execution',
       descriptions: ['lower is better'],
+      tooltip: this.opTimeInEagerModeTooltipMessage,
       propertyValues: [
         `Host: ${generalProps.host_op_time_eager_percent || ''}`,
         `Device: ${generalProps.device_op_time_eager_percent || ''}`,

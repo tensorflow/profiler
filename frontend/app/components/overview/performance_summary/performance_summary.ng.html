@@ -49,16 +49,22 @@
       <table>
         <tr>
           <td>
-            <b *ngIf="info.type != 'list'">{{info.title}}</b>
-            <ul *ngIf="info.type == 'list'">
-              <li><b>{{info.title}}</b></li>
+            <div *ngIf="info.type !== 'list'">
+              <ng-template *ngTemplateOutlet="titleAndTooltip; context: {$implicit: info}">
+              </ng-template>
+            </div>
+            <ul *ngIf="info.type === 'list'">
+              <li>
+                <ng-template *ngTemplateOutlet="titleAndTooltip; context: {$implicit: info}">
+                </ng-template>
+              </li>
             </ul>
             <div *ngFor="let description of info.descriptions"
                  [ngClass]="{'item-description': info.type == 'list', 'description': true}">
               {{description}}
             </div>
           </td>
-          <td class="item-value">
+          <td *ngIf="info.value" class="item-value">
             <div [style.color]="info.valueColor">{{info.value}}</div>
           </td>
         </tr>
@@ -68,4 +74,16 @@
       <li class="primary-content" *ngFor="let value of info.propertyValues">{{value}}</li>
     </ul>
   </div>
+</ng-template>
+
+<ng-template #titleAndTooltip let-info>
+    <b>{{info.title}}</b>
+    <span *ngIf="info.tooltip" class="tooltip-icon-container">
+      <mat-icon
+        class="tooltip-icon"
+        [matTooltip]="info.tooltip"
+        matTooltipPosition="above">
+        info
+      </mat-icon>
+    </span>
 </ng-template>

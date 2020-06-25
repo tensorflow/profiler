@@ -64,6 +64,22 @@ table ul {
 .flops-utilization-tooltip-target {
   color: #e8710a;
   border-bottom: 1px dotted #e8710a;
+  cursor: pointer;
+}
+
+.tooltip-icon-container {
+  position: relative;
+}
+
+.tooltip-icon {
+  color: #e8710a;
+  position: absolute;
+  top: -2px;
+  left: 4px;
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
 }
 
 :host.dark-theme {
