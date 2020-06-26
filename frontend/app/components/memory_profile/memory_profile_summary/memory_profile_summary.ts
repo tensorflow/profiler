@@ -73,6 +73,8 @@ export class MemoryProfileSummary implements AfterViewInit, OnChanges {
     this.heapAtPeakGB =
         this.bytesToGiBs(peakStats.heapAllocatedBytes).toFixed(2);
     this.freeAtPeakGB = this.bytesToGiBs(peakStats.freeMemoryBytes).toFixed(2);
+    this.fragmentationAtPeakPct =
+        ((peakStats.fragmentation || 0) * 100).toFixed(2) + '%';
   }
 
   bytesToGiBs(stat: string|number|undefined) {
@@ -95,4 +97,5 @@ export class MemoryProfileSummary implements AfterViewInit, OnChanges {
   stackAtPeakGB = '';
   heapAtPeakGB = '';
   freeAtPeakGB = '';
+  fragmentationAtPeakPct = '';
 }

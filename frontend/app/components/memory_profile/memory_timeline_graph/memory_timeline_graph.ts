@@ -42,29 +42,21 @@ export class MemoryTimelineGraph implements AfterViewInit, OnChanges {
   }
 
   drawChart() {
-    if (!this.chartRef) {
-      return;
-    }
-
-    const newWidth =
-        Math.min(MAX_CHART_WIDTH, this.chartRef.nativeElement.offsetWidth);
-
-    if (!this.chart || !this.memoryProfileProtoOrNull ||
-        this.width === newWidth) {
-      return;
-    }
-    this.width = newWidth;
-
-    if (!this.memoryProfileProtoOrNull ||
+    if (!this.chartRef || !this.chart || this.memoryId === '' ||
+        !this.memoryProfileProtoOrNull ||
         !this.memoryProfileProtoOrNull.memoryProfilePerAllocator) {
       return;
     }
+
+    this.width =
+        Math.min(MAX_CHART_WIDTH, this.chartRef.nativeElement.offsetWidth);
 
     const snapshots =
         this.memoryProfileProtoOrNull.memoryProfilePerAllocator[this.memoryId]
             .memoryProfileSnapshots;
 
     if (!snapshots) return;
+    snapshots.sort((a, b) => Number(a.timeOffsetPs) - Number(b.timeOffsetPs));
 
     const dataTable = new google.visualization.DataTable();
     dataTable.addColumn('number', 'timestamp(ps)');
@@ -72,6 +64,7 @@ export class MemoryTimelineGraph implements AfterViewInit, OnChanges {
     dataTable.addColumn('number', 'heap');
     dataTable.addColumn({type: 'string', role: 'tooltip'});
     dataTable.addColumn('number', 'free');
+    dataTable.addColumn('number', 'fragmentation');
 
     for (let i = 0; i < snapshots.length; i++) {
       const stats = snapshots[i].aggregationStats;
@@ -84,20 +77,39 @@ export class MemoryTimelineGraph implements AfterViewInit, OnChanges {
         this.bytesToGiBs(stats.heapAllocatedBytes),
         this.getMetadataTooltip(snapshots[i]),
         this.bytesToGiBs(stats.freeMemoryBytes),
+        (stats.fragmentation || 0) * 100,
       ]);
     }
 
     const options = {
       curveType: 'none',
-      chartArea: {left: 100, width: '100%'},
+      chartArea: {left: 60, right: 60, width: '100%'},
       hAxis: {
         title: 'Timestamp (ms)',
         textStyle: {bold: true},
       },
-      vAxis: {
-        title: 'Memory Usage (GiBs)',
-        minValue: 0,
-        textStyle: {bold: true},
+      vAxes: {
+        0: {
+          title: 'Memory Usage (GiBs)',
+          minValue: 0,
+          textStyle: {bold: true},
+        },
+        1: {
+          title: 'Fragmentation (%)',
+          minValue: 0,
+          maxValue: 100,
+          textStyle: {bold: true},
+        },
+      },
+      series: {
+        0: {'targetAxisIndex': 0},
+        1: {'targetAxisIndex': 0},
+        2: {'targetAxisIndex': 0},
+        3: {
+          'targetAxisIndex': 1,  // Using string parameter to prevent renaming.
+          type: 'line',
+          lineDashStyle: [4, 4],
+        },
       },
       // tslint:disable-next-line:no-any
       legend: {position: 'top' as any},
@@ -113,8 +125,8 @@ export class MemoryTimelineGraph implements AfterViewInit, OnChanges {
         maxZoomOut: 10,
       },
     };
-
-    this.chart.draw(dataTable, options);
+    this.chart.draw(
+        dataTable, options as google.visualization.AreaChartOptions);
   }
 
   bytesToGiBs(stat: string|number|undefined) {
