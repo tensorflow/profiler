@@ -125,6 +125,14 @@ def get_overview_page_analysis_table_args(overview_page_analysis):
     ]
     data.append(row)
 
+  host_tf_op_percent = "{:.1f}".format(
+      overview_page_analysis.host_tf_op_percent)
+  device_tf_op_percent = "{:.1f}".format(
+      overview_page_analysis.device_tf_op_percent)
+  host_op_time_eager_percent = "{:.1f}".format(
+      overview_page_analysis.host_op_time_eager_percent)
+  device_op_time_eager_percent = "{:.1f}".format(
+      overview_page_analysis.device_op_time_eager_percent)
   device_compute_16bit_percent = "{:.1f}".format(
       overview_page_analysis.device_compute_16bit_percent)
   device_compute_32bit_percent = "{:.1f}".format(
@@ -133,6 +141,10 @@ def get_overview_page_analysis_table_args(overview_page_analysis):
   remark_color = overview_page_analysis.remark_color
 
   custom_properties = {
+      "host_tf_op_percent": host_tf_op_percent,
+      "device_tf_op_percent": device_tf_op_percent,
+      "host_op_time_eager_percent": host_op_time_eager_percent,
+      "device_op_time_eager_percent": device_op_time_eager_percent,
       "device_compute_16bit_percent": device_compute_16bit_percent,
       "device_compute_32bit_percent": device_compute_32bit_percent,
       "remark_text": remark_text,

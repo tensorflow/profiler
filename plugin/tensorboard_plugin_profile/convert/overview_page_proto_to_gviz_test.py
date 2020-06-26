@@ -233,6 +233,16 @@ class ProtoToGvizTest(tf.test.TestCase):
     self.assertLen(table_description, len(list(self.mock_tf_op)))
     self.assertLen(data_table.columns, len(list(self.mock_tf_op)))
 
+    # Check for the expected properties in tha table.
+    self.assertIn("host_tf_op_percent", data_table.custom_properties)
+    self.assertIn("device_tf_op_percent", data_table.custom_properties)
+    self.assertIn("host_op_time_eager_percent", data_table.custom_properties)
+    self.assertIn("device_op_time_eager_percent", data_table.custom_properties)
+    self.assertIn("device_compute_16bit_percent", data_table.custom_properties)
+    self.assertIn("device_compute_32bit_percent", data_table.custom_properties)
+    self.assertIn("remark_text", data_table.custom_properties)
+    self.assertIn("remark_color", data_table.custom_properties)
+
     # Prepare expectation to check against.
     mock_csv_tf_op = [str(x) for x in list(self.mock_tf_op)]
 

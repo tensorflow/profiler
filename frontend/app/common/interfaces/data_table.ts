@@ -151,6 +151,8 @@ export type RunEnvironmentOrNull = RunEnvironment|null;
 declare interface RecommendationResultProperty {
   bottleneck?: string;
   statement?: string;
+  tf_function_statement_html?: string;
+  eager_statement_html?: string;
   all_other_bottleneck?: string;
   all_other_statement?: string;
   kernel_launch_bottleneck?: string;
