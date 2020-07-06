@@ -7,6 +7,7 @@ ng_module(
     name = "memory_viewer",
     srcs = [
         "memory_viewer.ts",
+        "memory_viewer_common.ts",
         "memory_viewer_module.ts",
     ],
     assets = [
