@@ -1,6 +1,8 @@
 import {Component, ElementRef, EventEmitter, Input, OnChanges, Output, SimpleChanges} from '@angular/core';
-import {ChannelInfo, PodStatsRecord, PodViewerRunEnvironment} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {Store} from '@ngrx/store';
+import {AllReduceOpInfo, ChannelInfo, PodStatsRecord, PodViewerRunEnvironment} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
+import {getActivePodViewerInfoState} from 'org_xprof/frontend/app/store/selectors';
 
 interface ColorInfo {
   color: string;
@@ -9,6 +11,7 @@ interface ColorInfo {
 
 interface ElementInfo {
   id?: string;
+  rid?: number;
   x: number;
   y: number;
 }
@@ -33,6 +36,28 @@ const TOOLTIP_OFFSET_Y = 35;
 const NODE_COLORS = [
   '#ffffd9', '#edf8b1', '#c7e9b4', '#7fcdbb', '#41b6c4', '#1d91c0', '#225ea8',
   '#253494', '#081d58'
+];
+const KELLY_COLORS = [
+  '#ffb300',  // Vivid yellow
+  '#803e75',  // Strong purple
+  '#ff6800',  // Vivid orange
+  '#a6bdd7',  // Very light blue
+  '#c10020',  // Vivid red
+  '#cea262',  // Grayish yellow
+  '#817066',  // Medium gray
+  '#007d34',  // Vivid green
+  '#f6768e',  // Strong purplish pink
+  '#00538a',  // Strong blue
+  '#ff7a5c',  // Strong yellowish pink
+  '#53377a',  // Strong violet
+  '#ff8e00',  // Vivid orange yellow
+  '#b32851',  // Strong purplish red
+  '#f4c800',  // Vivid greenish yellow
+  '#7f180d',  // Strong reddish brown
+  '#93aa00',  // Vivid yellowish green
+  '#593315',  // Deep yellowish brown
+  '#f13a13',  // Vivid reddish orange
+  '#232c16',  // Dark olive green
 ];
 
 /** A topology graph view component. */
@@ -89,9 +114,14 @@ export class TopologyGraph implements OnChanges {
   tooltipText = '';
   tooltipX = 0;
   tooltipY = 0;
+  info?: AllReduceOpInfo|ChannelInfo|PodStatsRecord;
 
-  constructor(private readonly elRef: ElementRef) {
+  constructor(
+      private readonly elRef: ElementRef, private readonly store: Store<{}>) {
     this.createColorInfos();
+    this.store.select(getActivePodViewerInfoState).subscribe((info) => {
+      this.updateReplicaGroupColoring(info as AllReduceOpInfo);
+    });
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -292,11 +322,16 @@ export class TopologyGraph implements OnChanges {
       return;
     }
 
-    Object.values(this.podStatsPerCore).forEach(podStatsRecord => {
+    Object.keys(this.podStatsPerCore).forEach(coreId => {
+      const podStatsRecord = this.podStatsPerCore![coreId];
       const chipId = podStatsRecord.chipId || 0;
       const nodeId = podStatsRecord.nodeId || 0;
       const nodeInfo = this.getNodePosition(chipId, nodeId);
       nodeInfo.id = 'node-' + chipId.toString() + '-' + nodeId.toString();
+      if (this.coreIdToReplicaIdMap &&
+          this.coreIdToReplicaIdMap[coreId] !== undefined) {
+        nodeInfo.rid = this.coreIdToReplicaIdMap[coreId];
+      }
       this.nodes.push(nodeInfo);
     });
   }
@@ -427,7 +462,7 @@ export class TopologyGraph implements OnChanges {
           return id === 'node-' + chipId.toString() + '-' + nodeId.toString();
         });
 
-    if (!found || found.length != 2) {
+    if (!found || found.length !== 2) {
       return;
     }
 
@@ -500,6 +535,23 @@ export class TopologyGraph implements OnChanges {
     this.selectedChannelId = this.channels[index];
     this.updateArrows();
     this.selected.emit(index || 0);
+  }
+
+  updateReplicaGroupColoring(info: AllReduceOpInfo) {
+    if (!info || !info.replicaGroups || !info.replicaGroups.length) return;
+    // Colors the nodes within the same replica group to the same color.
+    for (let i = 0; i < info.replicaGroups.length; i++) {
+      const group = info.replicaGroups[i].replicaIds;
+      if (!group) continue;
+      for (let j = 0; j < group.length; j++) {
+        const groupEl = this.elRef.nativeElement.querySelectorAll(
+            '[rid="' + group[j] + '"]');
+        groupEl.forEach((el: HTMLElement) => {
+          el.style.backgroundColor = KELLY_COLORS[i % 20];
+        });
+      }
+    }
+    this.selectedMetric = '';
   }
 
   update() {

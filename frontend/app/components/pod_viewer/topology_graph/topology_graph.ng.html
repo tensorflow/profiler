@@ -64,6 +64,7 @@
       *ngFor="let node of nodes"
       class="node"
       [id]="node.id"
+      [attr.rid]="node.rid"
       [style.top]="node.y + 'px'"
       [style.left]="node.x + 'px'"
       (mouseenter)="showTooltip(node.id)"

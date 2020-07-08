@@ -7,6 +7,7 @@ ng_module(
     name = "pod_viewer",
     srcs = [
         "pod_viewer.ts",
+        "pod_viewer_common.ts",
         "pod_viewer_module.ts",
     ],
     assets = [
