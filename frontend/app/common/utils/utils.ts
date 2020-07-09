@@ -279,3 +279,21 @@ export function parseDiagnosticsDataTable(
   });
   return diagnostics;
 }
+
+/**
+ * Returns the column index found by the given label.
+ */
+export function getColumnIndex(
+    dataTable: SimpleDataTableOrNull, label: string): number {
+  if (!dataTable || !dataTable.cols) {
+    return -1;
+  }
+
+  for (let i = 0; i < dataTable.cols.length; i++) {
+    if (dataTable.cols[i].label === label) {
+      return i;
+    }
+  }
+
+  return -1;
+}
