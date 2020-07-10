@@ -207,27 +207,7 @@ export function timeWasted(node: OpProfileNode): number {
  */
 export function getPodStatsRecordProperty(
     podStatsRecord: PodStatsRecord, key: string): number {
-  switch (key) {
-    case 'highFlopsComputeUs':
-      return podStatsRecord.highFlopsComputeUs || 0;
-    case 'lowFlopsComputeUs':
-      return podStatsRecord.lowFlopsComputeUs || 0;
-    case 'hostInfeedDurationUs':
-      return podStatsRecord.hostInfeedDurationUs || 0;
-    case 'hostOutfeedDurationUs':
-      return podStatsRecord.hostOutfeedDurationUs || 0;
-    case 'allReduceComputeDurationUs':
-      return podStatsRecord.allReduceComputeDurationUs || 0;
-    case 'allReduceSyncDurationUs':
-      return podStatsRecord.allReduceSyncDurationUs || 0;
-    case 'sendDurationUs':
-      return podStatsRecord.sendDurationUs || 0;
-    case 'recvDurationUs':
-      return podStatsRecord.recvDurationUs || 0;
-    default:
-      console.warn('No valid property name of PodStatsRecord');
-      return 0;
-  }
+  return (podStatsRecord as {[key: string]: number})[key] || 0;
 }
 
 /**
