@@ -1,5 +1,6 @@
 import {Component, ElementRef, EventEmitter, Input, OnChanges, Output, SimpleChanges} from '@angular/core';
 import {Store} from '@ngrx/store';
+import {TpuClass} from 'org_xprof/frontend/app/common/constants/enums';
 import {AllReduceOpInfo, ChannelInfo, PodStatsRecord, PodViewerRunEnvironment} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {getActivePodViewerInfoState} from 'org_xprof/frontend/app/store/selectors';
@@ -82,6 +83,8 @@ export class TopologyGraph implements OnChanges {
 
   /** The run environment of a pod viewer. */
   @Input() runEnvironment?: PodViewerRunEnvironment;
+
+  @Input() classifyTpuFunc: (tpuType: string) => TpuClass = this.getTpuClass;
 
   /** The event when the selection of the channel is changed. */
   @Output() selected = new EventEmitter<number>();
@@ -336,6 +339,18 @@ export class TopologyGraph implements OnChanges {
     });
   }
 
+  private getTpuClass(tpuType: string): TpuClass {
+    switch (tpuType) {
+      case 'TPU v2':
+        return TpuClass.TPU_V2;
+      case 'TPU v3':
+        return TpuClass.TPU_V3;
+      default:
+        break;
+    }
+    return TpuClass.UNKNOWN;
+  }
+
   private updateSystemInfo(tpuType?: string) {
     if (!this.runEnvironment) {
       this.tpuType = '';
@@ -352,15 +367,13 @@ export class TopologyGraph implements OnChanges {
 
     this.tpuType = this.runEnvironment.tpuType || '';
 
-    switch (this.runEnvironment.tpuType) {
-      case 'JellyFish':
-      case 'TPU v2':
+    switch (this.classifyTpuFunc(this.runEnvironment.tpuType || '')) {
+      case TpuClass.TPU_V2:
         this.hostXStride = 2;
         this.hostYStride = 2;
         this.nodesPerChip = 2;
         break;
-      case 'DragonFish':
-      case 'TPU v3':
+      case TpuClass.TPU_V3:
         this.hostXStride = 4;
         this.hostYStride = 2;
         this.nodesPerChip = 2;

@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, Input} from '@angular/core';
 import {Store} from '@ngrx/store';
 
 import {POD_STATS_RECORD_PROPERTY_MAP} from 'org_xprof/frontend/app/common/constants/constants';
@@ -18,6 +18,8 @@ interface DetailInfo {
   styleUrls: ['./pod_viewer_details.scss']
 })
 export class PodViewerDetails {
+  @Input() propertyMap = POD_STATS_RECORD_PROPERTY_MAP;
+
   info?: AllReduceOpInfo|ChannelInfo|PodStatsRecord;
   name = '';
   details: DetailInfo[] = [];
@@ -87,7 +89,7 @@ export class PodViewerDetails {
     if (!total) {
       return;
     }
-    POD_STATS_RECORD_PROPERTY_MAP.forEach(metric => {
+    this.propertyMap.forEach(metric => {
       const value = utils.getPodStatsRecordProperty(info, metric.key);
       this.details.push({
         title: metric.label,

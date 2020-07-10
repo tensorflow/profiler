@@ -1,4 +1,3 @@
-
 import {Store} from '@ngrx/store';
 import {POD_STATS_RECORD_PROPERTY_MAP} from 'org_xprof/frontend/app/common/constants/constants';
 import {AllReduceOpInfo, ChannelInfo, PodStatsRecord, PodViewerDatabaseOrNull, PodViewerRunEnvironment, PrimitiveTypeNumberStringOrUndefined} from 'org_xprof/frontend/app/common/interfaces/data_table';
@@ -119,22 +118,26 @@ export class PodViewerCommon {
       }
       return ((a.chipId || 0) > (b.chipId || 0)) ? 1 : -1;
     });
-    this.podStatsChartData = this.podStatsForChart.map(
-        podStatsRecord =>
-            ['(' + (podStatsRecord.chipId || 0).toString() + ',' +
-                 (podStatsRecord.nodeId || 0).toString() + ')',
-             podStatsRecord.highFlopsComputeUs || 0,
-             podStatsRecord.lowFlopsComputeUs || 0,
-             podStatsRecord.hostInfeedDurationUs || 0,
-             podStatsRecord.hostOutfeedDurationUs || 0,
-             podStatsRecord.allReduceComputeDurationUs || 0,
-             podStatsRecord.allReduceSyncDurationUs || 0,
-             podStatsRecord.sendDurationUs || 0,
-             podStatsRecord.recvDurationUs || 0,
-    ]);
-    const metrics = POD_STATS_RECORD_PROPERTY_MAP.map(metric => metric.label);
+    this.podStatsChartData =
+        this.podStatsForChart.map(this.parsePodStatsRecord);
+    const metrics = this.podStatsRecordPropertyMap.map(metric => metric.label);
     metrics.unshift('metrics');
     this.podStatsChartData.unshift(metrics);
+  }
+
+  parsePodStatsRecord(podStatsRecord: PodStatsRecord): Array<string|number> {
+    return [
+      '(' + (podStatsRecord.chipId || 0).toString() + ',' +
+          (podStatsRecord.nodeId || 0).toString() + ')',
+      podStatsRecord.highFlopsComputeUs || 0,
+      podStatsRecord.lowFlopsComputeUs || 0,
+      podStatsRecord.hostInfeedDurationUs || 0,
+      podStatsRecord.hostOutfeedDurationUs || 0,
+      podStatsRecord.allReduceComputeDurationUs || 0,
+      podStatsRecord.allReduceSyncDurationUs || 0,
+      podStatsRecord.sendDurationUs || 0,
+      podStatsRecord.recvDurationUs || 0,
+    ];
   }
 
   selectedAllReduceOpChart(allReduceOpIndex: number) {

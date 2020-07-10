@@ -23,6 +23,7 @@ ng_module(
         "@org_xprof//frontend/app/common/angular:angular_material_menu",
         "@org_xprof//frontend/app/common/angular:angular_material_slider",
         "@npm//@ngrx/store",
+        "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/utils",
         "@org_xprof//frontend/app/store",

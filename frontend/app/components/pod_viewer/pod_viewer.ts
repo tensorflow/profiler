@@ -32,27 +32,6 @@ export class PodViewer extends PodViewerCommon {
     }));
   }
 
-  selectedChannelDb(channelDbIndex: number) {
-    this.store.dispatch(setActivePodViewerInfoAction({
-      activePodViewerInfo: this.channelDb ? this.channelDb[channelDbIndex] :
-                                            null
-    }));
-  }
-
-  selectedChannelChart(channelIndex: number) {
-    this.store.dispatch(setActivePodViewerInfoAction({
-      activePodViewerInfo:
-          this.channelDbForChart ? this.channelDbForChart[channelIndex] : null
-    }));
-  }
-
-  selectedPodStatsChart(podStatsIndex: number) {
-    this.store.dispatch(setActivePodViewerInfoAction({
-      activePodViewerInfo:
-          this.podStatsForChart ? this.podStatsForChart[podStatsIndex] : null
-    }));
-  }
-
   update(event: NavigationEvent) {
     this.store.dispatch(setLoadingStateAction({
       loadingState: {
