@@ -86,7 +86,8 @@ declare interface InputPipelineAnalysisProperty {
   idle_ms_average?: string;
   input_ms_average?: string;
   compute_ms_average?: string;
-  summary_conclusion?: string;
+  input_conclusion?: string;
+  output_conclusion?: string;
   summary_nextstep?: string;
   other_time_ms_avg?: string;
   other_time_ms_sdv?: string;

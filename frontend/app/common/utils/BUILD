@@ -8,7 +8,9 @@ ts_library(
         "utils.ts",
     ],
     deps = [
+        "@npm//@ngrx/store",
         "@org_xprof//frontend/app/common/interfaces",
+        "@org_xprof//frontend/app/store",
     ],
 )
 

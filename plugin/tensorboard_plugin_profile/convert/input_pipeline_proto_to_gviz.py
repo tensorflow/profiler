@@ -106,13 +106,12 @@ def get_step_breakdown_table_args(ipa):
 
   bottleneck_analysis = input_pipeline_pb2.BottleneckAnalysis()
   ipa.recommendation.bottleneck_analysis.Unpack(bottleneck_analysis)
-  input_statement = bottleneck_analysis.input_statement
   kernel_launch_classification = \
       bottleneck_analysis.kernel_launch_classification
   kernel_launch_statement = bottleneck_analysis.kernel_launch_statement
   all_other_classification = bottleneck_analysis.all_other_classification
   all_other_statement = bottleneck_analysis.all_other_statement
-  summary_conclusion = input_statement
+  input_conclusion = bottleneck_analysis.input_statement
   summary_next_step = ipa.recommendation.summary_next_step
 
   # Add step time summary
@@ -180,7 +179,7 @@ def get_step_breakdown_table_args(ipa):
       "other_time_ms_avg": other_time_ms_avg,
       "other_time_ms_sdv": other_time_ms_sdv,
       # Input analysis summary
-      "summary_conclusion": summary_conclusion,
+      "input_conclusion": input_conclusion,
       "summary_nextstep": summary_next_step,
       # Generic recommendation
       "kernel_launch_bottleneck": kernel_launch_classification,

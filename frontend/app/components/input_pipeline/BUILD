@@ -1,5 +1,5 @@
 load("@npm_angular_bazel//:index.bzl", "ng_module")
-load("@io_bazel_rules_sass//:defs.bzl", "sass_binary")
+load("@io_bazel_rules_sass//:defs.bzl", "sass_binary", "sass_library")
 
 package(default_visibility = ["//frontend:internal"])
 
@@ -7,6 +7,7 @@ ng_module(
     name = "input_pipeline",
     srcs = [
         "input_pipeline.ts",
+        "input_pipeline_common.ts",
         "input_pipeline_module.ts",
     ],
     assets = [
@@ -25,7 +26,6 @@ ng_module(
         "@org_xprof//frontend/app/components/input_pipeline/device_side_analysis_detail",
         "@org_xprof//frontend/app/components/input_pipeline/host_side_analysis_detail",
         "@org_xprof//frontend/app/services/data_service",
-        "@org_xprof//frontend/app/store",
     ],
 )
 
@@ -36,6 +36,14 @@ sass_binary(
     src = "input_pipeline.scss",
 
     sourcemap = False,
+    deps = [
+        "@org_xprof//frontend/app/styles:common",
+    ],
+)
+
+sass_library(
+    name = "common_css",
+    srcs = ["input_pipeline.scss"],
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

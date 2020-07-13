@@ -67,7 +67,7 @@ declare interface ExtendedLineChartOptions extends
   styleUrls: ['./device_side_analysis_detail.scss']
 })
 export class DeviceSideAnalysisDetail implements AfterViewInit, OnChanges {
-  /** The input pipeline device anaysis data. */
+  /** The input pipeline device analysis data. */
   @Input()
   set deviceAnalysis(analysis: InputPipelineDeviceAnalysisOrNull) {
     this.inputPipelineDeviceAnalysis = analysis;
@@ -89,6 +89,12 @@ export class DeviceSideAnalysisDetail implements AfterViewInit, OnChanges {
     this.infeedPercentMetrics.stddev =
         analysis.p.infeed_percent_standard_deviation || '';
   }
+
+  /** The default column ids. */
+  @Input() columnIds = STEPTIME_COLUMN_IDS_FOR_TPU;
+
+  /** The default column colors. */
+  @Input() columnColors = COLORS_FOR_TPU;
 
   @ViewChild('areaChart', {static: false}) areaChartRef!: ElementRef;
   @ViewChild('lineChart', {static: false}) lineChartRef!: ElementRef;
@@ -160,9 +166,12 @@ export class DeviceSideAnalysisDetail implements AfterViewInit, OnChanges {
     }
 
     let i = 0;
-    let columnsIds =
-        this.isTpu ? STEPTIME_COLUMN_IDS_FOR_TPU : STEPTIME_COLUMN_IDS_FOR_GPU;
-    let colors = this.isTpu ? COLORS_FOR_TPU : COLORS_FOR_GPU;
+    let columnsIds = this.columnIds;
+    let colors = this.columnColors;
+    if (!this.isTpu) {
+      columnsIds = STEPTIME_COLUMN_IDS_FOR_GPU;
+      colors = COLORS_FOR_GPU;
+    }
     while (i < dataTable.getNumberOfColumns()) {
       if (!columnsIds.includes(dataTable.getColumnId(i))) {
         dataTable.removeColumn(i);

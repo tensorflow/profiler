@@ -14,18 +14,18 @@ export class AnalysisSummary {
   set deviceAnalysis(analysis: InputPipelineDeviceAnalysis|null) {
     analysis = analysis || {};
     analysis.p = analysis.p || {};
-    this.summaryConclusion = analysis.p.summary_conclusion || '';
+    this.inputConclusion = analysis.p.input_conclusion || '';
     this.summaryNextstep =
-        this.replaceSectionName(analysis.p.summary_nextstep || '');
+      this.replaceSectionName(analysis.p.summary_nextstep || '');
     this.summaryColor = 'green';
-    if (this.summaryConclusion.includes('HIGHLY')) {
+    if (this.inputConclusion.includes('HIGHLY')) {
       this.summaryColor = 'red';
-    } else if (this.summaryConclusion.includes('MODERATE')) {
+    } else if (this.inputConclusion.includes('MODERATE')) {
       this.summaryColor = 'orange';
     }
   }
 
-  summaryConclusion = '';
+  inputConclusion = '';
   summaryNextstep = '';
   summaryColor = 'green';
 

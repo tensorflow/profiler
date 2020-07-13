@@ -454,7 +454,7 @@ export const DATA_PLUGIN_PROFILE_INPUT_PIPELINE_DATA = [
       'steptime_ms_maximum': '8.6',
       'steptime_ms_minimum': '1.2',
       'steptime_ms_standard_deviation': '2.5',
-      'summary_conclusion': '(1) Your program is NOT input-bound',
+      'input_conclusion': '(1) Your program is NOT input-bound',
       'summary_nextstep':
           'Look at the section 3 for the breakdown of input time on the host.',
     },
