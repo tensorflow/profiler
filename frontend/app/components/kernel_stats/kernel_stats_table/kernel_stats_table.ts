@@ -93,11 +93,10 @@ export class KernelStatsTable implements OnChanges, OnInit {
 
     const options = {
       allowHtml: true,
-      alternatingRowStyle: true,
+      alternatingRowStyle: false,
       showRowNumber: false,
       width: '100%',
       cssClassNames: {
-        'oddTableRow': 'google-chart-table-odd-table-row',
         'headerCell': 'google-chart-table-header-cell',
         'tableCell': 'google-chart-table-table-cell',
       },

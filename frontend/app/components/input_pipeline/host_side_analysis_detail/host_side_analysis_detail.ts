@@ -166,9 +166,9 @@ export class HostSideAnalysisDetail implements AfterViewInit, OnChanges {
     dataTable.setProperty(0, columns.selfTimeInPercent, 'style', 'width: 5%');
     dataTable.setProperty(0, columns.category, 'style', 'width: 15%');
     const options = {
+      alternatingRowStyle: false,
       showRowNumber: false,
       cssClassNames: {
-        'oddTableRow': 'google-chart-table-odd-table-row',
         'headerCell': 'google-chart-table-header-cell',
         'tableCell': 'google-chart-table-table-cell',
       }

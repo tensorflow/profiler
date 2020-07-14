@@ -92,9 +92,9 @@ export class TopOpsTable implements AfterViewInit, OnChanges {
     dataTable.setProperty(0, columns.operation, 'style', 'width: 50%');
     dataTable.setProperty(0, columns.flopRate, 'style', 'display: 10%');
     const options = {
+      alternatingRowStyle: false,
       showRowNumber: false,
       cssClassNames: {
-        'oddTableRow': 'google-chart-table-odd-table-row',
         'headerCell': 'google-chart-table-header-cell',
         'tableCell': 'google-chart-table-table-cell',
       },
