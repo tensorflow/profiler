@@ -18,7 +18,7 @@ mat-card-title {
   margin-bottom: 25px;
 }
 
-b {
+:host ::ng-deep b {
   font-weight: 500;
 }
 
@@ -26,23 +26,20 @@ ul {
   @include ul-flat;
 }
 
-table {
-  width: 100%;
-}
-
-.item-container {
+:host ::ng-deep .item-container {
   margin-bottom: 16px;
 }
 
-.item-container > table {
+:host ::ng-deep .item-container > table {
   border-spacing: 0;
+  width: 100%;
 }
 
-.item-container > td {
+:host ::ng-deep .item-container > td {
   padding: 0;
 }
 
-.item-value {
+:host ::ng-deep .item-value {
   padding-left: 0px;
   min-width: 100px;
   width: 20%;

@@ -7,13 +7,25 @@
     <div class="container">
       <div class="left-column">
         <memory-profile-summary [data]="data" [memoryId]="selectedMemoryId">
-          <mat-form-field>
-            <mat-select [(value)]="selectedMemoryId">
-              <mat-option *ngFor="let id of memoryIds" [value]="id">
-                {{ id }}
-              </mat-option>
-            </mat-select>
-          </mat-form-field>
+          <div class="item-container">
+            <table>
+              <tr>
+                <td>
+                  <b>Memory ID</b>
+                  <div class="description">show memory profile for selected device</div>
+                </td>
+                <td class="item-value">
+                  <mat-form-field>
+                    <mat-select [(value)]="selectedMemoryId">
+                      <mat-option *ngFor="let id of memoryIds" [value]="id">
+                        {{ id }}
+                      </mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                </td>
+              </tr>
+            </table>
+          </div>
         </memory-profile-summary>
       </div>
 

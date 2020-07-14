@@ -1,19 +1,7 @@
 <mat-card>
   <mat-card-title>{{ title }}</mat-card-title>
   <mat-card-content>
-    <div class="item-container">
-      <table>
-        <tr>
-          <td>
-            <b>Memory ID</b>
-            <div class="description">show memory profile for selected device</div>
-          </td>
-          <td class="item-value">
-            <ng-content></ng-content>
-          </td>
-        </tr>
-      </table>
-    </div>
+    <ng-content></ng-content>
     <div class="item-container">
       <table>
         <tr>

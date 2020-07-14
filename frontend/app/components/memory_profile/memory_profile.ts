@@ -3,6 +3,7 @@ import {ActivatedRoute} from '@angular/router';
 import {Store} from '@ngrx/store';
 import {MemoryProfileProtoOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
+import {MemoryProfileBase} from 'org_xprof/frontend/app/components/memory_profile/memory_profile_base';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
 import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
 
@@ -12,17 +13,14 @@ import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
   templateUrl: './memory_profile.ng.html',
   styleUrls: ['./memory_profile.css']
 })
-export class MemoryProfile {
-  data: MemoryProfileProtoOrNull = null;
+export class MemoryProfile extends MemoryProfileBase {
   run = '';
   host = '';
-  hasMemoryData = false;
-  memoryIds: string[] = [];
-  selectedMemoryId = '';
 
   constructor(
       route: ActivatedRoute, private readonly dataService: DataService,
       private readonly store: Store<{}>) {
+    super();
     route.params.subscribe(params => {
       this.update(params as NavigationEvent);
     });
@@ -47,18 +45,7 @@ export class MemoryProfile {
               message: '',
             }
           }));
-
-          data = data as MemoryProfileProtoOrNull;
-          this.data = data;
-          if (data && data.memoryIds && data.numHosts) {
-            if (data.numHosts > 0 && data.memoryIds.length > 0) {
-              this.hasMemoryData = true;
-              this.memoryIds = data.memoryIds;
-              if (this.selectedMemoryId === '') {
-                this.selectedMemoryId = data.memoryIds[0];
-              }
-            }
-          }
+          this.parseData(data as MemoryProfileProtoOrNull);
         });
   }
 }
