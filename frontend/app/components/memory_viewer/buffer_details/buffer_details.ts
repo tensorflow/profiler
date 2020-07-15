@@ -46,10 +46,15 @@ export class BufferDetails {
     this.groupName = heapObject.groupName;
     if (unpaddedSizeMiB) {
       this.unpaddedSize = unpaddedSizeMiB.toFixed(1);
-      this.padding = (sizeMiB - unpaddedSizeMiB).toFixed(1);
       const utilization = unpaddedSizeMiB / sizeMiB;
-      this.expansion = (1 / utilization).toFixed(1);
       this.color = utils.flameColor(utilization, 0.7);
+      if (utilization < 1) {
+        this.expansion = (1 / utilization).toFixed(1);
+        this.padding = (sizeMiB - unpaddedSizeMiB).toFixed(1);
+      } else {
+        this.expansion = '';
+        this.padding = '';
+      }
     } else {
       this.unpaddedSize = '';
       this.padding = '';

@@ -7,6 +7,11 @@ import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {MemoryUsage} from 'org_xprof/frontend/app/components/memory_viewer/memory_usage/memory_usage';
 import {setActiveHeapObjectAction, setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
 
+interface BufferSpan {
+  alloc: number;
+  free: number;
+}
+
 /** A memory viewer component. */
 @Component({
   selector: 'memory-viewer-main',
@@ -16,6 +21,9 @@ import {setActiveHeapObjectAction, setLoadingStateAction} from 'org_xprof/fronte
 export class MemoryViewerMain implements OnDestroy {
   /** XLA Hlo proto */
   @Input() hloProto: HloProtoOrNull = null;
+
+  /** XLA memory space color */
+  @Input() memorySpaceColor: number = 0;
 
   moduleName: string = '';
   peakInfo?: BufferAllocationInfo;
@@ -45,10 +53,11 @@ export class MemoryViewerMain implements OnDestroy {
     this.store.dispatch(
         setActiveHeapObjectAction({activeHeapObject: heapObject}));
     if (heapObject) {
+      const span = this.getLogicalBufferSpan(heapObject.logicalBufferId);
       this.activeInfo = {
         size: heapObject.sizeMiB || 0,
-        alloc: this.getLogicalBufferSpan(heapObject.logicalBufferId || 0, 0),
-        free: this.getLogicalBufferSpan(heapObject.logicalBufferId || 0, 1),
+        alloc: span.alloc,
+        free: span.free,
         color: utils.getChartItemColorByIndex(heapObject.color || 0),
       };
     } else {
@@ -58,12 +67,19 @@ export class MemoryViewerMain implements OnDestroy {
     }
   }
 
-  private getLogicalBufferSpan(index: number, allocOrFree: number): number {
-    if (this.usage && this.usage.logicalBufferSpans &&
-        this.usage.logicalBufferSpans[index]) {
-      return this.usage.logicalBufferSpans[index][allocOrFree] + 1;
+  private getLogicalBufferSpan(index?: number): BufferSpan {
+    const bufferSpan: BufferSpan = {alloc: 0, free: 0};
+    if (index && this.usage && this.usage.logicalBufferSpans &&
+        this.heapSizes) {
+      const span = this.usage.logicalBufferSpans[index];
+      if (span) {
+        bufferSpan.alloc = span[0];
+        bufferSpan.free = span[1] < 0 ? this.heapSizes.length - 1 : span[1];
+      } else {
+        bufferSpan.free = this.heapSizes.length - 1;
+      }
     }
-    return 0;
+    return bufferSpan;
   }
 
   setSelectedHepObject(selectedIndex: number) {
@@ -95,7 +111,7 @@ export class MemoryViewerMain implements OnDestroy {
     const data = this.hloProto;
     if (!data || !data.hloModule || !data.bufferAssignment) return;
     this.moduleName = data.hloModule.name || '';
-    this.usage = new MemoryUsage(data);
+    this.usage = new MemoryUsage(data, this.memorySpaceColor);
     this.peakHeapSizeMiB =
         utils.bytesToMiB(this.usage.peakHeapSizeBytes).toFixed(2);
     this.unpaddedPeakHeapSizeMiB =

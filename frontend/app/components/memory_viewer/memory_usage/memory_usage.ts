@@ -6,6 +6,11 @@ import {HloInstruction} from 'org_xprof/frontend/app/components/memory_viewer/xl
 import {LogicalBuffer} from 'org_xprof/frontend/app/components/memory_viewer/xla/logical_buffer';
 import {Shape} from 'org_xprof/frontend/app/components/memory_viewer/xla/shape';
 
+interface MemoryUsageBytes {
+  padded: number;
+  unpadded: number;
+}
+
 /**
  * Provides calculation of memory usage from xla buffer assignment.
  * @final
@@ -19,12 +24,13 @@ export class MemoryUsage {
   private readonly seenBufferAllocations: Set<number>;
   private nColor: number;
   private rest: number;
+  private memorySpaceColor: number;
 
   peakHeapSizeBytes: number;
   unpaddedPeakHeapSizeBytes: number;
   peakLogicalBuffers: number[];
   peakHeapSizePosition: number;
-  indefiniteMemoryUsageBytes: number;
+  indefiniteMemoryUsageBytes: MemoryUsageBytes;
   heapSizes: number[];
   unpaddedHeapSizes: number[];
   maxHeap: HeapObject[];
@@ -35,7 +41,7 @@ export class MemoryUsage {
 
   smallBufferSize: number;
 
-  constructor(hloProto: proto.HloProto) {
+  constructor(hloProto: proto.HloProto, memorySpaceColor: number) {
     this.buffers = [];
     this.idToBuffer = {};
     this.idToBufferAllocation = {};
@@ -44,12 +50,13 @@ export class MemoryUsage {
     this.seenBufferAllocations = new Set();
     this.nColor = 0;
     this.rest = 0;
+    this.memorySpaceColor = memorySpaceColor;
 
     this.peakHeapSizeBytes = 0;
     this.unpaddedPeakHeapSizeBytes = 0;
     this.peakLogicalBuffers = [];
     this.peakHeapSizePosition = 0;
-    this.indefiniteMemoryUsageBytes = 0;
+    this.indefiniteMemoryUsageBytes = {padded: 0, unpadded: 0};
     this.heapSizes = [];
     this.unpaddedHeapSizes = [];
     this.maxHeap = [];
@@ -60,7 +67,7 @@ export class MemoryUsage {
     this.smallBufferSize = 16 * 1024;
 
     this.initHloInstructions(hloProto.hloModule);
-    this.initMemoryUsage(hloProto.bufferAssignment);
+    this.initMemoryUsage(memorySpaceColor, hloProto.bufferAssignment);
     this.initMaxHeap();
   }
 
@@ -103,29 +110,40 @@ export class MemoryUsage {
    * allocations.
    * @private
    */
-  private findIndefiniteMemoryUsage(buffers: Set<number>): number {
-    let indefiniteMemoryUsageBytes = 0;
+  private findIndefiniteMemoryUsage(buffers: Set<number>, color: number):
+      MemoryUsageBytes {
+    const usageBytes: MemoryUsageBytes = {padded: 0, unpadded: 0};
     buffers.forEach(id => {
       const alloc = this.idToBufferAllocation[id];
       if (!alloc || alloc.isThreadLocal) {
         return;
       }
       if (!this.seenBufferAllocations.has(alloc.index)) {
+        const buffer = this.idToBuffer[id];
+        if (!buffer || buffer.color !== color) return;
         this.seenBufferAllocations.add(alloc.index);
-        indefiniteMemoryUsageBytes += alloc.size;
-
+        usageBytes.padded += alloc.size;
+        let shape = null;
+        if (buffer.instructionName) {
+          const hlo = this.nameToHlo[buffer.instructionName];
+          if (hlo && hlo.shape) {
+            shape = hlo.shape.resolveShapeIndex(buffer.shapeIndex);
+          }
+        }
+        usageBytes.unpadded +=
+            shape ? shape.unpaddedHeapSizeBytes() : alloc.size;
         this.addHeapObject(this.idToBuffer[id], alloc.groupName);
       }
     });
-    this.indefiniteMemoryUsageBytes = indefiniteMemoryUsageBytes;
-    return indefiniteMemoryUsageBytes;
+    this.indefiniteMemoryUsageBytes = usageBytes;
+    return usageBytes;
   }
 
   /**
    * Finds the peak memory usage from the `HeapSimulatorTrace`.
    * @private
    */
-  private findPeakMemoryUsage(trace: proto.HeapSimulatorTrace) {
+  private findPeakMemoryUsage(trace: proto.HeapSimulatorTrace, color: number) {
     if (!trace) {
       return;
     }
@@ -139,7 +157,7 @@ export class MemoryUsage {
     let unpaddedPeakHeapSizeBytes = 0;
     let peakHeapSizePosition = 0;
 
-    for (let event of trace.events || []) {
+    for (const event of trace.events || []) {
       heapSizes.push(utils.bytesToMiB(heapSizeBytes));
       unpaddedHeapSizes.push(utils.bytesToMiB(unpaddedHeapSizeBytes));
       const eventId = utils.toNumber(event.bufferId);
@@ -150,7 +168,7 @@ export class MemoryUsage {
         this.seenBufferAllocations.add(alloc.index);
       }
       let shape: Shape|null = null;
-      if (buffer.instructionName && buffer.instructionName != '') {
+      if (buffer.instructionName && buffer.instructionName !== '') {
         const hlo = this.nameToHlo[buffer.instructionName];
         if (hlo && hlo.shape) {
           shape = hlo.shape.resolveShapeIndex(buffer.shapeIndex);
@@ -180,7 +198,13 @@ export class MemoryUsage {
           if (shape) {
             unpaddedHeapSizeBytes -= shape.unpaddedHeapSizeBytes();
           }
-          this.logicalBufferSpans[eventId][1] = heapSizes.length - 1;
+          if (!this.logicalBufferSpans[eventId]) {
+            // The logical buffer is not allocated in this module.
+            this.logicalBufferSpans[eventId] = [0, heapSizes.length - 1];
+            console.warn(event, ' is freed but has seen no allocation event.');
+          } else {
+            this.logicalBufferSpans[eventId][1] = heapSizes.length - 1;
+          }
           if (heapSizeBytes < 0) {
             console.error('heap_size_bytes < 0');
           }
@@ -194,15 +218,19 @@ export class MemoryUsage {
     heapSizes.push(utils.bytesToMiB(heapSizeBytes));
     unpaddedHeapSizes.push(utils.bytesToMiB(unpaddedHeapSizeBytes));
     const indefiniteMemoryUsageBytes =
-        this.findIndefiniteMemoryUsage(this.unSeenLogicalBuffers);
-    this.peakHeapSizeBytes = peakHeapSizeBytes + indefiniteMemoryUsageBytes;
+        this.findIndefiniteMemoryUsage(this.unSeenLogicalBuffers, color);
+    this.peakHeapSizeBytes =
+        peakHeapSizeBytes + indefiniteMemoryUsageBytes.padded;
     this.unpaddedPeakHeapSizeBytes =
-        unpaddedPeakHeapSizeBytes + indefiniteMemoryUsageBytes;
+        unpaddedPeakHeapSizeBytes + indefiniteMemoryUsageBytes.unpadded;
     this.peakLogicalBuffers = peakLogicalBuffers;
     this.peakHeapSizePosition = peakHeapSizePosition;
-    const addend = utils.bytesToMiB(indefiniteMemoryUsageBytes);
-    this.heapSizes = heapSizes.map(item => item + addend);
-    this.unpaddedHeapSizes = unpaddedHeapSizes.map(item => item + addend);
+    const addendPadded = utils.bytesToMiB(indefiniteMemoryUsageBytes.padded);
+    this.heapSizes = heapSizes.map(item => item + addendPadded);
+    const addendUnpadded =
+        utils.bytesToMiB(indefiniteMemoryUsageBytes.unpadded);
+    this.unpaddedHeapSizes =
+        unpaddedHeapSizes.map(item => item + addendUnpadded);
   }
 
   /**
@@ -210,18 +238,18 @@ export class MemoryUsage {
    * space color.
    * @private
    */
-  private getHbmHeapTrace(traces?: proto.HeapSimulatorTrace[]):
-      proto.HeapSimulatorTrace|null {
+  private getHbmHeapTraceByColor(
+      color: number,
+      traces?: proto.HeapSimulatorTrace[]): proto.HeapSimulatorTrace|null {
     if (!traces) {
       return null;
     }
-    const kHbmColor = 0;
-    for (let trace of traces) {
-      for (let event of trace.events || []) {
+    for (const trace of traces) {
+      for (const event of trace.events || []) {
         if (!event.bufferId) continue;
         const buffer = this.idToBuffer[utils.toNumber(event.bufferId)];
         if (!buffer) continue;
-        if (buffer.color != kHbmColor) break;
+        if (buffer.color !== color) break;
         return trace;
       }
     }
@@ -237,9 +265,9 @@ export class MemoryUsage {
     if (!bufferAllocations) {
       return;
     }
-    for (let bufferAllocation of bufferAllocations) {
+    for (const bufferAllocation of bufferAllocations) {
       const alloc = new BufferAllocation(bufferAllocation);
-      for (let assigned of bufferAllocation.assigned || []) {
+      for (const assigned of bufferAllocation.assigned || []) {
         if (!assigned.logicalBufferId) continue;
         this.idToBufferAllocation[utils.toNumber(assigned.logicalBufferId)] =
             alloc;
@@ -256,7 +284,7 @@ export class MemoryUsage {
     if (!logicalBuffers) {
       return;
     }
-    for (let logicalBuffer of logicalBuffers) {
+    for (const logicalBuffer of logicalBuffers) {
       if (!logicalBuffer.id) continue;
       const buffer = new LogicalBuffer(logicalBuffer);
       this.buffers.push(buffer);
@@ -275,8 +303,8 @@ export class MemoryUsage {
           'Missing hloModule, skipping unpadded allocation size analysis');
       return;
     }
-    for (let comp of hloModule.computations || []) {
-      for (let inst of comp.instructions || []) {
+    for (const comp of hloModule.computations || []) {
+      for (const inst of comp.instructions || []) {
         if (!inst.name) continue;
         this.nameToHlo[inst.name] = new HloInstruction(inst);
       }
@@ -289,14 +317,14 @@ export class MemoryUsage {
    * into the logical_buffers sequence above was program order, and we iterate
    * that order to create data points.
    * @private
-   **/
+   */
   private initMaxHeap() {
-    for (let id of this.peakLogicalBuffers) {
+    for (const id of this.peakLogicalBuffers) {
       const alloc = this.idToBufferAllocation[id];
       const groupName = alloc ? alloc.groupName : '';
       this.addHeapObject(this.idToBuffer[id], groupName);
     }
-    if (this.rest != 0) {
+    if (this.rest !== 0) {
       const small =
           'small (<' + (this.smallBufferSize / 1024).toString() + ' KiB)';
       this.maxHeap.push({
@@ -306,7 +334,7 @@ export class MemoryUsage {
         groupName: small,
       });
     }
-    let indexedMaxHeap = this.maxHeap.map((e, i) => {
+    const indexedMaxHeap = this.maxHeap.map((e, i) => {
       return {ind: i, val: e};
     });
     indexedMaxHeap.sort((a, b) => {
@@ -326,19 +354,22 @@ export class MemoryUsage {
    * Initializes memory usage of the module.
    * @private
    */
-  private initMemoryUsage(bufferAssignment?: proto.BufferAssignmentProto) {
+  private initMemoryUsage(
+      memorySpaceColor: number,
+      bufferAssignment?: proto.BufferAssignmentProto) {
     if (!bufferAssignment) {
       console.warn('No buffer assignment info');
       return;
     }
     this.initBuffers(bufferAssignment.logicalBuffers);
     this.initAllocations(bufferAssignment.bufferAllocations);
-    const trace = this.getHbmHeapTrace(bufferAssignment.heapSimulatorTraces);
+    const trace = this.getHbmHeapTraceByColor(
+        memorySpaceColor, bufferAssignment.heapSimulatorTraces);
     if (!trace) {
       console.warn('Missing hbm heap simulator trace.');
       return;
     }
-    this.findPeakMemoryUsage(trace);
+    this.findPeakMemoryUsage(trace, memorySpaceColor);
   }
 
   /**
@@ -362,7 +393,7 @@ export class MemoryUsage {
       sizeMiB: utils.bytesToMiB(buffer.size),
       color: this.nColor++,
       shape: shape ? shape.humanStringWithLayout() : '',
-      groupName: groupName,
+      groupName,
     };
   }
 }
