@@ -8,6 +8,9 @@
 
 .description {
   margin-top: -16px;
+  font-size: 16px;
+  font-weight: lighter;
+  line-height: 1.6;
 }
 
 .control-container {
@@ -16,17 +19,17 @@
 }
 
 .control {
-  margin-right: 32px;
+  margin-right: 80px;
 }
 
 .ops-control {
-  margin-right: 32px;
-  text-align: center;
+  margin-right: 80px;
+  text-align: left;
 }
 
 .control-title {
   color: $content-secondary-color;
-  margin-bottom: 16px;
+  margin-bottom: 5px;
 }
 
 .ops-control-title {
@@ -35,5 +38,16 @@
 }
 
 .children-count-input {
-  width: 50px;
+  width: 60px;
+}
+
+.tooltip-icon-container {
+  position: relative;
+}
+
+.tooltip-icon {
+  color: #e8710a;
+  font-size: 25px;
+  vertical-align: bottom;
+  cursor: pointer;
 }

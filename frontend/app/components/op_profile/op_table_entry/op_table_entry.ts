@@ -44,6 +44,7 @@ export class OpTableEntry implements OnChanges {
   provenance: string = '';
   timeWasted: string = '';
   utilization: string = '';
+  numLeftOut: number = 0;
 
   ngOnChanges(changes: SimpleChanges) {
     if (!this.node) {
@@ -55,6 +56,7 @@ export class OpTableEntry implements OnChanges {
       this.expanded = true;
     }
     this.children = this.getChildren();
+    this.numLeftOut = this.getLeftOut();
     if (!!this.node && !!this.node.metrics && !!this.node.metrics.time) {
       this.percent = utils.percent(this.node.metrics.time);
       this.barWidth = this.percent;
@@ -101,7 +103,7 @@ export class OpTableEntry implements OnChanges {
       return [];
     }
     let children: Node[] = [];
-    let k = this.get90ChildrenIndex();
+    const k = this.get90ChildrenIndex();
 
     children = this.level ? this.node.children.slice(0, k) :
                             this.node.children.slice();
@@ -110,6 +112,12 @@ export class OpTableEntry implements OnChanges {
     }
 
     return children;
+  }
+
+  private getLeftOut(): number {
+    if (!this.level || !this.node || !this.node.numChildren) return 0;
+    return this.node.numChildren -
+        Math.min(this.childrenCount, this.children.length);
   }
 
   toggleExpanded() {

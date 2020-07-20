@@ -85,6 +85,24 @@ sidenav mat-form-field .mat-select-value {
   color: #777;
 }
 
+op-profile .ops-control .mat-form-field {
+  text-align: center !important;
+}
+
+op-profile .ops-control .mat-slider-horizontal {
+   width: 200px;
+}
+
+op-profile .control .mat-slide-toggle-bar {
+  width: 45px;
+  height: 18px;
+}
+
+op-profile .control .mat-slide-toggle-thumb {
+  height: 25px;
+  width: 25px;
+}
+
 // Angular material styles
 @font-face {
   font-family: 'Material Icons';
@@ -128,4 +146,20 @@ sidenav mat-form-field .mat-select-value {
   font-style: normal;
   font-weight: 500;
   src: local('Roboto Medium'), local('Roboto-Medium');
+}
+
+// Styles for overlay components needs to be global.
+//
+// Reference: https://material.angular.io/guide/customizing-component-styles#styling-overlay-components
+// Some OS hides scrollbars while not in use. Always show scrollbar if the
+// overlay has a scroll feature.
+.panel-override::-webkit-scrollbar {
+  -webkit-appearance: none;
+  width: 7px;
+}
+
+.panel-override::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
 }

@@ -43,4 +43,7 @@
     (hover)="hover.emit($event);"
     (selected)="selected.emit($event);">
   </op-table-entry>
+  <div class="leftout" *ngIf="numLeftOut > 0">
+    <span [style.padding-left]="offset">{{numLeftOut}} categories or ops have been left out.</span>
+  </div>
 </div>

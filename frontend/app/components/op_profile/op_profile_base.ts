@@ -13,6 +13,7 @@ export class OpProfileBase {
   byWasted: boolean = false;
   showP90: boolean = false;
   childrenCount: number = 10;
+  deviceType: string = 'TPU';
 
   private hasMultipleProfiles(): boolean {
     return !!this.profile && !!this.profile.byCategory &&
@@ -30,6 +31,7 @@ export class OpProfileBase {
       this.rootNode =
           this.isByCategory ? this.profile.byCategory : this.profile.byProgram;
     }
+    this.deviceType = this.profile.deviceType || 'TPU';
   }
 
   parseData(data: ProfileOrNull) {

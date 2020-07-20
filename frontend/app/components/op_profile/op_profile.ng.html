@@ -1,7 +1,7 @@
 <div class="container">
   <div class="mat-headline">
     <div>
-      Overall TPU FLOPS utilization is
+      Overall {{deviceType}} FLOPS utilization is
       <span [style.color]="data.flopsColor">{{data.utilizationPercent}}</span>
     </div>
     <div>
@@ -12,17 +12,12 @@
   <div class="description">
     <div>
       Modifying your model's architecture, data dimensions, and improving
-      the efficiency of CPU operations may help reach the TPU's FLOPS
+      the efficiency of CPU operations may help reach the {{deviceType}}'s FLOPS
       potential.
     </div>
     <div>
       "Idle" represents the portion of the total execution time on device
       that is idle.
-    </div>
-    <div>
-      <span>Wasted time is defined by </span>
-      <code>RuntimeFraction * (1 - max(FlopsUtilization, MemoryUtilization))</code>
-      <span>.</span>
     </div>
   </div>
   <div class="control-container">
@@ -56,7 +51,15 @@
       </div>
     </div>
     <div class="control">
-      <div class="control-title">Sort by wasted time</div>
+      <div class="control-title">Sort by wasted time
+        <mat-icon
+                  class="tooltip-icon"
+                  matTooltip="Wasted time is defined by RuntimeFraction *
+                              (1 - max(FlopsUtilization, MemoryUtilization))."
+                  matTooltipPosition="above">
+              info
+        </mat-icon>
+      </div>
       <mat-slide-toggle [checked]="byWasted" (toggleChange)="updateByWasted()"></mat-slide-toggle>
     </div>
     <div class="control">

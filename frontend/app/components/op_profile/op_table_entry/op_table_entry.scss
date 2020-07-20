@@ -15,16 +15,16 @@
 }
 
 .row.expanded {
-  background-color: rgba(0, 0, 0, .04);
+  background-color: rgba(0, 0, 0, 0.04);
   font-weight: bold;
 }
 
 .row:hover {
-  background-color: rgba(0, 0, 0, .05);
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 .row > * {
-  padding: .5em;
+  padding: 0.5em;
   overflow: hidden;
   flex-shrink: 0;
   box-sizing: border-box;
@@ -51,7 +51,9 @@
   padding: 0 !important;
 }
 
-.time, .wasted, .utilization {
+.time,
+.wasted,
+.utilization {
   line-height: 20px;
   font-size: smaller;
   width: 60px;
@@ -86,4 +88,9 @@
   width: 16px;
   height: 16px;
   border-radius: 8px;
+}
+
+.leftout {
+  padding-left: 175px;
+  font-style: italic;
 }
