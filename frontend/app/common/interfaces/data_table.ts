@@ -61,6 +61,43 @@ declare interface GeneralAnalysisProperty {
 }
 /* tslint:enable */
 
+/* tslint:disable enforce-name-casing */
+/** The base interface for properties of meta host-op table. */
+declare interface MetaHostOpTableProperty {
+  num_host_op_tables: string;
+  valid_host_ops: string;
+  hostnames: string;
+  values: string;
+}
+/* tslint:enable */
+
+/** The base interface for meta host-op table. */
+export declare interface MetaHostOpTable {
+  cols?: DataTableColumn[];
+  rows?: DataTableRow[];
+  p: MetaHostOpTableProperty;
+}
+
+/** MetaHostOpTable type or Null. */
+export type MetaHostOpTableOrNull = MetaHostOpTable|null;
+
+/** The base interface for properties of host-op table. */
+declare interface HostOpTableProperty {
+  hostop: string;
+  hostname: string;
+  value: string;
+}
+
+/** The base interface for host-op table. */
+export declare interface HostOpTable {
+  cols?: DataTableColumn[];
+  rows?: DataTableRow[];
+  p: HostOpTableProperty;
+}
+
+/** HostOpTable type or Null. */
+export type HostOpTableOrNull = HostOpTable|null;
+
 /** The base interface for a general analysis. */
 export declare interface GeneralAnalysis {
   cols?: DataTableColumn[];
@@ -386,7 +423,7 @@ export type OverviewDataTuple = [
 
 /** All input pipeline page data table type. */
 export type InputPipelineDataTable =
-    InputPipelineDeviceAnalysis|InputPipelineHostAnalysis|SimpleDataTable;
+    InputPipelineDeviceAnalysis|InputPipelineHostAnalysis|MetaHostOpTable|HostOpTable|SimpleDataTable;
 
 /** The data table type for a PodViewerDatabase or null. */
 export type PodViewerDatabaseOrNull = PodViewerDatabase|null;
