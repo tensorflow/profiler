@@ -15,6 +15,7 @@ import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
 })
 export class MemoryProfile extends MemoryProfileBase {
   run = '';
+  tag = '';
   host = '';
 
   constructor(
@@ -28,6 +29,7 @@ export class MemoryProfile extends MemoryProfileBase {
 
   update(event: NavigationEvent) {
     this.run = event.run || '';
+    this.tag = event.tag || 'memory_profile';
     this.host = event.host || '';
 
     this.store.dispatch(setLoadingStateAction({
@@ -37,7 +39,7 @@ export class MemoryProfile extends MemoryProfileBase {
       }
     }));
 
-    this.dataService.getData(this.run, 'memory_profile', this.host)
+    this.dataService.getData(this.run, this.tag, this.host)
         .subscribe(data => {
           this.store.dispatch(setLoadingStateAction({
             loadingState: {

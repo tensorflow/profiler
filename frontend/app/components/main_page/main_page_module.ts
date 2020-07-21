@@ -26,22 +26,28 @@ import {TraceViewerModule} from 'org_xprof/frontend/app/components/trace_viewer/
 
 import {MainPage} from './main_page';
 
-/** The list of all routes available int the application. */
+/** The list of all routes available in the application. */
 export const routes: Routes = [
   {path: 'empty', component: EmptyPage},
   {path: 'overview_page', component: Overview},
   {path: 'overview_page@', component: Overview},
+  {path: 'overview_page^', component: Overview},
   {path: 'input_pipeline_analyzer', component: InputPipeline},
   {path: 'input_pipeline_analyzer@', component: InputPipeline},
+  {path: 'input_pipeline_analyzer^', component: InputPipeline},
   {path: 'kernel_stats', component: KernelStats},
-  {path: 'memory_profile', component: MemoryProfile},
+  {path: 'kernel_stats^', component: KernelStats},
+  {path: 'memory_profile#', component: MemoryProfile},
+  {path: 'memory_profile^', component: MemoryProfile},
   {path: 'memory_viewer', component: MemoryViewer},
   {path: 'op_profile', component: OpProfile},
   {path: 'pod_viewer', component: PodViewer},
   {path: 'tensorflow_stats', component: TensorflowStats},
+  {path: 'tensorflow_stats^', component: TensorflowStats},
   {path: 'trace_viewer', component: TraceViewer},
   {path: 'trace_viewer#', component: TraceViewer},
   {path: 'trace_viewer@', component: TraceViewer},
+  {path: 'trace_viewer^', component: TraceViewer},
   {path: '**', component: EmptyPage},
 ];
 

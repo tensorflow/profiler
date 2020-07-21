@@ -32,7 +32,8 @@ export class OpProfile extends OpProfileBase {
       }
     }));
 
-    this.dataService.getData(event.run || '', 'op_profile', event.host || '')
+    this.dataService
+        .getData(event.run || '', event.tag || 'op_profile', event.host || '')
         .subscribe(data => {
           this.store.dispatch(setLoadingStateAction({
             loadingState: {

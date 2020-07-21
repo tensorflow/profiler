@@ -17,6 +17,7 @@ export class TensorflowStats {
   data: TensorflowStatsData[]|null = null;
   selectedData: TensorflowStatsData|null = null;
   run = '';
+  tag = '';
   host = '';
   idleMenuButtonLabel = IdleOption.NO;
   idleOptionItems = [IdleOption.YES, IdleOption.NO];
@@ -39,7 +40,7 @@ export class TensorflowStats {
   }
 
   exportDataAsCSV() {
-    this.dataService.exportDataAsCSV(this.run, 'tensorflow_stats', this.host);
+    this.dataService.exportDataAsCSV(this.run, this.tag, this.host);
   }
 
   setIdleOption(option: IdleOption = IdleOption.NO) {
@@ -68,6 +69,7 @@ export class TensorflowStats {
 
   update(event: NavigationEvent) {
     this.run = event.run || '';
+    this.tag = event.tag || 'tensorflow_stats';
     this.host = event.host || '';
 
     this.store.dispatch(setLoadingStateAction({
@@ -77,7 +79,7 @@ export class TensorflowStats {
       }
     }));
 
-    this.dataService.getData(this.run, 'tensorflow_stats', this.host)
+    this.dataService.getData(this.run, this.tag, this.host)
         .subscribe(data => {
           this.store.dispatch(setLoadingStateAction({
             loadingState: {

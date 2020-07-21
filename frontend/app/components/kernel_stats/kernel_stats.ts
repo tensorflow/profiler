@@ -15,6 +15,7 @@ import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
 export class KernelStats {
   data: SimpleDataTable|null = null;
   run = '';
+  tag = '';
   host = '';
   hasDataRow = false;
 
@@ -27,11 +28,12 @@ export class KernelStats {
   }
 
   exportDataAsCSV() {
-    this.dataService.exportDataAsCSV(this.run, 'kernel_stats', this.host);
+    this.dataService.exportDataAsCSV(this.run, this.tag, this.host);
   }
 
   update(event: NavigationEvent) {
     this.run = event.run || '';
+    this.tag = event.tag || 'kernel_stats';
     this.host = event.host || '';
 
     this.store.dispatch(setLoadingStateAction({
@@ -41,7 +43,7 @@ export class KernelStats {
       }
     }));
 
-    this.dataService.getData(this.run, 'kernel_stats', this.host)
+    this.dataService.getData(this.run, this.tag, this.host)
         .subscribe(data => {
           this.store.dispatch(setLoadingStateAction({
             loadingState: {

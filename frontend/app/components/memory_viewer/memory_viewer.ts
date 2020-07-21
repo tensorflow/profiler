@@ -32,7 +32,9 @@ export class MemoryViewer {
       }
     }));
 
-    this.dataService.getData(event.run || '', 'memory_viewer', event.host || '')
+    this.dataService
+        .getData(
+            event.run || '', event.tag || 'memory_viewer', event.host || '')
         .subscribe(data => {
           this.store.dispatch(setLoadingStateAction({
             loadingState: {

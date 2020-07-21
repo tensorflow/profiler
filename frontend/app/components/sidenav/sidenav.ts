@@ -47,7 +47,8 @@ export class SideNav {
 
   getDisplayTagName(tag: string): string {
     return (tag && tag.length &&
-            (tag[tag.length - 1] === '@' || tag[tag.length - 1] === '#')) ?
+            (tag[tag.length - 1] === '@' || tag[tag.length - 1] === '#' ||
+             tag[tag.length - 1] === '^')) ?
         tag.slice(0, -1) :
         tag || '';
   }
@@ -66,7 +67,7 @@ export class SideNav {
       this.selectedTag =
           this.tags.find(
               tag => tag === targetTag || tag === targetTag + '@' ||
-                  tag === targetTag + '#') ||
+                  tag === targetTag + '#' || tag === targetTag + '^') ||
           this.tags[0];
       this.updateHosts();
     } else {

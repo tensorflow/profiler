@@ -3,9 +3,20 @@ export const DATA_PLUGIN_PROFILE_TOOLS = {
   'foo': ['overview_page', 'trace_viewer'],
   'empty': [],
   'bar': [
-    'overview_page', 'overview_page@', 'input_pipeline_analyzer',
-    'input_pipeline_analyzer@', 'memory_viewer', 'kernel_stats', 'op_profile',
-    'pod_viewer', 'trace_viewer', 'trace_viewer@', 'tensorflow_stats'
+    'overview_page',
+    'overview_page@',
+    'input_pipeline_analyzer',
+    'input_pipeline_analyzer@',
+    'memory_viewer',
+    'memory_profile#',
+    'kernel_stats',
+    'op_profile',
+    'pod_viewer',
+    'trace_viewer',
+    'trace_viewer@',
+    'trace_viewer^',
+    'tensorflow_stats',
+    'tensorflow_stats^',
   ]
 };
 

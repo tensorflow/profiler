@@ -14,6 +14,7 @@ py_library(
         ":input_pipeline_proto_to_gviz",
         ":kernel_stats_proto_to_gviz",
         ":overview_page_proto_to_gviz",
+        ":raw_to_tool_data",
         ":tf_stats_proto_to_gviz",
         ":trace_events_json",
     ],
@@ -160,6 +161,20 @@ py_test(
         requirement("absl-py"),
         requirement("gviz_api"),
         "@org_tensorflow_tensorboard//tensorboard:expect_tensorflow_installed",
+        "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
+    ],
+)
+
+py_library(
+    name = "raw_to_tool_data",
+    srcs = ["raw_to_tool_data.py"],
+    srcs_version = "PY2AND3",
+    deps = [
+        ":input_pipeline_proto_to_gviz",
+        ":kernel_stats_proto_to_gviz",
+        ":overview_page_proto_to_gviz",
+        ":tf_stats_proto_to_gviz",
+        ":trace_events_json",
         "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
     ],
 )

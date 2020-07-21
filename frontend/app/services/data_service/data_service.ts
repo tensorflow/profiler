@@ -62,30 +62,28 @@ export class DataService {
 
   getData(run: string, tag: string, host: string): Observable<DataTable> {
     if (this.isLocalDevelopment) {
-      if (tag === 'overview_page' || tag === 'overview_page@') {
+      if (tag.startsWith('overview_page')) {
         return of(mockData.DATA_PLUGIN_PROFILE_OVERVIEW_PAGE_DATA)
             .pipe(delay(DELAY_TIME_MS));
-      } else if (
-          tag === 'input_pipeline_analyzer' ||
-          tag === 'input_pipeline_analyzer@') {
+      } else if (tag.startsWith('input_pipeline_analyzer')) {
         return of(mockData.DATA_PLUGIN_PROFILE_INPUT_PIPELINE_DATA)
             .pipe(delay(DELAY_TIME_MS));
-      } else if (tag === 'tensorflow_stats') {
+      } else if (tag.startsWith('tensorflow_stats')) {
         return of(mockData.DATA_PLUGIN_PROFILE_TENSORFLOW_STATS_DATA)
             .pipe(delay(DELAY_TIME_MS));
-      } else if (tag === 'memory_viewer') {
+      } else if (tag.startsWith('memory_viewer')) {
         return of(mockData.DATA_PLUGIN_PROFILE_MEMORY_VIEWER_DATA)
             .pipe(delay(DELAY_TIME_MS));
-      } else if (tag === 'op_profile') {
+      } else if (tag.startsWith('op_profile')) {
         return of(mockData.DATA_PLUGIN_PROFILE_OP_PROFILE_DATA)
             .pipe(delay(DELAY_TIME_MS));
-      } else if (tag === 'pod_viewer') {
+      } else if (tag.startsWith('pod_viewer')) {
         return of(mockData.DATA_PLUGIN_PROFILE_POD_VIEWER_DATA)
             .pipe(delay(DELAY_TIME_MS));
-      } else if (tag === 'kernel_stats') {
+      } else if (tag.startsWith('kernel_stats')) {
         return of(mockData.DATA_PLUGIN_PROFILE_KERNEL_STATS_DATA)
             .pipe(delay(DELAY_TIME_MS));
-      } else if (tag === 'memory_profile') {
+      } else if (tag.startsWith('memory_profile')) {
         return of(mockData.DATA_PLUGIN_PROFILE_MEMORY_PROFILE_DATA)
             .pipe(delay(DELAY_TIME_MS));
       } else {
@@ -99,9 +97,6 @@ export class DataService {
   }
 
   exportDataAsCSV(run: string, tag: string, host: string) {
-    if (tag !== 'kernel_stats' && tag !== 'tensorflow_stats') {
-      return;
-    }
     const params = new HttpParams()
                        .set('run', run)
                        .set('tag', tag)

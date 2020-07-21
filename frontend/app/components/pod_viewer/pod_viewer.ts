@@ -40,7 +40,8 @@ export class PodViewer extends PodViewerCommon {
       }
     }));
 
-    this.dataService.getData(event.run || '', 'pod_viewer', event.host || '')
+    this.dataService
+        .getData(event.run || '', event.tag || 'pod_viewer', event.host || '')
         .subscribe(data => {
           this.store.dispatch(setLoadingStateAction({
             loadingState: {
