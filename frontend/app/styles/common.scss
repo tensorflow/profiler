@@ -44,6 +44,10 @@ $dark-theme-card-title-color: #fff;
   font-style: italic;
 }
 
+.item-container {
+  padding: 20px 20px 0;
+}
+
 @mixin overview-card {
   box-shadow: none !important;
   margin: 8px;
