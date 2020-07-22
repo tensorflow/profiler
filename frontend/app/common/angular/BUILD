@@ -177,3 +177,11 @@ ts_library(
         "@npm//@angular/material",
     ],
 )
+
+ts_library(
+    name = "angular_material_list",
+    srcs = [],
+    deps = [
+        "@npm//@angular/material",
+    ],
+)
