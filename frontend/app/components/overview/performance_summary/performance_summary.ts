@@ -76,11 +76,15 @@ export class PerformanceSummary implements OnChanges {
   remarkText = '';
   remarkColor = '';
   flopsUtilizationTooltipMessage =
-      'The first number shows the hardware utilization based on the hardware performance counter. The second one shows the performance compared to the program\'s optimal performance considering the instruction mix (i.e., the ratio of floating-point operations and memory operations).';
+    'The first number shows the hardware utilization based on the hardware performance counter. The second one shows the performance compared to the program\'s optimal performance considering the instruction mix (i.e., the ratio of floating-point operations and memory operations).';
   tfOpPlacementTooltipMessage =
-      'It is based on the number of TF ops executed on the host and device.';
+    'It is based on the number of TF ops executed on the host and device.';
   opTimeInEagerModeTooltipMessage =
-      'Out of the total op execution time on host (device), excluding idle time, the percentage of which used eager execution.';
+    'Out of the total op execution time on host (device), excluding idle time, the percentage of which used eager execution.';
+  memoryBandwidthTooltipMessage =
+    'Percentage of the peak device memory bandwidth that is used.';
+  deviceDutyCycleTooltipMessage =
+    'Percentage of the device time that is busy.';
 
   ngOnChanges(changes: SimpleChanges) {
     if (!this.generalAnalysis || !this.inputPipelineAnalysis) {
@@ -168,22 +172,39 @@ export class PerformanceSummary implements OnChanges {
     }
 
     this.summaryInfoBefore.push({
-      title: 'Host Idle Time',
-      descriptions: ['lower is better'],
-      value: generalProps.host_idle_time_percent,
-    });
-
-    this.summaryInfoBefore.push({
-      title: 'TPU Idle Time',
-      descriptions: ['lower is better'],
-      value: generalProps.device_idle_time_percent,
+      title: 'TPU Duty Cycle',
+      tooltip: this.deviceDutyCycleTooltipMessage,
+      descriptions: ['higher is better'],
+      value: generalProps.device_duty_cycle_percent,
     });
 
     this.summaryInfoAfter.push({
       title: 'Memory Bandwidth Utilization',
+      tooltip: this.memoryBandwidthTooltipMessage,
       descriptions: ['higher is better'],
       value: generalProps.memory_bw_utilization_relative_to_hw_limit,
     });
+
+    this.summaryInfoAfter.push({
+      title: 'TF Op Placement',
+      descriptions: ['generally desired to have more ops on device'],
+      tooltip: this.tfOpPlacementTooltipMessage,
+      propertyValues: [
+        `Host: ${generalProps.host_tf_op_percent || ''}`,
+        `Device: ${generalProps.device_tf_op_percent || ''}`,
+      ],
+    });
+
+    this.summaryInfoAfter.push({
+      title: 'Op Time Spent on Eager Execution',
+      descriptions: ['lower is better'],
+      tooltip: this.opTimeInEagerModeTooltipMessage,
+      propertyValues: [
+        `Host: ${generalProps.host_op_time_eager_percent || ''}`,
+        `Device: ${generalProps.device_op_time_eager_percent || ''}`,
+      ],
+    });
+
   }
 
   parseGenericData() {
@@ -217,6 +238,7 @@ export class PerformanceSummary implements OnChanges {
 
     this.summaryInfoBefore.push({
       title: 'TF Op Placement',
+      descriptions: ['generally desired to have more ops on device'],
       tooltip: this.tfOpPlacementTooltipMessage,
       propertyValues: [
         `Host: ${generalProps.host_tf_op_percent || ''}`,

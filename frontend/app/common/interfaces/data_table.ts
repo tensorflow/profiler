@@ -46,6 +46,7 @@ export type SimpleDataTableOrNull = SimpleDataTable|null;
 /** The base interface for a property of general analysis. */
 declare interface GeneralAnalysisProperty {
   device_idle_time_percent?: string;
+  device_duty_cycle_percent?: string;
   flop_rate_utilization_relative_to_roofline?: string;
   host_idle_time_percent?: string;
   memory_bw_utilization_relative_to_hw_limit?: string;
