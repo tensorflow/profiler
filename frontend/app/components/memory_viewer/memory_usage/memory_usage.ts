@@ -383,8 +383,10 @@ export class MemoryUsage {
     if (!buffer || !inst) {
       return null;
     }
+    const shapeIndex =
+        buffer.shapeIndex.length ? ' {' + buffer.shapeIndex.join() + '}' : '';
     return {
-      instructionName: buffer.instructionName,
+      instructionName: buffer.instructionName + shapeIndex,
       logicalBufferId: buffer.id,
       unpaddedSizeMiB: shape ? utils.bytesToMiB(shape.unpaddedHeapSizeBytes()) :
                                0,

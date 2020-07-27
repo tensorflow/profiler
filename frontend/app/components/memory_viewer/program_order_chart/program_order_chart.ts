@@ -107,6 +107,7 @@ export class ProgramOrderChart implements OnChanges, OnInit {
 
     const data = [];
     this.maxOrder = this.heapSizes.length - 1;
+    this.maxSize = 0;
     for (let i = 0; i < this.heapSizes.length; i++) {
       this.maxSize = Math.max(
           this.maxSize, Math.max(this.heapSizes[i], this.unpaddedHeapSizes[i]));
@@ -208,7 +209,7 @@ export class ProgramOrderChart implements OnChanges, OnInit {
       }, 100);
     }
 
-    google.charts.load('current', {'packages': ['corechart']})
+    google.charts.load('current', {'packages': ['corechart']});
     google.charts.setOnLoadCallback(() => {
       this.activeChart =
           new google.visualization.AreaChart(this.activeChartRef.nativeElement);
@@ -216,9 +217,9 @@ export class ProgramOrderChart implements OnChanges, OnInit {
           new google.visualization.LineChart(this.chartRef.nativeElement);
       this.peakChart =
           new google.visualization.AreaChart(this.peakChartRef.nativeElement);
+      this.drawChart();
       this.drawPeakChart();
       this.drawActiveChart();
-      this.drawChart();
     });
   }
 }
