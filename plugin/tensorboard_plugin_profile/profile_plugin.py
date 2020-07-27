@@ -525,13 +525,15 @@ class ProfilePlugin(base_plugin.TBPlugin):
           {'result': 'Capture profile successfully. Please refresh.'},
           'application/json',
       )
-    except tf.errors.UnavailableError:
+    except tf.errors.UnavailableError as e:
+      print(e)
       return respond(
           {'error': 'empty trace result.'},
           'application/json',
           code=200,
       )
     except Exception as e:  # pylint: disable=broad-except
+      print(e)
       return respond(
           {'error': str(e)},
           'application/json',
