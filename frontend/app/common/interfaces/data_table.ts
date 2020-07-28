@@ -163,6 +163,7 @@ export declare interface TopOpsColumn {
   category: number;
   operation: number;
   flopRate: number;
+  tcEligibility: number;
 }
 
 /* tslint:disable enforce-name-casing */

@@ -64,6 +64,7 @@ class ProtoToGvizTest(tf.test.TestCase):
             "category",
             "name",
             "flop_rate",
+            "is_op_tensorcore_eligible",
         ])
 
     ProtoToGvizTest.mock_tf_op = MockOverviewTfOp(
@@ -72,6 +73,7 @@ class ProtoToGvizTest(tf.test.TestCase):
         category="2",
         name="1",
         flop_rate=5.0,
+        is_op_tensorcore_eligible=True,
     )
 
     MockTip = collections.namedtuple(  # pylint: disable=invalid-name
@@ -96,14 +98,14 @@ class ProtoToGvizTest(tf.test.TestCase):
       raw_value = data[row_idx - 1][cc]
       value_type = table_description[cc][1]
 
-      # Only number and strings are used in our DataTable schema.
-      self.assertIn(value_type, ["number", "string"])
+      # Only number, string and boolean are used in our DataTable schema.
+      self.assertIn(value_type, ["number", "string", "boolean"])
 
       # Encode in similar fashion as DataTable.ToCsv().
       expected_value = gviz_api.DataTable.CoerceValue(raw_value, value_type)
       self.assertNotIsInstance(expected_value, tuple)
       self.assertEqual(expected_value, raw_value)
-      self.assertEqual(str(expected_value), cell_str)
+      self.assertEqual(gviz_api.DataTable.ToString(expected_value), cell_str)
 
   def create_empty_run_environment(self):
     return overview_page_pb2.OverviewPageRunEnvironment()
@@ -204,6 +206,7 @@ class ProtoToGvizTest(tf.test.TestCase):
       op.category = self.mock_tf_op.category
       op.name = self.mock_tf_op.name
       op.flop_rate = self.mock_tf_op.flop_rate
+      op.is_op_tensorcore_eligible = self.mock_tf_op.is_op_tensorcore_eligible
       analysis.top_device_ops.append(op)
 
     return analysis
@@ -244,7 +247,9 @@ class ProtoToGvizTest(tf.test.TestCase):
     self.assertIn("remark_color", data_table.custom_properties)
 
     # Prepare expectation to check against.
-    mock_csv_tf_op = [str(x) for x in list(self.mock_tf_op)]
+    mock_csv_tf_op = [
+        gviz_api.DataTable.ToString(x) for x in list(self.mock_tf_op)
+    ]
 
     # Check data against mock values.
     for row in data:
