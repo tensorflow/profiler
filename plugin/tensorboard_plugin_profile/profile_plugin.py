@@ -421,7 +421,8 @@ class ProfilePlugin(base_plugin.TBPlugin):
       # Remove the trailing dot if present
       grpc_request.host_name = host.rstrip('.')
 
-      grpc_request.parameters['resolution'] = request.args.get('resolution')
+      grpc_request.parameters['resolution'] = request.args.get(
+          'resolution', 8000)
       if request.args.get('start_time_ms') is not None:
         grpc_request.parameters['start_time_ms'] = request.args.get(
             'start_time_ms')
