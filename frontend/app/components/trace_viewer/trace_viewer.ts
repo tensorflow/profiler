@@ -2,7 +2,7 @@ import {PlatformLocation} from '@angular/common';
 import {HttpParams} from '@angular/common/http';
 import {Component} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
-import {API_PREFIX, DATA_API, PLUGIN_NAME, TRACE_VIEWER_URL} from 'org_xprof/frontend/app/common/constants/constants';
+import {API_PREFIX, DATA_API, PLUGIN_NAME} from 'org_xprof/frontend/app/common/constants/constants';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 
 /** A trace viewer component. */
@@ -26,12 +26,15 @@ export class TraceViewer {
   }
 
   update(event: NavigationEvent) {
+    const isStreaming = (event.tag  === 'trace_viewer@');
     const params = new HttpParams()
                        .set('run', event.run)
                        .set('tag', event.tag)
                        .set('host', event.host);
-    this.url = this.pathPrefix + TRACE_VIEWER_URL +
-        encodeURIComponent(
-                   this.pathPrefix + DATA_API + '?' + params.toString());
+    const traceDataUrl = this.pathPrefix + DATA_API + '?' + params.toString();
+    this.url = this.pathPrefix + API_PREFIX + PLUGIN_NAME +
+        '/trace_viewer_index.html' +
+        '?is_streaming=' + isStreaming.toString() +
+        '&trace_data_url=' + encodeURIComponent(traceDataUrl);
   }
 }

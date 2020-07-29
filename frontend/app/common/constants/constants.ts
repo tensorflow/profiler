@@ -20,10 +20,6 @@ export const DATA_API = API_PREFIX + PLUGIN_NAME + '/data';
 export const CAPTURE_PROFILE_API =
     API_PREFIX + PLUGIN_NAME + '/capture_profile';
 
-/** URL for trace_viewer_url.html of TensorBoard */
-export const TRACE_VIEWER_URL = API_PREFIX + PLUGIN_NAME +
-    '/trace_viewer_index.html?is_streaming=false&trace_data_url=';
-
 /** Default Host */
 export const DEFAULT_HOST = 'default';
 
