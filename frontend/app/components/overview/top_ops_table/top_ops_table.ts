@@ -111,11 +111,6 @@ export class TopOpsTable implements AfterViewInit, OnChanges {
       dataTable.removeColumn(FLOP_RATE_COLUMN_INDEX);
     }
 
-    // TensorCore eligibility only applies when hardware type is GPU.
-    if (this.inputPipelineAnalysis.p.hardware_type !== 'GPU') {
-      dataTable.removeColumn(TENSORCORE_ELIGIBILITY_COLUMN_INDEX);
-    }
-
     this.table.draw(dataTable, options);
   }
 
