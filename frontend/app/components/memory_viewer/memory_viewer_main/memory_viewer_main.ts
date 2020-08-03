@@ -2,6 +2,7 @@ import {Component, Input, OnChanges, OnDestroy, SimpleChanges} from '@angular/co
 import {Store} from '@ngrx/store';
 import {BufferAllocationInfo} from 'org_xprof/frontend/app/common/interfaces/buffer_allocation_info';
 import {HloProtoOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 import {HeapObject} from 'org_xprof/frontend/app/common/interfaces/heap_object';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {MemoryUsage} from 'org_xprof/frontend/app/components/memory_viewer/memory_usage/memory_usage';
@@ -18,7 +19,7 @@ interface BufferSpan {
   templateUrl: './memory_viewer_main.ng.html',
   styleUrls: ['./memory_viewer_main.scss']
 })
-export class MemoryViewerMain implements OnDestroy {
+export class MemoryViewerMain implements OnDestroy, OnChanges {
   /** XLA Hlo proto */
   @Input() hloProto: HloProtoOrNull = null;
 
@@ -38,6 +39,7 @@ export class MemoryViewerMain implements OnDestroy {
   selectedIndexBySize: number = -1;
   unpaddedHeapSizes?: number[];
   hasHeapSimulatorTrace = false;
+  diagnostics: Diagnostics = {info: [], warnings: [], errors: []};
 
   constructor(private readonly store: Store<{}>) {}
 
@@ -109,7 +111,18 @@ export class MemoryViewerMain implements OnDestroy {
 
   update() {
     const data = this.hloProto;
-    if (!data || !data.hloModule || !data.bufferAssignment) return;
+    this.diagnostics.errors = [];
+    if (!data || !data.hloModule) {
+      this.diagnostics.errors.push(
+          'We fail to fetch a valid input. The input is empty or too large.');
+      return;
+    }
+    if (!data.bufferAssignment) {
+      this.diagnostics.errors.push(
+          'The HloProto does not contain a buffer assignment. ' +
+          'Therefore, we don\'t know the memory usage.');
+      return;
+    }
     this.moduleName = data.hloModule.name || '';
     this.usage = new MemoryUsage(data, this.memorySpaceColor);
     this.peakHeapSizeMiB =
