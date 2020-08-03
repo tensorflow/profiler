@@ -65,6 +65,7 @@ class ProtoToGvizTest(tf.test.TestCase):
             "name",
             "flop_rate",
             "is_op_tensorcore_eligible",
+            "is_op_using_tensorcore",
         ])
 
     ProtoToGvizTest.mock_tf_op = MockOverviewTfOp(
@@ -74,6 +75,7 @@ class ProtoToGvizTest(tf.test.TestCase):
         name="1",
         flop_rate=5.0,
         is_op_tensorcore_eligible=True,
+        is_op_using_tensorcore=True,
     )
 
     MockTip = collections.namedtuple(  # pylint: disable=invalid-name
@@ -207,6 +209,7 @@ class ProtoToGvizTest(tf.test.TestCase):
       op.name = self.mock_tf_op.name
       op.flop_rate = self.mock_tf_op.flop_rate
       op.is_op_tensorcore_eligible = self.mock_tf_op.is_op_tensorcore_eligible
+      op.is_op_using_tensorcore = self.mock_tf_op.is_op_using_tensorcore
       analysis.top_device_ops.append(op)
 
     return analysis

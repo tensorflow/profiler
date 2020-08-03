@@ -113,6 +113,7 @@ def get_overview_page_analysis_table_args(overview_page_analysis):
       ("operation", "string", "Operation"),
       ("flopRate", "number", "GFLOPs/Sec"),
       ("tcEligibility", "boolean", "TensorCore eligibility"),
+      ("tcUtilization", "boolean", "Op is using TensorCore"),
   ]
 
   data = []
@@ -124,6 +125,7 @@ def get_overview_page_analysis_table_args(overview_page_analysis):
         str(op.name),
         op.flop_rate,
         op.is_op_tensorcore_eligible,
+        op.is_op_using_tensorcore,
     ]
     data.append(row)
 

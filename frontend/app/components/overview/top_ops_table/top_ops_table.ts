@@ -3,7 +3,6 @@ import {AfterViewInit, Component, ElementRef, Input, OnChanges, SimpleChanges, V
 import {GeneralAnalysis, InputPipelineAnalysis, TopOpsColumn} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 const FLOP_RATE_COLUMN_INDEX = 4;
-const TENSORCORE_ELIGIBILITY_COLUMN_INDEX = 5;
 
 /** A top ops table view component. */
 @Component({
@@ -55,6 +54,7 @@ export class TopOpsTable implements AfterViewInit, OnChanges {
       operation: 0,
       flopRate: 0,
       tcEligibility: 0,
+      tcUtilization: 0,
     };
     for (let i = 0; i < dataTable.getNumberOfColumns(); i++) {
       switch (dataTable.getColumnId(i)) {
@@ -76,6 +76,9 @@ export class TopOpsTable implements AfterViewInit, OnChanges {
         case 'tcEligibility':
           columns.tcEligibility = i;
           break;
+        case 'tcUtilization':
+          columns.tcUtilization = i;
+          break;
         default:
           break;
       }
@@ -96,7 +99,8 @@ export class TopOpsTable implements AfterViewInit, OnChanges {
     dataTable.setProperty(0, columns.category, 'style', 'width: 20%');
     dataTable.setProperty(0, columns.operation, 'style', 'width: 40%');
     dataTable.setProperty(0, columns.flopRate, 'style', 'display: 10%');
-    dataTable.setProperty(0, columns.tcEligibility, 'style', 'display: 10%');
+    dataTable.setProperty(0, columns.tcEligibility, 'style', 'display: 5%');
+    dataTable.setProperty(0, columns.tcUtilization, 'style', 'display: 5%');
     const options = {
       alternatingRowStyle: false,
       showRowNumber: false,
