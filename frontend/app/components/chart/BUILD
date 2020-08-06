@@ -29,4 +29,11 @@ ts_library(
     ],
 )
 
+ts_library(
+    name = "chart_options",
+    srcs = [
+        "chart_options.ts",
+    ],
+)
+
 
