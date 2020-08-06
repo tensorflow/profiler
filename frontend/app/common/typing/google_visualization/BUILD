@@ -3,16 +3,11 @@ load("@npm_bazel_typescript//:index.bzl", "ts_library")
 package(default_visibility = ["//frontend:internal"])
 
 ts_library(
-    name = "constants",
+    name = "google_visualization",
     srcs = [
-        "constants.ts",
-        "enums.ts",
+        "google_visualization.ts",
     ],
-)
-
-ts_library(
-    name = "chart_options",
-    srcs = [
-        "chart_options.ts",
+    deps = [
+        "@org_xprof//frontend/third_party/google_visualization",
     ],
 )
