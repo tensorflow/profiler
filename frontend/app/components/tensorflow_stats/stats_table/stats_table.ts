@@ -82,6 +82,17 @@ export class StatsTable implements OnChanges, OnInit {
     percentFormatter.format(
         this.dataTable, 11); /** host_total_self_time_percent */
 
+    /**
+     * Format tensorcore utilization column if it exists in dataTable.
+     * This column does not exist in dataTable if the device is not GPU.
+     */
+    for (let i = 0; i < dataTable.getNumberOfColumns(); i++) {
+      if (this.dataTable.getColumnId(i) === 'gpu_tensorcore_utilization') {
+        percentFormatter.format(this.dataTable, i);
+        break;
+      }
+    }
+
     this.dataTable.insertColumn(1, 'number', 'Rank');
   }
 

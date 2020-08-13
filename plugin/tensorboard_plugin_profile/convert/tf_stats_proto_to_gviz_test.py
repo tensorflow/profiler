@@ -53,6 +53,7 @@ class ProtoToGvizTest(tf.test.TestCase):
     record.device_cumulative_total_self_time_as_fraction = 0.7980
     record.host_total_self_time_as_fraction = 0
     record.host_cumulative_total_self_time_as_fraction = 0
+    record.gpu_tensorcore_utilization = 0.5
 
     record = table.tf_stats_record.add()
     record.rank = 200
@@ -68,31 +69,39 @@ class ProtoToGvizTest(tf.test.TestCase):
     record.device_cumulative_total_self_time_as_fraction = 0.17
     record.host_total_self_time_as_fraction = 0.19
     record.host_cumulative_total_self_time_as_fraction = 0.23
+    record.gpu_tensorcore_utilization = 0.0
 
     return table
 
-  def test_stats_table_empty(self):
+  def stats_table_empty_helper(self, device_type, expected_num_columns):
     stats_table = self.create_empty_stats_table()
-    data_table = tf_stats_proto_to_gviz.generate_chart_table(stats_table)
-
+    data_table = tf_stats_proto_to_gviz.generate_chart_table(
+        stats_table, device_type)
     self.assertEqual(0, data_table.NumberOfRows(),
                      "Empty table should have 0 rows.")
-    # "Stats table has 13 columns as defined in tf_stats.proto."
-    self.assertLen(data_table.columns, 13)
+    self.assertLen(data_table.columns, expected_num_columns)
 
-  def test_stats_table_simple(self):
+  def test_stats_table_empty(self):
+    # Non GPU case: 0 rows 13 columns
+    self.stats_table_empty_helper("CPU", 13)
+    # GPU case: 0 rows 14 columns, with an additional gpu_tensorcore_utilization
+    # column added to the schema.
+    self.stats_table_empty_helper("GPU", 14)
+
+  def stats_table_simple_helper(self, device_type, expected_num_columns):
     stats_table = self.create_mock_stats_table()
-    (table_description, data, custom_properties
-    ) = tf_stats_proto_to_gviz.get_chart_table_args(stats_table)
+    (table_description, data,
+     custom_properties) = tf_stats_proto_to_gviz.get_chart_table_args(
+         stats_table, device_type)
+
     data_table = gviz_api.DataTable(table_description, data, custom_properties)
 
     # Data is a list of 2 rows.
     self.assertLen(data, 2)
     self.assertEqual(2, data_table.NumberOfRows(), "Simple table has 2 rows.")
-    # Table descriptor is a list of 13 columns.
-    self.assertLen(table_description, 13)
-    # Stats table has 13 columns as defined in tf_stats.proto.
-    self.assertLen(data_table.columns, 13)
+
+    self.assertLen(table_description, expected_num_columns)
+    self.assertLen(data_table.columns, expected_num_columns)
 
     csv_file = io.StringIO(data_table.ToCsv())
     reader = csv.reader(csv_file)
@@ -114,6 +123,13 @@ class ProtoToGvizTest(tf.test.TestCase):
           self.assertNotIsInstance(expected_value, tuple)
           self.assertEqual(expected_value, raw_value)
           self.assertEqual(str(expected_value), cell_str)
+
+  def test_stats_table_simple(self):
+    # Non GPU case: 2 rows 13 columns
+    self.stats_table_simple_helper("CPU", 13)
+    # GPU case: 2 rows 14 columns, with an additional gpu_tensorcore_utilization
+    # column added to the schema.
+    self.stats_table_simple_helper("GPU", 14)
 
 
 if __name__ == "__main__":

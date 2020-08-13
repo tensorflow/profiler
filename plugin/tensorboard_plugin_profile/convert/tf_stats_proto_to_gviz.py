@@ -28,17 +28,18 @@ import gviz_api
 from tensorboard_plugin_profile.protobuf import tf_stats_pb2
 
 
-def get_chart_table_args(stats_table):
+def get_chart_table_args(stats_table, device_type):
   """Creates gviz DataTable object from a TensorFlow stats table.
 
   Args:
     stats_table: A tf_stats_pb2.TfStatsTable.
+    device_type: A string representing device type of this profile.
 
   Returns:
     Returns a gviz_api.DataTable
   """
 
-  ## Create schema
+  # Create schema
   table_description = [
       ("rank", "number", "Rank"),
       ("host_or_device", "string", "Host/device"),
@@ -58,6 +59,13 @@ def get_chart_table_args(stats_table):
        "Cumulative total-self time on Host (%)"),
   ]
 
+  # Add GPU TensorCore utilization only when hardware device type is GPU, for
+  # other devices, the GPU TensorCore utilization is always 0 so there is no
+  # need to display this column.
+  if device_type == "GPU":
+    table_description.append(
+        ("gpu_tensorcore_utilization", "number", "GPU TensorCore utilization"))
+
   data = []
   for record in stats_table.tf_stats_record:
     row = [
@@ -76,22 +84,25 @@ def get_chart_table_args(stats_table):
         record.host_cumulative_total_self_time_as_fraction,
     ]
 
+    if device_type == "GPU":
+      row.append(record.gpu_tensorcore_utilization)
+
     data.append(row)
 
   return (table_description, data, [])
 
 
-def generate_chart_table(stats_table):
+def generate_chart_table(stats_table, device_type):
   (table_description, data,
-   custom_properties) = get_chart_table_args(stats_table)
+   custom_properties) = get_chart_table_args(stats_table, device_type)
   return gviz_api.DataTable(table_description, data, custom_properties)
 
 
 def generate_all_chart_tables(tf_stats_db):
   """Converts a TfStatsDatabase proto to gviz DataTable."""
   return [
-      generate_chart_table(tf_stats_db.with_idle),
-      generate_chart_table(tf_stats_db.without_idle),
+      generate_chart_table(tf_stats_db.with_idle, tf_stats_db.device_type),
+      generate_chart_table(tf_stats_db.without_idle, tf_stats_db.device_type),
   ]
 
 
@@ -108,4 +119,5 @@ def to_csv(raw_data):
   """Converts a serialized TfStatsDatabase string to CSV."""
   tf_stats_db = tf_stats_pb2.TfStatsDatabase()
   tf_stats_db.ParseFromString(raw_data)
-  return generate_chart_table(tf_stats_db.with_idle).ToCsv()
+  return generate_chart_table(tf_stats_db.with_idle,
+                              tf_stats_db.device_type).ToCsv()
