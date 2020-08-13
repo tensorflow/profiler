@@ -55,7 +55,7 @@ def get_chart_table_args(stats_table, device_type):
       ("device_cumulative_total_self_time_percent", "number",
        "Cumulative total-self time on Device (%)"),
       ("host_total_self_time_percent", "number", "Total self-time on Host (%)"),
-      ("Host_cumulative_total_self_time_percent", "number",
+      ("host_cumulative_total_self_time_percent", "number",
        "Cumulative total-self time on Host (%)"),
   ]
 

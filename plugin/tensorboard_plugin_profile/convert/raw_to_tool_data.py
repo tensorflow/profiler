@@ -89,7 +89,7 @@ def tool_proto_to_tool_data(tool_proto, tool, tqx):
   """Converts the serialized tool proto to tool data string.
 
   Args:
-    tool_proto: A serialized XSpace proto string.
+    tool_proto: A serialized tool proto string.
     tool: A string of tool name.
     tqx: Gviz output format.
 
