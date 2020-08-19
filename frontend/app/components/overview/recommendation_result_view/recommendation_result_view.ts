@@ -7,6 +7,7 @@ import {setCurrentToolStateAction} from 'org_xprof/frontend/app/store/actions';
 import {RecommendationResultViewCommon} from './recommendation_result_view_common';
 
 const STATEMENT_INFO = [
+  {id: 'outside_compilation_statement_html'},
   {id: 'eager_statement_html'},
   {id: 'tf_function_statement_html'},
   {id: 'statement'},
@@ -32,6 +33,8 @@ export class RecommendationResultView extends RecommendationResultViewCommon {
     switch (id) {
       case 'bottleneck':
         return props.bottleneck || defaultValue;
+      case 'outside_compilation_statement_html':
+        return props.outside_compilation_statement_html || defaultValue;
       case 'eager_statement_html':
         return props.eager_statement_html || defaultValue;
       case 'tf_function_statement_html':
