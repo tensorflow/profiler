@@ -1,3 +1,4 @@
+import 'org_xprof/frontend/app/common/interfaces/window';
 import {Component} from '@angular/core';
 
 /** An empty page component. */
