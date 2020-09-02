@@ -4,6 +4,23 @@ load("@io_bazel_rules_sass//:defs.bzl", "sass_binary")
 package(default_visibility = ["//frontend:internal"])
 
 ng_module(
+    name = "tensorflow_stats_adapter",
+    srcs = [
+        "tensorflow_stats_adapter.ts",
+    ],
+    deps = [
+        ":tensorflow_stats",
+        "@npm//@angular/core",
+        "@npm//@angular/router",
+        "@npm//@ngrx/store",
+        "@org_xprof//frontend/app/common/constants",
+        "@org_xprof//frontend/app/common/interfaces",
+        "@org_xprof//frontend/app/store",
+        "@org_xprof//frontend/app/store/tensorflow_stats",
+    ],
+)
+
+ng_module(
     name = "tensorflow_stats",
     srcs = [
         "tensorflow_stats.ts",

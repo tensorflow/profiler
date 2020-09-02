@@ -79,6 +79,24 @@ export const reducer: ActionReducer<AppState, Action> = createReducer(
           };
         },
         ),
+    on(
+        actions.clearExportAsCsvStateAction,
+        (state: AppState, action: ActionCreatorAny) => {
+          return {
+            ...state,
+            exportAsCsv: '',
+          };
+        },
+        ),
+    on(
+        actions.setExportAsCsvStateAction,
+        (state: AppState, action: ActionCreatorAny) => {
+          return {
+            ...state,
+            exportAsCsv: action.exportAsCsv,
+          };
+        },
+        ),
 );
 
 /** Reducer */

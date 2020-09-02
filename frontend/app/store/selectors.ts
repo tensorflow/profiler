@@ -48,3 +48,7 @@ export const getCurrentTool: MemoizedSelectorAny =
 /** Selector for DataRequestType */
 export const getDataRequest: MemoizedSelectorAny =
     createSelector(appState, (appState: AppState) => appState.dataRequest);
+
+/** Selector for ExportAsCsv */
+export const getExportAsCsv: MemoizedSelectorAny =
+    createSelector(appState, (appState: AppState) => appState.exportAsCsv);
