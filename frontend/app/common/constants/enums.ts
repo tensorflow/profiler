@@ -24,7 +24,11 @@ export const enum TpuClass {
 
 export const enum DataRequestType {
   UNKNOWN = 0,
+  DATA_REQUEST_BEGIN,
   TENSORFLOW_STATS,
+  DATA_REQUEST_END,
+  DIFF_DATA_REQUEST_BEGIN,
   TENSORFLOW_STATS_DIFF,
+  DIFF_DATA_REQUEST_END,
 }
 // tslint:enable:enforce-comments-on-exported-symbols

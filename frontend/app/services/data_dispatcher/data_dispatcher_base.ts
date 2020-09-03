@@ -1,10 +1,16 @@
-import {Store} from '@ngrx/store';
+import {createAction, Store} from '@ngrx/store';
+import {DataRequestType} from 'org_xprof/frontend/app/common/constants/enums';
 import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
 import {getDataRequest} from 'org_xprof/frontend/app/store/selectors';
 import {DataRequest} from 'org_xprof/frontend/app/store/state';
+import * as tensorFlowStatsActions from 'org_xprof/frontend/app/store/tensorflow_stats/actions';
+import {ActionCreatorAny} from 'org_xprof/frontend/app/store/types';
 import {Observable, of} from 'rxjs';
 
 import {DataRequestQueue} from './data_request_queue';
+
+/** Action to do noghint */
+const doNothingAction: ActionCreatorAny = createAction('Do nothing');
 
 /** The base class of data dispatcher. */
 export class DataDispatcherBase {
@@ -33,6 +39,20 @@ export class DataDispatcherBase {
   }
 
   clearData(dataRequest: DataRequest) {}
+
+  getActions(dataRequest: DataRequest): ActionCreatorAny {
+    if (dataRequest.type === DataRequestType.TENSORFLOW_STATS) {
+      return tensorFlowStatsActions.setDataAction;
+    }
+    return doNothingAction;
+  }
+
+  getDefaultData(dataRequest: DataRequest): []|{} {
+    if (dataRequest.type === DataRequestType.TENSORFLOW_STATS) {
+      return [];
+    }
+    return {};
+  }
 
   // tslint:disable-next-line:no-any
   load(dataRequest: DataRequest): Observable<any> {
