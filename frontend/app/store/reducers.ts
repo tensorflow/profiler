@@ -1,70 +1,81 @@
-import {Action, createReducer, on} from '@ngrx/store';
+import {Action, ActionReducer, createReducer, on} from '@ngrx/store';
 
 import * as actions from './actions';
 import {AppState, INIT_APP_STATE} from './state';
+import {ActionCreatorAny} from './types';
 
-export const reducer: any = createReducer(
+/** Reduce functions of app stats. */
+export const reducer: ActionReducer<AppState, Action> = createReducer(
     INIT_APP_STATE,
     on(
         actions.setActiveHeapObjectAction,
-        (state, action) => {
+        (state: AppState, action: ActionCreatorAny) => {
           return {
             ...state,
             memoryViewerState: {
               ...state.memoryViewerState,
-              activeHeapObject: (action as any).activeHeapObject,
+              activeHeapObject: action.activeHeapObject,
             }
           };
         },
         ),
     on(
         actions.setActiveOpProfileNodeAction,
-        (state: AppState, action) => {
+        (state: AppState, action: ActionCreatorAny) => {
           return {
             ...state,
             opProfileState: {
               ...state.opProfileState,
-              activeOpProfileNode: (action as any).activeOpProfileNode,
+              activeOpProfileNode: action.activeOpProfileNode,
             }
           };
         },
         ),
     on(
         actions.setActivePodViewerInfoAction,
-        (state: AppState, action) => {
+        (state: AppState, action: ActionCreatorAny) => {
           return {
             ...state,
             podViewerState: {
               ...state.podViewerState,
-              activePodViewerInfo: (action as any).activePodViewerInfo,
+              activePodViewerInfo: action.activePodViewerInfo,
             }
           };
         },
         ),
     on(
         actions.setCapturingProfileAction,
-        (state: AppState, action) => {
+        (state: AppState, action: ActionCreatorAny) => {
           return {
             ...state,
-            capturingProfile: (action as any).capturingProfile,
+            capturingProfile: action.capturingProfile,
           };
         },
         ),
     on(
         actions.setLoadingStateAction,
-        (state: AppState, action) => {
+        (state: AppState, action: ActionCreatorAny) => {
           return {
             ...state,
-            loadingState: (action as any).loadingState,
+            loadingState: action.loadingState,
           };
         },
         ),
     on(
         actions.setCurrentToolStateAction,
-        (state: AppState, action) => {
+        (state: AppState, action: ActionCreatorAny) => {
           return {
             ...state,
-            currentTool: (action as any).currentTool,
+            currentTool: action.currentTool,
+          };
+        },
+        ),
+    on(
+        actions.setDataRequestStateAction,
+        (state: AppState, action: ActionCreatorAny) => {
+          return {
+            ...state,
+            dataRequest: action.dataRequest,
           };
         },
         ),

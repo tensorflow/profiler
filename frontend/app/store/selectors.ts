@@ -1,45 +1,50 @@
-import {createFeatureSelector, createSelector} from '@ngrx/store';
+import {createFeatureSelector, createSelector,} from '@ngrx/store';
 
 import {AppState, MemoryViewerState, OpProfileState, PodViewerState, STORE_KEY} from './state';
+import {MemoizedSelectorAny} from './types';
 
 const appState = createFeatureSelector<AppState>(STORE_KEY);
 
 /** Selector for MemoryViewerState */
-export const getMemoryViewerState: any = createSelector(
+export const getMemoryViewerState: MemoizedSelectorAny = createSelector(
     appState, (appState: AppState) => appState.memoryViewerState);
 
 /** Selector for ActiveHeapObjectState */
-export const getActiveHeapObjectState: any = createSelector(
+export const getActiveHeapObjectState: MemoizedSelectorAny = createSelector(
     getMemoryViewerState,
     (memoryViewerState: MemoryViewerState) =>
         memoryViewerState.activeHeapObject);
 
 /** Selector for OpProfileState */
-export const getOpProfileState: any =
+export const getOpProfileState: MemoizedSelectorAny =
     createSelector(appState, (appState: AppState) => appState.opProfileState);
 
 /** Selector for ActiveOpProfileNodeState */
-export const getActiveOpProfileNodeState: any = createSelector(
+export const getActiveOpProfileNodeState: MemoizedSelectorAny = createSelector(
     getOpProfileState,
     (opProfileState: OpProfileState) => opProfileState.activeOpProfileNode);
 
 /** Selector for PodViewerState */
-export const getPodViewerState: any =
+export const getPodViewerState: MemoizedSelectorAny =
     createSelector(appState, (appState: AppState) => appState.podViewerState);
 
 /** Selector for ActivePodViewerInfoState */
-export const getActivePodViewerInfoState: any = createSelector(
+export const getActivePodViewerInfoState: MemoizedSelectorAny = createSelector(
     getPodViewerState,
     (podViewerState: PodViewerState) => podViewerState.activePodViewerInfo);
 
 /** Selector for CapturingProfileState */
-export const getCapturingProfileState: any =
+export const getCapturingProfileState: MemoizedSelectorAny =
     createSelector(appState, (appState: AppState) => appState.capturingProfile);
 
 /** Selector for LoadingState */
-export const getLoadingState: any =
+export const getLoadingState: MemoizedSelectorAny =
     createSelector(appState, (appState: AppState) => appState.loadingState);
 
 /** Selector for CurrentTool */
-export const getCurrentTool: any =
+export const getCurrentTool: MemoizedSelectorAny =
     createSelector(appState, (appState: AppState) => appState.currentTool);
+
+/** Selector for DataRequestType */
+export const getDataRequest: MemoizedSelectorAny =
+    createSelector(appState, (appState: AppState) => appState.dataRequest);

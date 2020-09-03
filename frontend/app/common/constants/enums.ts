@@ -21,4 +21,10 @@ export const enum TpuClass {
   TPU_V2,
   TPU_V3,
 }
+
+export const enum DataRequestType {
+  UNKNOWN = 0,
+  TENSORFLOW_STATS,
+  TENSORFLOW_STATS_DIFF,
+}
 // tslint:enable:enforce-comments-on-exported-symbols

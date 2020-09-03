@@ -1,4 +1,5 @@
 import {Node} from 'org_xprof/frontend/app/common/interfaces/op_profile.proto';
+import {DataRequestType} from 'org_xprof/frontend/app/common/constants/enums';
 import {AllReduceOpInfo, ChannelInfo, PodStatsRecord} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {HeapObject} from 'org_xprof/frontend/app/common/interfaces/heap_object';
 
@@ -38,6 +39,22 @@ export interface LoadingState {
 /** Type for current tool state */
 type CurrentToolState = string;
 
+/** The interface of params of DataRequest */
+interface DataRequestParams {
+  run?: string;
+  tag?: string;
+  host?: string;
+  tool?: string;
+  sessionId?: string;
+}
+
+/** State of data request */
+export interface DataRequest {
+  type: DataRequestType;
+  params: DataRequestParams;
+  loadingMessage?: string;
+}
+
 /** State object */
 export interface AppState {
   memoryViewerState: MemoryViewerState;
@@ -46,6 +63,7 @@ export interface AppState {
   capturingProfile: CapturingProfileState;
   loadingState: LoadingState;
   currentTool: CurrentToolState;
+  dataRequest: DataRequest;
 }
 
 /** Initial state of active heap object */
@@ -84,6 +102,12 @@ export const INIT_LOADING_STATE: LoadingState = {
 /** Initial state of current tool */
 const INIT_CURRENT_TOOL_STATE: CurrentToolState = '';
 
+/** Initial state of request data */
+const INIT_REQUEST_DATA_STATE: DataRequest = {
+  type: DataRequestType.UNKNOWN,
+  params: {},
+};
+
 /** Initial state object */
 export const INIT_APP_STATE: AppState = {
   memoryViewerState: INIT_MEMORY_VIEWER_STATE,
@@ -92,6 +116,7 @@ export const INIT_APP_STATE: AppState = {
   capturingProfile: INIT_CAPTURING_PROFILE_STATE,
   loadingState: INIT_LOADING_STATE,
   currentTool: INIT_CURRENT_TOOL_STATE,
+  dataRequest: INIT_REQUEST_DATA_STATE,
 };
 
 /** Feature key for store */
