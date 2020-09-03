@@ -25,28 +25,28 @@ export const getHasDiffState: MemoizedSelectorAny =
         (tensorFlowStatsState: TensorflowStatsState) =>
             tensorFlowStatsState.hasDiff);
 
-/** Selector for showPprofLink peropery */
+/** Selector for showPprofLink property */
 export const getShowPprofLinkState: MemoizedSelectorAny =
     createSelector(
         tensorFlowStatsState,
         (tensorFlowStatsState: TensorflowStatsState) =>
             tensorFlowStatsState.showPprofLink);
 
-/** Selector for showFlopRateChart peropery */
+/** Selector for showFlopRateChart property */
 export const getShowFlopRateChartState: MemoizedSelectorAny =
     createSelector(
         tensorFlowStatsState,
         (tensorFlowStatsState: TensorflowStatsState) =>
             tensorFlowStatsState.showFlopRateChart);
 
-/** Selector for showModelProperties peropery */
+/** Selector for showModelProperties property */
 export const getShowModelPropertiesState: MemoizedSelectorAny =
     createSelector(
         tensorFlowStatsState,
         (tensorFlowStatsState: TensorflowStatsState) =>
             tensorFlowStatsState.showModelProperties);
 
-/** Selector for title peropery */
+/** Selector for title property */
 export const getTitleState: MemoizedSelectorAny = createSelector(
     tensorFlowStatsState,
     (tensorFlowStatsState: TensorflowStatsState) => tensorFlowStatsState.title);
