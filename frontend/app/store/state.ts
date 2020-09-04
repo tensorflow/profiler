@@ -48,6 +48,9 @@ interface DataRequestParams {
   sessionId?: string;
 }
 
+/** Type for export_as_csv state */
+type ExportAsCsvState = string;
+
 /** State of data request */
 export interface DataRequest {
   type: DataRequestType;
@@ -64,6 +67,7 @@ export interface AppState {
   loadingState: LoadingState;
   currentTool: CurrentToolState;
   dataRequest: DataRequest;
+  exportAsCsv: ExportAsCsvState;
 }
 
 /** Initial state of active heap object */
@@ -108,6 +112,9 @@ const INIT_REQUEST_DATA_STATE: DataRequest = {
   params: {},
 };
 
+/** Initial state of export_as_csv */
+const INIT_EXPORT_AS_CSV_STATE: ExportAsCsvState = '';
+
 /** Initial state object */
 export const INIT_APP_STATE: AppState = {
   memoryViewerState: INIT_MEMORY_VIEWER_STATE,
@@ -117,6 +124,7 @@ export const INIT_APP_STATE: AppState = {
   loadingState: INIT_LOADING_STATE,
   currentTool: INIT_CURRENT_TOOL_STATE,
   dataRequest: INIT_REQUEST_DATA_STATE,
+  exportAsCsv: INIT_EXPORT_AS_CSV_STATE,
 };
 
 /** Feature key for store */

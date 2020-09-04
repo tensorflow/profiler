@@ -1,7 +1,7 @@
 import {createAction, Store} from '@ngrx/store';
 import {DataRequestType} from 'org_xprof/frontend/app/common/constants/enums';
 import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
-import {getDataRequest} from 'org_xprof/frontend/app/store/selectors';
+import {getDataRequest, getExportAsCsv} from 'org_xprof/frontend/app/store/selectors';
 import {DataRequest} from 'org_xprof/frontend/app/store/state';
 import * as tensorFlowStatsActions from 'org_xprof/frontend/app/store/tensorflow_stats/actions';
 import {ActionCreatorAny} from 'org_xprof/frontend/app/store/types';
@@ -21,6 +21,9 @@ export class DataDispatcherBase {
     this.store.select(getDataRequest).subscribe((dataRequest: DataRequest) => {
       this.updateQueue(dataRequest);
     });
+    this.store.select(getExportAsCsv).subscribe((tool: string) => {
+      this.exportAsCsv(tool);
+    });
   }
 
   checkAndRun() {
@@ -39,6 +42,8 @@ export class DataDispatcherBase {
   }
 
   clearData(dataRequest: DataRequest) {}
+
+  exportAsCsv(tool: string) {}
 
   getActions(dataRequest: DataRequest): ActionCreatorAny {
     if (dataRequest.type === DataRequestType.TENSORFLOW_STATS) {
