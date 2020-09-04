@@ -17,5 +17,9 @@ declare namespace google {
       function min(): void;
       function sum(): void;
     }
+
+    export interface ChartTooltip extends ChartTooltip {
+      ignoreBounds?: boolean;
+    }
   }
 }

@@ -84,3 +84,14 @@ ts_library(
         ":xla_proto_defs",
     ],
 )
+
+ts_library(
+    name = "chart",
+    srcs = [
+        "chart.ts",
+    ],
+    deps = [
+        ":interfaces",
+        "@org_xprof//frontend/third_party/google_visualization",
+    ],
+)

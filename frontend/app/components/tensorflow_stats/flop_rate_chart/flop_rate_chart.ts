@@ -1,6 +1,8 @@
-import {Component, ElementRef, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, ViewChild} from '@angular/core';
-
+import {Component, Input, OnChanges, SimpleChanges} from '@angular/core';
+import {ChartDataInfo, DataType} from 'org_xprof/frontend/app/common/interfaces/chart';
 import {TensorflowStatsDataOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+
+import {FlopRateChartDataProvider} from './flop_rate_chart_data_provider';
 
 /** A flop rate chart view component. */
 @Component({
@@ -8,48 +10,16 @@ import {TensorflowStatsDataOrNull} from 'org_xprof/frontend/app/common/interface
   templateUrl: './flop_rate_chart.ng.html',
   styleUrls: ['./flop_rate_chart.scss']
 })
-export class FlopRateChart implements OnChanges, OnInit {
+export class FlopRateChart implements OnChanges {
   /** The tensorflow stats data. */
   @Input() tensorflowStatsData: TensorflowStatsDataOrNull = null;
 
-  /** The event to notify whether the data has rows. */
-  @Output() hasDataRowsChanged = new EventEmitter<boolean>();
-
-  @ViewChild('chart', {static: false}) chartRef!: ElementRef;
-
-  chart: google.visualization.ColumnChart|null = null;
-
-  ngOnInit() {
-    this.loadGoogleChart();
-  }
-
-  ngOnChanges(changes: SimpleChanges) {
-    this.drawChart();
-  }
-
-  drawChart() {
-    if (!this.chart || !this.tensorflowStatsData) {
-      return;
-    }
-
-    const dataTable =
-        new google.visualization.DataTable(this.tensorflowStatsData);
-    const numberFormatter =
-        new google.visualization.NumberFormat({'fractionDigits': 1});
-    numberFormatter.format(dataTable, 13);
-
-    const dataView = new google.visualization.DataView(dataTable);
-    dataView.setRows(dataView.getFilteredRows([{
-      column: 13,
-      minValue: 0.0000,
-    }]));
-    dataView.setColumns([3, 13]);
-
-    this.hasDataRowsChanged.emit(dataView.getNumberOfRows() > 0);
-
-    const options = {
+  dataInfo: ChartDataInfo = {
+    data: null,
+    type: DataType.DATA_TABLE,
+    dataProvider: new FlopRateChartDataProvider(),
+    options: {
       backgroundColor: 'transparent',
-      strokeWidth: 2,
       width: 550,
       height: 200,
       chartArea: {
@@ -64,25 +34,17 @@ export class FlopRateChart implements OnChanges, OnInit {
       },
       vAxis: {title: 'GFLOPs/sec'},
       legend: {position: 'none'},
-      tooltip: {isHtml: true, 'ignoreBounds': true},
+      tooltip: {
+        isHtml: true,
+        ignoreBounds: true,
+      },
+    },
+  };
+
+  ngOnChanges(changes: SimpleChanges) {
+    this.dataInfo = {
+      ...this.dataInfo,
+      data: this.tensorflowStatsData,
     };
-
-    this.chart.draw(
-        dataView, options as google.visualization.ColumnChartOptions);
-  }
-
-  loadGoogleChart() {
-    if (!google || !google.charts) {
-      setTimeout(() => {
-        this.loadGoogleChart();
-      }, 100);
-    }
-
-    google.charts.load('current', {'packages': ['corechart']})
-    google.charts.setOnLoadCallback(() => {
-      this.chart =
-          new google.visualization.ColumnChart(this.chartRef.nativeElement);
-      this.drawChart();
-    });
   }
 }
