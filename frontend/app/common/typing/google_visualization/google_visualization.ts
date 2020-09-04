@@ -21,5 +21,9 @@ declare namespace google {
     export interface ChartTooltip extends ChartTooltip {
       ignoreBounds?: boolean;
     }
+
+    export interface DataTableCellFilter extends DataTableCellFilter {
+      test?: (value: string) => boolean;
+    }
   }
 }

@@ -5,7 +5,7 @@
            matInput
            placeholder="Host/device"
            [value]="filterExecutor"
-           (input)="filterExecutor = $event.target.value; drawTable();">
+           (input)="filterExecutor = $event.target.value; updateFilters();">
     <mat-icon matSuffix>search</mat-icon>
   </mat-form-field>
   <mat-form-field>
@@ -13,7 +13,7 @@
            matInput
            placeholder="Type"
            [value]="filterType"
-           (input)="filterType = $event.target.value; drawTable();">
+           (input)="filterType = $event.target.value; updateFilters();">
     <mat-icon matSuffix>search</mat-icon>
   </mat-form-field>
   <mat-form-field>
@@ -21,7 +21,7 @@
            matInput
            placeholder="Operation"
            [value]="filterOperation"
-           (input)="filterOperation = $event.target.value; drawTable();">
+           (input)="filterOperation = $event.target.value; updateFilters();">
     <mat-icon matSuffix>search</mat-icon>
   </mat-form-field>
 </div>
@@ -30,6 +30,4 @@
   {{totalOperations}} operations are shown in the table below.
 </div>
 <br>
-<div>
-  <div #table class="table"></div>
-</div>
+<chart class="table" chartType="Table" [dataInfo]="dataInfo"></chart>
