@@ -34,13 +34,6 @@
   margin-top: -16px;
 }
 
-.save-button {
-  padding-top: 8px;
-  text-align: center;
-  width: 130px;
-}
-
-.save-button:hover {
-  color: $button-focus-color;
-  cursor: pointer;
+model-properties {
+  min-width: 550px;
 }

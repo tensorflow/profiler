@@ -1,11 +1,8 @@
 import {Component} from '@angular/core';
-import {ActivatedRoute} from '@angular/router';
 import {Store} from '@ngrx/store';
 import {IdleOption, OpExecutor, OpKind} from 'org_xprof/frontend/app/common/constants/enums';
 import {TensorflowStatsData} from 'org_xprof/frontend/app/common/interfaces/data_table';
-import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
-import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
-import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
+import * as selectors from 'org_xprof/frontend/app/store/tensorflow_stats/selectors';
 
 /** A TensorFlow Stats component. */
 @Component({
@@ -16,36 +13,48 @@ import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
 export class TensorflowStats {
   data: TensorflowStatsData[]|null = null;
   selectedData: TensorflowStatsData|null = null;
-  run = '';
-  tag = '';
-  host = '';
   idleMenuButtonLabel = IdleOption.NO;
   idleOptionItems = [IdleOption.YES, IdleOption.NO];
   opExecutorDevice = OpExecutor.DEVICE;
   opExecutorHost = OpExecutor.HOST;
   opKindName = OpKind.NAME;
   opKindType = OpKind.TYPE;
+  title = '';
   architecture = '';
   task = '';
-  hasDataRow = true;
+  devicePprofLink = '';
+  hostPprofLink = '';
   hasDeviceData = false;
+  showFlopRateChart = false;
+  showModelProperties = false;
+  showPprofLink = false;
 
-  constructor(
-      route: ActivatedRoute, private readonly dataService: DataService,
-      private readonly store: Store<{}>) {
-    route.params.subscribe(params => {
-      this.idleMenuButtonLabel = IdleOption.NO;
-      this.update(params as NavigationEvent);
+  constructor(private readonly store: Store<{}>) {
+    this.store.select(selectors.getTitleState).subscribe((title: string) => {
+      this.title = title || '';
     });
-  }
-
-  exportDataAsCSV() {
-    this.dataService.exportDataAsCSV(this.run, this.tag, this.host);
+    this.store.select(selectors.getShowFlopRateChartState)
+        .subscribe(showFlopRateChart => {
+          this.showFlopRateChart = Boolean(showFlopRateChart);
+        });
+    this.store.select(selectors.getShowModelPropertiesState)
+        .subscribe(showModelProperties => {
+          this.showModelProperties = Boolean(showModelProperties);
+        });
+    this.store.select(selectors.getShowPprofLinkState)
+        .subscribe(showPprofLink => {
+          this.showPprofLink = Boolean(showPprofLink);
+        });
+    this.store.select(selectors.getDataState)
+        .subscribe((data: TensorflowStatsData[]) => {
+          this.data = (data || []);
+          this.setIdleOption();
+        });
   }
 
   setIdleOption(option: IdleOption = IdleOption.NO) {
     this.idleMenuButtonLabel = option;
-    if (!this.data) {
+    if (!this.data || this.data.length === 0) {
       this.selectedData = null;
       return;
     }
@@ -58,6 +67,8 @@ export class TensorflowStats {
     if (this.selectedData && this.selectedData.p) {
       this.architecture = this.selectedData.p.architecture_type || '';
       this.task = this.selectedData.p.task_type || '';
+      this.devicePprofLink = this.selectedData.p.device_tf_pprof_link || '';
+      this.hostPprofLink = this.selectedData.p.host_tf_pprof_link || '';
     }
     this.hasDeviceData = false;
     if (this.selectedData && this.selectedData.rows) {
@@ -65,35 +76,5 @@ export class TensorflowStats {
         return row && row.c && row.c[1] && row.c[1].v === OpExecutor.DEVICE;
       });
     }
-  }
-
-  update(event: NavigationEvent) {
-    this.run = event.run || '';
-    this.tag = event.tag || 'tensorflow_stats';
-    this.host = event.host || '';
-
-    this.store.dispatch(setLoadingStateAction({
-      loadingState: {
-        loading: true,
-        message: 'Loading data',
-      }
-    }));
-
-    this.dataService.getData(this.run, this.tag, this.host)
-        .subscribe(data => {
-          this.store.dispatch(setLoadingStateAction({
-            loadingState: {
-              loading: false,
-              message: '',
-            }
-          }));
-
-          this.data = data as TensorflowStatsData[] || [];
-          this.setIdleOption();
-        });
-  }
-
-  changeHasDataRows(event: boolean) {
-    this.hasDataRow = event;
   }
 }

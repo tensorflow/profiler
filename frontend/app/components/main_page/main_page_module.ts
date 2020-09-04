@@ -19,8 +19,8 @@ import {OverviewModule} from 'org_xprof/frontend/app/components/overview/overvie
 import {PodViewer} from 'org_xprof/frontend/app/components/pod_viewer/pod_viewer';
 import {PodViewerModule} from 'org_xprof/frontend/app/components/pod_viewer/pod_viewer_module';
 import {SideNavModule} from 'org_xprof/frontend/app/components/sidenav/sidenav_module';
-import {TensorflowStats} from 'org_xprof/frontend/app/components/tensorflow_stats/tensorflow_stats';
-import {TensorflowStatsModule} from 'org_xprof/frontend/app/components/tensorflow_stats/tensorflow_stats_module';
+import {TensorflowStatsAdapter} from 'org_xprof/frontend/app/components/tensorflow_stats/tensorflow_stats_adapter';
+import {TensorflowStatsAdapterModule} from 'org_xprof/frontend/app/components/tensorflow_stats/tensorflow_stats_adapter';
 import {TraceViewer} from 'org_xprof/frontend/app/components/trace_viewer/trace_viewer';
 import {TraceViewerModule} from 'org_xprof/frontend/app/components/trace_viewer/trace_viewer_module';
 
@@ -42,8 +42,8 @@ export const routes: Routes = [
   {path: 'memory_viewer', component: MemoryViewer},
   {path: 'op_profile', component: OpProfile},
   {path: 'pod_viewer', component: PodViewer},
-  {path: 'tensorflow_stats', component: TensorflowStats},
-  {path: 'tensorflow_stats^', component: TensorflowStats},
+  {path: 'tensorflow_stats', component: TensorflowStatsAdapter},
+  {path: 'tensorflow_stats^', component: TensorflowStatsAdapter},
   {path: 'trace_viewer', component: TraceViewer},
   {path: 'trace_viewer#', component: TraceViewer},
   {path: 'trace_viewer@', component: TraceViewer},
@@ -67,7 +67,7 @@ export const routes: Routes = [
     MemoryViewerModule,
     OpProfileModule,
     PodViewerModule,
-    TensorflowStatsModule,
+    TensorflowStatsAdapterModule,
     RouterModule.forRoot(routes),
   ],
   exports: [MainPage]
