@@ -43,12 +43,15 @@ export class DataDispatcherBase {
   getActions(dataRequest: DataRequest): ActionCreatorAny {
     if (dataRequest.type === DataRequestType.TENSORFLOW_STATS) {
       return tensorFlowStatsActions.setDataAction;
+    } else if (dataRequest.type === DataRequestType.TENSORFLOW_STATS_DIFF) {
+      return tensorFlowStatsActions.setDiffDataAction;
     }
     return doNothingAction;
   }
 
   getDefaultData(dataRequest: DataRequest): []|{} {
-    if (dataRequest.type === DataRequestType.TENSORFLOW_STATS) {
+    if (dataRequest.type === DataRequestType.TENSORFLOW_STATS ||
+        dataRequest.type === DataRequestType.TENSORFLOW_STATS_DIFF) {
       return [];
     }
     return {};
