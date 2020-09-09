@@ -12,7 +12,9 @@ import * as selectors from 'org_xprof/frontend/app/store/tensorflow_stats/select
 })
 export class TensorflowStats {
   data: TensorflowStatsData[]|null = null;
+  diffData: TensorflowStatsData[]|null = null;
   selectedData: TensorflowStatsData|null = null;
+  selectedDiffData: TensorflowStatsData|null = null;
   idleMenuButtonLabel = IdleOption.NO;
   idleOptionItems = [IdleOption.YES, IdleOption.NO];
   opExecutorDevice = OpExecutor.DEVICE;
@@ -25,6 +27,7 @@ export class TensorflowStats {
   devicePprofLink = '';
   hostPprofLink = '';
   hasDeviceData = false;
+  hasDiff = false;
   showFlopRateChart = false;
   showModelProperties = false;
   showPprofLink = false;
@@ -32,6 +35,9 @@ export class TensorflowStats {
   constructor(private readonly store: Store<{}>) {
     this.store.select(selectors.getTitleState).subscribe((title: string) => {
       this.title = title || '';
+    });
+    this.store.select(selectors.getHasDiffState).subscribe(hasDiff => {
+      this.hasDiff = Boolean(hasDiff);
     });
     this.store.select(selectors.getShowFlopRateChartState)
         .subscribe(showFlopRateChart => {
@@ -45,6 +51,11 @@ export class TensorflowStats {
         .subscribe(showPprofLink => {
           this.showPprofLink = Boolean(showPprofLink);
         });
+    this.store.select(selectors.getDiffDataState)
+        .subscribe((diffData: TensorflowStatsData[]) => {
+          this.diffData = (diffData || []);
+          this.setIdleOption();
+        });
     this.store.select(selectors.getDataState)
         .subscribe((data: TensorflowStatsData[]) => {
           this.data = (data || []);
@@ -54,15 +65,23 @@ export class TensorflowStats {
 
   setIdleOption(option: IdleOption = IdleOption.NO) {
     this.idleMenuButtonLabel = option;
-    if (!this.data || this.data.length === 0) {
+    if ((!this.data || this.data.length === 0) ||
+        (this.hasDiff && (!this.diffData || this.diffData.length === 0))) {
       this.selectedData = null;
+      this.selectedDiffData = null;
       return;
     }
 
     if (option === IdleOption.YES) {
       this.selectedData = this.data[0] || null;
+      if (this.hasDiff && this.diffData) {
+        this.selectedDiffData = this.diffData[0] || null;
+      }
     } else {
       this.selectedData = this.data[1] || null;
+      if (this.hasDiff && this.diffData) {
+        this.selectedDiffData = this.diffData[1] || null;
+      }
     }
     if (this.selectedData && this.selectedData.p) {
       this.architecture = this.selectedData.p.architecture_type || '';

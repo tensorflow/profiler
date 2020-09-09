@@ -15,6 +15,12 @@ export class SelfTimeChart implements OnChanges {
   /** The tensorflow stats data. */
   @Input() tensorflowStatsData: TensorflowStatsDataOrNull = null;
 
+  /** The tensorflow stats data for diff. */
+  @Input() diffData: TensorflowStatsDataOrNull = null;
+
+  /** Whether to use diff. */
+  @Input() hasDiff = false;
+
   /** The Op executor. */
   @Input() opExecutor: OpExecutor = OpExecutor.NONE;
 
@@ -46,6 +52,10 @@ export class SelfTimeChart implements OnChanges {
         'ON ' + String(this.opExecutor).toUpperCase() + ': TOTAL SELF-TIME';
     if (this.opKind === OpKind.TYPE) {
       this.title += ' (GROUPED BY TYPE)';
+    }
+    this.dataProvider.hasDiff = this.hasDiff;
+    if (this.hasDiff && this.diffData) {
+      this.dataProvider.setDiffData(this.diffData);
     }
     this.dataProvider.opExecutor = this.opExecutor;
     this.dataProvider.opKind = this.opKind;

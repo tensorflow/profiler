@@ -41,26 +41,32 @@
 
   <div class="row" *ngIf="hasDeviceData">
     <self-time-chart [tensorflowStatsData]="selectedData"
+                     [diffData]="selectedDiffData"
+                     [hasDiff]="hasDiff"
                      [opExecutor]="opExecutorDevice"
                      [opKind]="opKindType">
     </self-time-chart>
     <self-time-chart [tensorflowStatsData]="selectedData"
                      [opExecutor]="opExecutorDevice"
-                     [opKind]="opKindName">
+                     [opKind]="opKindName"
+                     *ngIf="!hasDiff">
     </self-time-chart>
     <flop-rate-chart [tensorflowStatsData]="selectedData"
-                     *ngIf="showFlopRateChart">
+                     *ngIf="showFlopRateChart && !hasDiff">
     </flop-rate-chart>
   </div>
 
   <div class="row">
     <self-time-chart [tensorflowStatsData]="selectedData"
+                     [diffData]="selectedDiffData"
+                     [hasDiff]="hasDiff"
                      [opExecutor]="opExecutorHost"
                      [opKind]="opKindType">
     </self-time-chart>
     <self-time-chart [tensorflowStatsData]="selectedData"
                      [opExecutor]="opExecutorHost"
-                     [opKind]="opKindName">
+                     [opKind]="opKindName"
+                     *ngIf="!hasDiff">
     </self-time-chart>
     <model-properties [architecture]="architecture"
                       [task]="task"

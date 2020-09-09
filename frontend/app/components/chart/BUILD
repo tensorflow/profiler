@@ -37,4 +37,15 @@ ts_library(
     ],
 )
 
+ts_library(
+    name = "utils",
+    srcs = [
+        "table_utils.ts",
+    ],
+    deps = [
+        "@org_xprof//frontend/third_party/google_visualization",
+        "@org_xprof//frontend/app/common/interfaces:chart",
+    ],
+)
+
 
