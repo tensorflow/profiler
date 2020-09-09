@@ -93,6 +93,8 @@
   </div>
 
   <operations-table [tensorflowStatsData]="selectedData"
+                    [diffData]="selectedDiffData"
+                    [hasDiff]="hasDiff"
                     [opExecutor]="opExecutorDevice">
   </operations-table>
 
@@ -109,5 +111,7 @@
 </div>
 
 <operations-table [tensorflowStatsData]="selectedData"
+                  [diffData]="selectedDiffData"
+                  [hasDiff]="hasDiff"
                   [opExecutor]="opExecutorHost">
 </operations-table>

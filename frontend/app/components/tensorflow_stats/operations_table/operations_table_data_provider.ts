@@ -1,23 +1,31 @@
 import {OpExecutor} from 'org_xprof/frontend/app/common/constants/enums';
 import {ChartOptions} from 'org_xprof/frontend/app/common/interfaces/chart';
+import {TensorflowStatsDataOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {DefaultDataProvider} from 'org_xprof/frontend/app/components/chart/default_data_provider';
+import {computeDiffTable} from 'org_xprof/frontend/app/components/chart/table_utils';
 
 const MINIMUM_ROWS = 20;
 
 /** A operations table data provider. */
 export class OperationsTableDataProvider extends DefaultDataProvider {
+  diffTable?: google.visualization.DataTable;
+  hasDiff = false;
   opExecutor = OpExecutor.NONE;
   options = {
     allowHtml: true,
     alternatingRowStyle: false,
     showRowNumber: false,
-    width: '100%',
     height: '600px',
     cssClassNames: {
       'headerCell': 'google-chart-table-header-cell',
       'tableCell': 'google-chart-table-table-cell',
     },
   };
+
+  setDiffData(diffData: TensorflowStatsDataOrNull) {
+    this.diffTable =
+        diffData ? new google.visualization.DataTable(diffData) : undefined;
+  }
 
   process(): google.visualization.DataTable|google.visualization.DataView|null {
     if (!this.dataTable ||
@@ -26,10 +34,76 @@ export class OperationsTableDataProvider extends DefaultDataProvider {
       return null;
     }
 
+    let dataView: google.visualization.DataView|null = null;
 
-    const dataView = this.opExecutor === OpExecutor.DEVICE ?
-        this.makeDataViewForDevice() :
-        this.makeDataViewForHost();
+    if (!this.hasDiff || !this.diffTable) {
+      dataView = this.makeDataView(this.dataTable, this.opExecutor);
+    } else {
+      const oldDataView = this.makeDataView(this.diffTable, this.opExecutor);
+      const newDataView = this.makeDataView(this.dataTable, this.opExecutor);
+      if (!oldDataView || !newDataView) {
+        return null;
+      }
+      const formatDiffInfo = [
+        {
+          rangeMin: 1,
+          rangeMax: 1,
+          hasColor: false,
+          isLargeBetter: false,
+        },
+        {
+          rangeMin: 0,
+          rangeMax: 0,
+          hasColor: true,
+          isLargeBetter: false,
+        },
+        {
+          rangeMin: 2,
+          hasColor: true,
+          isLargeBetter: false,
+        },
+      ];
+      const formatValueInfo = [
+        {
+          rangeMin: 1,
+          rangeMax: 1,
+          multiplier: 1,
+          fixed: 0,
+          suffix: '',
+        },
+        {
+          rangeMin: 2,
+          rangeMax: 2,
+          multiplier: 1,
+          fixed: 3,
+          suffix: '',
+        },
+        {
+          rangeMin: 0,
+          rangeMax: 0,
+          multiplier: 100,
+          fixed: 1,
+          suffix: '%',
+        },
+        {
+          rangeMin: 3,
+          multiplier: 100,
+          fixed: 1,
+          suffix: '%',
+        },
+      ];
+      dataView = computeDiffTable(
+          /* oldTable= */ oldDataView.toDataTable(),
+          /* newTable= */ newDataView.toDataTable(),
+          /* referenceCol= */ 0,
+          /* comparisonCol= */ 3,
+          /* addColumnType= */ 'number',
+          /* addColumnLabel= */ 'Diff total self time',
+          /* sortColumn= */[],
+          /* hiddenColumns= */[],
+          /* formatDiffInfo= */ formatDiffInfo,
+          /* formatValueInfo= */ formatValueInfo);
+    }
 
     if (!dataView) {
       return null;
@@ -45,12 +119,20 @@ export class OperationsTableDataProvider extends DefaultDataProvider {
     return this.options;
   }
 
-  makeDataViewForDevice(): google.visualization.DataView|null {
-    if (!this.dataTable || this.opExecutor !== OpExecutor.DEVICE) {
+  makeDataView(
+      srcTable: google.visualization.DataTable, deviceType: OpExecutor) {
+    return deviceType === OpExecutor.DEVICE ?
+        this.makeDataViewForDevice(srcTable) :
+        this.makeDataViewForHost(srcTable);
+  }
+
+  makeDataViewForDevice(srcTable: google.visualization.DataTable):
+      google.visualization.DataView|null {
+    if (!srcTable || this.opExecutor !== OpExecutor.DEVICE) {
       return null;
     }
 
-    let dataView = new google.visualization.DataView(this.dataTable);
+    let dataView = new google.visualization.DataView(srcTable);
     dataView.setRows(dataView.getFilteredRows([{
       'column': 1,
       'value': 'Device',
@@ -120,12 +202,13 @@ export class OperationsTableDataProvider extends DefaultDataProvider {
     return dataView;
   }
 
-  makeDataViewForHost(): google.visualization.DataView|null {
-    if (!this.dataTable || this.opExecutor !== OpExecutor.HOST) {
+  makeDataViewForHost(srcTable: google.visualization.DataTable):
+      google.visualization.DataView|null {
+    if (!srcTable || this.opExecutor !== OpExecutor.HOST) {
       return null;
     }
 
-    const dataView = new google.visualization.DataView(this.dataTable);
+    const dataView = new google.visualization.DataView(srcTable);
     dataView.setRows(dataView.getFilteredRows([{
       'column': 1,
       'value': 'Host',

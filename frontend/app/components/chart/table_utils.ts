@@ -1,5 +1,26 @@
 import {ChartClass} from 'org_xprof/frontend/app/common/interfaces/chart';
 
+interface FormatDiffInfo {
+  rangeMin?: number;
+  rangeMax?: number;
+  hasColor: boolean;
+  isLargeBetter: boolean;
+}
+
+interface FormatValueInfo {
+  rangeMin?: number;
+  rangeMax?: number;
+  multiplier: number;
+  fixed: number;
+  suffix: string;
+}
+
+const RANGE_MIN = 0;
+const RANGE_MAX = 999;
+const XNOR = (a: boolean, b: boolean): boolean => {
+  return (a && b) || (!a && !b);
+};
+
 /**
  * Return the diffed pie-chart table based on category.
  */
@@ -57,4 +78,273 @@ export function computeCategoryDiffTable(
   // Return the diffed pie-chart table.
   // tslint:disable-next-line:no-any
   return (chart as any)['computeDiff'](oldTable, newTable);
+}
+
+/**
+ * Compute the stats difference between two tables. oldTable and newTable
+ * need to be DataTable class, and function also returns DataTable class.
+ * Assume the type and label of columns in both tables match, while their
+ * row counts can be different.
+ * This function works for both main table and opType aggregation table.
+ * @param oldTable Previous data table to be compared.It is used to calculate
+ *        the difference from the new data table.
+ * @param newTable Data table for current values.The increase or decrease is
+ *        displayed based on this value.
+ * @param referenceCol Column number as a reference for comparing two data
+ *        tables.
+ * @param comparisonCol Column number that has the actual value comparing two
+ *        data tables.
+ * @param addColumnType The type of an additional column at the end for sorting
+ *        purpose.
+ * @param addColumnLabel The label of an additional column at the end for
+ *        sorting purpose.
+ * @param sortColumn Columns used for sorting the created data table.
+ * @param hiddenColumns Number of hidden columns in the created data table.
+ * @param formatDiffInfo Define hasColor and isLargeBetter for the range of the
+ *        column. If all values are true in 8 and false in all other ranges, it
+ *        can be defined as follows. If rangeMin is not defined, 0 is used. If
+ *        rangeMax is not defined, 999 is used.
+ *        [
+ *          {
+ *            rangeMax: 7,
+ *            hasColor: false,
+ *            isLargeBetter: false,
+ *          },
+ *          {
+ *            rangeMin: 8,
+ *            rangeMax: 8,
+ *            hasColor: true,
+ *            isLargeBetter: true,
+ *          },
+ *          {
+ *            rangeMin: 9,
+ *            hasColor: true,
+ *            isLargeBetter: false,
+ *          },
+ *        ]
+ * @param formatValueInfo Defines multiplier, fixed, and suffix for the range of
+ *        the column. For example, column 0 multiplies by 100, removes the
+ *        decimal point, and adds a % sign. The remaining columns are displayed
+ *        up to two decimal places. In this case, it is defined as follows. If
+ *        rangeMin is not defined, 0 is used. If rangeMax is not defined, 999 is
+ *        used.
+ *        [
+ *          {
+ *            rangeMin: 0,
+ *            rangeMax: 0,
+ *            multiplier: 100,
+ *            fixed: 0,
+ *            suffix: '%',
+ *          },
+ *          {
+ *            rangeMin: 1,
+ *            multiplier: 1,
+ *            fixed: 2,
+ *            suffix: '',
+ *          },
+ *        ]
+ */
+export function computeDiffTable(
+    oldTable: google.visualization.DataTable,
+    newTable: google.visualization.DataTable, referenceCol: number,
+    comparisonCol: number, addColumnType: string, addColumnLabel: string,
+    sortColumn: google.visualization.SortByColumn[], hiddenColumns: number[],
+    formatDiffInfo: FormatDiffInfo[],
+    formatValueInfo: FormatValueInfo[]): google.visualization.DataView {
+  const colsCount = oldTable.getNumberOfColumns();
+  const diffTable = new google.visualization.DataTable();
+  // The first column can be rank ('number') or opType ('string').
+  diffTable.addColumn({
+    'type': oldTable.getColumnType(0),
+    'label': oldTable.getColumnLabel(0),
+  });
+  // Adds column label for diffTable. Assume old and new tables
+  // have the same column types.
+  for (let colIndex = 1; colIndex < colsCount; ++colIndex) {
+    diffTable.addColumn({
+      'type': 'string',
+      'label': oldTable.getColumnLabel(colIndex),
+    });
+  }
+  // Add additional column at the end for sorting purpose.
+  diffTable.addColumn({
+    'type': addColumnType,
+    'label': addColumnLabel,
+  });
+  diffTable.addRows(oldTable.getNumberOfRows() + newTable.getNumberOfRows());
+
+  // Merge sort and diff the oldTable and newTable based on opName.
+  const numDiffRows = mergeSortTables(
+      diffTable, oldTable, newTable, referenceCol, comparisonCol,
+      formatDiffInfo, formatValueInfo);
+
+  // Hide the empty rows, and the last column in diffTable.
+  const diffView = new google.visualization.DataView(diffTable);
+  if (numDiffRows > 0) {
+    diffView.setRows(0, numDiffRows - 1);
+    sortColumn.push({column: colsCount, desc: true});
+    diffView.setRows(diffView.getSortedRows(sortColumn));
+  }
+
+  hiddenColumns.push(colsCount);
+  diffView.hideColumns(hiddenColumns);
+
+  return diffView;
+}
+
+/**
+ * The function takes in oldTable and newTable, sort them by referenceCol
+ * column, and fill their difference into the generated diffTable.
+ * The difference in comparisonCol column is filled in the last column
+ * of diffTable, and used for sorting the diffTable afterwards,
+ */
+function mergeSortTables(
+    diffTable: google.visualization.DataTable,
+    oldTable: google.visualization.DataTable,
+    newTable: google.visualization.DataTable, referenceCol: number,
+    comparisonCol: number, formatDiffInfo: FormatDiffInfo[],
+    formatValueInfo: FormatValueInfo[]): number {
+  oldTable.sort({column: referenceCol, desc: false});  // Ascending order.
+  newTable.sort({column: referenceCol, desc: false});  // Ascending order.
+  const oldSize = oldTable.getNumberOfRows();
+  const newSize = newTable.getNumberOfRows();
+  // colsCount is number of columns in the original tables. In diffTable
+  // there is one additional column at the end which is the difference
+  // in self time between two stats.  The column is used solely for
+  // sorting the diffTable and gets hidden before function returns.
+  const colsCount = oldTable.getNumberOfColumns();
+  const largeCharInASCII = '~~~~';
+  let rowIndex = 0;
+  for (let oldRow = 0, newRow = 0; oldRow < oldSize || newRow < newSize;
+       rowIndex++) {
+    // Assign the largest character in ASCII table for comparison.
+    const oldReferenceValue = (oldRow < oldSize) ?
+        oldTable.getValue(oldRow, referenceCol) :
+        largeCharInASCII;
+    const newReferenceValue = (newRow < newSize) ?
+        newTable.getValue(newRow, referenceCol) :
+        largeCharInASCII;
+    if (oldRow < oldSize && newRow < newSize &&
+        oldReferenceValue === newReferenceValue) {
+      // If reference value is the same, then diff the two stats.
+      for (let colIndex = 0; colIndex < colsCount; colIndex++) {
+        if (colIndex !== 0 && oldTable.getColumnType(colIndex) === 'number') {
+          const baseVal = oldTable.getValue(oldRow, colIndex);
+          const diffVal = newTable.getValue(newRow, colIndex) -
+              oldTable.getValue(oldRow, colIndex);
+          diffTable.setCell(
+              rowIndex, colIndex,
+              formatValue(baseVal, colIndex, formatValueInfo) +
+                  formatDiff(diffVal, baseVal, colIndex, formatDiffInfo));
+        } else {  // Use oldTable's string values, or rank.
+          diffTable.setCell(
+              rowIndex, colIndex, oldTable.getValue(oldRow, colIndex));
+        }
+      }
+      const diffValue = newTable.getValue(newRow, comparisonCol) -
+          oldTable.getValue(oldRow, comparisonCol);
+      diffTable.setCell(rowIndex, colsCount, diffValue);
+      oldRow++, newRow++;
+    } else if (newRow === newSize || oldReferenceValue < newReferenceValue) {
+      // If only old stats, then assign the diff as negative old stats.
+      for (let colIndex = 0; colIndex < colsCount; colIndex++) {
+        if (colIndex !== 0 && oldTable.getColumnType(colIndex) === 'number') {
+          const baseVal = oldTable.getValue(oldRow, colIndex);
+          const diffVal = -oldTable.getValue(oldRow, colIndex);
+          diffTable.setCell(
+              rowIndex, colIndex,
+              formatValue(baseVal, colIndex, formatValueInfo) +
+                  formatDiff(diffVal, baseVal, colIndex, formatDiffInfo));
+        } else {  // Use oldTable's string values, or rank.
+          diffTable.setCell(
+              rowIndex, colIndex, oldTable.getValue(oldRow, colIndex));
+        }
+      }
+      const diffValue = -oldTable.getValue(oldRow, comparisonCol);
+      diffTable.setCell(rowIndex, colsCount, diffValue);
+      oldRow++;
+    } else {  // if (oldRow == oldSize || oldReferenceValue > newReferenceValue)
+      // If only new stats, then assign the diff as new stats.
+      for (let colIndex = 0; colIndex < colsCount; colIndex++) {
+        if (colIndex !== 0 && newTable.getColumnType(colIndex) === 'number') {
+          const baseVal = 0;
+          const diffVal = newTable.getValue(newRow, colIndex);
+          diffTable.setCell(
+              rowIndex, colIndex,
+              formatValue(baseVal, colIndex, formatValueInfo) +
+                  formatDiff(diffVal, baseVal, colIndex, formatDiffInfo));
+        } else {  // Use newTable's string values, or rank.
+          diffTable.setCell(
+              rowIndex, colIndex, newTable.getValue(newRow, colIndex));
+        }
+      }
+      const diffValue = newTable.getValue(newRow, comparisonCol);
+      diffTable.setCell(rowIndex, colsCount, diffValue);
+      newRow++;
+    }  // End of if condition comparing opName.
+  }    // End of for loop over all rows.
+  return rowIndex;
+}
+
+/**
+ * Format value based on table column index.
+ */
+function formatValue(
+    val: number, col: number, formatValueInfo: FormatValueInfo[]): string {
+  for (const info of formatValueInfo) {
+    const rangeMin =
+        info.hasOwnProperty('rangeMin') ? info.rangeMin || 0 : RANGE_MIN;
+    const rangeMax =
+        info.hasOwnProperty('rangeMax') ? info.rangeMax || 0 : RANGE_MAX;
+    if (col >= rangeMin && col <= rangeMax) {
+      return (val * info.multiplier).toFixed(info.fixed) + info.suffix;
+    }
+  }
+  return '';
+}
+
+/**
+ * Format diff value.
+ */
+function formatDiff(
+    diffVal: number, baseVal: number, colIndex: number,
+    formatDiffInfo: FormatDiffInfo[]): string {
+  for (const info of formatDiffInfo) {
+    const rangeMin =
+        info.hasOwnProperty('rangeMin') ? info.rangeMin || 0 : RANGE_MIN;
+    const rangeMax =
+        info.hasOwnProperty('rangeMax') ? info.rangeMax || 0 : RANGE_MAX;
+    if (colIndex >= rangeMin && colIndex <= rangeMax) {
+      return formatDiffWithColor(
+          diffVal, baseVal, info.hasColor, info.isLargeBetter);
+    }
+  }
+  return '';
+}
+
+/**
+ * Format diff value with color.
+ */
+function formatDiffWithColor(
+    dividend: number, divisor: number, hasColor: boolean,
+    isLargeBetter: boolean): string {
+  // If dividend is 0, return 0.
+  if (!dividend) return '<font color="grey">(0)</font>';
+
+  let color;
+  if (hasColor) {
+    color = XNOR(dividend > 0, isLargeBetter) ? 'green' : 'red';
+  } else {
+    color = 'black';
+  }
+
+  let str;
+  if (!divisor) {  // If divisor is 0, return the original dividend value.
+    str = '(+' + dividend.toFixed(1) + ')';
+  } else {
+    str = dividend > 0 ? '(+' : '(';
+    str += (dividend / divisor * 100).toFixed(0) + '%)';
+  }
+
+  return str.fontcolor(color);
 }
