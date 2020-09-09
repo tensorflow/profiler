@@ -1,3 +1,4 @@
+import 'org_xprof/frontend/app/common/typing/google_visualization/google_visualization';
 import {Component, ElementRef, EventEmitter, Input, NgModule, OnChanges, OnInit, Output, SimpleChanges} from '@angular/core';
 import {ChartClass, ChartDataInfo, ChartType} from 'org_xprof/frontend/app/common/interfaces/chart';
 

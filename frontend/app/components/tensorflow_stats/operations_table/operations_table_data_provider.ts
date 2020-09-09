@@ -1,3 +1,4 @@
+import 'org_xprof/frontend/app/common/typing/google_visualization/google_visualization';
 import {OpExecutor} from 'org_xprof/frontend/app/common/constants/enums';
 import {ChartOptions} from 'org_xprof/frontend/app/common/interfaces/chart';
 import {TensorflowStatsDataOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
