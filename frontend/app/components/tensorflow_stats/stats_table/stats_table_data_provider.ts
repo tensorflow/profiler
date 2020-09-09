@@ -1,6 +1,8 @@
 import {EventEmitter} from '@angular/core';
 import {ChartClass, ChartDataInfo, ChartOptions} from 'org_xprof/frontend/app/common/interfaces/chart';
+import {TensorflowStatsDataOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {DefaultDataProvider} from 'org_xprof/frontend/app/components/chart/default_data_provider';
+import {computeDiffTable} from 'org_xprof/frontend/app/components/chart/table_utils';
 
 declare interface SortEvent {
   column: number;
@@ -19,6 +21,8 @@ const MINIMUM_ROWS = 20;
 
 /** A stats table data provider. */
 export class StatsTableDataProvider extends DefaultDataProvider {
+  diffTable?: google.visualization.DataTable;
+  hasDiff = false;
   sortAscending = true;
   sortColumn = -1;
   options = {
@@ -55,7 +59,18 @@ export class StatsTableDataProvider extends DefaultDataProvider {
     }
 
     const dataTable = new google.visualization.DataTable(dataInfo.data);
-    this.preProcessDataTable(dataTable);
+    if (this.hasDiff && this.diffTable) {
+      this.preProcessDiffTable(dataTable, this.diffTable);
+    } else {
+      this.preProcessDataTable(dataTable);
+    }
+  }
+
+  setDiffData(diffData: TensorflowStatsDataOrNull) {
+    this.diffTable = diffData ?
+
+        new google.visualization.DataTable(diffData) :
+        undefined;
   }
 
   setFilters(filters: google.visualization.DataTableCellFilter[]) {
@@ -79,7 +94,11 @@ export class StatsTableDataProvider extends DefaultDataProvider {
       dataTable = dataView.toDataTable();
     }
 
-    dataView = this.formatDataTable(dataTable);
+    if (!this.hasDiff) {
+      dataView = this.formatDataTable(dataTable);
+    } else {
+      dataView = this.formatDiffTable(dataTable);
+    }
 
     this.options.height =
         dataView.getNumberOfRows() < MINIMUM_ROWS ? '' : '600px';
@@ -131,6 +150,75 @@ export class StatsTableDataProvider extends DefaultDataProvider {
     }
 
     this.dataTable.insertColumn(1, 'number', 'Rank');
+  }
+
+  preProcessDiffTable(
+      dataTable: google.visualization.DataTable,
+      diffTable: google.visualization.DataTable) {
+    const sortColumn = [{column: 1, desc: false}];
+    const hiddenColumn = [0, 4, 5, 6, 7, 10, 12];
+    const formatDiffInfo = [
+      {
+        rangeMin: 0,
+        rangeMax: 7,
+        hasColor: false,
+        isLargeBetter: false,
+      },
+      {
+        rangeMin: 8,
+        rangeMax: 12,
+        hasColor: true,
+        isLargeBetter: false,
+      },
+      {
+        rangeMin: 13,
+        hasColor: true,
+        isLargeBetter: true,
+      },
+    ];
+    const formatValueInfo = [
+      {
+        rangeMin: 0,
+        rangeMax: 8,
+        multiplier: 1,
+        fixed: 0,
+        suffix: '',
+      },
+      {
+        rangeMin: 9,
+        rangeMax: 12,
+        multiplier: 100,
+        fixed: 1,
+        suffix: '%',
+      },
+      {
+        rangeMin: 13,
+        multiplier: 1,
+        fixed: 1,
+        suffix: '',
+      },
+    ];
+    const dataView = computeDiffTable(
+        /* oldTable= */ diffTable,
+        /* newTable= */ dataTable,
+        /* referenceCol= */ 3,
+        /* comparisonCol= */ 8,
+        /* addColumnType= */ 'number',
+        /* addColumnLabel= */ 'Diff total self time',
+        /* sortColumn= */ sortColumn,
+        /* hiddenColumns= */ hiddenColumn,
+        /* formatDiffInfo= */ formatDiffInfo,
+        /* formatValueInfo= */ formatValueInfo);
+    if (!dataView) {
+      return;
+    }
+
+    this.dataTable = dataView.toDataTable();
+    if (!this.dataTable) {
+      return;
+    }
+
+    this.updateTotalOperations(this.dataTable);
   }
 
   formatDataTable(dataTable: google.visualization.DataTable):
@@ -207,6 +295,19 @@ export class StatsTableDataProvider extends DefaultDataProvider {
 
     dataView.hideColumns([0]);
 
+    return dataView;
+  }
+
+  formatDiffTable(dataTable: google.visualization.DataTable):
+      google.visualization.DataView {
+    const dataView = new google.visualization.DataView(dataTable);
+    if (this.sortColumn >= 0) {
+      const sortedIndex = dataTable.getSortedRows({
+        column: this.sortColumn,
+        desc: !this.sortAscending,
+      });
+      dataView.setRows(sortedIndex);
+    }
     return dataView;
   }
 

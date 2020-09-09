@@ -1,3 +1,4 @@
+import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import {MatIconModule} from '@angular/material/icon';
@@ -9,6 +10,7 @@ import {StatsTable} from './stats_table';
 @NgModule({
   declarations: [StatsTable],
   imports: [
+    CommonModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,

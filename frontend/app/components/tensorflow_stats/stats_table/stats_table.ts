@@ -31,6 +31,12 @@ export class StatsTable implements OnChanges, OnInit {
   /** The tensorflow stats data. */
   @Input() tensorflowStatsData: TensorflowStatsDataOrNull = null;
 
+  /** The tensorflow stats data for diff. */
+  @Input() diffData: TensorflowStatsDataOrNull = null;
+
+  /** Whether to use diff. */
+  @Input() hasDiff = false;
+
   filterExecutor = '';
   filterType = '';
   filterOperation = '';
@@ -50,6 +56,10 @@ export class StatsTable implements OnChanges, OnInit {
   }
 
   ngOnChanges(changes: SimpleChanges) {
+    this.dataProvider.hasDiff = this.hasDiff;
+    if (this.hasDiff && this.diffData) {
+      this.dataProvider.setDiffData(this.diffData);
+    }
     this.dataInfo = {
       ...this.dataInfo,
       data: this.tensorflowStatsData,

@@ -78,7 +78,10 @@
 
 <mat-divider></mat-divider>
 
-<stats-table [tensorflowStatsData]="selectedData"></stats-table>
+<stats-table [tensorflowStatsData]="selectedData"
+             [diffData]="selectedDiffData"
+             [hasDiff]="hasDiff">
+</stats-table>
 
 <mat-divider></mat-divider>
 
