@@ -348,3 +348,55 @@ function formatDiffWithColor(
 
   return str.fontcolor(color);
 }
+
+/**
+ * Return the diffed pie-chart table based on category.
+ */
+export function computePivotTable(
+    dataTable: google.visualization.DataTable, columnLabel: string,
+    rowLabel: string, valueLabel: string, newColumnLabel: string,
+    sortByValue: boolean): google.visualization.DataTable|null {
+  if (!dataTable) {
+    return null;
+  }
+
+  /* tslint:disable no-any */
+  const columnIndex = (dataTable as any)['getColumnIndex'](columnLabel);
+  const rowIndex = (dataTable as any)['getColumnIndex'](rowLabel);
+  const valueIndex = (dataTable as any)['getColumnIndex'](valueLabel);
+  /* tslint:enable */
+
+  if (sortByValue) {
+    // Set sort columns
+    dataTable.sort({column: valueIndex, desc: true});
+  }
+
+  // Creates pivotTable based on dataTable. The pivot table has one row for
+  // each rowLabel column and one column for each columnLabel column.
+  const pivotTable = new google.visualization.DataTable();
+  pivotTable.addColumn('string', newColumnLabel);
+  const columnValues = dataTable.getDistinctValues(columnIndex);
+  const columnValuesMap = new Map<string, number>();
+  columnValues.forEach(columnValue => {
+    columnValuesMap.set(columnValue, pivotTable.getNumberOfColumns());
+    pivotTable.addColumn('number', columnValue);
+  });
+  const rowValues = dataTable.getDistinctValues(rowIndex);
+  const rowValuesMap = new Map<string, number>();
+  rowValues.forEach(rowValue => {
+    const row = pivotTable.getNumberOfRows();
+    rowValuesMap.set(rowValue, row);
+    pivotTable.addRow();
+    pivotTable.setValue(row, 0, rowValue);
+  });
+  const numRows = dataTable.getNumberOfRows();
+  for (let i = 0; i < numRows; ++i) {
+    const rowValue = dataTable.getValue(i, rowIndex) as string;
+    const columnValue = dataTable.getValue(i, columnIndex) as string;
+    const value = dataTable.getValue(i, valueIndex);
+    pivotTable.setValue(
+        rowValuesMap.get(rowValue)!, columnValuesMap.get(columnValue)!, value);
+  }
+
+  return pivotTable;
+}
