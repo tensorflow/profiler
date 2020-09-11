@@ -1,6 +1,8 @@
-import {AfterViewInit, Component, ElementRef, Input, OnChanges, SimpleChanges, ViewChild} from '@angular/core';
-
+import {Component, Input, OnChanges, SimpleChanges} from '@angular/core';
+import {ChartDataInfo, DataType} from 'org_xprof/frontend/app/common/interfaces/chart';
 import {InputPipelineDeviceAnalysisOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+
+import {DeviceSideAnalysisDetailDataProvider} from './device_side_analysis_detail_data_provider';
 
 const INFEED_COLUMN_IDS = [
   'stepnum',
@@ -50,23 +52,13 @@ interface DeviceSideAnalysisMetrics {
   stddev?: string;
 }
 
-declare interface Intervals {
-  style?: string;
-  color?: string;
-}
-
-declare interface ExtendedLineChartOptions extends
-    google.visualization.LineChartOptions {
-  intervals?: Intervals;
-}
-
 /** A device-side analysis detail view component. */
 @Component({
   selector: 'device-side-analysis-detail',
   templateUrl: './device_side_analysis_detail.ng.html',
   styleUrls: ['./device_side_analysis_detail.scss']
 })
-export class DeviceSideAnalysisDetail implements AfterViewInit, OnChanges {
+export class DeviceSideAnalysisDetail implements OnChanges {
   /** The input pipeline device analysis data. */
   @Input()
   set deviceAnalysis(analysis: InputPipelineDeviceAnalysisOrNull) {
@@ -96,51 +88,39 @@ export class DeviceSideAnalysisDetail implements AfterViewInit, OnChanges {
   /** The default column colors. */
   @Input() columnColors = COLORS_FOR_TPU;
 
-  @ViewChild('areaChart', {static: false}) areaChartRef!: ElementRef;
-  @ViewChild('lineChart', {static: false}) lineChartRef!: ElementRef;
-
   isTpu = true;
   inputPipelineDeviceAnalysis: InputPipelineDeviceAnalysisOrNull = null;
   infeedPercentMetrics: DeviceSideAnalysisMetrics = {};
   steptimeMsMetrics: DeviceSideAnalysisMetrics = {};
   areaChart: google.visualization.AreaChart|null = null;
   lineChart: google.visualization.LineChart|null = null;
-
-  ngAfterViewInit() {
-    this.loadGoogleChart();
-  }
-
-  ngOnChanges(changes: SimpleChanges) {
-    this.drawChart();
-  }
-
-  drawChart() {
-    if (!this.inputPipelineDeviceAnalysis || !this.lineChart ||
-        !this.areaChart) {
-      return;
-    }
-
-    const dataTable =
-        new google.visualization.DataTable(this.inputPipelineDeviceAnalysis);
-    this.drawAreaChart(dataTable.clone());
-    this.drawLineChart(dataTable.clone());
-  }
-
-  drawLineChart(dataTable: google.visualization.DataTable|null) {
-    if (!this.lineChart || !dataTable) {
-      return;
-    }
-
-    let i = 0;
-    while (i < dataTable.getNumberOfColumns()) {
-      if (!INFEED_COLUMN_IDS.includes(dataTable.getColumnId(i))) {
-        dataTable.removeColumn(i);
-        continue;
-      }
-      i++;
-    }
-
-    const options: ExtendedLineChartOptions = {
+  dataProviderForAreaChart = new DeviceSideAnalysisDetailDataProvider();
+  dataInfoForAreaChart: ChartDataInfo = {
+    data: null,
+    type: DataType.DATA_TABLE,
+    dataProvider: this.dataProviderForAreaChart,
+    options: {
+      hAxis: {title: 'Step Number'},
+      vAxis: {title: 'Milliseconds', format: '###.####ms', minValue: 0},
+      chartArea: {
+        left: 100,
+        top: 10,
+        width: '65%',
+        height: '90%',
+      },
+      width: 820,
+      height: 300,
+      colors: COLORS_FOR_TPU,
+      backgroundColor: {fill: 'transparent'},
+      isStacked: true,
+    },
+  };
+  dataProviderForLineChart = new DeviceSideAnalysisDetailDataProvider();
+  dataInfoForLineChart: ChartDataInfo = {
+    data: null,
+    type: DataType.DATA_TABLE,
+    dataProvider: this.dataProviderForLineChart,
+    options: {
       hAxis: {title: 'Step Number'},
       vAxis: {title: '% of step time', format: '###.###\'%\''},
       chartArea: {
@@ -156,62 +136,25 @@ export class DeviceSideAnalysisDetail implements AfterViewInit, OnChanges {
       colors: ['none'],
       backgroundColor: {fill: 'transparent'},
       intervals: {style: 'boxes', color: 'red'},
-    };
-    this.lineChart.draw(dataTable, options);
-  }
+    },
+  };
 
-  drawAreaChart(dataTable: google.visualization.DataTable|null) {
-    if (!this.areaChart || !dataTable) {
-      return;
-    }
-
-    let i = 0;
-    let columnsIds = this.columnIds;
-    let colors = this.columnColors;
-    if (!this.isTpu) {
-      columnsIds = STEPTIME_COLUMN_IDS_FOR_GPU;
-      colors = COLORS_FOR_GPU;
-    }
-    while (i < dataTable.getNumberOfColumns()) {
-      if (!columnsIds.includes(dataTable.getColumnId(i))) {
-        dataTable.removeColumn(i);
-        continue;
-      }
-      i++;
-    }
-
-    const options = {
-      hAxis: {title: 'Step Number'},
-      vAxis: {title: 'Milliseconds', format: '###.####ms', minValue: 0},
-      chartArea: {
-        left: 100,
-        top: 10,
-        width: '65%',
-        height: '90%',
+  ngOnChanges(changes: SimpleChanges) {
+    this.dataProviderForAreaChart.setColumnIds(
+        this.isTpu ? this.columnIds : STEPTIME_COLUMN_IDS_FOR_GPU);
+    this.dataInfoForAreaChart = {
+      ...this.dataInfoForAreaChart,
+      data: this.inputPipelineDeviceAnalysis,
+      options: {
+        ...this.dataInfoForAreaChart.options,
+        colors: this.isTpu ? this.columnColors : COLORS_FOR_GPU,
       },
-      width: 820,
-      height: 300,
-      colors: colors,
-      backgroundColor: {fill: 'transparent'},
-      isStacked: true,
     };
-    this.areaChart.draw(dataTable, options);
-  }
 
-  loadGoogleChart() {
-    if (!google || !google.charts) {
-      setTimeout(() => {
-        this.loadGoogleChart();
-      }, 100);
-    }
-
-    google.charts.load('current', {'packages': ['corechart']})
-    google.charts.setOnLoadCallback(() => {
-      this.areaChart =
-          new google.visualization.AreaChart(this.areaChartRef.nativeElement);
-      this.lineChart =
-          new google.visualization.LineChart(this.lineChartRef.nativeElement);
-      this.drawChart();
-    });
+    this.dataProviderForLineChart.setColumnIds(INFEED_COLUMN_IDS);
+    this.dataInfoForLineChart = {
+      ...this.dataInfoForLineChart,
+      data: this.inputPipelineDeviceAnalysis,
+    };
   }
 }

@@ -25,5 +25,14 @@ declare namespace google {
     export interface DataTableCellFilter extends DataTableCellFilter {
       test?: (value: string) => boolean;
     }
+
+    interface Intervals {
+      style?: string;
+      color?: string;
+    }
+
+    export interface LineChartOptions extends LineChartOptions {
+      intervals?: Intervals;
+    }
   }
 }

@@ -9,3 +9,10 @@ ts_library(
         "enums.ts",
     ],
 )
+
+ts_library(
+    name = "testing",
+    srcs = [
+        "testing.ts",
+    ],
+)
