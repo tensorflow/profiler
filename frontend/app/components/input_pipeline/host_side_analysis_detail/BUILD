@@ -14,10 +14,28 @@ ng_module(
         "host_side_analysis_detail.ng.html",
     ],
     deps = [
+        ":host_side_analysis_detail_table_data_provider",
         "@npm//@angular/core",
         "@org_xprof//frontend/app/common/angular:angular_material_expansion",
-        "@org_xprof//frontend/third_party/google_visualization",
         "@org_xprof//frontend/app/common/interfaces",
+        "@org_xprof//frontend/app/common/interfaces:chart",
+        "@org_xprof//frontend/app/components/chart",
+        "@org_xprof//frontend/app/components/chart:chart_options",
+        "@org_xprof//frontend/app/components/chart:default_data_provider",
+    ],
+)
+
+ng_module(
+    name = "host_side_analysis_detail_table_data_provider",
+    srcs = [
+        "host_side_analysis_detail_table_data_provider.ts",
+    ],
+    deps = [
+        "@npm//@angular/core",
+        "@org_xprof//frontend/app/common/interfaces",
+        "@org_xprof//frontend/app/common/interfaces:chart",
+        "@org_xprof//frontend/app/common/typing/google_visualization",
+        "@org_xprof//frontend/app/components/chart:default_data_provider",
     ],
 )
 

@@ -50,7 +50,7 @@ export type ChartOptions = google.visualization.AreaChartOptions|
 
 /** The base interface for an information of chart data. */
 export interface ChartDataInfo {
-  data: SimpleDataTableOrNull;
+  data: SimpleDataTableOrNull|Array<Array<(string | number)>>;
   type: DataType;
   dataProvider: ChartDataProvider;
   sortColumns?: google.visualization.SortByColumn[];

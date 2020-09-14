@@ -1,6 +1,10 @@
-import {AfterViewInit, Component, ElementRef, Input, OnChanges, SimpleChanges, ViewChild} from '@angular/core';
+import {Component, Input, OnChanges, OnInit, SimpleChanges} from '@angular/core';
+import {ChartDataInfo, DataType} from 'org_xprof/frontend/app/common/interfaces/chart';
+import {InputPipelineHostAnalysisOrNull, SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {TABLE_OPTIONS} from 'org_xprof/frontend/app/components/chart/chart_options';
+import {DefaultDataProvider} from 'org_xprof/frontend/app/components/chart/default_data_provider';
 
-import {HostOpsColumn, InputPipelineDeviceAnalysisOrNull, InputPipelineHostAnalysisOrNull, SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {HostSideAnalysisDetailTableDataProvider} from './host_side_analysis_detail_table_data_provider';
 
 /** A host-side analysis detail view component. */
 @Component({
@@ -8,7 +12,7 @@ import {HostOpsColumn, InputPipelineDeviceAnalysisOrNull, InputPipelineHostAnaly
   templateUrl: './host_side_analysis_detail.ng.html',
   styleUrls: ['./host_side_analysis_detail.scss']
 })
-export class HostSideAnalysisDetail implements AfterViewInit, OnChanges {
+export class HostSideAnalysisDetail implements OnInit, OnChanges {
   /** The input pipeline host anaysis data. */
   @Input() hostAnalysis: InputPipelineHostAnalysisOrNull = null;
 
@@ -24,38 +28,59 @@ export class HostSideAnalysisDetail implements AfterViewInit, OnChanges {
     });
   }
 
-  @ViewChild('columnChart', {static: false}) columnChartRef!: ElementRef;
-  @ViewChild('table', {static: false}) tableRef!: ElementRef;
-
   hasHostOps = false;
   recommendations: string[] = [];
-  columnChart: google.visualization.ColumnChart|null = null;
-  table: google.visualization.Table|null = null;
+  dataInfoForColumnChart: ChartDataInfo = {
+    data: null,
+    type: DataType.ARRAY,
+    dataProvider: new DefaultDataProvider(),
+    options: {
+      bar: {groupWidth: '45%'},
+      chartArea: {
+        left: 40,
+        width: '50%',
+        height: '90%',
+      },
+      width: 800,
+      height: 300,
+      colors: ['red', 'blue', 'orange', 'green', 'purple'],
+      backgroundColor: {'fill': 'transparent'},
+      isStacked: 'percent',
+    },
+  };
+  dataProviderForTable = new HostSideAnalysisDetailTableDataProvider();
+  dataInfoForTable: ChartDataInfo = {
+    data: null,
+    type: DataType.DATA_TABLE,
+    dataProvider: this.dataProviderForTable,
+    options: {
+      ...TABLE_OPTIONS,
+      alternatingRowStyle: false,
+    },
+  };
 
-  ngAfterViewInit() {
-    this.loadGoogleChart();
+  ngOnInit() {
+    this.dataProviderForTable.setHasHostOpsChangedEventListener(
+        (hasHostOps: boolean) => {
+          this.hasHostOps = hasHostOps;
+        });
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    this.drawChart();
+    this.parseColumnChartData(this.hostAnalysis);
+    this.dataInfoForTable = {
+      ...this.dataInfoForTable,
+      data: this.hostAnalysis,
+    };
   }
 
-  drawChart() {
-    if (!this.hostAnalysis || !this.columnChart || !this.table) {
-      return;
-    }
-
-    this.drawColumnChart();
-    this.drawTable();
-  }
-
-  drawColumnChart() {
-    if (!this.hostAnalysis || !this.columnChart) {
+  parseColumnChartData(hostAnalysis: InputPipelineHostAnalysisOrNull) {
+    if (!hostAnalysis) {
       return;
     }
 
     const kUsPerMs = 1000.0;
-    const p = this.hostAnalysis.p || {};
+    const p = hostAnalysis.p || {};
     const unclassifiedNonEnqueueMs =
         Number(p.unclassified_nonequeue_us) / kUsPerMs;
     const demandedFileReadMs = Number(p.demanded_file_read_us) / kUsPerMs;
@@ -63,7 +88,7 @@ export class HostSideAnalysisDetail implements AfterViewInit, OnChanges {
     const preprocessingMs = Number(p.preprocessing_us) / kUsPerMs;
     const enqueueMs = Number(p.enqueue_us) / kUsPerMs;
 
-    const dataTable = google.visualization.arrayToDataTable([
+    const data = [
       [
         'Input time breakdown',
         'Other data reading or processing (in ms)',
@@ -80,116 +105,11 @@ export class HostSideAnalysisDetail implements AfterViewInit, OnChanges {
         preprocessingMs,
         enqueueMs,
       ],
-    ]);
+    ];
 
-    const options = {
-      bar: {groupWidth: '45%'},
-      chartArea: {
-        left: 40,
-        width: '50%',
-        height: '90%',
-      },
-      width: 800,
-      height: 300,
-      colors: ['red', 'blue', 'orange', 'green', 'purple'],
-      backgroundColor: {'fill': 'transparent'},
-      isStacked: 'percent',
+    this.dataInfoForColumnChart = {
+      ...this.dataInfoForColumnChart,
+      data,
     };
-    this.columnChart.draw(
-        dataTable, options as google.visualization.ColumnChartOptions);
-  }
-
-  drawTable() {
-    if (!this.hostAnalysis || !this.table) {
-      return;
-    }
-
-    const dataTable = new google.visualization.DataTable(this.hostAnalysis);
-    if (dataTable.getNumberOfRows() < 1) {
-      this.hasHostOps = false;
-      return;
-    }
-    this.hasHostOps = true;
-
-    const columns: HostOpsColumn = {
-      opName: 0,
-      count: 0,
-      timeInMs: 0,
-      timeInPercent: 0,
-      selfTimeInMs: 0,
-      selfTimeInPercent: 0,
-      category: 0,
-    };
-    for (let i = 0; i < dataTable.getNumberOfColumns(); i++) {
-      switch (dataTable.getColumnId(i)) {
-        case 'opName':
-          columns.opName = i;
-          break;
-        case 'count':
-          columns.count = i;
-          break;
-        case 'timeInMs':
-          columns.timeInMs = i;
-          break;
-        case 'timeInPercent':
-          columns.timeInPercent = i;
-          break;
-        case 'selfTimeInMs':
-          columns.selfTimeInMs = i;
-          break;
-        case 'selfTimeInPercent':
-          columns.selfTimeInPercent = i;
-          break;
-        case 'category':
-          columns.category = i;
-          break;
-        default:
-          break;
-      }
-    }
-
-    const percentFormatter =
-        new google.visualization.NumberFormat({pattern: '##.#%'});
-    percentFormatter.format(dataTable, columns.timeInPercent);
-    percentFormatter.format(dataTable, columns.selfTimeInPercent);
-
-    const zeroDecimalPtFormatter =
-        new google.visualization.NumberFormat({'fractionDigits': 0});
-    zeroDecimalPtFormatter.format(dataTable, columns.timeInMs);
-    zeroDecimalPtFormatter.format(dataTable, columns.selfTimeInMs);
-
-    dataTable.setProperty(0, columns.opName, 'style', 'width: 40%');
-    dataTable.setProperty(0, columns.count, 'style', 'width: 15%');
-    dataTable.setProperty(0, columns.timeInMs, 'style', 'width: 10%');
-    dataTable.setProperty(0, columns.timeInPercent, 'style', 'width: 5%');
-    dataTable.setProperty(0, columns.selfTimeInMs, 'style', 'width: 10%');
-    dataTable.setProperty(0, columns.selfTimeInPercent, 'style', 'width: 5%');
-    dataTable.setProperty(0, columns.category, 'style', 'width: 15%');
-    const options = {
-      alternatingRowStyle: false,
-      showRowNumber: false,
-      cssClassNames: {
-        'headerCell': 'google-chart-table-header-cell',
-        'tableCell': 'google-chart-table-table-cell',
-      }
-    };
-
-    this.table.draw(dataTable, options);
-  }
-
-  loadGoogleChart() {
-    if (!google || !google.charts) {
-      setTimeout(() => {
-        this.loadGoogleChart();
-      }, 100);
-    }
-
-    google.charts.load('current', {'packages': ['corechart', 'table']})
-    google.charts.setOnLoadCallback(() => {
-      this.columnChart = new google.visualization.ColumnChart(
-          this.columnChartRef.nativeElement);
-      this.table = new google.visualization.Table(this.tableRef.nativeElement);
-      this.drawChart();
-    });
   }
 }

@@ -1,9 +1,12 @@
-<div [className]="hasHostOps ? 'full-height' : 'hidden-content'">
+<div [className]="hasHostOps ? 'auto-height' : 'hidden-content'">
   <div class="section-container">
     <div class="mat-headline">Host-side analysis details</div>
     <div class="content-container">
       <div class="mat-title">Breakdown of input processing time on the host</div>
-      <div #columnChart class="column-chart"></div>
+      <chart class="column-chart"
+             chartType="ColumnChart"
+             [dataInfo]="dataInfoForColumnChart">
+      </chart>
       <div class="mat-title">What can be done to reduce above components of the host input time:</div>
       <div class="recommendations">
         <div *ngFor="let recommendation of recommendations" [innerHtml]="recommendation"></div>
@@ -15,7 +18,7 @@
     <mat-expansion-panel-header>
       <mat-panel-title>Input Op statistics</mat-panel-title>
     </mat-expansion-panel-header>
-    <div #table></div>
+    <chart chartType="Table" [dataInfo]="dataInfoForTable"></chart>
   </mat-expansion-panel>
   <br/>
 </div>
