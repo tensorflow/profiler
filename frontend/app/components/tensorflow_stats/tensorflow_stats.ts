@@ -4,7 +4,10 @@ import {IdleOption, OpExecutor, OpKind, OpType} from 'org_xprof/frontend/app/com
 import {TensorflowStatsData} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import * as selectors from 'org_xprof/frontend/app/store/tensorflow_stats/selectors';
 
+const OP_EXECUTOR_INDEX = 1;
+const OP_TYPE_INDEX = 2;
 const OP_NAME_INDEX = 3;
+const SELF_TIME_INDEX = 7;
 const MEASURED_FLOP_RATE_INDEX = 13;
 
 /** A TensorFlow Stats component. */
@@ -22,9 +25,15 @@ export class TensorflowStats {
   idleOptionItems = [IdleOption.YES, IdleOption.NO];
   opExecutorDevice = OpExecutor.DEVICE;
   opExecutorHost = OpExecutor.HOST;
-  opKindName = OpKind.NAME;
-  opKindType = OpKind.TYPE;
   opType = OpType.TENSORFLOW;
+  deviceFilter: google.visualization.DataTableCellFilter[] =
+      [{column: OP_EXECUTOR_INDEX, value: OpExecutor.DEVICE}];
+  hostFilter: google.visualization.DataTableCellFilter[] =
+      [{column: OP_EXECUTOR_INDEX, value: OpExecutor.HOST}];
+  opTypeColumn = OP_TYPE_INDEX;
+  opNameColumn = OP_NAME_INDEX;
+  selfTimeColumn = SELF_TIME_INDEX;
+  flopRateColumn = MEASURED_FLOP_RATE_INDEX;
   title = '';
   architecture = '';
   task = '';
@@ -33,8 +42,6 @@ export class TensorflowStats {
   hasDeviceData = false;
   hasDiff = false;
   showFlopRateChart = false;
-  flopRateChartXColumn = OP_NAME_INDEX;
-  flopRateChartYColumn = MEASURED_FLOP_RATE_INDEX;
   showModelProperties = false;
   showPprofLink = false;
 

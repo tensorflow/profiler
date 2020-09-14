@@ -48,6 +48,9 @@ export class FlopRateChart implements OnChanges {
   };
 
   ngOnChanges(changes: SimpleChanges) {
+    if (this.xColumn < 0 || this.yColumn < 0) {
+      return;
+    }
     this.dataProvider.xColumn = this.xColumn;
     this.dataProvider.yColumn = this.yColumn;
     this.dataOptions.hAxis!.title =

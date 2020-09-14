@@ -1,12 +1,12 @@
 import {NgModule} from '@angular/core';
 import {ChartModule} from 'org_xprof/frontend/app/components/chart/chart';
 
-import {SelfTimeChart} from './self_time_chart';
+import {PieChart} from './pie_chart';
 
 @NgModule({
-  declarations: [SelfTimeChart],
+  declarations: [PieChart],
   imports: [ChartModule],
-  exports: [SelfTimeChart],
+  exports: [PieChart],
 })
-export class SelfTimeChartModule {
+export class PieChartModule {
 }

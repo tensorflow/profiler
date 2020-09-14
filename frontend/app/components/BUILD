@@ -5,17 +5,17 @@ load("@io_bazel_rules_sass//:defs.bzl", "sass_binary")
 package(default_visibility = ["//frontend:internal"])
 
 ng_module(
-    name = "self_time_chart",
+    name = "pie_chart",
     srcs = [
-        "self_time_chart.ts",
-        "self_time_chart_module.ts",
+        "pie_chart.ts",
+        "pie_chart_module.ts",
     ],
     assets = [
-        ":self_time_chart_css",
-        "self_time_chart.ng.html",
+        ":pie_chart_css",
+        "pie_chart.ng.html",
     ],
     deps = [
-        ":self_time_chart_data_provider",
+        ":pie_chart_data_provider",
         "@npm//@angular/core",
         "@org_xprof//frontend/app/common/angular:angular_material_card",
         "@org_xprof//frontend/app/common/constants",
@@ -26,9 +26,9 @@ ng_module(
 )
 
 ts_library(
-    name = "self_time_chart_data_provider",
+    name = "pie_chart_data_provider",
     srcs = [
-        "self_time_chart_data_provider.ts",
+        "pie_chart_data_provider.ts",
     ],
     deps = [
         "@npm//@angular/core",
@@ -43,8 +43,8 @@ ts_library(
 
 
 sass_binary(
-    name = "self_time_chart_css",
-    src = "self_time_chart.scss",
+    name = "pie_chart_css",
+    src = "pie_chart.scss",
 
     sourcemap = False,
     deps = [

@@ -5,15 +5,15 @@ import {MatDividerModule} from '@angular/material/divider';
 import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
 import {ExportAsCsvModule} from 'org_xprof/frontend/app/components/controls/export_as_csv/export_as_csv_module';
+import {PieChartModule} from 'org_xprof/frontend/app/components/pie_chart/pie_chart_module';
 import {FlopRateChartModule} from 'org_xprof/frontend/app/components/tensorflow_stats/flop_rate_chart/flop_rate_chart_module';
 import {ModelPropertiesModule} from 'org_xprof/frontend/app/components/tensorflow_stats/model_properties/model_properties_module';
 import {OperationsTableModule} from 'org_xprof/frontend/app/components/tensorflow_stats/operations_table/operations_table_module';
-import {SelfTimeChartModule} from 'org_xprof/frontend/app/components/tensorflow_stats/self_time_chart/self_time_chart_module';
 import {StatsTableModule} from 'org_xprof/frontend/app/components/tensorflow_stats/stats_table/stats_table_module';
 
 import {TensorflowStats} from './tensorflow_stats';
 
-/** An op profile module. */
+/** A tensorflow stats module. */
 @NgModule({
   declarations: [TensorflowStats],
   imports: [
@@ -26,7 +26,7 @@ import {TensorflowStats} from './tensorflow_stats';
     FlopRateChartModule,
     ModelPropertiesModule,
     OperationsTableModule,
-    SelfTimeChartModule,
+    PieChartModule,
     StatsTableModule,
   ],
   exports: [TensorflowStats]
