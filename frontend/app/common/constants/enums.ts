@@ -16,6 +16,12 @@ export const enum OpKind {
   TYPE = 'Type'
 }
 
+export const enum OpType {
+  NONE = '',
+  TENSORFLOW = 'TensorFlow',
+  XLA_HLO = 'HLO',
+}
+
 export const enum TpuClass {
   UNKNOWN = 0,
   TPU_V2,

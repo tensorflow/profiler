@@ -1,8 +1,11 @@
 import {Component} from '@angular/core';
 import {Store} from '@ngrx/store';
-import {IdleOption, OpExecutor, OpKind} from 'org_xprof/frontend/app/common/constants/enums';
+import {IdleOption, OpExecutor, OpKind, OpType} from 'org_xprof/frontend/app/common/constants/enums';
 import {TensorflowStatsData} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import * as selectors from 'org_xprof/frontend/app/store/tensorflow_stats/selectors';
+
+const OP_NAME_INDEX = 3;
+const MEASURED_FLOP_RATE_INDEX = 13;
 
 /** A TensorFlow Stats component. */
 @Component({
@@ -21,6 +24,7 @@ export class TensorflowStats {
   opExecutorHost = OpExecutor.HOST;
   opKindName = OpKind.NAME;
   opKindType = OpKind.TYPE;
+  opType = OpType.TENSORFLOW;
   title = '';
   architecture = '';
   task = '';
@@ -29,6 +33,8 @@ export class TensorflowStats {
   hasDeviceData = false;
   hasDiff = false;
   showFlopRateChart = false;
+  flopRateChartXColumn = OP_NAME_INDEX;
+  flopRateChartYColumn = MEASURED_FLOP_RATE_INDEX;
   showModelProperties = false;
   showPprofLink = false;
 

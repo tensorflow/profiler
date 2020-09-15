@@ -4,12 +4,12 @@
       <div class="mat-headline">{{title}}</div>
       <div class="header-content">
         <div class="description">
-          (1) In the charts and table below, "IDLE" represents the portion of the total execution time
-          on device (or host) that is idle.
+          (1) In the charts and table below, "IDLE" represents the portion of the total execution
+          time on device (or host) that is idle.
         </div>
         <div class="description">
-          (2) In the pie charts, the "Other" sector represents the sum of sectors that are too small to
-          be shown individually.
+          (2) In the pie charts, the "Other" sector represents the sum of sectors that are too small
+          to be shown individually.
         </div>
       </div>
     </div>
@@ -51,7 +51,8 @@
                      [opKind]="opKindName"
                      *ngIf="!hasDiff">
     </self-time-chart>
-    <flop-rate-chart [tensorflowStatsData]="selectedData"
+    <flop-rate-chart [data]="selectedData" [xColumn]="flopRateChartXColumn"
+                     [yColumn]="flopRateChartYColumn" [opType]="opType"
                      *ngIf="showFlopRateChart && !hasDiff">
     </flop-rate-chart>
   </div>
