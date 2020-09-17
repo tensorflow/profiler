@@ -17,7 +17,7 @@ declare interface ColumeRole {
 }
 
 /** The base interface for a column. */
-declare interface DataTableColumn {
+export declare interface DataTableColumn {
   id?: string;
   label?: string;
   type?: string;
@@ -25,7 +25,7 @@ declare interface DataTableColumn {
 }
 
 /** The base interface for a row value. */
-declare interface DataTableRow {
+export declare interface DataTableRow {
   c?: DataTableCell[];
 }
 
