@@ -37,4 +37,13 @@ export const enum DataRequestType {
   TENSORFLOW_STATS_DIFF,
   DIFF_DATA_REQUEST_END,
 }
+
+export const enum FileExtensionType {
+  UNKNOWN = '',
+  PROTO_BINARY = 'pb',
+  PROTO_TEXT = 'pbtxt',
+  JSON = 'json',
+  SHORT_TEXT = 'short_text',
+  LONG_TEXT = 'long_text',
+}
 // tslint:enable:enforce-comments-on-exported-symbols
