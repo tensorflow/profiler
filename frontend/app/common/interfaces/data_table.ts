@@ -139,6 +139,8 @@ declare interface InputPipelineAnalysisProperty {
   kernel_launch_time_ms_sdv?: string;
   host_compute_time_ms_avg?: string;
   host_compute_time_ms_sdv?: string;
+  device_collectives_time_ms_avg?: string;
+  device_collectives_time_ms_sdv?: string;
   device_to_device_time_ms_avg?: string;
   device_to_device_time_ms_sdv?: string;
   device_compute_time_ms_avg?: string;
@@ -199,6 +201,8 @@ declare interface RecommendationResultProperty {
   all_other_statement?: string;
   kernel_launch_bottleneck?: string;
   kernel_launch_statement?: string;
+  device_collectives_bottleneck?: string;
+  device_collectives_statement?: string;
   precision_statement?: string;
 }
 /* tslint:enable */

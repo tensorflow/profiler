@@ -11,6 +11,7 @@ const STATEMENT_INFO = [
   {id: 'eager_statement_html'},
   {id: 'tf_function_statement_html'},
   {id: 'statement'},
+  {id: 'device_collectives_statement'},
   {id: 'kernel_launch_statement'},
   {id: 'all_other_statement'},
   {id: 'precision_statement'},
@@ -41,6 +42,8 @@ export class RecommendationResultView extends RecommendationResultViewCommon {
         return props.tf_function_statement_html || defaultValue;
       case 'statement':
         return props.statement || defaultValue;
+      case 'device_collectives_statement':
+        return props.device_collectives_statement || defaultValue;
       case 'kernel_launch_statement':
         return props.kernel_launch_statement || defaultValue;
       case 'all_other_statement':

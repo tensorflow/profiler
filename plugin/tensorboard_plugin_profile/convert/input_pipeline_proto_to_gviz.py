@@ -43,6 +43,7 @@ def get_step_breakdown_table_args(ipa):
       ("stepnum", "string", "Step number"),
       ("deviceComputeTimeMs", "number", "Device compute"),
       ("deviceToDeviceTimeMs", "number", "Device to device"),
+      ("deviceCollectivesTimeMs", "number", "Device collectives"),
       ("hostComputeTimeMs", "number", "Host compute"),
       ("kernelLaunchTimeMs", "number", "Kernel launch"),
       ("infeedTimeMs", "number", "Input"),
@@ -62,6 +63,7 @@ def get_step_breakdown_table_args(ipa):
   total_host_prepare_ms = 0.0
   total_host_compile_ms = 0.0
   total_device_to_device_ms = 0.0
+  total_device_collectives_ms = 0.0
   total_unknown_ms = 0.0
 
   data = []
@@ -76,6 +78,7 @@ def get_step_breakdown_table_args(ipa):
                "-Input: {:.2f} ms\n"
                "-Kernel launch: {:.2f} ms\n"
                "-Host compute: {:.2f} ms\n"
+               "-Device collectives: {:.2f} ms\n"
                "-Device to device: {:.2f} ms\n"
                "-Device compute: {:.2f} ms").format(
                    details.step_number, details.step_time_ms,
@@ -83,12 +86,13 @@ def get_step_breakdown_table_args(ipa):
                    details.output_ms,
                    details.host_wait_input_ms + details.host_to_device_ms,
                    details.host_prepare_ms, details.host_compute_ms,
-                   details.device_to_device_ms, details.device_compute_ms)
+                   details.device_collectives_ms, details.device_to_device_ms,
+                   details.device_compute_ms)
 
     row = [
         str(details.step_number), details.device_compute_ms,
-        details.device_to_device_ms, details.host_compute_ms,
-        details.host_prepare_ms,
+        details.device_to_device_ms, details.device_collectives_ms,
+        details.host_compute_ms, details.host_prepare_ms,
         details.host_wait_input_ms + details.host_to_device_ms,
         details.output_ms, details.host_compile_ms, details.unknown_time_ms,
         tooltip
@@ -100,6 +104,7 @@ def get_step_breakdown_table_args(ipa):
     total_output_ms += details.output_ms
     total_host_prepare_ms += details.host_prepare_ms
     total_device_to_device_ms += details.device_to_device_ms
+    total_device_collectives_ms += details.device_collectives_ms
     total_host_compute_ms += details.host_compute_ms
     total_host_compile_ms += details.host_compile_ms
     total_unknown_ms += details.unknown_time_ms
@@ -111,6 +116,10 @@ def get_step_breakdown_table_args(ipa):
   kernel_launch_statement = bottleneck_analysis.kernel_launch_statement
   all_other_classification = bottleneck_analysis.all_other_classification
   all_other_statement = bottleneck_analysis.all_other_statement
+  device_collectives_classification = \
+      bottleneck_analysis.device_collectives_classification
+  device_collectives_statement = \
+      bottleneck_analysis.device_collectives_statement
   input_conclusion = bottleneck_analysis.input_statement
   summary_next_step = ipa.recommendation.summary_next_step
 
@@ -132,6 +141,10 @@ def get_step_breakdown_table_args(ipa):
       breakdown.device_to_device_ms_summary.average)
   device_to_device_time_ms_sdv = "{:.1f}".format(
       breakdown.device_to_device_ms_summary.standard_deviation)
+  device_collectives_time_ms_avg = "{:.1f}".format(
+      breakdown.device_collectives_ms_summary.average)
+  device_collectives_time_ms_sdv = "{:.1f}".format(
+      breakdown.device_collectives_ms_summary.standard_deviation)
   infeed_time_ms_avg = "{:.1f}".format(breakdown.input_ms_summary.average)
   infeed_time_ms_sdv = "{:.1f}".format(
       breakdown.input_ms_summary.standard_deviation)
@@ -166,6 +179,8 @@ def get_step_breakdown_table_args(ipa):
       "device_compute_time_ms_sdv": device_compute_time_ms_sdv,
       "device_to_device_time_ms_avg": device_to_device_time_ms_avg,
       "device_to_device_time_ms_sdv": device_to_device_time_ms_sdv,
+      "device_collectives_time_ms_avg": device_collectives_time_ms_avg,
+      "device_collectives_time_ms_sdv": device_collectives_time_ms_sdv,
       "infeed_time_ms_avg": infeed_time_ms_avg,
       "infeed_time_ms_sdv": infeed_time_ms_sdv,
       "outfeed_time_ms_avg": outfeed_time_ms_avg,
@@ -182,6 +197,8 @@ def get_step_breakdown_table_args(ipa):
       "input_conclusion": input_conclusion,
       "summary_nextstep": summary_next_step,
       # Generic recommendation
+      "device_collectives_bottleneck": device_collectives_classification,
+      "device_collectives_statement": device_collectives_statement,
       "kernel_launch_bottleneck": kernel_launch_classification,
       "kernel_launch_statement": kernel_launch_statement,
       "all_other_bottleneck": all_other_classification,

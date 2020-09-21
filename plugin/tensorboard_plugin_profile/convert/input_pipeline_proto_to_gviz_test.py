@@ -47,6 +47,7 @@ class MockValues(StrEnum):
   OUTPUT_MS = 5
   DEVICE_COMPUTE_MS = 6
   DEVICE_TO_DEVICE_MS = 7
+  DEVICE_COLLECTIVES_MS = 13
   HOST_COMPUTE_MS = 8
   HOST_PREPARE_MS = 9
   HOST_COMPILE_MS = 10
@@ -57,6 +58,7 @@ class MockValues(StrEnum):
 -Input: 23.00 ms
 -Kernel launch: 9.00 ms
 -Host compute: 8.00 ms
+-Device collectives: 13.00 ms
 -Device to device: 7.00 ms
 -Device compute: 6.00 ms"""
 
@@ -91,6 +93,7 @@ class ProtoToGvizTest(tf.test.TestCase):
       step_details.output_ms = int(MockValues.OUTPUT_MS)
       step_details.device_compute_ms = int(MockValues.DEVICE_COMPUTE_MS)
       step_details.device_to_device_ms = int(MockValues.DEVICE_TO_DEVICE_MS)
+      step_details.device_collectives_ms = int(MockValues.DEVICE_COLLECTIVES_MS)
       step_details.host_compute_ms = int(MockValues.HOST_COMPUTE_MS)
       step_details.host_prepare_ms = int(MockValues.HOST_PREPARE_MS)
       step_details.host_compile_ms = int(MockValues.HOST_COMPILE_MS)
@@ -138,6 +141,8 @@ class ProtoToGvizTest(tf.test.TestCase):
         self.create_mock_step_summary(4))
     step_time_breakdown.device_to_device_ms_summary.CopyFrom(
         self.create_mock_step_summary(5))
+    step_time_breakdown.device_collectives_ms_summary.CopyFrom(
+        self.create_mock_step_summary(12))
     step_time_breakdown.host_compute_ms_summary.CopyFrom(
         self.create_mock_step_summary(6))
     step_time_breakdown.host_prepare_ms_summary.CopyFrom(
@@ -157,8 +162,8 @@ class ProtoToGvizTest(tf.test.TestCase):
 
     self.assertEqual(0, data_table.NumberOfRows(),
                      "Empty table should have 0 rows.")
-    # Input pipeline chart data table has 10 columns.
-    self.assertLen(data_table.columns, 10)
+    # Input pipeline chart data table has 11 columns.
+    self.assertLen(data_table.columns, 11)
 
   def test_input_pipeline_step_breakdown(self):
     ipa = self.create_mock_input_pipeline()
@@ -169,10 +174,10 @@ class ProtoToGvizTest(tf.test.TestCase):
     # Data is a list of 3 rows.
     self.assertLen(data, 3)
     self.assertEqual(3, data_table.NumberOfRows(), "Simple table has 3 rows.")
-    # Table descriptor is a list of 10 columns.
-    self.assertLen(table_description, 10)
+    # Table descriptor is a list of 11 columns.
+    self.assertLen(table_description, 11)
     # DataTable also has 10 columns.
-    self.assertLen(data_table.columns, 10)
+    self.assertLen(data_table.columns, 11)
 
     csv_file = io.StringIO(data_table.ToCsv())
     reader = csv.reader(csv_file)
@@ -181,6 +186,7 @@ class ProtoToGvizTest(tf.test.TestCase):
         str(int(MockValues.STEP_NUMBER)),
         int(MockValues.DEVICE_COMPUTE_MS),
         int(MockValues.DEVICE_TO_DEVICE_MS),
+        int(MockValues.DEVICE_COLLECTIVES_MS),
         int(MockValues.HOST_COMPUTE_MS),
         int(MockValues.HOST_PREPARE_MS),
         int(MockValues.HOST_WAIT_INPUT_MS) + int(MockValues.HOST_TO_DEVICE_MS),

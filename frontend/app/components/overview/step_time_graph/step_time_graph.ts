@@ -14,6 +14,7 @@ const COLUMN_IDS_FOR_GPU = [
   'stepnum',
   'deviceComputeTimeMs',
   'deviceToDeviceTimeMs',
+  'deviceCollectivesTimeMs',
   'hostComputeTimeMs',
   'kernelLaunchTimeMs',
   'infeedTimeMs',
@@ -30,6 +31,7 @@ const COLORS_FOR_TPU = [
 const COLORS_FOR_GPU = [
   '#9CCC65',
   '#FFEB3B',
+  'pink',
   '#64B5F6',
   '#FF9800',
   '#B71C1C',

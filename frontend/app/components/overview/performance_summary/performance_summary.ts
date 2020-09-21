@@ -34,6 +34,11 @@ const GENERIC_SUMMARY_INFO = [
     sdv: 'host_compute_time_ms_sdv',
   },
   {
+    title: 'Device Collective Communication Time',
+    avg: 'device_collectives_time_ms_avg',
+    sdv: 'device_collectives_time_ms_sdv',
+  },
+  {
     title: 'Device to Device Time',
     avg: 'device_to_device_time_ms_avg',
     sdv: 'device_to_device_time_ms_sdv',
@@ -130,6 +135,10 @@ export class PerformanceSummary implements OnChanges {
         return props.host_compute_time_ms_avg || defaultValue;
       case 'host_compute_time_ms_sdv':
         return props.host_compute_time_ms_sdv || defaultValue;
+      case 'device_collectives_time_ms_avg':
+        return props.device_collectives_time_ms_avg || defaultValue;
+      case 'device_collectives_time_ms_sdv':
+        return props.device_collectives_time_ms_sdv || defaultValue;
       case 'device_to_device_time_ms_avg':
         return props.device_to_device_time_ms_avg || defaultValue;
       case 'device_to_device_time_ms_sdv':

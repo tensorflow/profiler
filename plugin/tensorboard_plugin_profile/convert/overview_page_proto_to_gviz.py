@@ -201,6 +201,8 @@ def get_recommendation_table_args(overview_page_recommendation):
 
   recommendation = overview_page_pb2.GenericRecommendation()
   overview_page_recommendation.recommendation.Unpack(recommendation)
+  device_collectives_bottleneck = recommendation.device_collectives_bottleneck
+  device_collectives_statement = recommendation.device_collectives_statement
   kernel_launch_bottleneck = recommendation.kernel_launch_bottleneck
   kernel_launch_statement = recommendation.kernel_launch_statement
   all_other_bottleneck = recommendation.all_other_bottleneck
@@ -210,6 +212,8 @@ def get_recommendation_table_args(overview_page_recommendation):
   custom_properties = {
       "bottleneck": bottleneck,
       "statement": statement,
+      "device_collectives_bottleneck": device_collectives_bottleneck,
+      "device_collectives_statement": device_collectives_statement,
       "kernel_launch_bottleneck": kernel_launch_bottleneck,
       "kernel_launch_statement": kernel_launch_statement,
       "all_other_bottleneck": all_other_bottleneck,
