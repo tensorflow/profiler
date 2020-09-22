@@ -43,7 +43,7 @@ export const enum FileExtensionType {
   PROTO_BINARY = 'pb',
   PROTO_TEXT = 'pbtxt',
   JSON = 'json',
-  SHORT_TEXT = 'short_text',
-  LONG_TEXT = 'long_text',
+  SHORT_TEXT = 'short_txt',
+  LONG_TEXT = 'long_txt',
 }
 // tslint:enable:enforce-comments-on-exported-symbols
