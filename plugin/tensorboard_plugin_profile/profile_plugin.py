@@ -432,6 +432,15 @@ class ProfilePlugin(base_plugin.TBPlugin):
       return grpc_response.output, None
 
     asset_path = os.path.join(run_dir, _make_filename(host, tool))
+
+    data, content_encoding = None, None
+    if _use_xplane(tool):
+      try:
+        data = convert.xspace_to_tool_data([asset_path], tool, tqx)
+      except AttributeError:
+        logger.warning('XPlane converters are available after Tensorflow 2.4')
+      return data, content_encoding
+
     raw_data = None
     try:
       with tf.io.gfile.GFile(asset_path, 'rb') as f:
@@ -443,13 +452,8 @@ class ProfilePlugin(base_plugin.TBPlugin):
 
     if raw_data is None:
       return None, None
-    data, content_encoding = None, None
-    if _use_xplane(tool):
-      try:
-        data = convert.xspace_to_tool_data(raw_data, tool, tqx)
-      except AttributeError:
-        logger.warning('XPlane converters are available after Tensorflow 2.4')
-    elif tool in _RAW_DATA_TOOLS:
+
+    if tool in _RAW_DATA_TOOLS:
       data = raw_data
       if tool[-1] == '#':
         content_encoding = 'gzip'

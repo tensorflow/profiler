@@ -44,11 +44,11 @@ def process_raw_trace(raw_trace):
   return ''.join(trace_events_json.TraceEventsJsonStream(trace))
 
 
-def xspace_to_tool_data(xspace, tool, tqx):
-  """Converts the serialized XSpace proto to tool data string.
+def xspace_to_tool_data(xspace_paths, tool, tqx):
+  """Converts XSpace to tool data string.
 
   Args:
-    xspace: A serialized XSpace proto string.
+    xspace_paths: A list of XSpace paths.
     tool: A string of tool name.
     tqx: Gviz output format.
 
@@ -57,29 +57,41 @@ def xspace_to_tool_data(xspace, tool, tqx):
   """
   assert tool[-1] == '^'
   tool = tool[:-1]  # xplane tool name ends with '^'
-  data = ''
+  data = None
   if tool == 'trace_viewer':
-    data = process_raw_trace(_pywrap_profiler.xspace_to_trace_events(xspace))
+    # Trace viewer handles one host at a time.
+    assert len(xspace_paths) == 1
+    raw_data, success = _pywrap_profiler.xspace_to_trace_events(xspace_paths)
+    if success:
+      data = process_raw_trace(raw_data)
   elif tool == 'overview_page':
-    data = overview_page_proto_to_gviz.to_json(
-        _pywrap_profiler.xspace_to_overview_page(xspace))
+    raw_data, success = _pywrap_profiler.xspace_to_overview_page(xspace_paths)
+    if success:
+      data = overview_page_proto_to_gviz.to_json(raw_data)
   elif tool == 'input_pipeline_analyzer':
-    data = input_pipeline_proto_to_gviz.to_json(
-        _pywrap_profiler.xspace_to_input_pipeline(xspace))
+    raw_data, success = _pywrap_profiler.xspace_to_input_pipeline(xspace_paths)
+    if success:
+      data = input_pipeline_proto_to_gviz.to_json(raw_data)
   elif tool == 'tensorflow_stats':
-    data = _pywrap_profiler.xspace_to_tf_stats(xspace)
-    if tqx == 'out:csv;':
-      data = tf_stats_proto_to_gviz.to_csv(data)
-    else:
-      data = tf_stats_proto_to_gviz.to_json(data)
+    raw_data, success = _pywrap_profiler.xspace_to_tf_stats(xspace_paths)
+    if success:
+      if tqx == 'out:csv':
+        data = tf_stats_proto_to_gviz.to_csv(raw_data)
+      else:
+        data = tf_stats_proto_to_gviz.to_json(raw_data)
   elif tool == 'kernel_stats':
-    data = _pywrap_profiler.xspace_to_kernel_stats(xspace)
-    if tqx == 'out:csv;':
-      data = kernel_stats_proto_to_gviz.to_csv(data)
-    else:
-      data = kernel_stats_proto_to_gviz.to_json(data)
+    raw_data, success = _pywrap_profiler.xspace_to_kernel_stats(xspace_paths)
+    if success:
+      if tqx == 'out:csv;':
+        data = kernel_stats_proto_to_gviz.to_csv(raw_data)
+      else:
+        data = kernel_stats_proto_to_gviz.to_json(raw_data)
   elif tool == 'memory_profile':
-    data = _pywrap_profiler.xspace_to_memory_profile(xspace)
+    # Memory profile handles one host at a time.
+    assert len(xspace_paths) == 1
+    raw_data, success = _pywrap_profiler.xspace_to_memory_profile(xspace_paths)
+    if success:
+      data = raw_data
   else:
     logger.warning('%s is not a known xplane tool', tool)
   return data
