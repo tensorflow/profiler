@@ -37,3 +37,13 @@
 model-properties {
   min-width: 550px;
 }
+
+.pie-chart {
+  width: 450px;
+  height: fit-content;
+  margin: 8px 8px 8px 0;
+}
+
+.pie-chart .description {
+  margin-top: -16px;
+}

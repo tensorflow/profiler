@@ -26,6 +26,10 @@ declare namespace google {
       test?: (value: string) => boolean;
     }
 
+    export class DataTableExt extends DataTable {
+      getColumnIndex(column: number|string): number;
+    }
+
     interface Intervals {
       style?: string;
       color?: string;

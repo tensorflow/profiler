@@ -1,3 +1,4 @@
+import 'org_xprof/frontend/app/common/typing/google_visualization/google_visualization';
 import {SimpleDataTableOrNull} from './data_table';
 
 /** The enumerator for Google Chart type. */
@@ -48,6 +49,10 @@ export type ChartOptions = google.visualization.AreaChartOptions|
                            google.visualization.SteppedAreaChartOptions|
                            google.visualization.TableOptions;
 
+/** The data type of DataTable, DataView or null. */
+export type DataTableOrDataViewOrNull =
+    google.visualization.DataTable|google.visualization.DataView|null;
+
 /** The base interface for an information of chart data. */
 export interface ChartDataInfo {
   data: SimpleDataTableOrNull|Array<Array<(string | number)>>;
@@ -56,15 +61,27 @@ export interface ChartDataInfo {
   sortColumns?: google.visualization.SortByColumn[];
   filters?: google.visualization.DataTableCellFilter[];
   options?: ChartOptions;
+  customChartDataProcessor?: CustomChartDataProcessor;
 }
 
-/** The base interface for a char data provider. */
+/** The base interface for a chart data provider. */
 export interface ChartDataProvider {
   setChart(chart: ChartClass): void;
+  // Create a DataTable from JSON data or arrays.
   setData(dataInfo: ChartDataInfo): void;
   setFilters(filters: google.visualization.DataTableCellFilter[]): void;
   setSortColumns(sortColumns: google.visualization.SortByColumn[]): void;
-  process(): google.visualization.DataTable|google.visualization.DataView|null;
+  process(): DataTableOrDataViewOrNull;
+  // When using the chart function in customChartDataProcessor, get the chart
+  // through this function.
+  getChart(): ChartClass|null;
+  getDataTable(): google.visualization.DataTable|null;
   getOptions(): ChartOptions|null;
   setUpdateEventListener(callback: Function): void;
+  notifyCharts(): void;
+}
+
+/** The base interface for a class with custom process method. */
+export interface CustomChartDataProcessor {
+  process(dataProvider: ChartDataProvider): DataTableOrDataViewOrNull;
 }

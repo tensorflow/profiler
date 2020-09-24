@@ -40,17 +40,20 @@
   <br>
 
   <div class="row" *ngIf="hasDeviceData">
-    <self-time-chart [tensorflowStatsData]="selectedData"
-                     [diffData]="selectedDiffData"
-                     [hasDiff]="hasDiff"
-                     [opExecutor]="opExecutorDevice"
-                     [opKind]="opKindType">
-    </self-time-chart>
-    <self-time-chart [tensorflowStatsData]="selectedData"
-                     [opExecutor]="opExecutorDevice"
-                     [opKind]="opKindName"
-                     *ngIf="!hasDiff">
-    </self-time-chart>
+    <div class="pie-chart">
+      <div class="mat-title">ON DEVICE: TOTAL SELF-TIME (GROUPED BY TYPE)</div>
+      <div class="description">
+        (in microseconds) of a TensorFlow operation type
+      </div>
+      <chart chartType="PieChart" [dataInfo]="dataInfoDeviceByType"></chart>
+    </div>
+    <div class="pie-chart" *ngIf="!hasDiff">
+      <div class="mat-title">ON DEVICE: TOTAL SELF-TIME</div>
+      <div class="description">
+        (in microseconds) of a TensorFlow operation
+      </div>
+      <chart chartType="PieChart" [dataInfo]="dataInfoDeviceByName"></chart>
+    </div>
     <flop-rate-chart [data]="selectedData" [xColumn]="flopRateChartXColumn"
                      [yColumn]="flopRateChartYColumn" [opType]="opType"
                      *ngIf="showFlopRateChart && !hasDiff">
@@ -58,17 +61,20 @@
   </div>
 
   <div class="row">
-    <self-time-chart [tensorflowStatsData]="selectedData"
-                     [diffData]="selectedDiffData"
-                     [hasDiff]="hasDiff"
-                     [opExecutor]="opExecutorHost"
-                     [opKind]="opKindType">
-    </self-time-chart>
-    <self-time-chart [tensorflowStatsData]="selectedData"
-                     [opExecutor]="opExecutorHost"
-                     [opKind]="opKindName"
-                     *ngIf="!hasDiff">
-    </self-time-chart>
+    <div class="pie-chart">
+      <div class="mat-title">ON HOST: TOTAL SELF-TIME (GROUPED BY TYPE)</div>
+      <div class="description">
+        (in microseconds) of a TensorFlow operation type
+      </div>
+      <chart chartType="PieChart" [dataInfo]="dataInfoHostByType"></chart>
+    </div>
+    <div class="pie-chart" *ngIf="!hasDiff">
+      <div class="mat-title">ON HOST: TOTAL SELF-TIME</div>
+      <div class="description">
+        (in microseconds) of a TensorFlow operation
+      </div>
+      <chart chartType="PieChart" [dataInfo]="dataInfoHostByName"></chart>
+    </div>
     <model-properties [architecture]="architecture"
                       [task]="task"
                       *ngIf="showModelProperties">

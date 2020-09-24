@@ -1,3 +1,4 @@
+import 'org_xprof/frontend/app/common/typing/google_visualization/google_visualization';
 import {ChartClass} from 'org_xprof/frontend/app/common/interfaces/chart';
 
 interface FormatDiffInfo {
@@ -360,11 +361,10 @@ export function computePivotTable(
     return null;
   }
 
-  /* tslint:disable no-any */
-  const columnIndex = (dataTable as any)['getColumnIndex'](columnLabel);
-  const rowIndex = (dataTable as any)['getColumnIndex'](rowLabel);
-  const valueIndex = (dataTable as any)['getColumnIndex'](valueLabel);
-  /* tslint:enable */
+  const dataTableExt = dataTable as google.visualization.DataTableExt;
+  const columnIndex = dataTableExt.getColumnIndex(columnLabel);
+  const rowIndex = dataTableExt.getColumnIndex(rowLabel);
+  const valueIndex = dataTableExt.getColumnIndex(valueLabel);
 
   if (sortByValue) {
     // Set sort columns
@@ -399,4 +399,34 @@ export function computePivotTable(
   }
 
   return pivotTable;
+}
+
+/**
+ * Create a group table with a group column and a value column.
+ * @param dataTable The data table to be changed to a group.
+ * @param filters Filters on the data to be displayed.
+ * @param gColumn The column index to group the data.
+ * @param vColumn The column index that has data value.
+ */
+export function computeGroupView(
+    dataTable: google.visualization.DataTable,
+    filters: google.visualization.DataTableCellFilter[], gColumn: number,
+    vColumn: number): google.visualization.DataView {
+  const numberFormatter =
+      new google.visualization.NumberFormat({'fractionDigits': 0});
+  const dataView = new google.visualization.DataView(dataTable);
+
+  if (filters && filters.length > 0) {
+    dataView.setRows(dataView.getFilteredRows(filters));
+  }
+
+  const dataGroup = new google.visualization.data.group(
+      dataView, [gColumn], [{
+        'column': vColumn,
+        'aggregation': google.visualization.data.sum,
+        'type': 'number',
+      }]);
+  dataGroup.sort({column: 1, desc: true});
+  numberFormatter.format(dataGroup, 1);
+  return new google.visualization.DataView(dataGroup);
 }

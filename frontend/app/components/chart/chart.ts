@@ -1,6 +1,7 @@
 import 'org_xprof/frontend/app/common/typing/google_visualization/google_visualization';
+
 import {Component, ElementRef, EventEmitter, Input, NgModule, OnChanges, OnInit, Output, SimpleChanges} from '@angular/core';
-import {ChartClass, ChartDataInfo, ChartType} from 'org_xprof/frontend/app/common/interfaces/chart';
+import {ChartClass, ChartDataInfo, ChartType, CustomChartDataProcessor, DataTableOrDataViewOrNull} from 'org_xprof/frontend/app/common/interfaces/chart';
 
 /** A common chart component. */
 @Component({
@@ -46,7 +47,8 @@ export class Chart implements OnChanges, OnInit {
       return;
     }
 
-    const processedData = this.dataInfo.dataProvider.process();
+    const processedData =
+        this.getProcessedData(this.dataInfo.customChartDataProcessor);
 
     const options =
         this.dataInfo.dataProvider.getOptions() || this.dataInfo.options;
@@ -58,6 +60,19 @@ export class Chart implements OnChanges, OnInit {
 
     this.processedNumberOfRows.emit(
         processedData ? processedData.getNumberOfRows() : 0);
+  }
+
+  getProcessedData(customChartDataProcessor: CustomChartDataProcessor|
+                   undefined): DataTableOrDataViewOrNull {
+    if (!this.dataInfo || !this.dataInfo.dataProvider) {
+      return null;
+    }
+
+    if (customChartDataProcessor && customChartDataProcessor.process) {
+      return customChartDataProcessor.process(this.dataInfo.dataProvider);
+    }
+
+    return this.dataInfo.dataProvider.process();
   }
 
   loadGoogleChart() {

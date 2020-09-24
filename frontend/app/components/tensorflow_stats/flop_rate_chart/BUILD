@@ -1,5 +1,4 @@
 load("@npm_angular_bazel//:index.bzl", "ng_module")
-load("@npm_bazel_typescript//:index.bzl", "ts_library")
 load("@io_bazel_rules_sass//:defs.bzl", "sass_binary")
 
 package(default_visibility = ["//frontend:internal"])
@@ -15,23 +14,14 @@ ng_module(
         "flop_rate_chart.ng.html",
     ],
     deps = [
-        ":flop_rate_chart_data_provider",
         "@npm//@angular/core",
         "@org_xprof//frontend/app/common/angular:angular_material_card",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/interfaces:chart",
-        "@org_xprof//frontend/app/components/chart",
-    ],
-)
-
-ts_library(
-    name = "flop_rate_chart_data_provider",
-    srcs = [
-        "flop_rate_chart_data_provider.ts",
-    ],
-    deps = [
-        "@npm//@angular/core",
         "@org_xprof//frontend/app/common/typing/google_visualization",
+        "@org_xprof//frontend/app/components/chart",
+        "@org_xprof//frontend/app/components/chart:chart_options",
+        "@org_xprof//frontend/app/components/chart:data_processor",
         "@org_xprof//frontend/app/components/chart:default_data_provider",
     ],
 )

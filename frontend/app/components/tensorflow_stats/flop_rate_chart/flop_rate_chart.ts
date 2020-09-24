@@ -1,8 +1,10 @@
+import 'org_xprof/frontend/app/common/typing/google_visualization/google_visualization';
 import {Component, Input, OnChanges, SimpleChanges} from '@angular/core';
 import {ChartDataInfo, DataType} from 'org_xprof/frontend/app/common/interfaces/chart';
 import {SimpleDataTableOrNull, TensorflowStatsDataOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
-
-import {FlopRateChartDataProvider} from './flop_rate_chart_data_provider';
+import {COLUMN_CHART_OPTIONS} from 'org_xprof/frontend/app/components/chart/chart_options';
+import {DefaultDataProvider} from 'org_xprof/frontend/app/components/chart/default_data_provider';
+import {XyTableDataProcessor} from 'org_xprof/frontend/app/components/chart/xy_table_data_processor';
 
 /** A flop rate chart view component. */
 @Component({
@@ -20,38 +22,24 @@ export class FlopRateChart implements OnChanges {
   /** The type of the OP, e.g. TensorFlow. */
   @Input() opType: string = '';
 
-  dataProvider = new FlopRateChartDataProvider();
-  dataOptions: google.visualization.HistogramOptions = {
-    backgroundColor: 'transparent',
-    width: 550,
-    height: 200,
-    chartArea: {
-      left: 70,
-      top: 10,
-      width: '80%',
-      height: '80%',
-    },
-    hAxis: {textPosition: 'none'},
-    vAxis: {title: 'GFLOPs/sec'},
-    legend: {position: 'none'},
-    tooltip: {
-      isHtml: true,
-      ignoreBounds: true,
-    },
-  };
-
   dataInfo: ChartDataInfo = {
     data: null,
     type: DataType.DATA_TABLE,
-    dataProvider: this.dataProvider,
-    options: this.dataOptions,
+    dataProvider: new DefaultDataProvider(),
   };
 
   ngOnChanges(changes: SimpleChanges) {
-    this.dataProvider.xColumn = this.xColumn;
-    this.dataProvider.yColumn = this.yColumn;
-    this.dataOptions.hAxis!.title =
-        this.opType + 'Op on Device (in decreasing total self-time)';
+    this.dataInfo.customChartDataProcessor = new XyTableDataProcessor(
+        {'fractionDigits': 1}, [{column: this.yColumn, minValue: 0.0000}],
+        this.xColumn, this.yColumn);
+    this.dataInfo.options = {
+      ...COLUMN_CHART_OPTIONS,
+      hAxis: {
+        textPosition: 'none',
+        title: this.opType + ' Op on Device (in decreasing total self-time)',
+      },
+      vAxis: {title: 'GFLOPs/sec'},
+    };
     this.dataInfo = {
       ...this.dataInfo,
       data: this.data,

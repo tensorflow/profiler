@@ -92,6 +92,6 @@ ts_library(
     ],
     deps = [
         ":interfaces",
-        "@org_xprof//frontend/third_party/google_visualization",
+        "@org_xprof//frontend/app/common/typing/google_visualization",
     ],
 )

@@ -40,7 +40,6 @@ export class StatsTableDataProvider extends DefaultDataProvider {
     sortColumn: -1,
   };
 
-  private readonly updated = new EventEmitter();
   private readonly totalOperationsChanged = new EventEmitter<string>();
 
   setChart(chart: ChartClass) {
@@ -49,7 +48,7 @@ export class StatsTableDataProvider extends DefaultDataProvider {
         this.chart, 'sort', (event: SortEvent) => {
           this.sortColumn = event.column;
           this.sortAscending = event.ascending;
-          this.updated.emit();
+          this.update.emit();
         });
   }
 
@@ -76,7 +75,7 @@ export class StatsTableDataProvider extends DefaultDataProvider {
   setFilters(filters: google.visualization.DataTableCellFilter[]) {
     this.filters = filters;
     if (this.dataTable) {
-      this.updated.emit();
+      this.update.emit();
     }
   }
 
@@ -110,10 +109,6 @@ export class StatsTableDataProvider extends DefaultDataProvider {
     this.options.sortAscending = this.sortAscending;
     this.options.sortColumn = this.sortColumn;
     return this.options;
-  }
-
-  setUpdateEventListener(callback: Function) {
-    this.updated.subscribe(callback);
   }
 
   setTotalOperationsChangedEventListener(callback: Function) {

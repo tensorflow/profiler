@@ -1,9 +1,43 @@
+import 'org_xprof/frontend/app/common/typing/google_visualization/google_visualization';
+
 /** The basic options of Google Charts table. */
-export const TABLE_OPTIONS = {
+export const TABLE_OPTIONS: google.visualization.TableOptions = {
   allowHtml: true,
   alternatingRowStyle: false,
   cssClassNames: {
     'headerCell': 'google-chart-table-header-cell',
     'tableCell': 'google-chart-table-table-cell',
+  },
+};
+
+/** The basic options of Google Charts pie chart. */
+export const PIE_CHART_OPTIONS: google.visualization.PieChartOptions = {
+  backgroundColor: 'transparent',
+  width: 400,
+  height: 200,
+  chartArea: {
+    left: 0,
+    width: '100%',
+    height: '80%',
+  },
+  legend: {textStyle: {fontSize: 10}},
+  sliceVisibilityThreshold: 0.01,
+};
+
+/** The basic options of Google Charts column chart. */
+export const COLUMN_CHART_OPTIONS: google.visualization.ColumnChartOptions = {
+  backgroundColor: 'transparent',
+  width: 550,
+  height: 200,
+  chartArea: {
+    left: 70,
+    top: 10,
+    width: '80%',
+    height: '80%',
+  },
+  legend: {position: 'none'},
+  tooltip: {
+    isHtml: true,
+    ignoreBounds: true,
   },
 };
