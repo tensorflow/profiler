@@ -61,26 +61,31 @@ def xspace_to_tool_data(xspace_paths, tool, tqx):
   if tool == 'trace_viewer':
     # Trace viewer handles one host at a time.
     assert len(xspace_paths) == 1
-    raw_data, success = _pywrap_profiler.xspace_to_trace_events(xspace_paths)
+    raw_data, success = _pywrap_profiler.xspace_to_tools_data(
+        xspace_paths, tool)
     if success:
       data = process_raw_trace(raw_data)
   elif tool == 'overview_page':
-    raw_data, success = _pywrap_profiler.xspace_to_overview_page(xspace_paths)
+    raw_data, success = _pywrap_profiler.xspace_to_tools_data(
+        xspace_paths, tool)
     if success:
       data = overview_page_proto_to_gviz.to_json(raw_data)
   elif tool == 'input_pipeline_analyzer':
-    raw_data, success = _pywrap_profiler.xspace_to_input_pipeline(xspace_paths)
+    raw_data, success = _pywrap_profiler.xspace_to_tools_data(
+        xspace_paths, tool)
     if success:
       data = input_pipeline_proto_to_gviz.to_json(raw_data)
   elif tool == 'tensorflow_stats':
-    raw_data, success = _pywrap_profiler.xspace_to_tf_stats(xspace_paths)
+    raw_data, success = _pywrap_profiler.xspace_to_tools_data(
+        xspace_paths, tool)
     if success:
       if tqx == 'out:csv':
         data = tf_stats_proto_to_gviz.to_csv(raw_data)
       else:
         data = tf_stats_proto_to_gviz.to_json(raw_data)
   elif tool == 'kernel_stats':
-    raw_data, success = _pywrap_profiler.xspace_to_kernel_stats(xspace_paths)
+    raw_data, success = _pywrap_profiler.xspace_to_tools_data(
+        xspace_paths, tool)
     if success:
       if tqx == 'out:csv;':
         data = kernel_stats_proto_to_gviz.to_csv(raw_data)
@@ -89,7 +94,8 @@ def xspace_to_tool_data(xspace_paths, tool, tqx):
   elif tool == 'memory_profile':
     # Memory profile handles one host at a time.
     assert len(xspace_paths) == 1
-    raw_data, success = _pywrap_profiler.xspace_to_memory_profile(xspace_paths)
+    raw_data, success = _pywrap_profiler.xspace_to_tools_data(
+        xspace_paths, tool)
     if success:
       data = raw_data
   else:
