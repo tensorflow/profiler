@@ -15,4 +15,7 @@ ts_library(
     srcs = [
         "testing.ts",
     ],
+    deps = [
+        "@org_xprof//frontend/app/common/interfaces",
+    ],
 )
