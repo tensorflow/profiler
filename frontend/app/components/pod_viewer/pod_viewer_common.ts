@@ -100,6 +100,8 @@ export class PodViewerCommon {
     if (this.podStatsPerCore) {
       Object.values(this.podStatsPerCore).forEach(podStatsRecord => {
         let lowFlopsComputeUs = podStatsRecord.totalDurationUs || 0;
+        podStatsRecord = this.parseFromNewPodStatsFormat(podStatsRecord);
+
         this.podStatsRecordPropertyMap.forEach(propertyMap => {
           if (propertyMap.key === 'lowFlopsComputeUs') {
             return;
@@ -123,6 +125,20 @@ export class PodViewerCommon {
     const metrics = this.podStatsRecordPropertyMap.map(metric => metric.label);
     metrics.unshift('metrics');
     this.podStatsChartData.unshift(metrics);
+  }
+
+  // TODO(b/169695430) Refactor this file to use new format by default.
+  parseFromNewPodStatsFormat(podStatsRecord: PodStatsRecord): PodStatsRecord {
+    const stepBreakdown = podStatsRecord.stepBreakdownUs;
+    if (!stepBreakdown) return podStatsRecord;
+    podStatsRecord.highFlopsComputeUs = stepBreakdown['1'] || 0;
+    podStatsRecord.hostInfeedDurationUs = stepBreakdown['3'] || 0;
+    podStatsRecord.hostOutfeedDurationUs = stepBreakdown['4'] || 0;
+    podStatsRecord.sendDurationUs = stepBreakdown['8'] || 0;
+    podStatsRecord.recvDurationUs = stepBreakdown['9'] || 0;
+    podStatsRecord.allReduceComputeDurationUs = stepBreakdown['10'] || 0;
+    podStatsRecord.allReduceSyncDurationUs = stepBreakdown['11'] || 0;
+    return podStatsRecord;
   }
 
   parsePodStatsRecord(podStatsRecord: PodStatsRecord): Array<string|number> {

@@ -347,6 +347,7 @@ export declare interface PodStatsRecord {
   recvDurationUs?: /* double */ number;
   allReduceComputeDurationUs?: /* double */ number;
   allReduceSyncDurationUs?: /* double */ number;
+  stepBreakdownUs?: {[key: /* uint32 */ string]: /* double */ number};
   bottleneck?: string;
 }
 
@@ -389,6 +390,12 @@ export declare interface PodViewerSummary {
   warnings?: string[];
 }
 
+/** Interface for pod viewer step breakdown events. */
+export declare interface StepBreakdownEvents {
+  id?: number;
+  name?: string;
+}
+
 /** The base interface for a pod viewer database. */
 export declare interface PodViewerDatabase {
   podStatsSequence?: PodStatsSequence;
@@ -396,6 +403,7 @@ export declare interface PodViewerDatabase {
   hloInfoMap?: {[key: string]: HloInfo};
   summary?: PodViewerSummary;
   diagnostics?: diagnosticsProto.Diagnostics;
+  stepBreakdownEvents?: StepBreakdownEvents[];
 }
 
 /** The data table type for a tensorflow stats or null. */
