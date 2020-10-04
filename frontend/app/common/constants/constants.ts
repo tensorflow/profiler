@@ -22,16 +22,3 @@ export const CAPTURE_PROFILE_API =
 
 /** Default Host */
 export const DEFAULT_HOST = 'default';
-
-/** The map of podStatsRecord key and label */
-export const POD_STATS_RECORD_PROPERTY_MAP:
-    Array<{key: string, label: string}> = [
-      {key: 'highFlopsComputeUs', label: 'High flops compute'},
-      {key: 'lowFlopsComputeUs', label: 'Low flops compute'},
-      {key: 'hostInfeedDurationUs', label: 'Host infeed'},
-      {key: 'hostOutfeedDurationUs', label: 'Host outfeed'},
-      {key: 'allReduceComputeDurationUs', label: 'AllReduce compute'},
-      {key: 'allReduceSyncDurationUs', label: 'AllReduce sync'},
-      {key: 'sendDurationUs', label: 'Send'},
-      {key: 'recvDurationUs', label: 'Recv'},
-    ];

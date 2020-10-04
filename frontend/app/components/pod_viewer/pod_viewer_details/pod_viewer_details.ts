@@ -1,7 +1,6 @@
-import {Component, Input} from '@angular/core';
+import {Component} from '@angular/core';
 import {Store} from '@ngrx/store';
 
-import {POD_STATS_RECORD_PROPERTY_MAP} from 'org_xprof/frontend/app/common/constants/constants';
 import {AllReduceOpInfo, ChannelInfo, PodStatsRecord} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {getActivePodViewerInfoState} from 'org_xprof/frontend/app/store/selectors';
@@ -18,8 +17,6 @@ interface DetailInfo {
   styleUrls: ['./pod_viewer_details.scss']
 })
 export class PodViewerDetails {
-  @Input() propertyMap = POD_STATS_RECORD_PROPERTY_MAP;
-
   info?: AllReduceOpInfo|ChannelInfo|PodStatsRecord;
   name = '';
   details: DetailInfo[] = [];
@@ -86,13 +83,13 @@ export class PodViewerDetails {
     this.name = 'Step breakdown of chip ' + (info.chipId || 0).toString();
     this.description = '';
     const total = info.totalDurationUs || 0;
-    if (!total) {
+    if (!total || !info.stepBreakdownUs) {
       return;
     }
-    this.propertyMap.forEach(metric => {
-      const value = utils.getPodStatsRecordProperty(info, metric.key);
+    Object.keys(info.stepBreakdownUs).forEach((key) => {
+      const value: number = utils.getPodStatsRecordBreakdownProperty(info, key);
       this.details.push({
-        title: metric.label,
+        title: key,
         value: value.toFixed(2) + ' Us (' + (value / total).toFixed(2) + '%)',
       });
     });

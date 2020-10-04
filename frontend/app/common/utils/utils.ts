@@ -205,11 +205,14 @@ export function timeWasted(node: OpProfileNode): number {
 }
 
 /**
- * Returns podStatsRecord property.
+ * Returns podStatsRecord stepBreakdownUs field property.
  */
-export function getPodStatsRecordProperty(
+export function getPodStatsRecordBreakdownProperty(
     podStatsRecord: PodStatsRecord, key: string): number {
-  return (podStatsRecord as {[key: string]: number})[key] || 0;
+  if (podStatsRecord.stepBreakdownUs) {
+    return podStatsRecord.stepBreakdownUs[key] || 0;
+  }
+  return 0;
 }
 
 /**

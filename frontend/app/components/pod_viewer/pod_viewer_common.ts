@@ -1,6 +1,5 @@
 import {Store} from '@ngrx/store';
-import {POD_STATS_RECORD_PROPERTY_MAP} from 'org_xprof/frontend/app/common/constants/constants';
-import {AllReduceOpInfo, ChannelInfo, PodStatsRecord, PodViewerDatabaseOrNull, PodViewerRunEnvironment, PrimitiveTypeNumberStringOrUndefined} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {AllReduceOpInfo, ChannelInfo, PodStatsMap, PodStatsRecord, PodViewerDatabaseOrNull, PodViewerRunEnvironment, PrimitiveTypeNumberStringOrUndefined, StepBreakdownEvent} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {setActivePodViewerInfoAction} from 'org_xprof/frontend/app/store/actions';
@@ -21,9 +20,8 @@ export class PodViewerCommon {
   podStatsPerCore?: {[key: string]: PodStatsRecord};
   podStatsForChart?: PodStatsRecord[];
   podStatsChartData?: PrimitiveTypeNumberStringOrUndefined[][];
-  podStatsRecordPropertyMap: Array<{key: string, label: string}> =
-      POD_STATS_RECORD_PROPERTY_MAP;
   runEnvironment?: PodViewerRunEnvironment;
+  stepBreakdownEvents: StepBreakdownEvent[] = [];
 
   constructor(readonly store: Store<{}>) {}
 
@@ -66,6 +64,16 @@ export class PodViewerCommon {
     }
     // Negative step number indicates incomplete step.
     this.selectedStep = step >> 0 > 0 ? step.toString() : 'incomplete step';
+    this.coreIdToReplicaIdMap = podStats.coreIdToReplicaIdMap || {};
+    this.processAllReduceOpChart(podStats);
+    this.processChannelDb(podStats);
+    this.podStatsPerCore = podStats.podStatsPerCore;
+    if (this.podStatsPerCore) {
+      this.processStepBreakdownChart(this.podStatsPerCore);
+    }
+  }
+
+  processAllReduceOpChart(podStats: PodStatsMap) {
     this.allReduceOpDb =
         (podStats.allReduceOpDb || [])
             .slice(0)
@@ -79,6 +87,9 @@ export class PodViewerCommon {
       return [name, allReduceOpInfo.durationUs];
     });
     this.allReduceOpChartData.unshift(['name', 'Duration (us)']);
+  }
+
+  processChannelDb(podStats: PodStatsMap) {
     this.channelDb =
         (podStats.channelDb || [])
             .sort(
@@ -95,24 +106,24 @@ export class PodViewerCommon {
              channelInfo.durationUs,
     ]);
     this.channelChartData.unshift(['channelId', 'Duration (us)']);
-    this.coreIdToReplicaIdMap = podStats.coreIdToReplicaIdMap || {};
-    this.podStatsPerCore = podStats.podStatsPerCore;
-    if (this.podStatsPerCore) {
-      Object.values(this.podStatsPerCore).forEach(podStatsRecord => {
-        let lowFlopsComputeUs = podStatsRecord.totalDurationUs || 0;
-        podStatsRecord = this.parseFromNewPodStatsFormat(podStatsRecord);
+  }
 
-        this.podStatsRecordPropertyMap.forEach(propertyMap => {
-          if (propertyMap.key === 'lowFlopsComputeUs') {
-            return;
-          }
-          lowFlopsComputeUs -=
-              utils.getPodStatsRecordProperty(podStatsRecord, propertyMap.key);
-        });
-        podStatsRecord.lowFlopsComputeUs = lowFlopsComputeUs;
-      });
+  // Convert PodStatsRecord to gviz data row.
+  parsePodStatsRecord(podStatsRecord: PodStatsRecord): Array<string|number> {
+    const entry: Array<string|number> = [];
+    entry.push(
+        '(' + (podStatsRecord.chipId || 0).toString() + ',' +
+        (podStatsRecord.nodeId || 0).toString() + ')');
+    for (const event of this.stepBreakdownEvents || []) {
+      entry.push(utils.getPodStatsRecordBreakdownProperty(
+          podStatsRecord, event.id.toString()));
     }
-    this.podStatsForChart = Object.values(this.podStatsPerCore || {})
+    return entry;
+  }
+
+  processStepBreakdownChart(podStatsPerCore:
+                                {[key: /* uint32 */ string]: PodStatsRecord}) {
+    this.podStatsForChart = Object.values(podStatsPerCore || {})
                                 .map(podStatsRecord => podStatsRecord);
     this.podStatsForChart.sort((a, b) => {
       if (a.chipId === b.chipId) {
@@ -121,39 +132,10 @@ export class PodViewerCommon {
       return ((a.chipId || 0) > (b.chipId || 0)) ? 1 : -1;
     });
     this.podStatsChartData =
-        this.podStatsForChart.map(this.parsePodStatsRecord);
-    const metrics = this.podStatsRecordPropertyMap.map(metric => metric.label);
+        this.podStatsForChart.map(this.parsePodStatsRecord, this);
+    const metrics: string[] = this.stepBreakdownEvents.map(event => event.name);
     metrics.unshift('metrics');
     this.podStatsChartData.unshift(metrics);
-  }
-
-  // TODO(b/169695430) Refactor this file to use new format by default.
-  parseFromNewPodStatsFormat(podStatsRecord: PodStatsRecord): PodStatsRecord {
-    const stepBreakdown = podStatsRecord.stepBreakdownUs;
-    if (!stepBreakdown) return podStatsRecord;
-    podStatsRecord.highFlopsComputeUs = stepBreakdown['1'] || 0;
-    podStatsRecord.hostInfeedDurationUs = stepBreakdown['3'] || 0;
-    podStatsRecord.hostOutfeedDurationUs = stepBreakdown['4'] || 0;
-    podStatsRecord.sendDurationUs = stepBreakdown['8'] || 0;
-    podStatsRecord.recvDurationUs = stepBreakdown['9'] || 0;
-    podStatsRecord.allReduceComputeDurationUs = stepBreakdown['10'] || 0;
-    podStatsRecord.allReduceSyncDurationUs = stepBreakdown['11'] || 0;
-    return podStatsRecord;
-  }
-
-  parsePodStatsRecord(podStatsRecord: PodStatsRecord): Array<string|number> {
-    return [
-      '(' + (podStatsRecord.chipId || 0).toString() + ',' +
-          (podStatsRecord.nodeId || 0).toString() + ')',
-      podStatsRecord.highFlopsComputeUs || 0,
-      podStatsRecord.lowFlopsComputeUs || 0,
-      podStatsRecord.hostInfeedDurationUs || 0,
-      podStatsRecord.hostOutfeedDurationUs || 0,
-      podStatsRecord.allReduceComputeDurationUs || 0,
-      podStatsRecord.allReduceSyncDurationUs || 0,
-      podStatsRecord.sendDurationUs || 0,
-      podStatsRecord.recvDurationUs || 0,
-    ];
   }
 
   selectedAllReduceOpChart(allReduceOpIndex: number) {
@@ -177,10 +159,21 @@ export class PodViewerCommon {
     }));
   }
 
+  convertRecordForDetailsCard(record: PodStatsRecord): PodStatsRecord {
+    const breakdown: {[key: /* uint32 */ string]: /* double */ number} = {};
+    if (!record.stepBreakdownUs) return record;
+    for (const event of this.stepBreakdownEvents) {
+      breakdown[event.name] = record.stepBreakdownUs[event.id] || 0;
+    }
+    return {...record, stepBreakdownUs: breakdown};
+  }
+
   selectedPodStatsChart(podStatsIndex: number) {
     this.store.dispatch(setActivePodViewerInfoAction({
-      activePodViewerInfo:
-          this.podStatsForChart ? this.podStatsForChart[podStatsIndex] : null
+      activePodViewerInfo: this.podStatsForChart ?
+          this.convertRecordForDetailsCard(
+              this.podStatsForChart[podStatsIndex]) :
+          null
     }));
   }
 
@@ -194,6 +187,7 @@ export class PodViewerCommon {
   parseData(data: PodViewerDatabaseOrNull) {
     this.data = data;
     this.setDiagnostics(this.data);
+    this.stepBreakdownEvents = this.data?.stepBreakdownEvents || [];
     this.updateSteps();
     this.runEnvironment = this.data ? this.data.runEnvironment : undefined;
   }

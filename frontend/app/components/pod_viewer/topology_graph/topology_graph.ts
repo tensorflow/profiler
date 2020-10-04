@@ -1,7 +1,7 @@
 import {Component, ElementRef, EventEmitter, Input, OnChanges, Output, SimpleChanges} from '@angular/core';
 import {Store} from '@ngrx/store';
 import {TpuClass} from 'org_xprof/frontend/app/common/constants/enums';
-import {AllReduceOpInfo, ChannelInfo, PodStatsRecord, PodViewerRunEnvironment} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {AllReduceOpInfo, ChannelInfo, PodStatsRecord, PodViewerRunEnvironment, StepBreakdownEvent} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {getActivePodViewerInfoState} from 'org_xprof/frontend/app/store/selectors';
 
@@ -75,8 +75,8 @@ export class TopologyGraph implements OnChanges {
   @Input()
   coreIdToReplicaIdMap?: {[key: /* uint32 */ string]: /* uint32 */ number};
 
-  /** The metric map. */
-  @Input() metricMap?: Array<{key: string, label: string}>;
+  /** The metric list. */
+  @Input() metricList: StepBreakdownEvent[] = [];
 
   /** The pod stats per core. */
   @Input() podStatsPerCore?: {[key: string]: PodStatsRecord};
@@ -107,7 +107,7 @@ export class TopologyGraph implements OnChanges {
   hostYStride = 1;
   hostWidth = 0;
   nodesPerChip = 2;
-  selectedMetric = '';
+  selectedMetric = 0;
   selectedMetricLabel = '';
   channelCount = 0;
   firstChannel = 0;
@@ -127,7 +127,7 @@ export class TopologyGraph implements OnChanges {
     });
   }
 
-  ngOnChanges(changes: SimpleChanges) {
+  ngOnChanges() {
     this.update();
   }
 
@@ -435,9 +435,9 @@ export class TopologyGraph implements OnChanges {
     this.tooltipText = '';
   }
 
-  selectMetric(key: string, label: string) {
-    if (!key || !label) {
-      this.selectedMetric = '';
+  selectMetric(key: number, label: string) {
+    if (!label) {
+      this.selectedMetric = 0;
       this.selectedMetricLabel = 'Please select a metric';
       return;
     }
@@ -454,7 +454,8 @@ export class TopologyGraph implements OnChanges {
       const id = 'node-' + chipId.toString() + '-' + nodeId.toString();
       const nodeEl = this.elRef.nativeElement.querySelector('#' + id);
       if (nodeEl) {
-        let value = utils.getPodStatsRecordProperty(podStatsRecord, key);
+        let value = utils.getPodStatsRecordBreakdownProperty(
+            podStatsRecord, key.toString());
         value = podStatsRecord.totalDurationUs ?
             value / podStatsRecord.totalDurationUs :
             0;
@@ -469,7 +470,7 @@ export class TopologyGraph implements OnChanges {
     let coreId = '';
 
     const found =
-        Object.entries(this.podStatsPerCore || {}).find(([key, value]) => {
+        Object.entries(this.podStatsPerCore || {}).find(([, value]) => {
           const chipId = value.chipId || 0;
           const nodeId = value.nodeId || 0;
           return id === 'node-' + chipId.toString() + '-' + nodeId.toString();
@@ -503,8 +504,8 @@ export class TopologyGraph implements OnChanges {
           'replica id: ' + this.coreIdToReplicaIdMap[coreId].toString() + '\n';
     }
     if (this.selectedMetric && this.selectedMetricLabel) {
-      const value =
-          utils.getPodStatsRecordProperty(podStatsRecord, this.selectedMetric);
+      const value: number = utils.getPodStatsRecordBreakdownProperty(
+          podStatsRecord, this.selectedMetric.toString());
       this.tooltipText += this.selectedMetricLabel.replace('Color: ', '');
       this.tooltipText += ' spends ';
       this.tooltipText += value.toFixed(2);
@@ -564,7 +565,7 @@ export class TopologyGraph implements OnChanges {
         });
       }
     }
-    this.selectedMetric = '';
+    this.selectedMetric = 0;
   }
 
   update() {
@@ -572,7 +573,7 @@ export class TopologyGraph implements OnChanges {
     this.updateLabels();
     this.updateHosts();
     this.updateNodes();
-    this.selectMetric('', '');
+    this.selectMetric(0, '');
     this.updateChannels();
   }
 }

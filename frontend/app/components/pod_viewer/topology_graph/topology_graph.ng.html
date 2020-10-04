@@ -10,11 +10,11 @@
       </button>
       <mat-menu #mecticMenu="matMenu">
         <button
-          *ngFor="let metric of metricMap"
+          *ngFor="let metric of metricList"
           mat-menu-item
-          [ngClass]="{'selected-metric-item': selectedMetric === metric.key}"
-          (click)="selectMetric(metric.key, metric.label)">
-          {{metric.label}}
+          [ngClass]="{'selected-metric-item': selectedMetric === metric.id}"
+          (click)="selectMetric(metric.id, metric.name)">
+          {{metric.name}}
         </button>
       </mat-menu>
     </div>

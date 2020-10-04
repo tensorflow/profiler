@@ -339,14 +339,6 @@ export declare interface PodStatsRecord {
   nodeId?: /* int32 */ number;
   stepNum?: /* int32 */ number;
   totalDurationUs?: /* double */ number;
-  highFlopsComputeUs?: /* double */ number;
-  lowFlopsComputeUs?: /* double */ number;
-  hostInfeedDurationUs?: /* double */ number;
-  hostOutfeedDurationUs?: /* double */ number;
-  sendDurationUs?: /* double */ number;
-  recvDurationUs?: /* double */ number;
-  allReduceComputeDurationUs?: /* double */ number;
-  allReduceSyncDurationUs?: /* double */ number;
   stepBreakdownUs?: {[key: /* uint32 */ string]: /* double */ number};
   bottleneck?: string;
 }
@@ -358,7 +350,7 @@ declare interface HloInfo {
 }
 
 /** The base interface for a pod stats map. */
-declare interface PodStatsMap {
+export declare interface PodStatsMap {
   stepNum?: /* uint32 */ number;
   podStatsPerCore?: {[key: /* uint32 */ string]: PodStatsRecord};
   channelDb?: ChannelInfo[];
@@ -390,10 +382,10 @@ export declare interface PodViewerSummary {
   warnings?: string[];
 }
 
-/** Interface for pod viewer step breakdown events. */
-export declare interface StepBreakdownEvents {
-  id?: number;
-  name?: string;
+/** Interface for pod viewer step breakdown event. */
+export declare interface StepBreakdownEvent {
+  id: number;
+  name: string;
 }
 
 /** The base interface for a pod viewer database. */
@@ -403,7 +395,14 @@ export declare interface PodViewerDatabase {
   hloInfoMap?: {[key: string]: HloInfo};
   summary?: PodViewerSummary;
   diagnostics?: diagnosticsProto.Diagnostics;
-  stepBreakdownEvents?: StepBreakdownEvents[];
+  stepBreakdownEvents?: StepBreakdownEvent[];
+}
+
+/** Interface for step breakdown details card in pod viewer. */
+export declare interface StepBreakdownDetailsCard {
+  hostName?: string;
+  chipId?: /* int32 */ number;
+  nodeId?: /* int32 */ number;
 }
 
 /** The data table type for a tensorflow stats or null. */

@@ -12,7 +12,7 @@ const DEFAULT_CHART_WIDTH = 500;
 })
 export class StackBarChart implements OnChanges, OnInit {
   /** The data to be display. */
-  @Input() data?: Array<Array<PrimitiveTypeNumberStringOrUndefined>>;
+  @Input() data?: PrimitiveTypeNumberStringOrUndefined[][];
 
   /** The event when the selection of the chart is changed. */
   @Output() selected = new EventEmitter<number>();

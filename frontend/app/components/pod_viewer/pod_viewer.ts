@@ -3,7 +3,6 @@ import {ActivatedRoute} from '@angular/router';
 import {Store} from '@ngrx/store';
 import {PodViewerDatabaseOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
-import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
 import {setActivePodViewerInfoAction, setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
 
