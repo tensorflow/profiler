@@ -2,7 +2,7 @@
 <div class="section-container">
   <div class="mat-headline">Pod Viewer</div>
   <div class="control">Selected step: {{selectedStep}}</div>
-  <div [className]="minStep == maxStep ? 'hidden-content' : 'auto-height'">
+  <div *ngIf="minStep != maxStep">
     <mat-slider
                 [min]="minStep"
                 [max]="maxStep"
@@ -10,17 +10,19 @@
                 (change)="updateSelectedStep($event.value)">
     </mat-slider>
   </div>
-  <topology-graph
-    [channelDb]="channelDb"
-    [coreIdToReplicaIdMap]="coreIdToReplicaIdMap"
-    [metricList]="stepBreakdownEvents"
-    [podStatsPerCore]="podStatsPerCore"
-    [runEnvironment]="runEnvironment"
-    (selected)="selectedChannelDb($event)">
-  </topology-graph>
+  <div *ngIf="runEnvironment">
+    <topology-graph
+      [channelDb]="channelDb"
+      [coreIdToReplicaIdMap]="coreIdToReplicaIdMap"
+      [metricList]="stepBreakdownEvents"
+      [podStatsPerCore]="podStatsPerCore"
+      [runEnvironment]="runEnvironment"
+      (selected)="selectedChannelDb($event)">
+    </topology-graph>
+  </div>
 </div>
 
-<div [className]="channelDb && channelDb.length ? 'auto-height' : 'hidden-content'">
+<div *ngIf="channelDb && channelDb.length">
   <mat-divider></mat-divider>
 
   <div class="section-container">
@@ -31,7 +33,7 @@
   </div>
 </div>
 
-<div [className]="allReduceOpDb && allReduceOpDb.length ? 'auto-height' : 'hidden-content'">
+<div *ngIf="allReduceOpDb && allReduceOpDb.length">
   <mat-divider></mat-divider>
 
   <div class="section-container">

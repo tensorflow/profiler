@@ -63,7 +63,7 @@ export class PodViewerCommon {
       return;
     }
     // Negative step number indicates incomplete step.
-    this.selectedStep = step >> 0 > 0 ? step.toString() : 'incomplete step';
+    this.selectedStep = (step >= 0) ? step.toString() : 'incomplete step';
     this.coreIdToReplicaIdMap = podStats.coreIdToReplicaIdMap || {};
     this.processAllReduceOpChart(podStats);
     this.processChannelDb(podStats);

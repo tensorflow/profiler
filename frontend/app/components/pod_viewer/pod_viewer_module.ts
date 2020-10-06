@@ -1,3 +1,4 @@
+import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
 import {MatDividerModule} from '@angular/material/divider';
 import {MatSliderModule} from '@angular/material/slider';
@@ -11,6 +12,7 @@ import {TopologyGraphModule} from './topology_graph/topology_graph_module';
 @NgModule({
   declarations: [PodViewer],
   imports: [
+    CommonModule,
     DiagnosticsViewModule,
     MatDividerModule,
     MatSliderModule,
