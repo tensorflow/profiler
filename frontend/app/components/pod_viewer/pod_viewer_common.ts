@@ -187,7 +187,8 @@ export class PodViewerCommon {
   parseData(data: PodViewerDatabaseOrNull) {
     this.data = data;
     this.setDiagnostics(this.data);
-    this.stepBreakdownEvents = this.data?.stepBreakdownEvents || [];
+    this.stepBreakdownEvents =
+        this.data ? this.data.stepBreakdownEvents || [] : [];
     this.updateSteps();
     this.runEnvironment = this.data ? this.data.runEnvironment : undefined;
   }
