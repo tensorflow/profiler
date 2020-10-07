@@ -1,0 +1,94 @@
+import 'org_xprof/frontend/app/common/typing/google_visualization/google_visualization';
+import {Component, EventEmitter, Input, OnChanges, Output, SimpleChanges} from '@angular/core';
+
+/**
+ * A category filter component.
+ * The options are all unique values in the given column of dataTable.
+ * Each cell in the column contains one value or multiple values if a
+ * valueSeparator is given.
+ * Selects the rows that contain the value selected by the user.
+ * If all is set, it is used as a value that selects all rows.
+ */
+@Component({
+  selector: 'category-filter',
+  templateUrl: './category_filter.ng.html',
+  styleUrls: ['./category_filter.scss']
+})
+export class CategoryFilter implements OnChanges {
+  @Input() dataTable?: google.visualization.DataTable;
+  @Input() column: number|string = -1;
+  @Input() valueSeparator = '';
+  @Input() all = '';
+
+  columnIndex = -1;
+  columnLabel = '';
+  options: Array<number|string> = [];
+  value: number|string = '';
+
+  @Output()
+  changed = new EventEmitter<google.visualization.DataTableCellFilter>();
+
+  ngOnChanges(changes: SimpleChanges) {
+    this.processData();
+  }
+
+  processData() {
+    if (!this.dataTable || this.dataTable.getNumberOfRows() === 0) {
+      return;
+    }
+
+    this.columnIndex = (this.dataTable as google.visualization.DataTableExt)
+                           .getColumnIndex(this.column);
+    if (this.columnIndex !== -1) {
+      this.columnLabel = this.dataTable.getColumnLabel(this.columnIndex);
+      const values = new Set<number|string>();
+      const numRows = this.dataTable.getNumberOfRows();
+      for (let i = 0; i < numRows; ++i) {
+        const v = this.dataTable.getValue(i, this.columnIndex);
+        if (v === null) continue;
+        if (this.valueSeparator) {
+          (v as string).split(this.valueSeparator).forEach(value => {
+            values.add(value);
+          });
+        } else {
+          values.add(v);
+        }
+      }
+      this.options = Array.from(values);
+      if (this.dataTable.getColumnType(this.columnIndex) === 'number') {
+        this.options.sort((a, b) => (a as number) - (b as number));
+      } else {
+        this.options.sort();
+      }
+      if (this.all) {
+        this.options.unshift(this.all);
+      }
+      this.value = this.options[0];
+    }
+
+    this.updateFilter();
+  }
+
+  updateFilter() {
+    if (!this.dataTable || this.dataTable.getNumberOfRows() === 0) {
+      return;
+    }
+
+    const filter:
+        google.visualization.DataTableCellFilter = {column: this.columnIndex};
+    if (!this.all || this.value !== this.all) {
+      if (this.valueSeparator) {
+        filter.test = (value: string) =>
+            (this.valueSeparator + value + this.valueSeparator)
+                .toLowerCase()
+                .indexOf(
+                    this.valueSeparator + this.value.toString() +
+                    this.valueSeparator) !== -1;
+      } else {
+        filter.value = this.value;
+      }
+    }
+
+    this.changed.emit(filter);
+  }
+}
