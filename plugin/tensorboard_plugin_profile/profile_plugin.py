@@ -77,6 +77,8 @@ TOOLS = {
     'xplane': 'xplane.pb',
 }
 
+ALL_HOSTS = 'ALL_HOSTS'
+
 _EXTENSION_TO_TOOL = {extension: tool for tool, extension in TOOLS.items()}
 
 _FILENAME_RE = re.compile(r'(?:(.*)\.)?(' +
@@ -92,6 +94,15 @@ XPLANE_TOOLS = [
     'trace_viewer^', 'overview_page^', 'input_pipeline_analyzer^',
     'tensorflow_stats^', 'kernel_stats^', 'memory_profile^'
 ]
+
+# XPlane generated tools that support all host mode.
+XPLANE_TOOLS_ALL_HOSTS_SUPPORTED = frozenset([
+    'input_pipeline_analyzer^', 'tensorflow_stats^', 'kernel_stats^',
+    'overview_page^', 'pod_viewer^'
+])
+
+# XPlane generated tools that only support all host mode.
+XPLANE_TOOLS_ALL_HOSTS_ONLY = frozenset(['overview_page^', 'pod_viewer^'])
 
 
 def _use_xplane(tool):
@@ -374,7 +385,13 @@ class ProfilePlugin(base_plugin.TBPlugin):
     except tf.errors.OpError as e:
       logger.warning('Cannot read asset directory: %s, OpError %s', run_dir, e)
     filenames = [os.path.basename(f) for f in filenames]
-    return sorted(_get_hosts(filenames))
+    hosts = _get_hosts(filenames)
+    if len(hosts) > 1:
+      if tool in XPLANE_TOOLS_ALL_HOSTS_ONLY:
+        hosts = [ALL_HOSTS]
+      elif tool in XPLANE_TOOLS_ALL_HOSTS_SUPPORTED:
+        hosts.add(ALL_HOSTS)
+    return sorted(hosts)
 
   @wrappers.Request.application
   def hosts_route(self, request):
@@ -435,8 +452,18 @@ class ProfilePlugin(base_plugin.TBPlugin):
 
     data, content_encoding = None, None
     if _use_xplane(tool):
+      if host == ALL_HOSTS:
+        file_pattern = _make_filename('*', 'xplane')
+        try:
+          asset_paths = tf.io.gfile.glob(os.path.join(run_dir, file_pattern))
+        except tf.errors.OpError as e:
+          logger.warning('Cannot read asset directory: %s, OpError %s', run_dir,
+                         e)
+      else:
+        asset_paths = [asset_path]
+
       try:
-        data = convert.xspace_to_tool_data([asset_path], tool, tqx)
+        data = convert.xspace_to_tool_data(asset_paths, tool, tqx)
       except AttributeError:
         logger.warning('XPlane converters are available after Tensorflow 2.4')
       return data, content_encoding

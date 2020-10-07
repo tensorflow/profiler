@@ -35,6 +35,7 @@ RUN_TO_TOOLS = {
     'bar': ['unsupported'],
     'baz': ['overview_page', 'op_profile', 'trace_viewer'],
     'qux': ['overview_page@', 'input_pipeline_analyzer@', 'trace_viewer'],
+    'abc': ['xplane'],
     'empty': [],
 }
 
@@ -43,6 +44,7 @@ RUN_TO_HOSTS = {
     'bar': ['host1'],
     'baz': ['host2'],
     'qux': [None],
+    'abc': ['host1', 'host2'],
     'empty': [],
 }
 
@@ -153,6 +155,16 @@ class ProfilePluginTest(tf.test.TestCase):
     self.assertListEqual(['host0', 'host1'], hosts_a)
     hosts_q = self.plugin.host_impl('qux', 'tensorflow_stats')
     self.assertEmpty(hosts_q)
+    hosts_abc_tf_stats = self.plugin.host_impl('abc', 'tensorflow_stats^')
+    self.assertListEqual(['ALL_HOSTS', 'host1', 'host2'], hosts_abc_tf_stats)
+    # TraceViewer and MemoryProfile does not support all hosts.
+    hosts_abc_trace_viewer = self.plugin.host_impl('abc', 'trace_viewer^')
+    self.assertListEqual(['host1', 'host2'], hosts_abc_trace_viewer)
+    hosts_abc_memory_profile = self.plugin.host_impl('abc', 'memory_profile^')
+    self.assertListEqual(['host1', 'host2'], hosts_abc_memory_profile)
+    # OverviewPage supports all hosts only.
+    hosts_abc_overview_page = self.plugin.host_impl('abc', 'overview_page^')
+    self.assertListEqual(['ALL_HOSTS'], hosts_abc_overview_page)
 
   def testData(self):
     generate_testdata(self.logdir)
