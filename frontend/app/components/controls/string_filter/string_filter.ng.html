@@ -1,0 +1,8 @@
+<mat-form-field class="input-control" *ngIf="columnLabel">
+  <input
+    matInput
+    [placeholder]="columnLabel"
+    [value]="value"
+    (input)="value = $event.target.value; updateFilter()"
+  />
+</mat-form-field>
