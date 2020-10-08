@@ -4,20 +4,17 @@
       <div class="mat-headline">GPU Kernel Stats</div>
     </div>
     <div class="flex-space"></div>
-    <div class="save-button" (click)="exportDataAsCSV()">
-      <mat-icon>save_alt</mat-icon>
-      <div class="mat-title">Export as CSV</div>
-    </div>
+    <export-as-csv tool="kernel_stats"></export-as-csv>
   </div>
 
-  <div [className]="hasDataRow ? 'full-height' : 'hidden-content'">
+  <div [className]="hasDataRow ? 'auto-height' : 'hidden-content'">
     <br>
 
     <kernel-stats-chart [kernelStatsData]="data"></kernel-stats-chart>
   </div>
 </div>
 
-<div [className]="hasDataRow ? 'full-height' : 'hidden-content'">
+<div [className]="hasDataRow ? 'auto-height' : 'hidden-content'">
   <mat-divider></mat-divider>
 
   <kernel-stats-table [kernelStatsData]="data"></kernel-stats-table>

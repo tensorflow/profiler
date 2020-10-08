@@ -6,8 +6,8 @@ import {EmptyPage} from 'org_xprof/frontend/app/components/empty_page/empty_page
 import {EmptyPageModule} from 'org_xprof/frontend/app/components/empty_page/empty_page_module';
 import {InputPipeline} from 'org_xprof/frontend/app/components/input_pipeline/input_pipeline';
 import {InputPipelineModule} from 'org_xprof/frontend/app/components/input_pipeline/input_pipeline_module';
-import {KernelStats} from 'org_xprof/frontend/app/components/kernel_stats/kernel_stats';
-import {KernelStatsModule} from 'org_xprof/frontend/app/components/kernel_stats/kernel_stats_module';
+import {KernelStatsAdapter} from 'org_xprof/frontend/app/components/kernel_stats/kernel_stats_adapter';
+import {KernelStatsAdapterModule} from 'org_xprof/frontend/app/components/kernel_stats/kernel_stats_adapter';
 import {MemoryProfile} from 'org_xprof/frontend/app/components/memory_profile/memory_profile';
 import {MemoryProfileModule} from 'org_xprof/frontend/app/components/memory_profile/memory_profile_module';
 import {MemoryViewer} from 'org_xprof/frontend/app/components/memory_viewer/memory_viewer';
@@ -35,8 +35,8 @@ export const routes: Routes = [
   {path: 'input_pipeline_analyzer', component: InputPipeline},
   {path: 'input_pipeline_analyzer@', component: InputPipeline},
   {path: 'input_pipeline_analyzer^', component: InputPipeline},
-  {path: 'kernel_stats', component: KernelStats},
-  {path: 'kernel_stats^', component: KernelStats},
+  {path: 'kernel_stats', component: KernelStatsAdapter},
+  {path: 'kernel_stats^', component: KernelStatsAdapter},
   {path: 'memory_profile#', component: MemoryProfile},
   {path: 'memory_profile^', component: MemoryProfile},
   {path: 'memory_viewer', component: MemoryViewer},
@@ -62,7 +62,7 @@ export const routes: Routes = [
     TraceViewerModule,
     OverviewModule,
     InputPipelineModule,
-    KernelStatsModule,
+    KernelStatsAdapterModule,
     MemoryProfileModule,
     MemoryViewerModule,
     OpProfileModule,
