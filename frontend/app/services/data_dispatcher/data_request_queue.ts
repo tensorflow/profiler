@@ -10,8 +10,8 @@ export class DataRequestQueue {
       return DataRequestType.UNKNOWN;
     }
 
-    if (dataRequest.type >= DataRequestType.TENSORFLOW_STATS &&
-        dataRequest.type <= DataRequestType.TENSORFLOW_STATS_DIFF) {
+    if (dataRequest.type >= DataRequestType.DATA_REQUEST_BEGIN &&
+        dataRequest.type <= DataRequestType.DIFF_DATA_REQUEST_END) {
       return dataRequest.type;
     }
 

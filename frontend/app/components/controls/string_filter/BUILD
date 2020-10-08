@@ -1,6 +1,6 @@
 load("@npm_angular_bazel//:index.bzl", "ng_module")
 
-package(default_visibility = ["//perftools/accelerators/xprof/frontend:__subpackages__"])
+package(default_visibility = ["//frontend:internal"])
 
 ng_module(
     name = "string_filter",

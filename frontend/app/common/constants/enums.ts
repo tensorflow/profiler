@@ -31,6 +31,7 @@ export const enum TpuClass {
 export const enum DataRequestType {
   UNKNOWN = 0,
   DATA_REQUEST_BEGIN,
+  KERNEL_STATS,
   TENSORFLOW_STATS,
   DATA_REQUEST_END,
   DIFF_DATA_REQUEST_BEGIN,

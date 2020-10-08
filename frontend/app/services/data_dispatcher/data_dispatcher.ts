@@ -21,8 +21,7 @@ export class DataDispatcher extends DataDispatcherBase {
   }
 
   clearData(dataRequest: DataRequest) {
-    this.store.dispatch(
-        this.getActions(dataRequest)({data: this.getDefaultData(dataRequest)}));
+    this.store.dispatch(this.getActions(dataRequest));
   }
 
   exportAsCsv(tool: string) {
@@ -50,7 +49,9 @@ export class DataDispatcher extends DataDispatcherBase {
 
   // tslint:disable-next-line:no-any
   parseData(dataRequest: DataRequest, data: any) {
-    this.store.dispatch(this.getActions(dataRequest)(
-        {data: (data || this.getDefaultData(dataRequest))}));
+    if (dataRequest.type === DataRequestType.KERNEL_STATS) {
+      data = (data || [{}])[0];
+    }
+    this.store.dispatch(this.getActions(dataRequest, data));
   }
 }
