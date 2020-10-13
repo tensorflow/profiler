@@ -1,5 +1,5 @@
 import {Store} from '@ngrx/store';
-import {AllReduceOpInfo, ChannelInfo, PodStatsMap, PodStatsRecord, PodViewerDatabaseOrNull, PodViewerRunEnvironment, PrimitiveTypeNumberStringOrUndefined, StepBreakdownEvent} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {AllReduceOpInfo, ChannelInfo, PodStatsMap, PodStatsRecord, PodViewerDatabaseOrNull, PodViewerTopology, PrimitiveTypeNumberStringOrUndefined, StepBreakdownEvent} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {setActivePodViewerInfoAction} from 'org_xprof/frontend/app/store/actions';
@@ -20,8 +20,9 @@ export class PodViewerCommon {
   podStatsPerCore?: {[key: string]: PodStatsRecord};
   podStatsForChart?: PodStatsRecord[];
   podStatsChartData?: PrimitiveTypeNumberStringOrUndefined[][];
-  runEnvironment?: PodViewerRunEnvironment;
+  topology?: PodViewerTopology;
   stepBreakdownEvents: StepBreakdownEvent[] = [];
+  deviceType: string = '';
 
   constructor(readonly store: Store<{}>) {}
 
@@ -190,6 +191,7 @@ export class PodViewerCommon {
     this.stepBreakdownEvents =
         this.data ? this.data.stepBreakdownEvents || [] : [];
     this.updateSteps();
-    this.runEnvironment = this.data ? this.data.runEnvironment : undefined;
+    this.deviceType = this.data ? this.data.deviceType || '' : '';
+    this.topology = this.data ? this.data.topology : undefined;
   }
 }

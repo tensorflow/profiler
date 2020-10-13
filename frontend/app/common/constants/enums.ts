@@ -22,12 +22,6 @@ export const enum OpType {
   XLA_HLO = 'HLO',
 }
 
-export const enum TpuClass {
-  UNKNOWN = 0,
-  TPU_V2,
-  TPU_V3,
-}
-
 export const enum DataRequestType {
   UNKNOWN = 0,
   DATA_REQUEST_BEGIN,

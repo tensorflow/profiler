@@ -1,7 +1,6 @@
-import {Component, ElementRef, EventEmitter, Input, OnChanges, Output, SimpleChanges} from '@angular/core';
+import {Component, ElementRef, EventEmitter, Input, OnChanges, Output} from '@angular/core';
 import {Store} from '@ngrx/store';
-import {TpuClass} from 'org_xprof/frontend/app/common/constants/enums';
-import {AllReduceOpInfo, ChannelInfo, PodStatsRecord, PodViewerRunEnvironment, StepBreakdownEvent} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {AllReduceOpInfo, ChannelInfo, PodStatsRecord, PodViewerTopology, StepBreakdownEvent} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {getActivePodViewerInfoState} from 'org_xprof/frontend/app/store/selectors';
 
@@ -81,10 +80,11 @@ export class TopologyGraph implements OnChanges {
   /** The pod stats per core. */
   @Input() podStatsPerCore?: {[key: string]: PodStatsRecord};
 
-  /** The run environment of a pod viewer. */
-  @Input() runEnvironment?: PodViewerRunEnvironment;
+  /** The topology of the system to draw. */
+  @Input() topology?: PodViewerTopology;
 
-  @Input() classifyTpuFunc: (tpuType: string) => TpuClass = this.getTpuClass;
+  /** The device type of the system, e.g. TPU, GPU. */
+  @Input() deviceType?: string;
 
   /** The event when the selection of the channel is changed. */
   @Output() selected = new EventEmitter<number>();
@@ -95,7 +95,6 @@ export class TopologyGraph implements OnChanges {
   colorInfos: ColorInfo[] = [];
   channels: number[] = [];
   arrows: ArrowElementInfo[] = [];
-  tpuType = '';
   xDimension = 0;
   yDimension = 0;
   containerHeight = 0;
@@ -194,8 +193,7 @@ export class TopologyGraph implements OnChanges {
   private updateArrows() {
     this.arrows = [];
 
-    if (!this.runEnvironment || !this.runEnvironment.topology ||
-        !this.podStatsPerCore || !this.channelDb) {
+    if (!this.topology || !this.podStatsPerCore || !this.channelDb) {
       return;
     }
 
@@ -226,8 +224,7 @@ export class TopologyGraph implements OnChanges {
   }
 
   private updateChannels() {
-    if (!this.runEnvironment || !this.runEnvironment.topology ||
-        !this.podStatsPerCore || !this.channelDb) {
+    if (!this.topology || !this.podStatsPerCore || !this.channelDb) {
       this.channelCount = 0;
       this.firstChannel = 0;
       this.lastChannel = 0;
@@ -250,9 +247,7 @@ export class TopologyGraph implements OnChanges {
   private updateHosts() {
     this.hosts = [];
 
-    if (!this.runEnvironment || !this.runEnvironment.topology) {
-      return;
-    }
+    if (!this.topology) return;
 
     const xOffset =
         CONTAINER_MARGIN + LABEL_PADDING + LABEL_WIDTH + LABEL_PADDING;
@@ -275,9 +270,7 @@ export class TopologyGraph implements OnChanges {
   private updateLabels() {
     this.labels = [];
 
-    if (!this.runEnvironment || !this.runEnvironment.topology) {
-      return;
-    }
+    if (!this.topology) return;
 
     let xOffset =
         CONTAINER_MARGIN + LABEL_PADDING + LABEL_WIDTH + LABEL_PADDING;
@@ -320,8 +313,7 @@ export class TopologyGraph implements OnChanges {
   private updateNodes() {
     this.nodes = [];
 
-    if (!this.runEnvironment || !this.runEnvironment.topology ||
-        !this.podStatsPerCore) {
+    if (!this.topology || !this.podStatsPerCore) {
       return;
     }
 
@@ -339,21 +331,8 @@ export class TopologyGraph implements OnChanges {
     });
   }
 
-  private getTpuClass(tpuType: string): TpuClass {
-    switch (tpuType) {
-      case 'TPU v2':
-        return TpuClass.TPU_V2;
-      case 'TPU v3':
-        return TpuClass.TPU_V3;
-      default:
-        break;
-    }
-    return TpuClass.UNKNOWN;
-  }
-
-  private updateSystemInfo(tpuType?: string) {
-    if (!this.runEnvironment) {
-      this.tpuType = '';
+  private updateSystemInfo() {
+    if (!this.topology) {
       this.xDimension = 0;
       this.yDimension = 0;
       this.containerWidth = 0;
@@ -365,41 +344,11 @@ export class TopologyGraph implements OnChanges {
       return;
     }
 
-    this.tpuType = this.runEnvironment.tpuType || '';
-
-    switch (this.classifyTpuFunc(this.runEnvironment.tpuType || '')) {
-      case TpuClass.TPU_V2:
-        this.hostXStride = 2;
-        this.hostYStride = 2;
-        this.nodesPerChip = 2;
-        break;
-      case TpuClass.TPU_V3:
-        this.hostXStride = 4;
-        this.hostYStride = 2;
-        this.nodesPerChip = 2;
-        break;
-      default:
-        this.hostXStride = 1;
-        this.hostYStride = 1;
-        this.nodesPerChip = 2;
-        console.warn('TPU type: ', tpuType, 'is not supported by pod viewer.');
-        break;
-    }
-
-    if (!this.runEnvironment.topology) {
-      this.xDimension = 0;
-      this.yDimension = 0;
-      this.containerWidth = 0;
-      this.containerHeight = 0;
-      this.hostColumns = 0;
-      this.hostRows = 0;
-      this.hostWidth = 0;
-      this.hostHeight = 0;
-      return;
-    }
-
-    this.xDimension = utils.toNumber(this.runEnvironment.topology.xDimension);
-    this.yDimension = utils.toNumber(this.runEnvironment.topology.yDimension);
+    this.xDimension = this.topology.xDimension || 0;
+    this.yDimension = this.topology.yDimension || 0;
+    this.hostXStride = this.topology.hostXStride || 1;
+    this.hostYStride = this.topology.hostYStride || 1;
+    this.nodesPerChip = this.topology.numCoresPerChip || 1;
 
     const chipWidth = CHIP_PADDING +
         ((BORDER_WIDTH + NODE_WIDTH) * this.nodesPerChip) + BORDER_WIDTH +

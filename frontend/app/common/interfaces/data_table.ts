@@ -343,12 +343,6 @@ export declare interface PodStatsRecord {
   bottleneck?: string;
 }
 
-/** The base interface for a hlo info. */
-declare interface HloInfo {
-  category?: string;
-  description?: string;
-}
-
 /** The base interface for a pod stats map. */
 export declare interface PodStatsMap {
   stepNum?: /* uint32 */ number;
@@ -363,18 +357,15 @@ declare interface PodStatsSequence {
   podStatsMap?: PodStatsMap[];
 }
 
-/** The base interface for a system topology. */
-declare interface SystemTopology {
-  xDimension?: /* int64 */ string;
-  yDimension?: /* int64 */ string;
-  zDimension?: /* int64 */ string;
-  numExpectedReducedChips?: /* int64 */ string;
-}
-
-/** The base interface for a pod viewer run environment. */
-export declare interface PodViewerRunEnvironment {
-  tpuType?: string;
-  topology?: SystemTopology;
+/** The base interface for information to draw topology graph. */
+export declare interface PodViewerTopology {
+  xDimension?: number;
+  yDimension?: number;
+  zDimension?: number;
+  hostXStride?: number;
+  hostYStride?: number;
+  hostZStride?: number;
+  numCoresPerChip?: number;
 }
 
 /** The base interface for a pod viewer summary. */
@@ -390,12 +381,12 @@ export declare interface StepBreakdownEvent {
 
 /** The base interface for a pod viewer database. */
 export declare interface PodViewerDatabase {
+  deviceType?: string;
   podStatsSequence?: PodStatsSequence;
-  runEnvironment?: PodViewerRunEnvironment;
-  hloInfoMap?: {[key: string]: HloInfo};
   summary?: PodViewerSummary;
   diagnostics?: diagnosticsProto.Diagnostics;
   stepBreakdownEvents?: StepBreakdownEvent[];
+  topology?: PodViewerTopology;
 }
 
 /** Interface for step breakdown details card in pod viewer. */

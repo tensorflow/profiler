@@ -10,13 +10,14 @@
                 (change)="updateSelectedStep($event.value)">
     </mat-slider>
   </div>
-  <div *ngIf="runEnvironment">
+  <div *ngIf="topology">
     <topology-graph
       [channelDb]="channelDb"
       [coreIdToReplicaIdMap]="coreIdToReplicaIdMap"
       [metricList]="stepBreakdownEvents"
       [podStatsPerCore]="podStatsPerCore"
-      [runEnvironment]="runEnvironment"
+      [topology]="topology"
+      [deviceType]="deviceType"
       (selected)="selectedChannelDb($event)">
     </topology-graph>
   </div>
