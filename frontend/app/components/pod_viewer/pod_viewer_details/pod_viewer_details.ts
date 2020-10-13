@@ -90,7 +90,8 @@ export class PodViewerDetails {
       const value: number = utils.getPodStatsRecordBreakdownProperty(info, key);
       this.details.push({
         title: key,
-        value: value.toFixed(2) + ' Us (' + (value / total).toFixed(2) + '%)',
+        value: value.toFixed(2) + ' Us (' + (value / total * 100).toFixed(2) +
+            '%)',
       });
     });
   }
