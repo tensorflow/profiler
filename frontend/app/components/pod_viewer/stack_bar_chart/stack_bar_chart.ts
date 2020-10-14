@@ -1,4 +1,4 @@
-import {Component, ElementRef, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, ViewChild} from '@angular/core';
+import {Component, ElementRef, EventEmitter, Input, OnChanges, OnInit, Output, ViewChild} from '@angular/core';
 import {PrimitiveTypeNumberStringOrUndefined} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 const BAR_WIDTH = 50;
@@ -26,7 +26,7 @@ export class StackBarChart implements OnChanges, OnInit {
     this.loadGoogleChart();
   }
 
-  ngOnChanges(changes: SimpleChanges) {
+  ngOnChanges() {
     this.drawChart();
   }
 

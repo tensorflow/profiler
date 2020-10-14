@@ -52,7 +52,7 @@
 
 <div class="section-container">
   <div class="chart-title">Step breakdown</div>
-  <div class="description">(x-axis: global chip id, node id, y-axis: time(us))</div>
+  <div class="description">{{stepBreakdownChartDescription}}</div>
   <stack-bar-chart [data]="podStatsChartData" (selected)="selectedPodStatsChart($event)">
   </stack-bar-chart>
 </div>

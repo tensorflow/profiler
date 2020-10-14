@@ -80,8 +80,17 @@ export class PodViewerDetails {
 
   private updatePodStatsRecord(info: PodStatsRecord) {
     this.info = info;
-    this.name = 'Step breakdown of chip ' + (info.chipId || 0).toString();
-    this.description = '';
+    if (info.chipId === -1) {
+      this.name = 'Step breakdown of ' + (info.hostName || 'localhost');
+    } else {
+      this.name = 'Step breakdown of chip ' + (info.chipId || 0).toString();
+      if (info.hostName) {
+        this.details.push({
+          title: 'Hostname',
+          value: info.hostName,
+        });
+      }
+    }
     const total = info.totalDurationUs || 0;
     if (!total || !info.stepBreakdownUs) {
       return;
