@@ -52,7 +52,7 @@
   <op-details></op-details>
 </div>
 
-<div [hidden]="selectedTag != 'pod_viewer'">
+<div [hidden]="!selectedTag.startsWith('pod_viewer')">
   <pod-viewer-details></pod-viewer-details>
 </div>
 

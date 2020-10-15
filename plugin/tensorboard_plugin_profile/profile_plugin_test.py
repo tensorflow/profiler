@@ -165,6 +165,9 @@ class ProfilePluginTest(tf.test.TestCase):
     # OverviewPage supports all hosts only.
     hosts_abc_overview_page = self.plugin.host_impl('abc', 'overview_page^')
     self.assertListEqual(['ALL_HOSTS'], hosts_abc_overview_page)
+    # PodViewer supports all hosts only.
+    hosts_abc_pod_viewer = self.plugin.host_impl('abc', 'pod_viewer^')
+    self.assertListEqual(['ALL_HOSTS'], hosts_abc_pod_viewer)
 
   def testData(self):
     generate_testdata(self.logdir)

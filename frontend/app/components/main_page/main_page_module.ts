@@ -42,6 +42,7 @@ export const routes: Routes = [
   {path: 'memory_viewer', component: MemoryViewer},
   {path: 'op_profile', component: OpProfile},
   {path: 'pod_viewer', component: PodViewer},
+  {path: 'pod_viewer^', component: PodViewer},
   {path: 'tensorflow_stats', component: TensorflowStatsAdapter},
   {path: 'tensorflow_stats^', component: TensorflowStatsAdapter},
   {path: 'trace_viewer', component: TraceViewer},

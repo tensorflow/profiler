@@ -24,7 +24,7 @@ export class PodViewerCommon {
   stepBreakdownEvents: StepBreakdownEvent[] = [];
   stepBreakdownChartDescription: string = '';
   deviceType: string = '';
-  isGPU: boolean = false;
+  isTPU: boolean = false;
 
   constructor(readonly store: Store<{}>) {}
 
@@ -114,12 +114,12 @@ export class PodViewerCommon {
   // Convert PodStatsRecord to gviz data row.
   parsePodStatsRecord(podStatsRecord: PodStatsRecord): Array<string|number> {
     const entry: Array<string|number> = [];
-    if (this.isGPU) {
-      entry.push(podStatsRecord.hostName || 'local');
-    } else {
+    if (this.isTPU) {
       entry.push(
           '(' + (podStatsRecord.chipId || 0).toString() + ',' +
           (podStatsRecord.nodeId || 0).toString() + ')');
+    } else {
+      entry.push(podStatsRecord.hostName || 'localhost');
     }
     for (const event of this.stepBreakdownEvents || []) {
       entry.push(utils.getPodStatsRecordBreakdownProperty(
@@ -132,16 +132,16 @@ export class PodViewerCommon {
                                 {[key: /* uint32 */ string]: PodStatsRecord}) {
     this.podStatsForChart = Object.values(podStatsPerCore || {})
                                 .map(podStatsRecord => podStatsRecord);
-    if (this.isGPU) {
-      this.podStatsForChart.sort((a, b) => {
-        return ((a.hostName || '') > (b.hostName || '')) ? 1 : -1;
-      });
-    } else {
+    if (this.isTPU) {
       this.podStatsForChart.sort((a, b) => {
         if (a.chipId === b.chipId) {
           return ((a.nodeId || 0) > (b.nodeId || 0)) ? 1 : -1;
         }
         return ((a.chipId || 0) > (b.chipId || 0)) ? 1 : -1;
+      });
+    } else {
+      this.podStatsForChart.sort((a, b) => {
+        return ((a.hostName || '') > (b.hostName || '')) ? 1 : -1;
       });
     }
     this.podStatsChartData =
@@ -175,7 +175,7 @@ export class PodViewerCommon {
   convertRecordForDetailsCard(record: PodStatsRecord): PodStatsRecord {
     const breakdown: {[key: /* uint32 */ string]: /* double */ number} = {};
     if (!record.stepBreakdownUs) return record;
-    if (this.isGPU) {
+    if (!this.isTPU) {
       // Set an invalid chip id so that the details card only show hostname.
       record.chipId = -1;
     }
@@ -201,26 +201,26 @@ export class PodViewerCommon {
     this.diagnostics.errors = data.diagnostics.errors || [];
   }
 
-  setStepBreakdownChartDescription(isGPU: boolean) {
-    if (isGPU) {
-      this.stepBreakdownChartDescription =
-          '(x-axis: hostname, y-axis: time(us))';
-    } else {
+  setStepBreakdownChartDescription(isTPU: boolean) {
+    if (isTPU) {
       this.stepBreakdownChartDescription =
           '(x-axis: global chip id, node id, y-axis: time(us))';
+    } else {
+      this.stepBreakdownChartDescription =
+          '(x-axis: hostname, y-axis: time(us))';
     }
   }
 
   parseData(data: PodViewerDatabaseOrNull) {
     this.data = data;
     this.deviceType = this.data ? this.data.deviceType || '' : '';
-    this.isGPU = this.deviceType.includes('GPU');
+    this.isTPU = !this.deviceType.includes('GPU') && this.deviceType !== 'CPU';
 
     this.setDiagnostics(this.data);
     this.stepBreakdownEvents =
         this.data ? this.data.stepBreakdownEvents || [] : [];
     this.updateSteps();
-    this.setStepBreakdownChartDescription(this.isGPU);
+    this.setStepBreakdownChartDescription(this.isTPU);
     this.topology = this.data ? this.data.topology : undefined;
   }
 }

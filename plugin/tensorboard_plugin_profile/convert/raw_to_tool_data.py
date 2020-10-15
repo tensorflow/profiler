@@ -98,6 +98,11 @@ def xspace_to_tool_data(xspace_paths, tool, tqx):
         xspace_paths, tool)
     if success:
       data = raw_data
+  elif tool == 'pod_viewer':
+    raw_data, success = _pywrap_profiler.xspace_to_tools_data(
+        xspace_paths, tool)
+    if success:
+      data = raw_data
   else:
     logger.warning('%s is not a known xplane tool', tool)
   return data

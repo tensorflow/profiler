@@ -91,8 +91,13 @@ _RAW_DATA_TOOLS = frozenset(
 
 # Tools that can be generated from xplane end with ^.
 XPLANE_TOOLS = [
-    'trace_viewer^', 'overview_page^', 'input_pipeline_analyzer^',
-    'tensorflow_stats^', 'kernel_stats^', 'memory_profile^'
+    'trace_viewer^',
+    'overview_page^',
+    'input_pipeline_analyzer^',
+    'tensorflow_stats^',
+    'kernel_stats^',
+    'memory_profile^',
+    'pod_viewer^',
 ]
 
 # XPlane generated tools that support all host mode.

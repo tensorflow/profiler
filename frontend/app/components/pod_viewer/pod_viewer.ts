@@ -24,13 +24,6 @@ export class PodViewer extends PodViewerCommon {
     });
   }
 
-  selectedAllReduceOpChart(allReduceOpIndex: number) {
-    this.store.dispatch(setActivePodViewerInfoAction({
-      activePodViewerInfo:
-          this.allReduceOpDb ? this.allReduceOpDb[allReduceOpIndex] : null
-    }));
-  }
-
   update(event: NavigationEvent) {
     this.store.dispatch(setLoadingStateAction({
       loadingState: {
