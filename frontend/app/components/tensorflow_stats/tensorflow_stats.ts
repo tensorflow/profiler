@@ -2,8 +2,11 @@ import 'org_xprof/frontend/app/common/typing/google_visualization/google_visuali
 import {Component} from '@angular/core';
 import {Store} from '@ngrx/store';
 import {IdleOption, OpExecutor, OpKind, OpType} from 'org_xprof/frontend/app/common/constants/enums';
+import {ChartDataInfo} from 'org_xprof/frontend/app/common/interfaces/chart';
 import {TensorflowStatsData} from 'org_xprof/frontend/app/common/interfaces/data_table';
-import {createPieChartDataInfo, updatePieChartDataInfo} from 'org_xprof/frontend/app/components/chart/data_info_utils';
+import {CategoryDiffTableDataProcessor} from 'org_xprof/frontend/app/components/chart/category_diff_table_data_processor';
+import {CategoryTableDataProcessor} from 'org_xprof/frontend/app/components/chart/category_table_data_processor';
+import {PIE_CHART_OPTIONS} from 'org_xprof/frontend/app/components/chart/chart_options';
 import {DefaultDataProvider} from 'org_xprof/frontend/app/components/chart/default_data_provider';
 import * as selectors from 'org_xprof/frontend/app/store/tensorflow_stats/selectors';
 
@@ -44,14 +47,26 @@ export class TensorflowStats {
   showModelProperties = false;
   showPprofLink = false;
   dataProvider = new DefaultDataProvider();
-  dataInfoDeviceByType =
-      createPieChartDataInfo(-1, -1, [], null, this.dataProvider);
-  dataInfoDeviceByName =
-      createPieChartDataInfo(-1, -1, [], null, this.dataProvider);
-  dataInfoHostByType =
-      createPieChartDataInfo(-1, -1, [], null, this.dataProvider);
-  dataInfoHostByName =
-      createPieChartDataInfo(-1, -1, [], null, this.dataProvider);
+  dataInfoDeviceByType: ChartDataInfo = {
+    data: null,
+    dataProvider: this.dataProvider,
+    options: PIE_CHART_OPTIONS,
+  };
+  dataInfoDeviceByName: ChartDataInfo = {
+    data: null,
+    dataProvider: this.dataProvider,
+    options: PIE_CHART_OPTIONS,
+  };
+  dataInfoHostByType: ChartDataInfo = {
+    data: null,
+    dataProvider: this.dataProvider,
+    options: PIE_CHART_OPTIONS,
+  };
+  dataInfoHostByName: ChartDataInfo = {
+    data: null,
+    dataProvider: this.dataProvider,
+    options: PIE_CHART_OPTIONS,
+  };
 
   constructor(private readonly store: Store<{}>) {
     this.store.select(selectors.getTitleState).subscribe((title: string) => {
@@ -132,18 +147,23 @@ export class TensorflowStats {
         [{column: opExecutorIndex, value: OpExecutor.DEVICE}];
     const filtersForHost = [{column: opExecutorIndex, value: OpExecutor.HOST}];
 
-    updatePieChartDataInfo(
-        this.dataInfoDeviceByType, opTypeIndex, selfTimeIndex, filtersForDevice,
-        this.selectedDiffData);
-    updatePieChartDataInfo(
-        this.dataInfoDeviceByName, opNameIndex, selfTimeIndex, filtersForDevice,
-        null);
-    updatePieChartDataInfo(
-        this.dataInfoHostByType, opTypeIndex, selfTimeIndex, filtersForHost,
-        this.selectedDiffData);
-    updatePieChartDataInfo(
-        this.dataInfoHostByName, opNameIndex, selfTimeIndex, filtersForHost,
-        null);
+    this.dataInfoDeviceByType.customChartDataProcessor = this.selectedDiffData ?
+        new CategoryDiffTableDataProcessor(
+            this.selectedDiffData, filtersForDevice, opTypeIndex,
+            selfTimeIndex) :
+        new CategoryTableDataProcessor(
+            filtersForDevice, opTypeIndex, selfTimeIndex);
+    this.dataInfoDeviceByName.customChartDataProcessor =
+        new CategoryTableDataProcessor(
+            filtersForDevice, opNameIndex, selfTimeIndex);
+    this.dataInfoHostByType.customChartDataProcessor = this.selectedDiffData ?
+        new CategoryDiffTableDataProcessor(
+            this.selectedDiffData, filtersForHost, opTypeIndex, selfTimeIndex) :
+        new CategoryTableDataProcessor(
+            filtersForHost, opTypeIndex, selfTimeIndex);
+    this.dataInfoHostByName.customChartDataProcessor =
+        new CategoryTableDataProcessor(
+            filtersForHost, opNameIndex, selfTimeIndex);
 
     // Since the DataInfo has not been updated, the notifyCharts function is
     // called to redraw the graph.

@@ -65,19 +65,4 @@ ts_library(
     ],
 )
 
-ts_library(
-    name = "data_info_utils",
-    srcs = [
-        "data_info_utils.ts",
-    ],
-    deps = [
-        ":chart_options",
-        ":data_processor",
-        ":default_data_provider",
-        "@org_xprof//frontend/third_party/google_visualization",
-        "@org_xprof//frontend/app/common/interfaces",
-        "@org_xprof//frontend/app/common/interfaces:chart",
-    ],
-)
-
 
