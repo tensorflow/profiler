@@ -18,13 +18,6 @@ export const enum ChartType {
   TABLE = 'Table',
 }
 
-/** The enumerator for data type. */
-export const enum DataType {
-  UNKNOWN = 0,
-  ARRAY,
-  DATA_TABLE,
-}
-
 /** The type for Google Chart class. */
 export type ChartClass =
     google.visualization.AreaChart|google.visualization.BarChart|
@@ -56,7 +49,6 @@ export type DataTableOrDataViewOrNull =
 /** The base interface for an information of chart data. */
 export interface ChartDataInfo {
   data: SimpleDataTableOrNull|Array<Array<(string | number)>>;
-  type: DataType;
   dataProvider: ChartDataProvider;
   sortColumns?: google.visualization.SortByColumn[];
   filters?: google.visualization.DataTableCellFilter[];

@@ -11,7 +11,7 @@ export class HostSideAnalysisDetailTableDataProvider extends
   private readonly hasHostOpsChanged = new EventEmitter<boolean>();
 
   setData(dataInfo: ChartDataInfo) {
-    if (!dataInfo || !dataInfo.data || !dataInfo.type) {
+    if (!dataInfo || !dataInfo.data) {
       return;
     }
 

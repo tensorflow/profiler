@@ -1,6 +1,6 @@
 import {Component, Input, OnChanges, SimpleChanges} from '@angular/core';
 import {OpExecutor} from 'org_xprof/frontend/app/common/constants/enums';
-import {ChartDataInfo, DataType} from 'org_xprof/frontend/app/common/interfaces/chart';
+import {ChartDataInfo} from 'org_xprof/frontend/app/common/interfaces/chart';
 import {TensorflowStatsDataOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 import {OperationsTableDataProvider} from './operations_table_data_provider';
@@ -28,7 +28,6 @@ export class OperationsTable implements OnChanges {
   dataProvider = new OperationsTableDataProvider();
   dataInfo: ChartDataInfo = {
     data: null,
-    type: DataType.DATA_TABLE,
     dataProvider: this.dataProvider,
   };
 

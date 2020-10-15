@@ -1,5 +1,5 @@
 import {Component, Input, OnChanges, SimpleChanges} from '@angular/core';
-import {ChartDataInfo, DataType} from 'org_xprof/frontend/app/common/interfaces/chart';
+import {ChartDataInfo} from 'org_xprof/frontend/app/common/interfaces/chart';
 import {InputPipelineDeviceAnalysisOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 import {DeviceSideAnalysisDetailDataProvider} from './device_side_analysis_detail_data_provider';
@@ -99,7 +99,6 @@ export class DeviceSideAnalysisDetail implements OnChanges {
   dataProviderForAreaChart = new DeviceSideAnalysisDetailDataProvider();
   dataInfoForAreaChart: ChartDataInfo = {
     data: null,
-    type: DataType.DATA_TABLE,
     dataProvider: this.dataProviderForAreaChart,
     options: {
       hAxis: {title: 'Step Number'},
@@ -120,7 +119,6 @@ export class DeviceSideAnalysisDetail implements OnChanges {
   dataProviderForLineChart = new DeviceSideAnalysisDetailDataProvider();
   dataInfoForLineChart: ChartDataInfo = {
     data: null,
-    type: DataType.DATA_TABLE,
     dataProvider: this.dataProviderForLineChart,
     options: {
       hAxis: {title: 'Step Number'},

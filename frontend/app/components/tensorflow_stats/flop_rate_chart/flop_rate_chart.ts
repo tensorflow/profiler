@@ -1,6 +1,6 @@
 import 'org_xprof/frontend/app/common/typing/google_visualization/google_visualization';
 import {Component, Input, OnChanges, SimpleChanges} from '@angular/core';
-import {ChartDataInfo, DataType} from 'org_xprof/frontend/app/common/interfaces/chart';
+import {ChartDataInfo} from 'org_xprof/frontend/app/common/interfaces/chart';
 import {SimpleDataTableOrNull, TensorflowStatsDataOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {COLUMN_CHART_OPTIONS} from 'org_xprof/frontend/app/components/chart/chart_options';
 import {DefaultDataProvider} from 'org_xprof/frontend/app/components/chart/default_data_provider';
@@ -24,7 +24,6 @@ export class FlopRateChart implements OnChanges {
 
   dataInfo: ChartDataInfo = {
     data: null,
-    type: DataType.DATA_TABLE,
     dataProvider: new DefaultDataProvider(),
   };
 

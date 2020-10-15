@@ -1,6 +1,6 @@
 import 'org_xprof/frontend/app/common/typing/google_visualization/google_visualization';
 
-import {ChartDataInfo, ChartDataProvider, CustomChartDataProcessor, DataType} from 'org_xprof/frontend/app/common/interfaces/chart';
+import {ChartDataInfo, ChartDataProvider, CustomChartDataProcessor} from 'org_xprof/frontend/app/common/interfaces/chart';
 import {SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 import {CategoryDiffTableDataProcessor} from './category_diff_table_data_processor';
@@ -25,7 +25,6 @@ export function createPieChartDataInfo(
     dataProvider: ChartDataProvider|null): ChartDataInfo {
   return {
     data: null,
-    type: DataType.DATA_TABLE,
     dataProvider: dataProvider || new DefaultDataProvider(),
     options: PIE_CHART_OPTIONS,
     customChartDataProcessor:

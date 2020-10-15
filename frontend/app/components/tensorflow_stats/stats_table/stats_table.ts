@@ -1,5 +1,5 @@
 import {Component, Input, OnChanges, OnInit, SimpleChanges} from '@angular/core';
-import {ChartDataInfo, DataType} from 'org_xprof/frontend/app/common/interfaces/chart';
+import {ChartDataInfo} from 'org_xprof/frontend/app/common/interfaces/chart';
 import {TensorflowStatsDataOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 import {StatsTableDataProvider} from './stats_table_data_provider';
@@ -44,7 +44,6 @@ export class StatsTable implements OnChanges, OnInit {
   dataProvider = new StatsTableDataProvider();
   dataInfo: ChartDataInfo = {
     data: null,
-    type: DataType.DATA_TABLE,
     dataProvider: this.dataProvider,
   };
 

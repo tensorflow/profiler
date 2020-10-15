@@ -1,8 +1,8 @@
 import {Component, Input, OnChanges, OnInit, SimpleChanges} from '@angular/core';
-import {ChartDataInfo, DataType} from 'org_xprof/frontend/app/common/interfaces/chart';
+import {ChartDataInfo} from 'org_xprof/frontend/app/common/interfaces/chart';
 import {InputPipelineHostAnalysisOrNull, SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {TABLE_OPTIONS} from 'org_xprof/frontend/app/components/chart/chart_options';
-import {DefaultDataProvider} from 'org_xprof/frontend/app/components/chart/default_data_provider';
+import {ArrayDataProvider} from 'org_xprof/frontend/app/components/chart/default_data_provider';
 
 import {HostSideAnalysisDetailTableDataProvider} from './host_side_analysis_detail_table_data_provider';
 
@@ -32,8 +32,7 @@ export class HostSideAnalysisDetail implements OnInit, OnChanges {
   recommendations: string[] = [];
   dataInfoForColumnChart: ChartDataInfo = {
     data: null,
-    type: DataType.ARRAY,
-    dataProvider: new DefaultDataProvider(),
+    dataProvider: new ArrayDataProvider(),
     options: {
       bar: {groupWidth: '45%'},
       chartArea: {
@@ -51,7 +50,6 @@ export class HostSideAnalysisDetail implements OnInit, OnChanges {
   dataProviderForTable = new HostSideAnalysisDetailTableDataProvider();
   dataInfoForTable: ChartDataInfo = {
     data: null,
-    type: DataType.DATA_TABLE,
     dataProvider: this.dataProviderForTable,
     options: {
       ...TABLE_OPTIONS,

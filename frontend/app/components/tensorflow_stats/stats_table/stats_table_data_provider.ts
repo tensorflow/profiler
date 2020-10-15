@@ -53,7 +53,7 @@ export class StatsTableDataProvider extends DefaultDataProvider {
   }
 
   setData(dataInfo: ChartDataInfo) {
-    if (!dataInfo || !dataInfo.data || !dataInfo.type) {
+    if (!dataInfo || !dataInfo.data) {
       return;
     }
 

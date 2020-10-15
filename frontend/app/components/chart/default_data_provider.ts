@@ -1,7 +1,7 @@
 import 'org_xprof/frontend/app/common/typing/google_visualization/google_visualization';
 
 import {EventEmitter} from '@angular/core';
-import {ChartClass, ChartDataInfo, ChartDataProvider, ChartOptions, DataTableOrDataViewOrNull, DataType} from 'org_xprof/frontend/app/common/interfaces/chart';
+import {ChartClass, ChartDataInfo, ChartDataProvider, ChartOptions, DataTableOrDataViewOrNull} from 'org_xprof/frontend/app/common/interfaces/chart';
 
 /** A default chart data provider. */
 export class DefaultDataProvider implements ChartDataProvider {
@@ -16,24 +16,10 @@ export class DefaultDataProvider implements ChartDataProvider {
   }
 
   setData(dataInfo: ChartDataInfo) {
-    if (!dataInfo || !dataInfo.data || !dataInfo.type) {
+    if (!dataInfo || !dataInfo.data) {
       return;
     }
-
-    switch (dataInfo.type) {
-      case DataType.ARRAY:
-        /* tslint:disable no-any */
-        this.dataTable =
-            google.visualization.arrayToDataTable(dataInfo.data as any[]);
-        /* tslint:enable */
-        break;
-      case DataType.DATA_TABLE:
-        this.dataTable = new google.visualization.DataTable(dataInfo.data);
-        break;
-      default:
-        this.dataTable = undefined;
-        break;
-    }
+    this.dataTable = new google.visualization.DataTable(dataInfo.data);
   }
 
   setFilters(filters: google.visualization.DataTableCellFilter[]) {
@@ -81,5 +67,18 @@ export class DefaultDataProvider implements ChartDataProvider {
 
   notifyCharts() {
     this.update.emit();
+  }
+}
+
+/** A chart data provider that accepts array data. */
+export class ArrayDataProvider extends DefaultDataProvider {
+  setData(dataInfo: ChartDataInfo) {
+    if (!dataInfo || !dataInfo.data) {
+      return;
+    }
+    /* tslint:disable no-any */
+    this.dataTable =
+        google.visualization.arrayToDataTable(dataInfo.data as any[]);
+    /* tslint:enable */
   }
 }
