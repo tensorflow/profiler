@@ -29,9 +29,7 @@ export class Chart implements OnChanges, OnInit {
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['dataInfo'] && this.dataInfo && this.dataInfo.dataProvider) {
-      this.dataInfo.dataProvider.setData(this.dataInfo);
-      this.dataInfo.dataProvider.setSortColumns(
-          this.dataInfo.sortColumns || []);
+      this.dataInfo.dataProvider.parseData(this.dataInfo.data);
       this.dataInfo.dataProvider.setFilters(this.dataInfo.filters || []);
     }
     this.draw();
@@ -154,8 +152,7 @@ export class Chart implements OnChanges, OnInit {
     if (this.chart) {
       this.dataInfo.dataProvider.setChart(this.chart);
     }
-    this.dataInfo.dataProvider.setData(this.dataInfo);
-    this.dataInfo.dataProvider.setSortColumns(this.dataInfo.sortColumns || []);
+    this.dataInfo.dataProvider.parseData(this.dataInfo.data);
     this.dataInfo.dataProvider.setFilters(this.dataInfo.filters || []);
     this.dataInfo.dataProvider.setUpdateEventListener(() => {
       this.draw();

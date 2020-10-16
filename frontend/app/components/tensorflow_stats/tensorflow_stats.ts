@@ -122,25 +122,21 @@ export class TensorflowStats {
 
     // Four charts share one DataProvider. In order to prevent DataTable from
     // being created 4 times, it calls DataProvider function directly.
-    this.dataProvider.setData({
-      ...this.dataInfoDeviceByType,
-      data: this.selectedData,
-    });
+    this.dataProvider.parseData(this.selectedData);
 
-    const dataTableExt =
-        this.dataProvider.getDataTable() as google.visualization.DataTableExt;
+    const dataTable = this.dataProvider.getDataTable();
     let opTypeIndex = -1;
     let opNameIndex = -1;
     let selfTimeIndex = -1;
     let opExecutorIndex = -1;
-    if (dataTableExt && dataTableExt.getColumnIndex) {
-      this.flopRateChartXColumn = dataTableExt.getColumnIndex(OP_NAME_ID);
+    if (dataTable && dataTable.getColumnIndex) {
+      this.flopRateChartXColumn = dataTable.getColumnIndex(OP_NAME_ID);
       this.flopRateChartYColumn =
-          dataTableExt.getColumnIndex(MEASURED_FLOP_RATE_ID);
-      opTypeIndex = dataTableExt.getColumnIndex(OP_TYPE_ID);
-      opNameIndex = dataTableExt.getColumnIndex(OP_NAME_ID);
-      selfTimeIndex = dataTableExt.getColumnIndex(SELF_TIME_ID);
-      opExecutorIndex = dataTableExt.getColumnIndex(OP_EXECUTOR_ID);
+          dataTable.getColumnIndex(MEASURED_FLOP_RATE_ID);
+      opTypeIndex = dataTable.getColumnIndex(OP_TYPE_ID);
+      opNameIndex = dataTable.getColumnIndex(OP_NAME_ID);
+      selfTimeIndex = dataTable.getColumnIndex(SELF_TIME_ID);
+      opExecutorIndex = dataTable.getColumnIndex(OP_EXECUTOR_ID);
     }
 
     const filtersForDevice =

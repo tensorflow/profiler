@@ -10,20 +10,19 @@ ng_module(
     ],
     deps = [
         "@npm//@angular/core",
-        "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/interfaces:chart",
         "@org_xprof//frontend/app/common/typing/google_visualization",
     ],
 )
 
-ts_library(
+ng_module(
     name = "default_data_provider",
     srcs = [
         "default_data_provider.ts",
     ],
     deps = [
-        ":utils",
         "@npm//@angular/core",
+        "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/interfaces:chart",
         "@org_xprof//frontend/app/common/typing/google_visualization",
     ],

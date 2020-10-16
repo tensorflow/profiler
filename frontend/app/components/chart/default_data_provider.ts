@@ -2,32 +2,38 @@ import 'org_xprof/frontend/app/common/typing/google_visualization/google_visuali
 
 import {EventEmitter} from '@angular/core';
 import {ChartClass, ChartDataInfo, ChartDataProvider, ChartOptions, DataTableOrDataViewOrNull} from 'org_xprof/frontend/app/common/interfaces/chart';
+import {SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 /** A default chart data provider. */
 export class DefaultDataProvider implements ChartDataProvider {
   protected chart?: ChartClass;
   protected dataTable?: google.visualization.DataTable;
-  protected filters?: google.visualization.DataTableCellFilter[];
   protected sortColumns?: google.visualization.SortByColumn[];
+  protected visibleColumns?: number[];
+  protected filters?: google.visualization.DataTableCellFilter[];
   protected readonly update = new EventEmitter();
 
   setChart(chart: ChartClass) {
     this.chart = chart;
   }
 
-  setData(dataInfo: ChartDataInfo) {
-    if (!dataInfo || !dataInfo.data) {
-      return;
+  parseData(data: SimpleDataTable|Array<Array<(string | number)>>|null) {
+    if (data) {
+      this.dataTable =
+          new google.visualization.DataTable(data as SimpleDataTable);
     }
-    this.dataTable = new google.visualization.DataTable(dataInfo.data);
-  }
-
-  setFilters(filters: google.visualization.DataTableCellFilter[]) {
-    this.filters = filters;
   }
 
   setSortColumns(sortColumns: google.visualization.SortByColumn[]) {
     this.sortColumns = sortColumns;
+  }
+
+  setVisibleColumns(visibleColumns: number[]) {
+    this.visibleColumns = visibleColumns;
+  }
+
+  setFilters(filters: google.visualization.DataTableCellFilter[]) {
+    this.filters = filters;
   }
 
   process(): DataTableOrDataViewOrNull {
@@ -39,22 +45,27 @@ export class DefaultDataProvider implements ChartDataProvider {
       this.dataTable.sort(this.sortColumns);
     }
 
-    let dataView: google.visualization.DataView|null = null;
+    const dataView = new google.visualization.DataView(this.dataTable);
+
+    if (this.visibleColumns && this.visibleColumns.length > 0) {
+      dataView.setColumns(this.visibleColumns);
+    }
 
     if (this.filters && this.filters.length > 0) {
-      dataView = new google.visualization.DataView(this.dataTable);
       dataView.setRows(this.dataTable.getFilteredRows(this.filters));
     }
 
-    return dataView || this.dataTable || null;
+    return dataView;
   }
 
   getChart(): ChartClass|null {
     return this.chart || null;
   }
 
-  getDataTable(): google.visualization.DataTable|null {
-    return this.dataTable || null;
+  getDataTable(): google.visualization.DataTableExt|null {
+    return this.dataTable ?
+        (this.dataTable as google.visualization.DataTableExt) :
+        null;
   }
 
   getOptions(): ChartOptions|null {
@@ -72,13 +83,11 @@ export class DefaultDataProvider implements ChartDataProvider {
 
 /** A chart data provider that accepts array data. */
 export class ArrayDataProvider extends DefaultDataProvider {
-  setData(dataInfo: ChartDataInfo) {
-    if (!dataInfo || !dataInfo.data) {
-      return;
+  parseData(data: SimpleDataTable|Array<Array<(string | number)>>|null) {
+    if (data) {
+      /* tslint:disable no-any */
+      this.dataTable = google.visualization.arrayToDataTable(data as any[]);
+      /* tslint:enable */
     }
-    /* tslint:disable no-any */
-    this.dataTable =
-        google.visualization.arrayToDataTable(dataInfo.data as any[]);
-    /* tslint:enable */
   }
 }

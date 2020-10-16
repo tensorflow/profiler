@@ -50,7 +50,6 @@ export type DataTableOrDataViewOrNull =
 export interface ChartDataInfo {
   data: SimpleDataTableOrNull|Array<Array<(string | number)>>;
   dataProvider: ChartDataProvider;
-  sortColumns?: google.visualization.SortByColumn[];
   filters?: google.visualization.DataTableCellFilter[];
   options?: ChartOptions;
   customChartDataProcessor?: CustomChartDataProcessor;
@@ -60,14 +59,13 @@ export interface ChartDataInfo {
 export interface ChartDataProvider {
   setChart(chart: ChartClass): void;
   // Create a DataTable from JSON data or arrays.
-  setData(dataInfo: ChartDataInfo): void;
+  parseData(data: SimpleDataTableOrNull|Array<Array<(string | number)>>): void;
   setFilters(filters: google.visualization.DataTableCellFilter[]): void;
-  setSortColumns(sortColumns: google.visualization.SortByColumn[]): void;
   process(): DataTableOrDataViewOrNull;
   // When using the chart function in customChartDataProcessor, get the chart
   // through this function.
   getChart(): ChartClass|null;
-  getDataTable(): google.visualization.DataTable|null;
+  getDataTable(): google.visualization.DataTableExt|null;
   getOptions(): ChartOptions|null;
   setUpdateEventListener(callback: Function): void;
   notifyCharts(): void;
