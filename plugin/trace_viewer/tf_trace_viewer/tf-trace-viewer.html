@@ -47,6 +47,22 @@ Trace Viewer.
   .no-webcomponents-container .contents {
     max-width: 600px;
   }
+
+  #event-details {
+    float: right;
+    display: flex;
+    min-width: 30%;
+    background-color: #ececec;
+  }
+
+  tr-ui-b-tab-view {
+    float: left;
+    flex: 1;
+  }
+
+  #analysis {
+    flex-flow: row nowrap;
+  }
 </style>
 
 <div class="no-webcomponents-container hidden">
@@ -166,6 +182,7 @@ dashboard would integrate trace viewer app using iframe.
       _traceContainer: Object,
       _traceModel: Object,
       _throbber: Object,
+      _eventDetails: Object,
       _isStreaming: {type: Boolean, value: false},
       _loadedRange: Object,
       _loadedTraceEents: Object,
@@ -185,8 +202,11 @@ dashboard would integrate trace viewer app using iframe.
       this._traceViewer.track_view_container = this._traceContainer;
       Polymer.dom(this._traceViewer).appendChild(this._traceContainer);
 
+      this._traceViewer.brushingStateController.addEventListener(
+        'change', this.onSelectionChange.bind(this));
+
       this._traceViewer.id = 'trace-viewer';
-      this._traceViewer.globalMode = true;
+      this._traceViewer.globalMode = false;
 
       this._throbber = document.createElement('div');
       this._throbber.id = 'throbber';
@@ -203,6 +223,14 @@ dashboard would integrate trace viewer app using iframe.
           var components = parts[i].split('=');
           if (components[0] == 'trace_data_url') {
             this.traceDataUrl = decodeURIComponent(components[1]);
+            if (this.traceDataUrl) {
+              try {
+                traceViewerLink = new URL(window.location.origin + this.traceDataUrl);
+                this._sessionId = traceViewerLink.searchParams.get('session_id');
+              } catch(err) {  // not fatal.
+                console.log('cannot find session id');
+              }
+            }
           } else if (components[0] == 'is_streaming') {
             this._isStreaming = components[1] === 'true';
           } else if (components[0] == 'hosts_data_url') {
@@ -219,6 +247,49 @@ dashboard would integrate trace viewer app using iframe.
         this._loadHosts();
       } else {
         this._loadTrace(null, /*replaceModel=*/true);
+      }
+
+      window.addEventListener('load', function(e) {
+        element = document.getElementById('analysis');
+        // add a vertical divider as child.
+        verticalDivider = document.createElement('tr-ui-b-drag-handle');
+        element.appendChild(verticalDivider);
+        // add a event details pane as child.
+        this._eventDetails = document.createElement('div');
+        this._eventDetails.id = 'event-details';
+        element.appendChild(this._eventDetails);
+        // associate divider with event details pane.
+        verticalDivider.horizontal = false;
+        verticalDivider.target = this._eventDetails;
+      }.bind(this));
+    },
+
+    _sessionId: string = '',
+    _lastSelectedHloModule: string = '',
+
+    onSelectionChange: function(e) {
+      if (!this._sessionId) return;
+      this._eventDetails.innerHTML = "";
+      events = this._traceViewer.brushingStateController.currentBrushingState.selection;
+      if (events === undefined) return;
+      if (events.length != 1) return;
+
+      for (const event of events) {
+        if (event.parentContainer.name === 'XLA Ops') {
+          hloOp = event.title;
+          const graphViewLink =
+                new URL(window.location.origin + '/graph_viewer/' + this._sessionId);
+          graphViewLink.searchParams.append("node_name", hloOp);
+          if (this._lastSelectedHloModule) {
+            graphViewLink.searchParams.append("module_name", this._lastSelectedHloModule);
+          }
+          module_name = this._lastSelectedHloModule ? this._lastSelectedHloModule : 'default';
+          this._eventDetails.innerHTML =
+            '<a href="' + graphViewLink.href + '" target="_blank"> see hlo graph for ' +
+            hloOp + '@' + module_name + '</a>';
+        } else if (event.parentContainer.name === 'XLA Modules') {
+          this._lastSelectedHloModule = event.title;
+        }
       }
     },
 
