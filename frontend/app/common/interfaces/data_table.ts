@@ -427,6 +427,51 @@ export type OverviewDataTuple = [
   SimpleDataTableOrNull,
 ];
 
+/* tslint:disable enforce-name-casing */
+declare interface TfFunctionExplanationTableProperty {
+  note_self_time?: string;
+  note_gpu_time?: string;
+  note_unknown_tracing_time?: string;
+  recommendation_header?: string;
+  trace_optimization_html?: string;
+  eager_optimization_html?: string;
+}
+/* tslint:enable */
+
+/** The explanation table in tf-function stats. */
+export declare interface TfFunctionExplanationTable {
+    cols?: DataTableColumn[];
+    rows?: DataTableRow[];
+    p?: TfFunctionExplanationTableProperty;
+}
+
+/** The explanation table in tf-function stats or null. */
+export type TfFunctionExplanationTableOrNull = TfFunctionExplanationTable|null;
+
+/* tslint:disable enforce-name-casing */
+declare interface TfFunctionDataTableProperty {
+  has_concrete?: string;
+  has_eager?: string;
+}
+/* tslint:enable */
+
+/** The function table in tf-function stats. */
+export declare interface TfFunctionDataTable {
+    cols: DataTableColumn[];
+    rows: DataTableRow[];
+    p: TfFunctionDataTableProperty;
+}
+
+/** The function table in tf-function stats or null. */
+export type TfFunctionDataTableOrNull = TfFunctionDataTable|null;
+
+/** The data table type in tf-function stats. */
+export type TfFunctionStatsTable =
+    TfFunctionDataTable | TfFunctionExplanationTable;
+
+/** The data table type in tf-function stats or null. */
+export type TfFunctionStatsTableOrNull = TfFunctionStatsTable|null;
+
 /** All input pipeline page data table type. */
 export type InputPipelineDataTable =
     InputPipelineDeviceAnalysis|InputPipelineHostAnalysis|MetaHostOpTable|HostOpTable|SimpleDataTable;
