@@ -27,4 +27,7 @@ sass_binary(
     src = "program_order_chart.scss",
 
     sourcemap = False,
+    deps = [
+        "@org_xprof//frontend/app/styles:common",
+    ],
 )

@@ -143,10 +143,8 @@ export class MemoryUsage {
    * Finds the peak memory usage from the `HeapSimulatorTrace`.
    * @private
    */
-  private findPeakMemoryUsage(trace: proto.HeapSimulatorTrace, color: number) {
-    if (!trace) {
-      return;
-    }
+  private findPeakMemoryUsage(
+      trace: proto.HeapSimulatorTrace|null, color: number) {
     const heapSizes: number[] = [];
     const unpaddedHeapSizes: number[] = [];
     let logicalBuffers: number[] = [];
@@ -157,66 +155,69 @@ export class MemoryUsage {
     let unpaddedPeakHeapSizeBytes = 0;
     let peakHeapSizePosition = 0;
 
-    for (const event of trace.events || []) {
-      heapSizes.push(utils.bytesToMiB(heapSizeBytes));
-      unpaddedHeapSizes.push(utils.bytesToMiB(unpaddedHeapSizeBytes));
-      const eventId = utils.toNumber(event.bufferId);
-      const buffer = this.idToBuffer[eventId];
-      this.unSeenLogicalBuffers.delete(eventId);
-      const alloc = this.idToBufferAllocation[eventId];
-      if (alloc) {
-        this.seenBufferAllocations.add(alloc.index);
-      }
-      let shape: Shape|null = null;
-      if (buffer.instructionName && buffer.instructionName !== '') {
-        const hlo = this.nameToHlo[buffer.instructionName];
-        if (hlo && hlo.shape) {
-          shape = hlo.shape.resolveShapeIndex(buffer.shapeIndex);
+    if (trace) {
+      for (const event of trace.events || []) {
+        heapSizes.push(utils.bytesToMiB(heapSizeBytes));
+        unpaddedHeapSizes.push(utils.bytesToMiB(unpaddedHeapSizeBytes));
+        const eventId = utils.toNumber(event.bufferId);
+        const buffer = this.idToBuffer[eventId];
+        this.unSeenLogicalBuffers.delete(eventId);
+        const alloc = this.idToBufferAllocation[eventId];
+        if (alloc) {
+          this.seenBufferAllocations.add(alloc.index);
+        }
+        let shape: Shape|null = null;
+        if (buffer.instructionName && buffer.instructionName !== '') {
+          const hlo = this.nameToHlo[buffer.instructionName];
+          if (hlo && hlo.shape) {
+            shape = hlo.shape.resolveShapeIndex(buffer.shapeIndex);
+          }
+        }
+        switch (event.kind) {
+          case 'ALLOC':
+          case 'SHARE_WITH':
+            logicalBuffers.push(eventId);
+            heapSizeBytes += buffer.size;
+            if (shape) {
+              unpaddedHeapSizeBytes += shape.unpaddedHeapSizeBytes();
+            }
+            this.logicalBufferSpans[eventId] = [heapSizes.length - 1, -1];
+            if (heapSizeBytes > peakHeapSizeBytes) {
+              peakHeapSizeBytes = heapSizeBytes;
+              unpaddedPeakHeapSizeBytes = unpaddedHeapSizeBytes;
+              peakHeapSizePosition = heapSizes.length - 1;
+              peakLogicalBuffers = logicalBuffers.slice();
+            }
+            break;
+          case 'FREE':
+            logicalBuffers = logicalBuffers.filter(item => {
+              return item !== eventId;
+            });
+            heapSizeBytes -= buffer.size;
+            if (shape) {
+              unpaddedHeapSizeBytes -= shape.unpaddedHeapSizeBytes();
+            }
+            if (!this.logicalBufferSpans[eventId]) {
+              // The logical buffer is not allocated in this module.
+              this.logicalBufferSpans[eventId] = [0, heapSizes.length - 1];
+              console.warn(
+                  event, ' is freed but has seen no allocation event.');
+            } else {
+              this.logicalBufferSpans[eventId][1] = heapSizes.length - 1;
+            }
+            if (heapSizeBytes < 0) {
+              console.error('heap_size_bytes < 0');
+            }
+            break;
+          default:
+            console.log('ERROR: unknown heap event kind:' + event.toString());
+            break;
         }
       }
-      switch (event.kind) {
-        case 'ALLOC':
-        case 'SHARE_WITH':
-          logicalBuffers.push(eventId);
-          heapSizeBytes += buffer.size;
-          if (shape) {
-            unpaddedHeapSizeBytes += shape.unpaddedHeapSizeBytes();
-          }
-          this.logicalBufferSpans[eventId] = [heapSizes.length - 1, -1];
-          if (heapSizeBytes > peakHeapSizeBytes) {
-            peakHeapSizeBytes = heapSizeBytes;
-            unpaddedPeakHeapSizeBytes = unpaddedHeapSizeBytes;
-            peakHeapSizePosition = heapSizes.length - 1;
-            peakLogicalBuffers = logicalBuffers.slice();
-          }
-          break;
-        case 'FREE':
-          logicalBuffers = logicalBuffers.filter(item => {
-            return item !== eventId;
-          });
-          heapSizeBytes -= buffer.size;
-          if (shape) {
-            unpaddedHeapSizeBytes -= shape.unpaddedHeapSizeBytes();
-          }
-          if (!this.logicalBufferSpans[eventId]) {
-            // The logical buffer is not allocated in this module.
-            this.logicalBufferSpans[eventId] = [0, heapSizes.length - 1];
-            console.warn(event, ' is freed but has seen no allocation event.');
-          } else {
-            this.logicalBufferSpans[eventId][1] = heapSizes.length - 1;
-          }
-          if (heapSizeBytes < 0) {
-            console.error('heap_size_bytes < 0');
-          }
-          break;
-        default:
-          console.log('ERROR: unknown heap event kind:' + event.toString());
-          break;
-      }
+      heapSizes.push(utils.bytesToMiB(heapSizeBytes));
+      unpaddedHeapSizes.push(utils.bytesToMiB(unpaddedHeapSizeBytes));
     }
 
-    heapSizes.push(utils.bytesToMiB(heapSizeBytes));
-    unpaddedHeapSizes.push(utils.bytesToMiB(unpaddedHeapSizeBytes));
     const indefiniteMemoryUsageBytes =
         this.findIndefiniteMemoryUsage(this.unSeenLogicalBuffers, color);
     this.peakHeapSizeBytes =
@@ -238,7 +239,7 @@ export class MemoryUsage {
    * space color.
    * @private
    */
-  private getHbmHeapTraceByColor(
+  private getHeapTraceByColor(
       color: number,
       traces?: proto.HeapSimulatorTrace[]): proto.HeapSimulatorTrace|null {
     if (!traces) {
@@ -363,11 +364,10 @@ export class MemoryUsage {
     }
     this.initBuffers(bufferAssignment.logicalBuffers);
     this.initAllocations(bufferAssignment.bufferAllocations);
-    const trace = this.getHbmHeapTraceByColor(
+    const trace = this.getHeapTraceByColor(
         memorySpaceColor, bufferAssignment.heapSimulatorTraces);
     if (!trace) {
       console.warn('Missing hbm heap simulator trace.');
-      return;
     }
     this.findPeakMemoryUsage(trace, memorySpaceColor);
   }

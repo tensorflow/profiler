@@ -15,33 +15,35 @@
 
 <mat-divider></mat-divider>
 
-<div [className]="hasHeapSimulatorTrace ? 'full-height' : 'hidden-content'">
-  <program-order-chart
-    [heapSizes]="heapSizes"
-    [unpaddedHeapSizes]="unpaddedHeapSizes"
-    [peakInfo]="peakInfo"
-    [activeInfo]="activeInfo">
-  </program-order-chart>
+<program-order-chart
+  [heapSizes]="heapSizes"
+  [unpaddedHeapSizes]="unpaddedHeapSizes"
+  [peakInfo]="peakInfo"
+  [activeInfo]="activeInfo">
+</program-order-chart>
 
-  <mat-divider></mat-divider>
-
-  <max-heap-chart
-    [maxHeap]="maxHeap"
-    [title]="'By Program Order'"
-    [selectedIndex]="selectedIndex"
-    (selected)="setSelectedHepObject($event)">
-  </max-heap-chart>
-
-  <mat-divider></mat-divider>
-
-  <max-heap-chart
-    [maxHeap]="maxHeapBySize"
-    [title]="'By Size'"
-    [selectedIndex]="selectedIndexBySize"
-    (selected)="setSelectedHepObjectBySize($event)">
-  </max-heap-chart>
+<div [hidden]="!heapSizes.length">
+  <mat-divider ></mat-divider>
 </div>
 
-<div class="section-container" [hidden]="hasHeapSimulatorTrace">
+<max-heap-chart
+   [maxHeap]="maxHeap"
+   [title]="'By Program Order'"
+   [selectedIndex]="selectedIndex"
+   (selected)="setSelectedHepObject($event)">
+</max-heap-chart>
+
+<div [hidden]="!maxHeap.length">
+  <mat-divider ></mat-divider>
+</div>
+
+<max-heap-chart
+  [maxHeap]="maxHeapBySize"
+  [title]="'By Size'"
+  [selectedIndex]="selectedIndexBySize"
+  (selected)="setSelectedHepObjectBySize($event)">
+</max-heap-chart>
+
+<div class="section-container" [hidden]="hasTrace">
   There is no data to display.
 </div>

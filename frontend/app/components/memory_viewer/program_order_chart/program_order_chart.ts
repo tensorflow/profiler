@@ -10,10 +10,10 @@ import {BufferAllocationInfo} from 'org_xprof/frontend/app/common/interfaces/buf
 })
 export class ProgramOrderChart implements OnChanges, OnInit {
   /** The heap size list. */
-  @Input() heapSizes?: number[];
+  @Input() heapSizes: number[] = [];
 
   /** The unpadded heap size list. */
-  @Input() unpaddedHeapSizes?: number[];
+  @Input() unpaddedHeapSizes: number[] = [];
 
   /** The peak buffer allocation information. */
   @Input() peakInfo?: BufferAllocationInfo;
@@ -101,7 +101,8 @@ export class ProgramOrderChart implements OnChanges, OnInit {
   }
 
   drawChart() {
-    if (!this.chart || !this.heapSizes || !this.unpaddedHeapSizes) {
+    if (!this.chart || !this.heapSizes.length ||
+        !this.unpaddedHeapSizes.length) {
       return;
     }
 

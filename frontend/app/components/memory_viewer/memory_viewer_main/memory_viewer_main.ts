@@ -1,4 +1,4 @@
-import {Component, Input, OnChanges, OnDestroy, SimpleChanges} from '@angular/core';
+import {Component, Input, OnChanges, OnDestroy} from '@angular/core';
 import {Store} from '@ngrx/store';
 import {BufferAllocationInfo} from 'org_xprof/frontend/app/common/interfaces/buffer_allocation_info';
 import {HloProtoOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
@@ -6,7 +6,7 @@ import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics'
 import {HeapObject} from 'org_xprof/frontend/app/common/interfaces/heap_object';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {MemoryUsage} from 'org_xprof/frontend/app/components/memory_viewer/memory_usage/memory_usage';
-import {setActiveHeapObjectAction, setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
+import {setActiveHeapObjectAction} from 'org_xprof/frontend/app/store/actions';
 
 interface BufferSpan {
   alloc: number;
@@ -32,18 +32,18 @@ export class MemoryViewerMain implements OnDestroy, OnChanges {
   peakHeapSizeMiB: string = '';
   unpaddedPeakHeapSizeMiB: string = '';
   usage?: MemoryUsage;
-  heapSizes?: number[];
-  maxHeap?: HeapObject[];
-  maxHeapBySize?: HeapObject[];
+  heapSizes: number[] = [];
+  maxHeap: HeapObject[] = [];
+  maxHeapBySize: HeapObject[] = [];
   selectedIndex: number = -1;
   selectedIndexBySize: number = -1;
-  unpaddedHeapSizes?: number[];
-  hasHeapSimulatorTrace = false;
+  unpaddedHeapSizes: number[] = [];
+  hasTrace = false;
   diagnostics: Diagnostics = {info: [], warnings: [], errors: []};
 
   constructor(private readonly store: Store<{}>) {}
 
-  ngOnChanges(changes: SimpleChanges) {
+  ngOnChanges() {
     this.update();
   }
 
@@ -111,7 +111,7 @@ export class MemoryViewerMain implements OnDestroy, OnChanges {
 
   update() {
     const data = this.hloProto;
-    this.diagnostics.errors = [];
+    this.diagnostics = {errors: [], warnings: [], info: []};
     if (!data || !data.hloModule) {
       this.diagnostics.errors.push(
           'We fail to fetch a valid input. The input is empty or too large.');
@@ -123,22 +123,28 @@ export class MemoryViewerMain implements OnDestroy, OnChanges {
           'Therefore, we don\'t know the memory usage.');
       return;
     }
+    if (!data.bufferAssignment.heapSimulatorTraces ||
+        !data.bufferAssignment.heapSimulatorTraces.length) {
+      this.diagnostics.warnings.push(
+          'The HloProto does not contain a heap simulater trace. ' +
+          'Therefore, we simply sum up all allocations.');
+    }
     this.moduleName = data.hloModule.name || '';
     this.usage = new MemoryUsage(data, this.memorySpaceColor);
     this.peakHeapSizeMiB =
         utils.bytesToMiB(this.usage.peakHeapSizeBytes).toFixed(2);
     this.unpaddedPeakHeapSizeMiB =
         utils.bytesToMiB(this.usage.unpaddedPeakHeapSizeBytes).toFixed(2);
-    this.heapSizes = this.usage.heapSizes;
-    this.unpaddedHeapSizes = this.usage.unpaddedHeapSizes;
+    this.heapSizes = this.usage.heapSizes || [];
+    this.unpaddedHeapSizes = this.usage.unpaddedHeapSizes || [];
     this.peakInfo = {
       size: utils.bytesToMiB(this.usage.peakHeapSizeBytes),
       alloc: this.usage.peakHeapSizePosition + 1,
       free: this.usage.peakHeapSizePosition + 2,
     };
-    this.maxHeap = this.usage.maxHeap;
-    this.maxHeapBySize = this.usage.maxHeapBySize;
-
-    this.hasHeapSimulatorTrace = !!this.heapSizes && this.heapSizes.length > 0;
+    this.maxHeap = this.usage.maxHeap || [];
+    this.maxHeapBySize = this.usage.maxHeapBySize || [];
+    this.hasTrace = this.maxHeap.length > 0 || this.heapSizes.length > 0 ||
+        this.maxHeapBySize.length > 0;
   }
 }

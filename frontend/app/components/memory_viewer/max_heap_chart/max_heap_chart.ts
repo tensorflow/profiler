@@ -10,7 +10,7 @@ import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 })
 export class MaxHeapChart implements OnChanges, OnInit {
   /** The heap object list. */
-  @Input() maxHeap?: HeapObject[];
+  @Input() maxHeap: HeapObject[] = [];
 
   /** The title of view component. */
   @Input() title: string = '';
@@ -49,7 +49,7 @@ export class MaxHeapChart implements OnChanges, OnInit {
     const chartItemColors = this.maxHeap.map(
         heapObject => utils.getChartItemColorByIndex(heapObject.color || 0));
     const dataTable = google.visualization.arrayToDataTable([
-      Array(data.length).fill(''),
+      Array.from<string>({length: data.length}).fill(''),
       data,
     ]);
 
@@ -106,7 +106,7 @@ export class MaxHeapChart implements OnChanges, OnInit {
       }, 100);
     }
 
-    google.charts.load('current', {'packages': ['corechart']})
+    google.charts.load('current', {'packages': ['corechart']});
     google.charts.setOnLoadCallback(() => {
       this.chart =
           new google.visualization.ColumnChart(this.chartRef.nativeElement);
