@@ -44,9 +44,12 @@ export class Dashboard {
       dataView.setColumns(this.columns);
     }
     if (this.filters.size !== 0) {
-      const filters = Array.from(this.filters.values());
-      dataView.setRows(this.dataTable.getFilteredRows(filters));
+      dataView.setRows(this.dataTable.getFilteredRows(this.getFilters()));
     }
     this.dataView = dataView;
+  }
+
+  getFilters(): google.visualization.DataTableCellFilter[] {
+    return Array.from(this.filters.values());
   }
 }
