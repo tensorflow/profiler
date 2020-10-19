@@ -33,6 +33,7 @@ ts_library(
     srcs = [
         "category_diff_table_data_processor.ts",
         "category_table_data_processor.ts",
+        "filter_data_processor.ts",
         "xy_table_data_processor.ts",
     ],
     deps = [

@@ -41,3 +41,21 @@ export const COLUMN_CHART_OPTIONS: google.visualization.ColumnChartOptions = {
     ignoreBounds: true,
   },
 };
+
+/** The basic options of Google Charts bar chart. */
+export const BAR_CHART_OPTIONS: google.visualization.BarChartOptions = {
+  backgroundColor: 'transparent',
+  width: 550,
+  height: 200,
+  chartArea: {
+    left: 70,
+    top: 10,
+    width: '80%',
+    height: '80%',
+  },
+  legend: {position: 'none'},
+  tooltip: {
+    isHtml: true,
+    ignoreBounds: true,
+  },
+};
