@@ -52,3 +52,7 @@ export const getDataRequest: MemoizedSelectorAny =
 /** Selector for ExportAsCsv */
 export const getExportAsCsv: MemoizedSelectorAny =
     createSelector(appState, (appState: AppState) => appState.exportAsCsv);
+
+/** Selector for ErrorMessage */
+export const getErrorMessage: MemoizedSelectorAny =
+    createSelector(appState, (appState: AppState) => appState.errorMessage);

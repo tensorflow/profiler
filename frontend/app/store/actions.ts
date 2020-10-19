@@ -59,3 +59,9 @@ export const setExportAsCsvStateAction: ActionCreatorAny = createAction(
     '[App State] Set export_as_csv state',
     props<{exportAsCsv: string}>(),
 );
+
+/** Action to set error message state */
+export const setErrorMessageStateAction: ActionCreatorAny = createAction(
+    '[App State] Set error message state',
+    props<{errorMessage: string}>(),
+);

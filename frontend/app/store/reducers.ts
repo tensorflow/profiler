@@ -97,6 +97,15 @@ export const reducer: ActionReducer<AppState, Action> = createReducer(
           };
         },
         ),
+    on(
+        actions.setErrorMessageStateAction,
+        (state: AppState, action: ActionCreatorAny) => {
+          return {
+            ...state,
+            errorMessage: action.errorMessage,
+          };
+        },
+        ),
 );
 
 /** Reducer */

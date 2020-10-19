@@ -58,6 +58,9 @@ export interface DataRequest {
   loadingMessage?: string;
 }
 
+/** Type for error message state */
+type ErrorMessageState = string;
+
 /** State object */
 export interface AppState {
   memoryViewerState: MemoryViewerState;
@@ -68,6 +71,7 @@ export interface AppState {
   currentTool: CurrentToolState;
   dataRequest: DataRequest;
   exportAsCsv: ExportAsCsvState;
+  errorMessage: ErrorMessageState;
 }
 
 /** Initial state of active heap object */
@@ -115,6 +119,9 @@ const INIT_REQUEST_DATA_STATE: DataRequest = {
 /** Initial state of export_as_csv */
 const INIT_EXPORT_AS_CSV_STATE: ExportAsCsvState = '';
 
+/** Initial state of error message */
+const INIT_ERROR_MESSAGE_STATE: ErrorMessageState = '';
+
 /** Initial state object */
 export const INIT_APP_STATE: AppState = {
   memoryViewerState: INIT_MEMORY_VIEWER_STATE,
@@ -125,6 +132,7 @@ export const INIT_APP_STATE: AppState = {
   currentTool: INIT_CURRENT_TOOL_STATE,
   dataRequest: INIT_REQUEST_DATA_STATE,
   exportAsCsv: INIT_EXPORT_AS_CSV_STATE,
+  errorMessage: INIT_ERROR_MESSAGE_STATE,
 };
 
 /** Feature key for store */
