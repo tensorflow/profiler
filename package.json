@@ -15,7 +15,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/xprof/xprof.git"
+    "url": "git+https://github.com/tensorflow/profiler.git"
   },
   "keywords": [
     "ml",
@@ -24,9 +24,9 @@
   "author": "TensorFlow authors",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/xprof/issues"
+    "url": "https://github.com/tensorflow/profiler/issues"
   },
-  "homepage": "https://github.com/xprof",
+  "homepage": "https://github.com/tensorflow/profiler",
   "devDependencies": {
     "@angular/bazel": "^8.2.14",
     "@angular/cli": "^8.3.21",
