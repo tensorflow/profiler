@@ -198,6 +198,7 @@ py_library(
         ":input_pipeline_proto_to_gviz",
         ":kernel_stats_proto_to_gviz",
         ":overview_page_proto_to_gviz",
+        ":tf_data_stats_proto_to_gviz",
         ":tf_stats_proto_to_gviz",
         ":trace_events_json",
         "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",

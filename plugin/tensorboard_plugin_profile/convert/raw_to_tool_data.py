@@ -30,6 +30,7 @@ from tensorflow.python.profiler.internal import _pywrap_profiler  # pylint: disa
 from tensorboard_plugin_profile.convert import input_pipeline_proto_to_gviz
 from tensorboard_plugin_profile.convert import kernel_stats_proto_to_gviz
 from tensorboard_plugin_profile.convert import overview_page_proto_to_gviz
+from tensorboard_plugin_profile.convert import tf_data_stats_proto_to_gviz
 from tensorboard_plugin_profile.convert import tf_stats_proto_to_gviz
 from tensorboard_plugin_profile.convert import trace_events_json
 from tensorboard_plugin_profile.protobuf import trace_events_pb2
@@ -103,6 +104,11 @@ def xspace_to_tool_data(xspace_paths, tool, tqx):
         xspace_paths, tool)
     if success:
       data = raw_data
+  elif tool == 'tf_data_bottleneck_analysis':
+    raw_data, success = _pywrap_profiler.xspace_to_tools_data(
+        xspace_paths, tool)
+    if success:
+      data = tf_data_stats_proto_to_gviz.to_json(raw_data)
   else:
     logger.warning('%s is not a known xplane tool', tool)
   return data
