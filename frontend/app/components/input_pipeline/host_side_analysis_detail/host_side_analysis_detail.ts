@@ -74,8 +74,10 @@ export class HostSideAnalysisDetail implements OnInit, OnChanges {
 
   parseColumnChartData(hostAnalysis: InputPipelineHostAnalysisOrNull) {
     if (!hostAnalysis) {
+      this.hasHostOps = false;
       return;
     }
+    this.hasHostOps = true;
 
     const kUsPerMs = 1000.0;
     const p = hostAnalysis.p || {};
