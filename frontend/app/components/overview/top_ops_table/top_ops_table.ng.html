@@ -1,7 +1,9 @@
-<mat-expansion-panel [expanded]="initiallyExpanded">
-  <mat-expansion-panel-header>
-    <mat-panel-title>{{title}}</mat-panel-title>
-  </mat-expansion-panel-header>
-  <div class="table" #table></div>
-  <br>
-</mat-expansion-panel>
+<div [className]="title ? 'auto-height' : 'hidden-content'">
+  <mat-expansion-panel [expanded]="initiallyExpanded">
+    <mat-expansion-panel-header>
+      <mat-panel-title>{{title}}</mat-panel-title>
+    </mat-expansion-panel-header>
+    <div class="table" #table></div>
+    <br>
+  </mat-expansion-panel>
+</div>

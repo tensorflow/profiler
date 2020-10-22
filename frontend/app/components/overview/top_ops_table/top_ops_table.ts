@@ -1,4 +1,4 @@
-import {AfterViewInit, Component, ElementRef, Input, OnChanges, SimpleChanges, ViewChild} from '@angular/core';
+import {AfterViewInit, Component, ElementRef, Input, OnChanges, ViewChild} from '@angular/core';
 
 import {GeneralAnalysis, InputPipelineAnalysis, TopOpsColumn} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
@@ -22,14 +22,14 @@ export class TopOpsTable implements AfterViewInit, OnChanges {
 
   @ViewChild('table', {static: false}) tableRef!: ElementRef;
 
-  title = 'Top TensorFlow operations on TPU';
+  title = '';
   table: google.visualization.Table|null = null;
 
   ngAfterViewInit() {
     this.loadGoogleChart();
   }
 
-  ngOnChanges(changes: SimpleChanges) {
+  ngOnChanges() {
     this.drawTable();
   }
 
@@ -39,7 +39,9 @@ export class TopOpsTable implements AfterViewInit, OnChanges {
     }
 
     const dataTable = new google.visualization.DataTable(this.generalAnalysis);
-    if (dataTable.getNumberOfColumns() < 1) {
+    if (dataTable.getNumberOfColumns() < 1 || dataTable.getNumberOfRows() < 1) {
+      this.title = '';
+      this.table = null;
       return;
     }
 
@@ -47,6 +49,7 @@ export class TopOpsTable implements AfterViewInit, OnChanges {
     this.title = 'Top ' + String(dataTable.getNumberOfRows()) +
         ' TensorFlow operations on ' +
         (this.inputPipelineAnalysis.p.hardware_type || 'TPU');
+
     const columns: TopOpsColumn = {
       selfTimePercent: 0,
       cumulativeTimePercent: 0,
@@ -124,7 +127,6 @@ export class TopOpsTable implements AfterViewInit, OnChanges {
         this.loadGoogleChart();
       }, 100);
     }
-
     google.charts.load('current', {'packages': ['table']});
     google.charts.setOnLoadCallback(() => {
       this.table = new google.visualization.Table(this.tableRef.nativeElement);
