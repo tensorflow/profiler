@@ -19,6 +19,7 @@ export class CategoryFilter implements OnChanges {
   @Input() column: number|string = -1;
   @Input() valueSeparator = '';
   @Input() all = '';
+  @Input() initValue: number|string = '';
 
   columnIndex = -1;
   columnLabel = '';
@@ -63,7 +64,11 @@ export class CategoryFilter implements OnChanges {
       if (this.all) {
         this.options.unshift(this.all);
       }
-      this.value = this.options[0];
+      if (this.initValue) {
+        this.value = this.initValue;
+      } else {
+        this.value = this.options[0];
+      }
     }
 
     this.updateFilter();
