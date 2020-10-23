@@ -1,5 +1,6 @@
 import 'org_xprof/frontend/app/common/typing/google_visualization/google_visualization';
-import {ChartDataInfo} from 'org_xprof/frontend/app/common/interfaces/chart';
+
+import {SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {DefaultDataProvider} from 'org_xprof/frontend/app/components/chart/default_data_provider';
 
 /** A device side analysis detail data provider. */
@@ -10,12 +11,8 @@ export class DeviceSideAnalysisDetailDataProvider extends DefaultDataProvider {
     this.columnIds = columnIds;
   }
 
-  setData(dataInfo: ChartDataInfo) {
-    if (!dataInfo || !dataInfo.data) {
-      return;
-    }
-
-    const dataTable = new google.visualization.DataTable(dataInfo.data).clone();
+  parseData(data: SimpleDataTable|Array<Array<(string | number)>>|null) {
+    const dataTable = new google.visualization.DataTable(data);
 
     let i = 0;
     while (i < dataTable.getNumberOfColumns()) {

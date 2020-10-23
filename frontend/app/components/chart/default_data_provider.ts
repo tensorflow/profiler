@@ -1,7 +1,7 @@
 import 'org_xprof/frontend/app/common/typing/google_visualization/google_visualization';
 
 import {EventEmitter} from '@angular/core';
-import {ChartClass, ChartDataInfo, ChartDataProvider, ChartOptions, DataTableOrDataViewOrNull} from 'org_xprof/frontend/app/common/interfaces/chart';
+import {ChartClass, ChartDataProvider, ChartOptions, DataTableOrDataViewOrNull} from 'org_xprof/frontend/app/common/interfaces/chart';
 import {SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 /** A default chart data provider. */

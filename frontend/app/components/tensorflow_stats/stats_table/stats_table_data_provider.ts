@@ -1,6 +1,9 @@
+import 'org_xprof/frontend/app/common/typing/google_visualization/google_visualization';
+
 import {EventEmitter} from '@angular/core';
 import {ChartClass, ChartDataInfo, ChartOptions} from 'org_xprof/frontend/app/common/interfaces/chart';
 import {TensorflowStatsDataOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {DefaultDataProvider} from 'org_xprof/frontend/app/components/chart/default_data_provider';
 import {computeDiffTable} from 'org_xprof/frontend/app/components/chart/table_utils';
 
@@ -52,12 +55,8 @@ export class StatsTableDataProvider extends DefaultDataProvider {
         });
   }
 
-  setData(dataInfo: ChartDataInfo) {
-    if (!dataInfo || !dataInfo.data) {
-      return;
-    }
-
-    const dataTable = new google.visualization.DataTable(dataInfo.data);
+  parseData(data: SimpleDataTable|Array<Array<(string | number)>>|null) {
+    const dataTable = new google.visualization.DataTable(data);
     if (this.hasDiff && this.diffTable) {
       this.preProcessDiffTable(dataTable, this.diffTable);
     } else {
@@ -67,7 +66,6 @@ export class StatsTableDataProvider extends DefaultDataProvider {
 
   setDiffData(diffData: TensorflowStatsDataOrNull) {
     this.diffTable = diffData ?
-
         new google.visualization.DataTable(diffData) :
         undefined;
   }

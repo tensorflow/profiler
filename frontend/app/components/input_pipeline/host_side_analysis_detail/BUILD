@@ -33,7 +33,6 @@ ng_module(
     deps = [
         "@npm//@angular/core",
         "@org_xprof//frontend/app/common/interfaces",
-        "@org_xprof//frontend/app/common/interfaces:chart",
         "@org_xprof//frontend/app/common/typing/google_visualization",
         "@org_xprof//frontend/app/components/chart:default_data_provider",
     ],
