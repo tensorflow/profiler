@@ -31,4 +31,5 @@ sass_binary(
     src = "trace_viewer.scss",
 
     sourcemap = False,
+    strict_deps = False,
 )
