@@ -57,6 +57,7 @@ sass_binary(
 sass_library(
     name = "memory_profile_common",
     srcs = ["memory_profile_common.scss"],
+    strict_deps = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

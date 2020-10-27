@@ -44,6 +44,7 @@ sass_binary(
 sass_library(
     name = "common_css",
     srcs = ["input_pipeline.scss"],
+    strict_deps = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],
