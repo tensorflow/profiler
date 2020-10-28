@@ -24,4 +24,5 @@ sass_binary(
     src = "org_chart.scss",
 
     sourcemap = False,
+    strict_deps = False,
 )

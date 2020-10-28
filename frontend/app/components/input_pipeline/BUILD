@@ -36,6 +36,7 @@ sass_binary(
     src = "input_pipeline.scss",
 
     sourcemap = False,
+    strict_deps = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

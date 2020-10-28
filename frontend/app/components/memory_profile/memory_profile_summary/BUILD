@@ -29,6 +29,7 @@ sass_binary(
     src = "memory_profile_summary.scss",
 
     sourcemap = False,
+    strict_deps = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

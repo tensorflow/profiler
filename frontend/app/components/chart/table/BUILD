@@ -24,4 +24,5 @@ sass_binary(
     src = "table.scss",
 
     sourcemap = False,
+    strict_deps = False,
 )

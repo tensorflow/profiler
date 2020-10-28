@@ -49,6 +49,7 @@ sass_binary(
     src = "memory_profile.scss",
 
     sourcemap = False,
+    strict_deps = False,
     deps = [
         ":memory_profile_common",
     ],

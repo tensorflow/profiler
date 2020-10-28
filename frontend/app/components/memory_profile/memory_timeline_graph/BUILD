@@ -28,6 +28,7 @@ sass_binary(
     src = "memory_timeline_graph.scss",
 
     sourcemap = False,
+    strict_deps = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

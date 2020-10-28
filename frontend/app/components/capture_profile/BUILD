@@ -37,6 +37,7 @@ sass_binary(
     src = "capture_profile.scss",
 
     sourcemap = False,
+    strict_deps = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

@@ -28,4 +28,5 @@ sass_binary(
     src = "category_filter.scss",
 
     sourcemap = False,
+    strict_deps = False,
 )
