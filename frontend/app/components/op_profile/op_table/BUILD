@@ -30,4 +30,5 @@ sass_binary(
     src = "op_table.scss",
 
     sourcemap = False,
+    strict_deps = False,
 )

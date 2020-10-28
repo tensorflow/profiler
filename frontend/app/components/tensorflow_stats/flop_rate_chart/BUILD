@@ -33,4 +33,5 @@ sass_binary(
     src = "flop_rate_chart.scss",
 
     sourcemap = False,
+    strict_deps = False,
 )

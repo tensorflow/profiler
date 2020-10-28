@@ -52,6 +52,7 @@ sass_binary(
     src = "op_profile.scss",
 
     sourcemap = False,
+    strict_deps = False,
     deps = [
         ":op_profile_common",
     ],

@@ -30,6 +30,7 @@ sass_binary(
     src = "performance_summary.scss",
 
     sourcemap = False,
+    strict_deps = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

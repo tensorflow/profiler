@@ -25,4 +25,5 @@ sass_binary(
     src = "stack_bar_chart.scss",
 
     sourcemap = False,
+    strict_deps = False,
 )

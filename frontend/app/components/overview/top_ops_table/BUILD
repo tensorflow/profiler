@@ -28,6 +28,7 @@ sass_binary(
     src = "top_ops_table.scss",
 
     sourcemap = False,
+    strict_deps = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],
