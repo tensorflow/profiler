@@ -514,7 +514,8 @@ class ProfilePlugin(base_plugin.TBPlugin):
       options = profiler.ProfilerOptions(
           host_tracer_level=int(request.args.get('host_tracer_level', '2')),
           device_tracer_level=int(request.args.get('device_tracer_level', '1')),
-          python_tracer_level=int(request.args.get('python_tracer_level', '0'))
+          python_tracer_level=int(request.args.get('python_tracer_level', '0')),
+          delay_ms=int(request.args.get('delay', '0'))
       )
     except AttributeError:
       logger.warning('ProfilerOptions are available after tensorflow 2.3')

@@ -14,4 +14,5 @@ export interface CaptureProfileOptions {
   hostTracerLevel: number;
   deviceTracerLevel: number;
   pythonTracerLevel: number;
+  delay: number;
 }

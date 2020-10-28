@@ -41,7 +41,8 @@ export class DataService {
             .set('worker_list', options.workerList)
             .set('host_tracer_level', options.hostTracerLevel.toString())
             .set('device_tracer_level', options.deviceTracerLevel.toString())
-            .set('python_tracer_level', options.pythonTracerLevel.toString());
+            .set('python_tracer_level', options.pythonTracerLevel.toString())
+            .set('delay', options.delay.toString());
     return this.httpClient.get(this.pathPrefix + CAPTURE_PROFILE_API, {params});
   }
 

@@ -22,6 +22,7 @@ export class CaptureProfileDialog {
       'level is less than info';
   deviceTracerLevel = '1';
   pythonTracerLevel = '0';
+  delay = 0;
 
   constructor(private readonly dialogRef: MatDialogRef<CaptureProfileDialog>) {}
 
@@ -43,6 +44,7 @@ export class CaptureProfileDialog {
       hostTracerLevel: Number(this.hostTracerLevel),
       deviceTracerLevel: Number(this.deviceTracerLevel),
       pythonTracerLevel: Number(this.pythonTracerLevel),
+      delay: this.delay,
     });
   }
 
