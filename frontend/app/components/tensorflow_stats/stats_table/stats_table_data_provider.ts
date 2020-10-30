@@ -56,6 +56,7 @@ export class StatsTableDataProvider extends DefaultDataProvider {
   }
 
   parseData(data: SimpleDataTable|Array<Array<(string | number)>>|null) {
+    if (!data) return;
     const dataTable = new google.visualization.DataTable(data);
     if (this.hasDiff && this.diffTable) {
       this.preProcessDiffTable(dataTable, this.diffTable);

@@ -11,6 +11,7 @@ export class HostSideAnalysisDetailTableDataProvider extends
   private readonly hasHostOpsChanged = new EventEmitter<boolean>();
 
   parseData(data: SimpleDataTable|Array<Array<(string | number)>>|null) {
+    if (!data) return;
     const dataTable = new google.visualization.DataTable(data);
     if (dataTable.getNumberOfRows() < 1) {
       this.hasHostOpsChanged.emit(false);

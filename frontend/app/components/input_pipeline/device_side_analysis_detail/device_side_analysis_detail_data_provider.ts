@@ -12,6 +12,7 @@ export class DeviceSideAnalysisDetailDataProvider extends DefaultDataProvider {
   }
 
   parseData(data: SimpleDataTable|Array<Array<(string | number)>>|null) {
+    if (!data) return;
     const dataTable = new google.visualization.DataTable(data);
 
     let i = 0;
