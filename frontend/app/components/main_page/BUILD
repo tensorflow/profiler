@@ -31,6 +31,7 @@ ng_module(
         "@org_xprof//frontend/app/components/pod_viewer",
         "@org_xprof//frontend/app/components/sidenav",
         "@org_xprof//frontend/app/components/tensorflow_stats:tensorflow_stats_adapter",
+        "@org_xprof//frontend/app/components/tf_data_bottleneck_analysis",
         "@org_xprof//frontend/app/components/trace_viewer",
         "@org_xprof//frontend/app/store",
     ],

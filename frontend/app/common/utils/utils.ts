@@ -63,6 +63,7 @@ const KNOWN_TOOLS = [
   'pod_viewer',
   'tensorflow_stats',
   'trace_viewer',
+  'tf_data_bottleneck_analysis',
 ];
 
 /**

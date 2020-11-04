@@ -1656,3 +1656,237 @@ export const DATA_PLUGIN_PROFILE_KERNEL_STATS_DATA = [
     'p': {},
   },
 ];
+
+/** Mock data for data API with tf_data_bottleneck_analysis tag */
+export const DATA_PLUGIN_PROFILE_TF_DATA_BOTTLENECK_ANALYSIS_DATA =
+    [
+      {
+        'cols': [
+          {'id': 'host', 'label': 'Host', 'type': 'string'},
+          {'id': 'input_pipeline', 'label': 'Input Pipeline', 'type': 'string'},
+          {'id': 'rank', 'label': 'Rank', 'type': 'number'},
+          {'id': 'name', 'label': 'Name', 'type': 'string'},
+          {'id': 'parent', 'label': 'Parent', 'type': 'string'},
+          {'id': 'type', 'label': 'Type', 'type': 'number'}
+        ],
+        'rows': [
+          {
+            'c': [
+              {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 0}, {
+                'v': '8657233632614672692',
+                'f':
+                    '\u003cdiv style\u003d\u0027padding: 1px;\u0027\u003e\u003cb\u003eModel\u003c/b\u003e\u003cbr/\u003e\u003cdiv style\u003d\u0027text-align: left;\u0027\u003eStart Time: 4,666,862 us\u003cbr/\u003eTotal Duration: 992,837 us\u003cbr/\u003eSelf Duration: 2 us\u003cbr/\u003e# Calls: 1\u003c/div\u003e\u003c/div\u003e'
+              },
+              {'v': ''}, {'v': 1}
+            ]
+          },
+          {
+            'c': [
+              {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 0}, {
+                'v': '1204700340925195271',
+                'f':
+                    '\u003cdiv style\u003d\u0027padding: 1px;\u0027\u003e\u003cb\u003eMap\u003c/b\u003e\u003cbr/\u003e\u003cdiv style\u003d\u0027text-align: left;\u0027\u003eStart Time: 4,666,863 us\u003cbr/\u003eTotal Duration: 992,835 us\u003cbr/\u003eSelf Duration: 723,709 us\u003cbr/\u003e# Calls: 1\u003c/div\u003e\u003c/div\u003e'
+              },
+              {'v': '8657233632614672692'}, {'v': 2}
+            ]
+          },
+          {
+            'c': [
+              {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 0}, {
+                'v': '7987410324060857182',
+                'f':
+                    '\u003cdiv style\u003d\u0027padding: 1px;\u0027\u003e\u003cb\u003ePrefetch\u003c/b\u003e\u003cbr/\u003e\u003cdiv style\u003d\u0027text-align: left;\u0027\u003eStart Time: 4,666,865 us\u003cbr/\u003eTotal Duration: 269,126 us\u003cbr/\u003eSelf Duration: 269,126 us\u003cbr/\u003e# Calls: 1\u003c/div\u003e\u003c/div\u003e'
+              },
+              {'v': '1204700340925195271'}, {'v': 1}
+            ]
+          },
+          {
+            'c': [
+              {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 1}, {
+                'v': '7987410324060857182',
+                'f':
+                    '\u003cdiv style\u003d\u0027padding: 1px;\u0027\u003e\u003cb\u003ePrefetch\u003c/b\u003e\u003cbr/\u003e\u003cdiv style\u003d\u0027text-align: left;\u0027\u003eStart Time: 733,397 us\u003cbr/\u003eTotal Duration: 4 us\u003cbr/\u003eSelf Duration: 4 us\u003cbr/\u003e# Calls: 1\u003c/div\u003e\u003c/div\u003e'
+              },
+              {'v': '1204700340925195271'}, {'v': 1}
+            ]
+          },
+          {
+            'c': [
+              {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 1}, {
+                'v': '1204700340925195271',
+                'f':
+                    '\u003cdiv style\u003d\u0027padding: 1px;\u0027\u003e\u003cb\u003eMap\u003c/b\u003e\u003cbr/\u003e\u003cdiv style\u003d\u0027text-align: left;\u0027\u003eStart Time: 733,392 us\u003cbr/\u003eTotal Duration: 852,132 us\u003cbr/\u003eSelf Duration: 852,127 us\u003cbr/\u003e# Calls: 1\u003c/div\u003e\u003c/div\u003e'
+              },
+              {'v': '8657233632614672692'}, {'v': 2}
+            ]
+          },
+          {
+            'c': [
+              {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 1}, {
+                'v': '8657233632614672692',
+                'f':
+                    '\u003cdiv style\u003d\u0027padding: 1px;\u0027\u003e\u003cb\u003eModel\u003c/b\u003e\u003cbr/\u003e\u003cdiv style\u003d\u0027text-align: left;\u0027\u003eStart Time: 733,391 us\u003cbr/\u003eTotal Duration: 852,134 us\u003cbr/\u003eSelf Duration: 2 us\u003cbr/\u003e# Calls: 1\u003c/div\u003e\u003c/div\u003e'
+              },
+              {'v': ''}, {'v': 1}
+            ]
+          },
+          {
+            'c': [
+              {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 2}, {
+                'v': '1204700340925195271',
+                'f':
+                    '\u003cdiv style\u003d\u0027padding: 1px;\u0027\u003e\u003cb\u003eMap\u003c/b\u003e\u003cbr/\u003e\u003cdiv style\u003d\u0027text-align: left;\u0027\u003eStart Time: 6,940,733 us\u003cbr/\u003eTotal Duration: 833,329 us\u003cbr/\u003eSelf Duration: 833,323 us\u003cbr/\u003e# Calls: 1\u003c/div\u003e\u003c/div\u003e'
+              },
+              {'v': '8657233632614672692'}, {'v': 2}
+            ]
+          },
+          {
+            'c': [
+              {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 2}, {
+                'v': '8657233632614672692',
+                'f':
+                    '\u003cdiv style\u003d\u0027padding: 1px;\u0027\u003e\u003cb\u003eModel\u003c/b\u003e\u003cbr/\u003e\u003cdiv style\u003d\u0027text-align: left;\u0027\u003eStart Time: 6,940,731 us\u003cbr/\u003eTotal Duration: 833,331 us\u003cbr/\u003eSelf Duration: 2 us\u003cbr/\u003e# Calls: 1\u003c/div\u003e\u003c/div\u003e'
+              },
+              {'v': ''}, {'v': 1}
+            ]
+          },
+          {
+            'c': [
+              {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 2}, {
+                'v': '7987410324060857182',
+                'f':
+                    '\u003cdiv style\u003d\u0027padding: 1px;\u0027\u003e\u003cb\u003ePrefetch\u003c/b\u003e\u003cbr/\u003e\u003cdiv style\u003d\u0027text-align: left;\u0027\u003eStart Time: 6,940,738 us\u003cbr/\u003eTotal Duration: 5 us\u003cbr/\u003eSelf Duration: 5 us\u003cbr/\u003e# Calls: 1\u003c/div\u003e\u003c/div\u003e'
+              },
+              {'v': '1204700340925195271'}, {'v': 1}
+            ]
+          },
+          {
+            'c': [
+              {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 3}, {
+                'v': '1204700340925195271',
+                'f':
+                    '\u003cdiv style\u003d\u0027padding: 1px;\u0027\u003e\u003cb\u003eMap\u003c/b\u003e\u003cbr/\u003e\u003cdiv style\u003d\u0027text-align: left;\u0027\u003eStart Time: 2,458,588 us\u003cbr/\u003eTotal Duration: 798,433 us\u003cbr/\u003eSelf Duration: 798,429 us\u003cbr/\u003e# Calls: 1\u003c/div\u003e\u003c/div\u003e'
+              },
+              {'v': '8657233632614672692'}, {'v': 2}
+            ]
+          },
+          {
+            'c': [
+              {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 3}, {
+                'v': '8657233632614672692',
+                'f':
+                    '\u003cdiv style\u003d\u0027padding: 1px;\u0027\u003e\u003cb\u003eModel\u003c/b\u003e\u003cbr/\u003e\u003cdiv style\u003d\u0027text-align: left;\u0027\u003eStart Time: 2,458,587 us\u003cbr/\u003eTotal Duration: 798,437 us\u003cbr/\u003eSelf Duration: 3 us\u003cbr/\u003e# Calls: 1\u003c/div\u003e\u003c/div\u003e'
+              },
+              {'v': ''}, {'v': 1}
+            ]
+          },
+          {
+            'c': [
+              {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 3}, {
+                'v': '7987410324060857182',
+                'f':
+                    '\u003cdiv style\u003d\u0027padding: 1px;\u0027\u003e\u003cb\u003ePrefetch\u003c/b\u003e\u003cbr/\u003e\u003cdiv style\u003d\u0027text-align: left;\u0027\u003eStart Time: 2,458,594 us\u003cbr/\u003eTotal Duration: 4 us\u003cbr/\u003eSelf Duration: 4 us\u003cbr/\u003e# Calls: 1\u003c/div\u003e\u003c/div\u003e'
+              },
+              {'v': '1204700340925195271'}, {'v': 1}
+            ]
+          },
+          {
+            'c': [
+              {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 4}, {
+                'v': '1204700340925195271',
+                'f':
+                    '\u003cdiv style\u003d\u0027padding: 1px;\u0027\u003e\u003cb\u003eMap\u003c/b\u003e\u003cbr/\u003e\u003cdiv style\u003d\u0027text-align: left;\u0027\u003eStart Time: 9,857,056 us\u003cbr/\u003eTotal Duration: 139,103 us\u003cbr/\u003eSelf Duration: 139,099 us\u003cbr/\u003e# Calls: 1\u003c/div\u003e\u003c/div\u003e'
+              },
+              {'v': '8657233632614672692'}, {'v': 2}
+            ]
+          },
+          {
+            'c': [
+              {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 4}, {
+                'v': '8657233632614672692',
+                'f':
+                    '\u003cdiv style\u003d\u0027padding: 1px;\u0027\u003e\u003cb\u003eModel\u003c/b\u003e\u003cbr/\u003e\u003cdiv style\u003d\u0027text-align: left;\u0027\u003eStart Time: 9,857,055 us\u003cbr/\u003eTotal Duration: 139,106 us\u003cbr/\u003eSelf Duration: 2 us\u003cbr/\u003e# Calls: 1\u003c/div\u003e\u003c/div\u003e'
+              },
+              {'v': ''}, {'v': 1}
+            ]
+          },
+          {
+            'c': [
+              {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 4}, {
+                'v': '7987410324060857182',
+                'f':
+                    '\u003cdiv style\u003d\u0027padding: 1px;\u0027\u003e\u003cb\u003ePrefetch\u003c/b\u003e\u003cbr/\u003e\u003cdiv style\u003d\u0027text-align: left;\u0027\u003eStart Time: 9,857,061 us\u003cbr/\u003eTotal Duration: 4 us\u003cbr/\u003eSelf Duration: 4 us\u003cbr/\u003e# Calls: 1\u003c/div\u003e\u003c/div\u003e'
+              },
+              {'v': '1204700340925195271'}, {'v': 1}
+            ]
+          },
+          {
+            'c': [
+              {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 5}, {
+                'v': '1204700340925195271',
+                'f':
+                    '\u003cdiv style\u003d\u0027padding: 1px;\u0027\u003e\u003cb\u003eMap\u003c/b\u003e\u003cbr/\u003e\u003cdiv style\u003d\u0027text-align: left;\u0027\u003eStart Time: 4,024,899 us\u003cbr/\u003eTotal Duration: 55,780 us\u003cbr/\u003eSelf Duration: 55,776 us\u003cbr/\u003e# Calls: 1\u003c/div\u003e\u003c/div\u003e'
+              },
+              {'v': '8657233632614672692'}, {'v': 2}
+            ]
+          },
+          {
+            'c': [
+              {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 5}, {
+                'v': '7987410324060857182',
+                'f':
+                    '\u003cdiv style\u003d\u0027padding: 1px;\u0027\u003e\u003cb\u003ePrefetch\u003c/b\u003e\u003cbr/\u003e\u003cdiv style\u003d\u0027text-align: left;\u0027\u003eStart Time: 4,024,904 us\u003cbr/\u003eTotal Duration: 4 us\u003cbr/\u003eSelf Duration: 4 us\u003cbr/\u003e# Calls: 1\u003c/div\u003e\u003c/div\u003e'
+              },
+              {'v': '1204700340925195271'}, {'v': 1}
+            ]
+          },
+          {
+            'c': [
+              {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 5}, {
+                'v': '8657233632614672692',
+                'f':
+                    '\u003cdiv style\u003d\u0027padding: 1px;\u0027\u003e\u003cb\u003eModel\u003c/b\u003e\u003cbr/\u003e\u003cdiv style\u003d\u0027text-align: left;\u0027\u003eStart Time: 4,024,898 us\u003cbr/\u003eTotal Duration: 55,783 us\u003cbr/\u003eSelf Duration: 2 us\u003cbr/\u003e# Calls: 1\u003c/div\u003e\u003c/div\u003e'
+              },
+              {'v': ''}, {'v': 1}
+            ]
+          }
+        ]
+      },
+      {
+        'cols': [
+          {'id': 'host', 'label': 'Host', 'type': 'string'},
+          {'id': 'input_pipeline', 'label': 'Input Pipeline', 'type': 'string'},
+          {'id': 'min', 'label': 'Min (us)', 'type': 'number'},
+          {'id': 'mean', 'label': 'Avg (us)', 'type': 'number'},
+          {'id': 'max', 'label': 'Max (us)', 'type': 'number'},
+          {'id': 'num_calls', 'label': '# calls', 'type': 'number'},
+          {'id': 'num_slow_calls', 'label': '# slow calls', 'type': 'number'}
+        ],
+        'rows': [{
+          'c': [
+            {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 55783}, {'v': 611938},
+            {'v': 992837}, {'v': 6}, {'v': 6}
+          ]
+        }]
+      },
+      {
+        'cols': [
+          {'id': 'host', 'label': 'Host', 'type': 'string'},
+          {'id': 'input_pipeline', 'label': 'Input Pipeline', 'type': 'string'},
+          {'id': 'max_latency', 'label': 'Max Latency (us)', 'type': 'number'},
+          {'id': 'bottleneck', 'label': 'Bottleneck', 'type': 'string'},
+          {'id': 'suggestion', 'label': 'Suggestion', 'type': 'string'}
+        ],
+        'rows': [{
+          'c': [
+            {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 992837}, {
+              'v': 'Map',
+              'f':
+                  '\u003cu\u003eIterator Type\u003c/u\u003e: \u003cb\u003eMap\u003c/b\u003e\u003cbr/\u003e\u003cu\u003eLong Name\u003c/u\u003e: Iterator::Model::Map'
+            },
+            {'v': 'suggestion', 'f': 'mock suggestion'}
+          ]
+        }],
+        'p': {'is_input_bound': 'true', 'summary_message': 'mock summary'}
+      }
+    ];

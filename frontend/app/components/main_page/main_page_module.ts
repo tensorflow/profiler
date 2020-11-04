@@ -21,6 +21,8 @@ import {PodViewerModule} from 'org_xprof/frontend/app/components/pod_viewer/pod_
 import {SideNavModule} from 'org_xprof/frontend/app/components/sidenav/sidenav_module';
 import {TensorflowStatsAdapter} from 'org_xprof/frontend/app/components/tensorflow_stats/tensorflow_stats_adapter';
 import {TensorflowStatsAdapterModule} from 'org_xprof/frontend/app/components/tensorflow_stats/tensorflow_stats_adapter';
+import {TfDataBottleneckAnalysis} from 'org_xprof/frontend/app/components/tf_data_bottleneck_analysis/tf_data_bottleneck_analysis';
+import {TfDataBottleneckAnalysisModule} from 'org_xprof/frontend/app/components/tf_data_bottleneck_analysis/tf_data_bottleneck_analysis_module';
 import {TraceViewer} from 'org_xprof/frontend/app/components/trace_viewer/trace_viewer';
 import {TraceViewerModule} from 'org_xprof/frontend/app/components/trace_viewer/trace_viewer_module';
 
@@ -43,6 +45,7 @@ export const routes: Routes = [
   {path: 'op_profile', component: OpProfile},
   {path: 'pod_viewer', component: PodViewer},
   {path: 'pod_viewer^', component: PodViewer},
+  {path: 'tf_data_bottleneck_analysis^', component: TfDataBottleneckAnalysis},
   {path: 'tensorflow_stats', component: TensorflowStatsAdapter},
   {path: 'tensorflow_stats^', component: TensorflowStatsAdapter},
   {path: 'trace_viewer', component: TraceViewer},
@@ -68,6 +71,7 @@ export const routes: Routes = [
     MemoryViewerModule,
     OpProfileModule,
     PodViewerModule,
+    TfDataBottleneckAnalysisModule,
     TensorflowStatsAdapterModule,
     RouterModule.forRoot(routes),
   ],

@@ -75,6 +75,7 @@ TOOLS = {
     'kernel_stats': 'kernel_stats.pb',
     'memory_profile#': 'memory_profile.json.gz',
     'xplane': 'xplane.pb',
+    'tf_data_bottleneck_analysis': 'tf_data_bottleneck_analysis.json',
 }
 
 ALL_HOSTS = 'ALL_HOSTS'
@@ -98,16 +99,22 @@ XPLANE_TOOLS = [
     'kernel_stats^',
     'memory_profile^',
     'pod_viewer^',
+    'tf_data_bottleneck_analysis^',
 ]
 
 # XPlane generated tools that support all host mode.
 XPLANE_TOOLS_ALL_HOSTS_SUPPORTED = frozenset([
-    'input_pipeline_analyzer^', 'tensorflow_stats^', 'kernel_stats^',
-    'overview_page^', 'pod_viewer^'
+    'input_pipeline_analyzer^',
+    'tensorflow_stats^',
+    'kernel_stats^',
+    'overview_page^',
+    'pod_viewer^',
+    'tf_data_bottleneck_analysis^',
 ])
 
 # XPlane generated tools that only support all host mode.
-XPLANE_TOOLS_ALL_HOSTS_ONLY = frozenset(['overview_page^', 'pod_viewer^'])
+XPLANE_TOOLS_ALL_HOSTS_ONLY = frozenset(
+    ['overview_page^', 'pod_viewer^', 'tf_data_bottleneck_analysis^'])
 
 
 def _use_xplane(tool):

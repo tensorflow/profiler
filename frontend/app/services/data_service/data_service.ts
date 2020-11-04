@@ -87,6 +87,9 @@ export class DataService {
       } else if (tag.startsWith('memory_profile')) {
         return of(mockData.DATA_PLUGIN_PROFILE_MEMORY_PROFILE_DATA)
             .pipe(delay(DELAY_TIME_MS));
+      } else if (tag.startsWith('tf_data_bottleneck_analysis')) {
+        return of(mockData.DATA_PLUGIN_PROFILE_TF_DATA_BOTTLENECK_ANALYSIS_DATA)
+            .pipe(delay(DELAY_TIME_MS));
       } else {
         return of([]).pipe(delay(DELAY_TIME_MS));
       }

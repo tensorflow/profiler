@@ -1,0 +1,46 @@
+<div class="section-container">
+  <div class="mat-h1">Performance Analysis Summary</div>
+  <div>
+    <div class="mat-body">
+      This tool is <em>experimental</em>. Please report an issue
+      <a href="https://github.com/tensorflow/profiler/issues" target="blank">here</a> if the
+      analysis result seems off.
+    </div>
+    <div class="mat-body" [innerHTML]="summaryMessage"></div>
+  </div>
+</div>
+
+<table *ngIf="isInputBound" [dataView]="bottleneckDataView"></table>
+
+<mat-divider></mat-divider>
+
+<div class="section-container">
+  <div class="mat-h2">Summary of All Input Pipelines</div>
+</div>
+
+<table [dataView]="summaryDataView"></table>
+
+<mat-divider></mat-divider>
+
+<div class="section-container">
+  <div class="mat-h2">Input Pipeline Graph</div>
+  <div class="row">
+    <div>
+      <category-filter
+        [dataTable]="dataTable"
+        column="Host"
+        (changed)="updateFilters($event)"
+      >
+      </category-filter>
+      <category-filter
+        [dataTable]="dataTable"
+        column="Input Pipeline"
+        (changed)="updateFilters($event)"
+      >
+      </category-filter>
+      <category-filter [dataTable]="dataTable" column="Rank" (changed)="updateFilters($event)">
+      </category-filter>
+    </div>
+  </div>
+  <org-chart [dataView]="orgChartDataView"></org-chart>
+</div>
