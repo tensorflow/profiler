@@ -1,5 +1,5 @@
 import {Component, Input, OnChanges, SimpleChanges} from '@angular/core';
-import {GeneralAnalysis, InputPipelineAnalysis} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {GeneralAnalysis, InputPipelineAnalysis, InputPipelineAnalysisProperty} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {SummaryInfo} from 'org_xprof/frontend/app/common/interfaces/summary_info';
 
 const GENERIC_SUMMARY_INFO = [
@@ -154,16 +154,7 @@ export class PerformanceSummary implements OnChanges {
     return defaultValue;
   }
 
-  parseTpuData() {
-    const generalProps = (this.generalAnalysis || {}).p || {};
-    const inputPipelineProps = (this.inputPipelineAnalysis || {}).p || {};
-
-    this.mxuUtilizationPercent = generalProps.mxu_utilization_percent || '';
-    this.flopRateUtilizationRelativeToRoofline =
-        generalProps.flop_rate_utilization_relative_to_roofline || '';
-    this.remarkText = generalProps.remark_text || '';
-    this.remarkColor = generalProps.remark_color || '';
-
+  initializeSummary(inputPipelineProps: InputPipelineAnalysisProperty) {
     this.summaryInfoBefore = [...this.firstSummaryInfo];
     this.summaryInfoAfter = [];
 
@@ -179,6 +170,19 @@ export class PerformanceSummary implements OnChanges {
         propertyValues: [...(this.propertyValues || [])],
       });
     }
+  }
+
+  parseTpuData() {
+    const generalProps = (this.generalAnalysis || {}).p || {};
+    const inputPipelineProps = (this.inputPipelineAnalysis || {}).p || {};
+
+    this.mxuUtilizationPercent = generalProps.mxu_utilization_percent || '';
+    this.flopRateUtilizationRelativeToRoofline =
+        generalProps.flop_rate_utilization_relative_to_roofline || '';
+    this.remarkText = generalProps.remark_text || '';
+    this.remarkColor = generalProps.remark_color || '';
+
+    this.initializeSummary(inputPipelineProps);
 
     this.summaryInfoBefore.push({
       title: 'TPU Duty Cycle',
@@ -213,7 +217,6 @@ export class PerformanceSummary implements OnChanges {
         `Device: ${generalProps.device_op_time_eager_percent || ''}`,
       ],
     });
-
   }
 
   parseGenericData() {
@@ -223,18 +226,7 @@ export class PerformanceSummary implements OnChanges {
     this.remarkText = generalProps.remark_text || '';
     this.remarkColor = generalProps.remark_color || '';
 
-    this.summaryInfoBefore = [];
-    this.summaryInfoAfter = [];
-
-    this.summaryInfoBefore.push({
-      title: 'Average Step Time',
-      descriptions: [
-        'lower is better',
-        `(σ = ${inputPipelineProps.steptime_ms_standard_deviation || ''} ms)`,
-      ],
-      value: `${inputPipelineProps.steptime_ms_average} ms`,
-      valueColor: this.averageStepTimeValueColor,
-    });
+    this.initializeSummary(inputPipelineProps);
 
     GENERIC_SUMMARY_INFO.forEach(info => {
       this.summaryInfoBefore.push({

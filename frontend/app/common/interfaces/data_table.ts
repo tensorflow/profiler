@@ -111,7 +111,7 @@ export type GeneralAnalysisOrNull = GeneralAnalysis|null;
 
 /* tslint:disable enforce-name-casing */
 /** The base interface for a property of input pipeline analysis. */
-declare interface InputPipelineAnalysisProperty {
+export declare interface InputPipelineAnalysisProperty {
   hardware_type?: string;
   steptime_ms_average?: string;
   steptime_ms_standard_deviation?: string;
