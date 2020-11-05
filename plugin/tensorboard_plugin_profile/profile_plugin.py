@@ -210,7 +210,8 @@ def get_worker_list(cluster_resolver):
   cluster_spec = cluster_resolver.cluster_spec()
   task_indices = cluster_spec.task_indices('worker')
   worker_list = [
-      cluster_spec.task_address('worker', i).split(':')[0] for i in task_indices
+      cluster_spec.task_address('worker', i).replace(':8470', ':8466')
+      for i in task_indices
   ]
   return ','.join(worker_list)
 
