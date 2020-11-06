@@ -126,7 +126,7 @@ export class MemoryViewerMain implements OnDestroy, OnChanges {
     if (!data.bufferAssignment.heapSimulatorTraces ||
         !data.bufferAssignment.heapSimulatorTraces.length) {
       this.diagnostics.warnings.push(
-          'The HloProto does not contain a heap simulater trace. ' +
+          'The HloProto does not contain a heap simulator trace. ' +
           'Therefore, we simply sum up all allocations.');
     }
     this.moduleName = data.hloModule.name || '';
