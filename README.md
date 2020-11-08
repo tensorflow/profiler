@@ -29,6 +29,11 @@ To profile on a **single GPU** system, the following NVIDIA software must be ins
    $ export LD_LIBRARY_PATH=/usr/local/cuda/extras/CUPTI/lib64:$LD_LIBRARY_PATH
    ```
    Run the ldconfig command above again to verify that the CUPTI 10.1 library is found.
+   
+   If this doesn't work, try: 
+   ```shell
+   $ sudo apt-get install libcupti-dev
+   ```
 
 To profile a system with **multiple GPUs**, see this [guide](docs/profile_multi_gpu.md) for details.
 
