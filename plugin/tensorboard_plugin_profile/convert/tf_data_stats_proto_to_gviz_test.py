@@ -77,7 +77,7 @@ class ProtoToGvizTest(tf.test.TestCase):
     combined_tf_data_stats.is_input_bound = "True" == MockValues.IS_INPUT_BOUND
     combined_tf_data_stats.summary = MockValues.SUMMARY
 
-    bottleneck_analysis = combined_tf_data_stats.bottleneck_analysis
+    bottleneck_analysis = tf_data_stats_pb2.TfDataBottleneckAnalysis()
     bottleneck_analysis.host = MockValues.BOTTLENECK_HOST_NAME
     bottleneck_analysis.input_pipeline = MockValues.BOTTLENECK_INPUT_PIPELINE_NAME
     bottleneck_analysis.max_latency_ps = int(
@@ -85,6 +85,7 @@ class ProtoToGvizTest(tf.test.TestCase):
     bottleneck_analysis.iterator_name = MockValues.BOTTLENECK_ITERATOR_NAME
     bottleneck_analysis.iterator_long_name = MockValues.BOTTLENECK_ITERATOR_LONG_NAME
     bottleneck_analysis.suggestion = MockValues.SUGGESTION
+    combined_tf_data_stats.bottleneck_analysis.append(bottleneck_analysis)
 
     tf_data_stats = combined_tf_data_stats.tf_data_stats[MockValues.HOST_NAME]
     iterator_metadata = tf_data_stats.iterator_metadata[int(

@@ -158,15 +158,17 @@ def get_bottleneck_analysis_table_args(combined_tf_data_stats):
       ("bottleneck", "string", "Bottleneck"),
       ("suggestion", "string", "Suggestion"),
   ]
-  bottleneck_analysis = combined_tf_data_stats.bottleneck_analysis
-  data = [[
-      bottleneck_analysis.host,
-      bottleneck_analysis.input_pipeline,
-      int(bottleneck_analysis.max_latency_ps / 1000_000),
-      format_bottleneck(bottleneck_analysis.iterator_name,
-                        bottleneck_analysis.iterator_long_name),
-      bottleneck_analysis.suggestion,
-  ]]
+  data = []
+  for bottleneck_analysis in combined_tf_data_stats.bottleneck_analysis:
+    row = [
+        bottleneck_analysis.host,
+        bottleneck_analysis.input_pipeline,
+        int(bottleneck_analysis.max_latency_ps / 1000_000),
+        format_bottleneck(bottleneck_analysis.iterator_name,
+                          bottleneck_analysis.iterator_long_name),
+        bottleneck_analysis.suggestion,
+    ]
+    data.append(row)
   custom_properties = {
       "is_input_bound":
           "true" if combined_tf_data_stats.is_input_bound else "false",
