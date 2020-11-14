@@ -43,6 +43,7 @@ class MockValues(StrEnum):
   BOTTLENECK_MAX_LATENCY_PS = 100_000_000
   BOTTLENECK_ITERATOR_NAME = "Iterator::Map"
   BOTTLENECK_ITERATOR_LONG_NAME = "Iterator::Prefetch::Map"
+  BOTTLENECK_ITERATOR_LATENCY_PS = 80_000_000
   SUGGESTION = "Suggestion"
   HOST_NAME = "host1"
   FIRST_ITERATOR_ID = 123
@@ -84,6 +85,8 @@ class ProtoToGvizTest(tf.test.TestCase):
         MockValues.BOTTLENECK_MAX_LATENCY_PS)
     bottleneck_analysis.iterator_name = MockValues.BOTTLENECK_ITERATOR_NAME
     bottleneck_analysis.iterator_long_name = MockValues.BOTTLENECK_ITERATOR_LONG_NAME
+    bottleneck_analysis.iterator_latency_ps = int(
+        MockValues.BOTTLENECK_ITERATOR_LATENCY_PS)
     bottleneck_analysis.suggestion = MockValues.SUGGESTION
     combined_tf_data_stats.bottleneck_analysis.append(bottleneck_analysis)
 
@@ -244,7 +247,8 @@ class ProtoToGvizTest(tf.test.TestCase):
         int(MockValues.BOTTLENECK_MAX_LATENCY_PS) / 1000_000,
         tf_data_stats_proto_to_gviz.format_bottleneck(
             MockValues.BOTTLENECK_ITERATOR_NAME,
-            MockValues.BOTTLENECK_ITERATOR_LONG_NAME),
+            MockValues.BOTTLENECK_ITERATOR_LONG_NAME,
+            int(MockValues.BOTTLENECK_ITERATOR_LATENCY_PS)),
         MockValues.SUGGESTION
     ]]
     self.check_data_table(table_description, data, data_table, expected)

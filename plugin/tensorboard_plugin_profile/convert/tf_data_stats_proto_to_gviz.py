@@ -137,9 +137,11 @@ def generate_summary_table(combined_tf_data_stats):
   return gviz_api.DataTable(table_description, data, custom_properties)
 
 
-def format_bottleneck(iterator_name, iterator_long_name):
-  return "<u>Iterator Type</u>: <b>{}</b><br/><u>Long Name</u>: {}".format(
-      iterator_name, iterator_long_name)
+def format_bottleneck(iterator_name, iterator_long_name, iterator_latency_ps):
+  return ("<u>Iterator Type</u>: <b>{}</b><br/><u>Long Name</u>: "
+          "{}<br/><u>Latency</u>: {:,} us").format(
+              iterator_name, iterator_long_name,
+              int(iterator_latency_ps / 1000_000))
 
 
 def get_bottleneck_analysis_table_args(combined_tf_data_stats):
@@ -165,7 +167,8 @@ def get_bottleneck_analysis_table_args(combined_tf_data_stats):
         bottleneck_analysis.input_pipeline,
         int(bottleneck_analysis.max_latency_ps / 1000_000),
         format_bottleneck(bottleneck_analysis.iterator_name,
-                          bottleneck_analysis.iterator_long_name),
+                          bottleneck_analysis.iterator_long_name,
+                          bottleneck_analysis.iterator_latency_ps),
         bottleneck_analysis.suggestion,
     ]
     data.append(row)
