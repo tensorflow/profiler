@@ -1,14 +1,31 @@
 <diagnostics-view [diagnostics]="diagnostics"></diagnostics-view>
+
 <div class="section-container">
-  <div class="mat-headline">Module name: {{moduleName}}</div>
-  <div>
-    <div class="sub-title">Peak memory allocation is {{peakHeapSizeMiB}} MiB</div>
-    <div class="description" [hidden]="!unpaddedPeakHeapSizeMiB">
-      ({{unpaddedPeakHeapSizeMiB}} MiB without padding)
+  <div class="row">
+    <div>
+      <div class="mat-headline">Module name: {{moduleName}}</div>
+      <div class="sub-title">Peak memory allocation is {{peakHeapSizeMiB}} MiB</div>
+      <div class="description" [hidden]="!unpaddedPeakHeapSizeMiB">
+        ({{unpaddedPeakHeapSizeMiB}} MiB without padding)
+      </div>
+      <div class="description">
+        Modifying your model's architecture, batch size and data dimensions may
+        help reduce the memory footprint.
+      </div>
     </div>
-    <div class="description">
-      Modifying your model's architecture, batch size and data dimensions may
-      help reduce the memory footprint.
+    <div class="control">
+      <mat-checkbox [(ngModel)]="includeNotSimulated" (ngModelChange)="update()">
+        Include not simulated
+        <mat-icon
+          class="tooltip-icon"
+          matTooltip="Include all logical buffers that haven't appeared in HeapSimulatorTraces.
+                      We simply sum up all those buffer allocations, and report the additional
+                      unpadded heap sizes as the sum of those unsimulated buffer allocations *
+                      (total unpadded logical buffer sizes / total padded logical buffer sizes)."
+          matTooltipPosition="above">
+            info
+        </mat-icon>
+      </mat-checkbox>
     </div>
   </div>
 </div>
@@ -30,7 +47,7 @@
    [maxHeap]="maxHeap"
    [title]="'By Program Order'"
    [selectedIndex]="selectedIndex"
-   (selected)="setSelectedHepObject($event)">
+   (selected)="setSelectedHeapObject($event)">
 </max-heap-chart>
 
 <div [hidden]="!maxHeap.length">
@@ -41,7 +58,7 @@
   [maxHeap]="maxHeapBySize"
   [title]="'By Size'"
   [selectedIndex]="selectedIndexBySize"
-  (selected)="setSelectedHepObjectBySize($event)">
+  (selected)="setSelectedHeapObjectBySize($event)">
 </max-heap-chart>
 
 <div class="section-container" [hidden]="hasTrace">

@@ -57,6 +57,7 @@ export class Shape {
    * @return {!Shape}
    */
   resolveShapeIndex(shapeIndex: number[]): Shape {
+    if (shapeIndex.length === 0) return this;
     return shapeIndex.reduce(
         (shape: Shape, item) => shape.tupleShapes[item], this);
   }

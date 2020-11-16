@@ -13,3 +13,20 @@
 .sub-title {
   font-weight: 500;
 }
+
+.control-title {
+  color: $content-secondary-color;
+  margin-bottom: 5px;
+}
+
+.row {
+  display: flex;
+}
+
+.flex-space {
+  flex: 1;
+}
+
+.control {
+  padding: 20;
+}

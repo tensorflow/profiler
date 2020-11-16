@@ -38,6 +38,7 @@ export class MemoryViewerMain implements OnDestroy, OnChanges {
   selectedIndex: number = -1;
   selectedIndexBySize: number = -1;
   unpaddedHeapSizes: number[] = [];
+  includeNotSimulated = true;
   hasTrace = false;
   diagnostics: Diagnostics = {info: [], warnings: [], errors: []};
 
@@ -84,7 +85,7 @@ export class MemoryViewerMain implements OnDestroy, OnChanges {
     return bufferSpan;
   }
 
-  setSelectedHepObject(selectedIndex: number) {
+  setSelectedHeapObject(selectedIndex: number) {
     if (!this.usage) {
       return;
     }
@@ -96,7 +97,7 @@ export class MemoryViewerMain implements OnDestroy, OnChanges {
     }
   }
 
-  setSelectedHepObjectBySize(selectedIndexBySize: number) {
+  setSelectedHeapObjectBySize(selectedIndexBySize: number) {
     if (!this.usage) {
       return;
     }
@@ -126,15 +127,17 @@ export class MemoryViewerMain implements OnDestroy, OnChanges {
     if (!data.bufferAssignment.heapSimulatorTraces ||
         !data.bufferAssignment.heapSimulatorTraces.length) {
       this.diagnostics.warnings.push(
-          'The HloProto does not contain a heap simulator trace. ' +
-          'Therefore, we simply sum up all allocations.');
+          'The HloProto does not contain a heap simulator trace.');
     }
     this.moduleName = data.hloModule.name || '';
-    this.usage = new MemoryUsage(data, this.memorySpaceColor);
+    this.usage =
+        new MemoryUsage(data, this.memorySpaceColor, this.includeNotSimulated);
+
     this.peakHeapSizeMiB =
         utils.bytesToMiB(this.usage.peakHeapSizeBytes).toFixed(2);
     this.unpaddedPeakHeapSizeMiB =
         utils.bytesToMiB(this.usage.unpaddedPeakHeapSizeBytes).toFixed(2);
+
     this.heapSizes = this.usage.heapSizes || [];
     this.unpaddedHeapSizes = this.usage.unpaddedHeapSizes || [];
     this.peakInfo = {

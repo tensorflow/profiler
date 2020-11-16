@@ -40,17 +40,17 @@ export class BufferDetails {
     const unpaddedSizeMiB = heapObject.unpaddedSizeMiB || 0;
     this.instructionName = heapObject.instructionName;
     this.opcode = heapObject.opcode ? heapObject.opcode + ' operation' : '';
-    this.size = sizeMiB.toFixed(1);
+    this.size = sizeMiB.toFixed(2);
     this.shape = heapObject.shape;
     this.tfOpName = heapObject.tfOpName;
     this.groupName = heapObject.groupName;
     if (unpaddedSizeMiB) {
-      this.unpaddedSize = unpaddedSizeMiB.toFixed(1);
+      this.unpaddedSize = unpaddedSizeMiB.toFixed(2);
       const utilization = unpaddedSizeMiB / sizeMiB;
       this.color = utils.flameColor(utilization, 0.7);
       if (utilization < 1) {
         this.expansion = (1 / utilization).toFixed(1);
-        this.padding = (sizeMiB - unpaddedSizeMiB).toFixed(1);
+        this.padding = (sizeMiB - unpaddedSizeMiB).toFixed(2);
       } else {
         this.expansion = '';
         this.padding = '';

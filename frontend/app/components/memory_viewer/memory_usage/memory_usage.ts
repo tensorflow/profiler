@@ -24,7 +24,7 @@ export class MemoryUsage {
   private readonly seenBufferAllocations: Set<number>;
   private nColor: number;
   private rest: number;
-  private memorySpaceColor: number;
+  private smallBufferCount: number;
 
   peakHeapSizeBytes: number;
   unpaddedPeakHeapSizeBytes: number;
@@ -41,7 +41,9 @@ export class MemoryUsage {
 
   smallBufferSize: number;
 
-  constructor(hloProto: proto.HloProto, memorySpaceColor: number) {
+  constructor(
+      hloProto: proto.HloProto, memorySpaceColor: number,
+      private readonly includeNotSimulated: boolean) {
     this.buffers = [];
     this.idToBuffer = {};
     this.idToBufferAllocation = {};
@@ -50,7 +52,7 @@ export class MemoryUsage {
     this.seenBufferAllocations = new Set();
     this.nColor = 0;
     this.rest = 0;
-    this.memorySpaceColor = memorySpaceColor;
+    this.smallBufferCount = 0;
 
     this.peakHeapSizeBytes = 0;
     this.unpaddedPeakHeapSizeBytes = 0;
@@ -74,29 +76,20 @@ export class MemoryUsage {
   /**
    * Adds the logical buffer as an element in the maxHeap with constitutent
    * logical buffers.
-   * @private
    */
   private addHeapObject(buffer: LogicalBuffer, groupName: string) {
-    if (!buffer) {
-      return;
-    }
     if (buffer.size <= this.smallBufferSize) {
       this.rest += buffer.size;
+      this.smallBufferCount++;
       return;
     }
-    if (!buffer.instructionName) {
-      return;
-    }
-    const inst = this.nameToHlo[buffer.instructionName];
-    if (!inst) {
-      return;
-    }
-    if (!inst.shape) {
-      return;
-    }
-    const shape = inst.shape.resolveShapeIndex(buffer.shapeIndex);
-    if (!shape) {
-      return;
+    let shape = new Shape();
+    let inst = new HloInstruction();
+    if (buffer.instructionName) {
+      inst = this.nameToHlo[buffer.instructionName];
+      if (inst && inst.shape) {
+        shape = inst.shape.resolveShapeIndex(buffer.shapeIndex);
+      }
     }
     const heapObject = this.newHeapObject(buffer, shape, inst, groupName);
     if (heapObject) {
@@ -118,21 +111,31 @@ export class MemoryUsage {
       if (!alloc || alloc.isThreadLocal) {
         return;
       }
+      if (!this.idToBuffer[id] || this.idToBuffer[id].color !== color) return;
+
       if (!this.seenBufferAllocations.has(alloc.index)) {
-        const buffer = this.idToBuffer[id];
-        if (!buffer || buffer.color !== color) return;
-        this.seenBufferAllocations.add(alloc.index);
         usageBytes.padded += alloc.size;
-        let shape = null;
-        if (buffer.instructionName) {
-          const hlo = this.nameToHlo[buffer.instructionName];
-          if (hlo && hlo.shape) {
-            shape = hlo.shape.resolveShapeIndex(buffer.shapeIndex);
+        this.seenBufferAllocations.add(alloc.index);
+
+        // Add all logical buffers assigned to the allocation to HeapObjects.
+        // Since we don't know the heap simulator traces of those buffers,
+        // simply estimate the total padding size with average padding.
+        let padded = 0;
+        let unpadded = 0;
+        alloc.assigned.forEach(assigned => {
+          const buffer = this.idToBuffer[assigned.logicalBufferId];
+          let shape = null;
+          if (buffer.instructionName) {
+            const hlo = this.nameToHlo[buffer.instructionName];
+            if (hlo && hlo.shape) {
+              shape = hlo.shape.resolveShapeIndex(buffer.shapeIndex);
+            }
           }
-        }
-        usageBytes.unpadded +=
-            shape ? shape.unpaddedHeapSizeBytes() : alloc.size;
-        this.addHeapObject(this.idToBuffer[id], alloc.groupName);
+          this.addHeapObject(buffer, alloc.groupName);
+          unpadded += shape ? shape.unpaddedHeapSizeBytes() : buffer.size;
+          padded += buffer.size;
+        });
+        usageBytes.unpadded += Math.floor(alloc.size * unpadded / padded);
       }
     });
     this.indefiniteMemoryUsageBytes = usageBytes;
@@ -141,7 +144,6 @@ export class MemoryUsage {
 
   /**
    * Finds the peak memory usage from the `HeapSimulatorTrace`.
-   * @private
    */
   private findPeakMemoryUsage(
       trace: proto.HeapSimulatorTrace|null, color: number) {
@@ -218,26 +220,33 @@ export class MemoryUsage {
       unpaddedHeapSizes.push(utils.bytesToMiB(unpaddedHeapSizeBytes));
     }
 
-    const indefiniteMemoryUsageBytes =
-        this.findIndefiniteMemoryUsage(this.unSeenLogicalBuffers, color);
-    this.peakHeapSizeBytes =
-        peakHeapSizeBytes + indefiniteMemoryUsageBytes.padded;
-    this.unpaddedPeakHeapSizeBytes =
-        unpaddedPeakHeapSizeBytes + indefiniteMemoryUsageBytes.unpadded;
     this.peakLogicalBuffers = peakLogicalBuffers;
     this.peakHeapSizePosition = peakHeapSizePosition;
-    const addendPadded = utils.bytesToMiB(indefiniteMemoryUsageBytes.padded);
-    this.heapSizes = heapSizes.map(item => item + addendPadded);
-    const addendUnpadded =
-        utils.bytesToMiB(indefiniteMemoryUsageBytes.unpadded);
-    this.unpaddedHeapSizes =
-        unpaddedHeapSizes.map(item => item + addendUnpadded);
+
+    if (this.includeNotSimulated) {
+      const indefiniteMemoryUsageBytes =
+          this.findIndefiniteMemoryUsage(this.unSeenLogicalBuffers, color);
+      this.peakHeapSizeBytes =
+          peakHeapSizeBytes + indefiniteMemoryUsageBytes.padded;
+      this.unpaddedPeakHeapSizeBytes =
+          unpaddedPeakHeapSizeBytes + indefiniteMemoryUsageBytes.unpadded;
+      const addendPadded = utils.bytesToMiB(indefiniteMemoryUsageBytes.padded);
+      this.heapSizes = heapSizes.map(item => item + addendPadded);
+      const addendUnpadded =
+          utils.bytesToMiB(indefiniteMemoryUsageBytes.unpadded);
+      this.unpaddedHeapSizes =
+          unpaddedHeapSizes.map(item => item + addendUnpadded);
+    } else {
+      this.peakHeapSizeBytes = peakHeapSizeBytes;
+      this.unpaddedPeakHeapSizeBytes = unpaddedPeakHeapSizeBytes;
+      this.heapSizes = heapSizes;
+      this.unpaddedHeapSizes = unpaddedHeapSizes;
+    }
   }
 
   /**
    * From a list of heap simulator traces, identify the one uses 0 as memory
    * space color.
-   * @private
    */
   private getHeapTraceByColor(
       color: number,
@@ -260,7 +269,6 @@ export class MemoryUsage {
   /**
    * Creates a logical buffer id to buffer allocation map from
    * `bufferAllocations`.
-   * @private
    */
   private initAllocations(bufferAllocations?: proto.BufferAllocationProto[]) {
     if (!bufferAllocations) {
@@ -296,7 +304,6 @@ export class MemoryUsage {
 
   /**
    * Constructs a mapping from name to HLO instruction.
-   * @private
    */
   private initHloInstructions(hloModule?: proto.HloModuleProto) {
     if (!hloModule) {
@@ -317,7 +324,6 @@ export class MemoryUsage {
    * We accumulate it in "program order" -- the order in which it was placed
    * into the logical_buffers sequence above was program order, and we iterate
    * that order to create data points.
-   * @private
    */
   private initMaxHeap() {
     for (const id of this.peakLogicalBuffers) {
@@ -326,8 +332,8 @@ export class MemoryUsage {
       this.addHeapObject(this.idToBuffer[id], groupName);
     }
     if (this.rest !== 0) {
-      const small =
-          'small (<' + (this.smallBufferSize / 1024).toString() + ' KiB)';
+      const small = `${this.smallBufferCount} small buffers (<${
+          this.smallBufferSize / 1024} KiB)`;
       this.maxHeap.push({
         instructionName: small,
         sizeMiB: utils.bytesToMiB(this.rest),
@@ -353,7 +359,6 @@ export class MemoryUsage {
 
   /**
    * Initializes memory usage of the module.
-   * @private
    */
   private initMemoryUsage(
       memorySpaceColor: number,
@@ -375,12 +380,11 @@ export class MemoryUsage {
   /**
    * Creates a heap object that is displayed in a plot in the memory
    * visualization.
-   * @private
    */
   private newHeapObject(
       buffer: LogicalBuffer, shape: Shape, inst: HloInstruction,
       groupName: string): HeapObject|null {
-    if (!buffer || !inst) {
+    if (!buffer) {
       return null;
     }
     const shapeIndex =
@@ -388,13 +392,12 @@ export class MemoryUsage {
     return {
       instructionName: buffer.instructionName + shapeIndex,
       logicalBufferId: buffer.id,
-      unpaddedSizeMiB: shape ? utils.bytesToMiB(shape.unpaddedHeapSizeBytes()) :
-                               0,
+      unpaddedSizeMiB: utils.bytesToMiB(shape.unpaddedHeapSizeBytes()),
       tfOpName: inst.tfOpName,
       opcode: inst.opcode,
       sizeMiB: utils.bytesToMiB(buffer.size),
       color: this.nColor++,
-      shape: shape ? shape.humanStringWithLayout() : '',
+      shape: shape.humanStringWithLayout(),
       groupName,
     };
   }
