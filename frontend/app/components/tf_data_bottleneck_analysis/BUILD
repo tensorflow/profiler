@@ -38,5 +38,5 @@ sass_binary(
     name = "tf_data_bottleneck_analysis_css",
     src = "tf_data_bottleneck_analysis.scss",
     sourcemap = False,
-    strict_deps = False,
+
 )

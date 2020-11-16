@@ -52,7 +52,7 @@ sass_binary(
     src = "op_profile.scss",
 
     sourcemap = False,
-    strict_deps = False,
+
     deps = [
         ":op_profile_common",
     ],
@@ -61,7 +61,7 @@ sass_binary(
 sass_library(
     name = "op_profile_common",
     srcs = ["op_profile_common.scss"],
-    strict_deps = False,
+
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

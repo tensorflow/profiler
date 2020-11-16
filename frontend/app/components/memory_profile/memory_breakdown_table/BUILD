@@ -31,7 +31,7 @@ sass_binary(
     src = "memory_breakdown_table.scss",
 
     sourcemap = False,
-    strict_deps = False,
+
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

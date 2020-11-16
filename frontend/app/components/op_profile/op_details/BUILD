@@ -31,7 +31,7 @@ sass_binary(
     src = "op_details.scss",
 
     sourcemap = False,
-    strict_deps = False,
+
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

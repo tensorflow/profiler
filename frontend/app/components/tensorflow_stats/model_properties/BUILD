@@ -26,5 +26,5 @@ sass_binary(
     src = "model_properties.scss",
 
     sourcemap = False,
-    strict_deps = False,
+
 )

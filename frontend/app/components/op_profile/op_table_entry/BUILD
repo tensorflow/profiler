@@ -28,7 +28,7 @@ sass_binary(
     src = "op_table_entry.scss",
 
     sourcemap = False,
-    strict_deps = False,
+
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

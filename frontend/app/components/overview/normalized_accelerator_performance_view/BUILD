@@ -28,7 +28,7 @@ sass_binary(
     src = "normalized_accelerator_performance_view.scss",
 
     sourcemap = False,
-    strict_deps = False,
+
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

@@ -30,7 +30,7 @@ sass_binary(
     src = "kernel_stats_table.scss",
 
     sourcemap = False,
-    strict_deps = False,
+
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

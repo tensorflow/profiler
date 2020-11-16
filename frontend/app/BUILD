@@ -38,5 +38,5 @@ sass_binary(
     src = "app.scss",
 
     sourcemap = False,
-    strict_deps = False,
+
 )

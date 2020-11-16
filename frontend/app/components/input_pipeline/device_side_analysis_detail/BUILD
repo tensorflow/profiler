@@ -42,7 +42,7 @@ sass_binary(
     src = "device_side_analysis_detail.scss",
 
     sourcemap = False,
-    strict_deps = False,
+
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

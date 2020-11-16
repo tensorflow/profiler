@@ -34,7 +34,7 @@ sass_binary(
     src = "recommendation_result_view.scss",
 
     sourcemap = False,
-    strict_deps = False,
+
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],
