@@ -1,4 +1,3 @@
-load("@npm_bazel_typescript//:index.bzl", "ts_library")
 load("@io_bazel_rules_sass//:defs.bzl", "sass_binary")
 load("@npm_angular_bazel//:index.bzl", "ng_module")
 
@@ -27,11 +26,6 @@ ng_module(
         "@org_xprof//frontend/app/services/data_service",
         "@org_xprof//frontend/app/store",
     ],
-)
-
-ts_library(
-    name = "tf_data_bottleneck_analysis_tests",
-    testonly = True,
 )
 
 sass_binary(
