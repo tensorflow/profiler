@@ -115,7 +115,7 @@ export class MemoryViewerMain implements OnDestroy, OnChanges {
     this.diagnostics = {errors: [], warnings: [], info: []};
     if (!data || !data.hloModule) {
       this.diagnostics.errors.push(
-          'We fail to fetch a valid input. The input is empty or too large.');
+          'We failed to fetch a valid input. The input is empty or too large.');
       return;
     }
     if (!data.bufferAssignment) {
