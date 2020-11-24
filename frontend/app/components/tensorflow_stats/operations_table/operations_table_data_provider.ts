@@ -158,7 +158,7 @@ export class OperationsTableDataProvider extends DefaultDataProvider {
      * column 2: sum of self_time
      * column 3: sum of self_time_on_device
      */
-    const dataTable = new google.visualization.data.group(dataView, [0], [
+    const dataTable = google.visualization.data.group(dataView, [0], [
       {
         'column': 1,
         'aggregation': google.visualization.data.sum,
@@ -229,7 +229,7 @@ export class OperationsTableDataProvider extends DefaultDataProvider {
      * column 2: sum of self_time
      * column 3: sum of self_time_on_host
      */
-    const dataTable = new google.visualization.data.group(dataView, [0], [
+    const dataTable = google.visualization.data.group(dataView, [0], [
       {
         'column': 1,
         'aggregation': google.visualization.data.sum,

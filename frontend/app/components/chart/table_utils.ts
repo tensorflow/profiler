@@ -420,7 +420,7 @@ export function computeGroupView(
     dataView.setRows(dataView.getFilteredRows(filters));
   }
 
-  const dataGroup = new google.visualization.data.group(
+  const dataGroup = google.visualization.data.group(
       dataView, [gColumn], [{
         'column': vColumn,
         'aggregation': google.visualization.data.sum,
