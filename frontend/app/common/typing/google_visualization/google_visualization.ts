@@ -6,11 +6,9 @@ declare namespace google {
   }
   namespace visualization {
     namespace data {
-      // tslint:disable-next-line:class-name
-      export class group extends DataTable {
-        // tslint:disable-next-line:no-any
-        constructor(dataTable?: any, keys?: any, columns?: any);
-      }
+      // TODO(b/161803357): Remove 'any' after go/lsc-gviz-externs-cleanup.
+      // tslint:disable-next-line:no-any
+      function group(dataTable?: any, keys?: any, columns?: any): DataTable;
       function avg(): void;
       function count(): void;
       function max(): void;
@@ -23,7 +21,12 @@ declare namespace google {
     }
 
     export interface DataTableCellFilter extends DataTableCellFilter {
-      test?: (value: string) => boolean;
+      // TODO(b/161803357): Remove 'any' after go/lsc-gviz-externs-cleanup.
+      test?:
+          // tslint:disable-next-line:no-any
+          (value: any, rowIndex: number, columnIndex: number,
+           // tslint:disable-next-line:no-any
+           dataTable: any) => boolean;
     }
 
     export class DataTableExt extends DataTable {
