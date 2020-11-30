@@ -176,6 +176,10 @@ export class MemoryUsage {
           }
         }
         switch (event.kind) {
+          // Default to 'ALLOC' when event.kind is undefined. This is because
+          // by default proto3 primitive fields with default values will be
+          // omitted in JSON output.
+          case undefined:
           case 'ALLOC':
           case 'SHARE_WITH':
             logicalBuffers.push(eventId);
@@ -212,7 +216,7 @@ export class MemoryUsage {
             }
             break;
           default:
-            console.log('ERROR: unknown heap event kind:' + event.toString());
+            console.log('ERROR: unknown heap event kind: ', event);
             break;
         }
       }
@@ -256,8 +260,7 @@ export class MemoryUsage {
     }
     for (const trace of traces) {
       for (const event of trace.events || []) {
-        if (!event.bufferId) continue;
-        const buffer = this.idToBuffer[utils.toNumber(event.bufferId)];
+        const buffer = this.idToBuffer[utils.toNumber(event.bufferId || '0')];
         if (!buffer) continue;
         if (buffer.color !== color) break;
         return trace;
@@ -277,9 +280,8 @@ export class MemoryUsage {
     for (const bufferAllocation of bufferAllocations) {
       const alloc = new BufferAllocation(bufferAllocation);
       for (const assigned of bufferAllocation.assigned || []) {
-        if (!assigned.logicalBufferId) continue;
-        this.idToBufferAllocation[utils.toNumber(assigned.logicalBufferId)] =
-            alloc;
+        this.idToBufferAllocation[utils.toNumber(
+            assigned.logicalBufferId || '0')] = alloc;
       }
     }
   }
@@ -294,7 +296,6 @@ export class MemoryUsage {
       return;
     }
     for (const logicalBuffer of logicalBuffers) {
-      if (!logicalBuffer.id) continue;
       const buffer = new LogicalBuffer(logicalBuffer);
       this.buffers.push(buffer);
       this.idToBuffer[buffer.id] = buffer;

@@ -15,9 +15,9 @@ export class LogicalBuffer {
 
   constructor(buffer?: proto.LogicalBufferProto) {
     buffer = buffer || {};
-    this.id = toNumber(buffer.id);
-    this.size = toNumber(buffer.size);
-    this.color = toNumber(buffer.color);
+    this.id = toNumber(buffer.id || '0');
+    this.size = toNumber(buffer.size || '0');
+    this.color = toNumber(buffer.color || '0');
     this.computationName = '';
     this.instructionName = '';
     this.shapeIndex = [];
