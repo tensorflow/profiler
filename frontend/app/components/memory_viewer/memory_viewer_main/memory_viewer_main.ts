@@ -35,8 +35,10 @@ export class MemoryViewerMain implements OnDestroy, OnChanges {
   heapSizes: number[] = [];
   maxHeap: HeapObject[] = [];
   maxHeapBySize: HeapObject[] = [];
+  maxHeapByPaddingSize: HeapObject[] = [];
   selectedIndex: number = -1;
   selectedIndexBySize: number = -1;
+  selectedIndexByPaddingSize: number = -1;
   unpaddedHeapSizes: number[] = [];
   includeNotSimulated = true;
   hasTrace = false;
@@ -67,6 +69,7 @@ export class MemoryViewerMain implements OnDestroy, OnChanges {
       this.activeInfo = undefined;
       this.selectedIndex = -1;
       this.selectedIndexBySize = -1;
+      this.selectedIndexByPaddingSize = -1;
     }
   }
 
@@ -94,6 +97,8 @@ export class MemoryViewerMain implements OnDestroy, OnChanges {
     } else {
       this.dispatchActiveHeapObject(this.usage.maxHeap[selectedIndex]);
       this.selectedIndexBySize = this.usage.maxHeapToBySize[selectedIndex];
+      this.selectedIndexByPaddingSize =
+          this.usage.maxHeapToByPaddingSize[selectedIndex];
     }
   }
 
@@ -107,6 +112,23 @@ export class MemoryViewerMain implements OnDestroy, OnChanges {
       this.dispatchActiveHeapObject(
           this.usage.maxHeapBySize[selectedIndexBySize]);
       this.selectedIndex = this.usage.bySizeToMaxHeap[selectedIndexBySize];
+      this.selectedIndexByPaddingSize =
+          this.usage.maxHeapToByPaddingSize[this.selectedIndex];
+    }
+  }
+
+  setSelectedHeapObjectByPaddingSize(selectedIndexByPaddingSize: number) {
+    if (!this.usage) {
+      return;
+    }
+    if (selectedIndexByPaddingSize === -1) {
+      this.dispatchActiveHeapObject();
+    } else {
+      this.dispatchActiveHeapObject(
+          this.maxHeapByPaddingSize[selectedIndexByPaddingSize]);
+      this.selectedIndex =
+          this.usage.byPaddingSizeToMaxHeap[selectedIndexByPaddingSize];
+      this.selectedIndexBySize = this.usage.maxHeapToBySize[this.selectedIndex];
     }
   }
 
@@ -147,6 +169,8 @@ export class MemoryViewerMain implements OnDestroy, OnChanges {
     };
     this.maxHeap = this.usage.maxHeap || [];
     this.maxHeapBySize = this.usage.maxHeapBySize || [];
+    this.maxHeapByPaddingSize = this.usage.maxHeapByPaddingSize || [];
+
     this.hasTrace = this.maxHeap.length > 0 || this.heapSizes.length > 0 ||
         this.maxHeapBySize.length > 0;
   }

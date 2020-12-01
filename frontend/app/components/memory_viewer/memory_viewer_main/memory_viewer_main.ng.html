@@ -61,6 +61,17 @@
   (selected)="setSelectedHeapObjectBySize($event)">
 </max-heap-chart>
 
+<div [hidden]="!maxHeapByPaddingSize.length">
+  <mat-divider ></mat-divider>
+</div>
+
+<max-heap-chart
+  [maxHeap]="maxHeapByPaddingSize"
+  [title]="'By Padding Size'"
+  [selectedIndex] = "selectedIndexByPaddingSize"
+  (selected)="setSelectedHeapObjectByPaddingSize($event)">
+</max-heap-chart>
+
 <div class="section-container" [hidden]="hasTrace">
   There is no data to display.
 </div>

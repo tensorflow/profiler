@@ -35,8 +35,11 @@ export class MemoryUsage {
   unpaddedHeapSizes: number[];
   maxHeap: HeapObject[];
   maxHeapBySize: HeapObject[];
+  maxHeapByPaddingSize: HeapObject[];
   bySizeToMaxHeap: number[];
   maxHeapToBySize: number[];
+  byPaddingSizeToMaxHeap: number[];
+  maxHeapToByPaddingSize: number[];
   logicalBufferSpans: {[key: number]: number[]};
 
   smallBufferSize: number;
@@ -63,8 +66,11 @@ export class MemoryUsage {
     this.unpaddedHeapSizes = [];
     this.maxHeap = [];
     this.maxHeapBySize = [];
+    this.maxHeapByPaddingSize = [];
     this.bySizeToMaxHeap = [];
     this.maxHeapToBySize = [];
+    this.byPaddingSizeToMaxHeap = [];
+    this.maxHeapToByPaddingSize = [];
     this.logicalBufferSpans = {};
     this.smallBufferSize = 16 * 1024;
 
@@ -345,6 +351,7 @@ export class MemoryUsage {
     const indexedMaxHeap = this.maxHeap.map((e, i) => {
       return {ind: i, val: e};
     });
+    // Sort max heap objects by size and create index.
     indexedMaxHeap.sort((a, b) => {
       const sizeA = a && a.val && a.val.sizeMiB ? a.val.sizeMiB : 0;
       const sizeB = b && b.val && b.val.sizeMiB ? b.val.sizeMiB : 0;
@@ -355,6 +362,22 @@ export class MemoryUsage {
     this.maxHeapToBySize.length = this.maxHeap.length;
     for (let i = 0; i < this.bySizeToMaxHeap.length; i++) {
       this.maxHeapToBySize[this.bySizeToMaxHeap[i]] = i;
+    }
+    // Sort max heap objects by padding size and create index.
+    indexedMaxHeap.sort((a, b) => {
+      const paddingA = a && a.val && a.val.sizeMiB && a.val.unpaddedSizeMiB ?
+          a.val.sizeMiB - a.val.unpaddedSizeMiB :
+          0;
+      const paddingB = b && b.val && b.val.sizeMiB && b.val.unpaddedSizeMiB ?
+          b.val.sizeMiB - b.val.unpaddedSizeMiB :
+          0;
+      return paddingB - paddingA;
+    });
+    this.maxHeapByPaddingSize = indexedMaxHeap.map(e => e.val);
+    this.byPaddingSizeToMaxHeap = indexedMaxHeap.map(e => e.ind);
+    this.maxHeapToByPaddingSize.length = this.maxHeap.length;
+    for (let i = 0; i < this.byPaddingSizeToMaxHeap.length; i++) {
+      this.maxHeapToByPaddingSize[this.byPaddingSizeToMaxHeap[i]] = i;
     }
   }
 
