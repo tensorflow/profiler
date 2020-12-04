@@ -1,4 +1,5 @@
 import {Component, ElementRef, EventEmitter, Input, OnChanges, OnInit, Output, ViewChild} from '@angular/core';
+import {KELLY_COLORS} from 'org_xprof/frontend/app/common/constants/constants';
 import {PrimitiveTypeNumberStringOrUndefined} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 const BAR_WIDTH = 50;
@@ -59,6 +60,7 @@ export class StackBarChart implements OnChanges, OnInit {
       orientation: 'horizontal',
       tooltip: {trigger: 'none'},
       width: this.chartWidth,
+      colors: KELLY_COLORS,
     };
 
     this.chart.draw(dataTable, options as google.visualization.BarChartOptions);

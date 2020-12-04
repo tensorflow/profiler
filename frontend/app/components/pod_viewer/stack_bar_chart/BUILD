@@ -16,6 +16,7 @@ ng_module(
     deps = [
         "@npm//@angular/core",
         "@org_xprof//frontend/third_party/google_visualization",
+        "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",
     ],
 )

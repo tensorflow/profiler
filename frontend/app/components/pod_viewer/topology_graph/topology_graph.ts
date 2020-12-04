@@ -1,5 +1,6 @@
 import {Component, ElementRef, EventEmitter, Input, OnChanges, Output} from '@angular/core';
 import {Store} from '@ngrx/store';
+import {KELLY_COLORS} from 'org_xprof/frontend/app/common/constants/constants';
 import {AllReduceOpInfo, ChannelInfo, PodStatsRecord, PodViewerTopology, StepBreakdownEvent} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {getActivePodViewerInfoState} from 'org_xprof/frontend/app/store/selectors';
@@ -36,28 +37,6 @@ const TOOLTIP_OFFSET_Y = 35;
 const NODE_COLORS = [
   '#ffffd9', '#edf8b1', '#c7e9b4', '#7fcdbb', '#41b6c4', '#1d91c0', '#225ea8',
   '#253494', '#081d58'
-];
-const KELLY_COLORS = [
-  '#ffb300',  // Vivid yellow
-  '#803e75',  // Strong purple
-  '#ff6800',  // Vivid orange
-  '#a6bdd7',  // Very light blue
-  '#c10020',  // Vivid red
-  '#cea262',  // Grayish yellow
-  '#817066',  // Medium gray
-  '#007d34',  // Vivid green
-  '#f6768e',  // Strong purplish pink
-  '#00538a',  // Strong blue
-  '#ff7a5c',  // Strong yellowish pink
-  '#53377a',  // Strong violet
-  '#ff8e00',  // Vivid orange yellow
-  '#b32851',  // Strong purplish red
-  '#f4c800',  // Vivid greenish yellow
-  '#7f180d',  // Strong reddish brown
-  '#93aa00',  // Vivid yellowish green
-  '#593315',  // Deep yellowish brown
-  '#f13a13',  // Vivid reddish orange
-  '#232c16',  // Dark olive green
 ];
 
 /** A topology graph view component. */
