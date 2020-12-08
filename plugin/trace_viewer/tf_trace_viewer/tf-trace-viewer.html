@@ -215,6 +215,7 @@ dashboard would integrate trace viewer app using iframe.
       Polymer.dom(this.root).appendChild(this._traceViewer);
       Polymer.dom(this.root).appendChild(this._throbber);
 
+      this._resolution = this._resolutionFromViewerWidth(this._traceViewer.clientWidth);
       // Retrieve the URL of trace data.
       var queryString = window.location.href.split('?')[1];
       if (queryString) {
@@ -235,6 +236,8 @@ dashboard would integrate trace viewer app using iframe.
             this._isStreaming = components[1] === 'true';
           } else if (components[0] == 'hosts_data_url') {
             this.hostsDataUrl = decodeURIComponent(components[1]);
+          } else if (components[0] == 'resolution') {
+            this._resolution = Number(components[1]) / tf_component_traceviewer.ZOOM_RATIO;
           }
         }
       }
@@ -443,7 +446,10 @@ dashboard would integrate trace viewer app using iframe.
       // resolution if appropriate.
       var requestURL = this._buildBaseURL();
       var ZOOM_RATIO = tf_component_traceviewer.ZOOM_RATIO;
-      requestURL.searchParams.set('resolution', this._resolution * ZOOM_RATIO);
+      requestURL.searchParams.set(
+        'resolution',
+        requestURL.searchParams.has("selected_group_ids") ?
+            0 : this._resolution * ZOOM_RATIO);
       if (requestedRange != null) {
         requestURL.searchParams.set('start_time_ms', requestedRange.min);
         requestURL.searchParams.set('end_time_ms', requestedRange.max);
@@ -475,20 +481,24 @@ dashboard would integrate trace viewer app using iframe.
 
     // Decodes the JSON trace events, removes all events that were loaded before
     // and serializes to JSON again.
-    _filterKnownTraceEvents: function(data) {
-      var traceEvents = data.traceEvents;
-      data.traceEvents = [];
-      for (var i = 0; i < traceEvents.length; i++) {
-        // This is inefficient as we are serializing the events we just
-        // deserialized. If this becomes a problem in practice, we should assign
-        // IDs on the server.
-        var asString = JSON.stringify(traceEvents[i]);
-        if (!this._loadedTraceEvents.has(asString)) {
-          this._loadedTraceEvents.add(asString);
-          data.traceEvents.push(traceEvents[i]);
+    _filterKnownTraceEvents: function(traceEvents) {
+      if (this._loadedTraceEvents.size == 0) {
+        for (let event of traceEvents) {
+          const key = JSON.stringify(event);
+          this._loadedTraceEvents.add(key);
         }
+        return traceEvents;
+      } else {
+        let filteredTraceEvents = [];
+        for (let event of traceEvents) {
+          const key = JSON.stringify(event);
+          if (!this._loadedTraceEvents.has(key)) {
+            this._loadedTraceEvents.add(key);
+            filteredTraceEvents.push(event);
+          }
+        }
+        return filteredTraceEvents;
       }
-      return data;
     },
 
     // Updates the model with data returned by the JSON endpoint.
@@ -502,10 +512,10 @@ dashboard would integrate trace viewer app using iframe.
         this._model = new tr.Model();
         this._loadedTraceEvents = new Set();
       } else {
-        // Delete metadata and displayTimeUnits as otherwise traceviewer
-        // accumulates them.
+        // Delete fields to prevent traceviewer from accumulating them.
         delete data['metadata'];
         delete data['displayTimeUnit'];
+        delete data['tasks'];
       }
 
       // Populate and show "details" selector.
@@ -540,7 +550,7 @@ dashboard would integrate trace viewer app using iframe.
         delete data['details'];
       }
 
-      data = this._filterKnownTraceEvents(data);
+      data.traceEvents = this._filterKnownTraceEvents(data.traceEvents);
       if (data.traceEvents.length > 0) {
         var opt = new tr.importer.ImportOptions();
         opt.shiftWorldToZero = false;
@@ -599,6 +609,16 @@ dashboard would integrate trace viewer app using iframe.
         min: xfm.xViewToWorld(0),
         max: xfm.xViewToWorld(devicePixelWidth),
       };
+    },
+
+    // Returns the resolution (in number of events) given the width of the
+    // trace viewer (in pixels).
+    _resolutionFromViewerWidth(viewerWidth) {
+      const pixelRatio = window.devicePixelRatio || 1;
+      const minEventWidth = 2 * pixelRatio;
+      viewerWidth -= tr.ui.b.constants.HEADING_WIDTH;  // substract row header
+      viewerWidth *= pixelRatio;  // adjust pixel ratio
+      return Math.round(viewerWidth / minEventWidth);
     },
 
     // Builds a base URL for fetching json data. The URL will be assembled with
