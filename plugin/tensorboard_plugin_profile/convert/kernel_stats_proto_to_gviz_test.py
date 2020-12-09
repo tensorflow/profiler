@@ -43,6 +43,7 @@ class MockValues(StrEnum):
   DYNAMIC_SHMEM_BYTES = 32768
   BLOCK_DIM = "32,1,1"
   GRID_DIM = "80,1,1"
+  OCCUPANCY_PCT = 50
   IS_OP_TENSOR_CORE_ELIGIBLE = False
   IS_KERNEL_USING_TENSOR_CORE = False
   OP_NAME = "operation name bar"
@@ -72,6 +73,7 @@ class ProtoToGvizTest(tf.test.TestCase):
           int(x) for x in MockValues.BLOCK_DIM.split(","))
       kernel_report.grid_dim.extend(
           int(x) for x in MockValues.GRID_DIM.split(","))
+      kernel_report.occupancy_pct = float(MockValues.OCCUPANCY_PCT)
       kernel_report.is_op_tensor_core_eligible = \
           "True" == MockValues.IS_OP_TENSOR_CORE_ELIGIBLE
       kernel_report.is_kernel_using_tensor_core = \
@@ -92,8 +94,8 @@ class ProtoToGvizTest(tf.test.TestCase):
 
     self.assertEqual(0, data_table.NumberOfRows(),
                      "Empty table should have 0 rows.")
-    # Kernel stats chart data table has 14 columns.
-    self.assertLen(data_table.columns, 14)
+    # Kernel stats chart data table has this many columns.
+    self.assertLen(data_table.columns, 15)
 
   def test_mock_kernel_stats(self):
     kernel_stats = self.create_mock_kernel_stats()
@@ -105,10 +107,10 @@ class ProtoToGvizTest(tf.test.TestCase):
     # Data is a list of 3 rows.
     self.assertLen(data, 3)
     self.assertEqual(3, data_table.NumberOfRows(), "Simple table has 3 rows.")
-    # Table descriptor is a list of 14 columns.
-    self.assertLen(table_description, 14)
-    # DataTable also has 10 columns.
-    self.assertLen(data_table.columns, 14)
+    # Table descriptor is a list of this many columns.
+    self.assertLen(table_description, 15)
+    # DataTable has this many columns.
+    self.assertLen(data_table.columns, 15)
 
     csv_file = io.StringIO(data_table.ToCsv())
     reader = csv.reader(csv_file)
@@ -127,6 +129,7 @@ class ProtoToGvizTest(tf.test.TestCase):
             int(MockValues.DYNAMIC_SHMEM_BYTES),
             MockValues.BLOCK_DIM,
             MockValues.GRID_DIM,
+            MockValues.OCCUPANCY_PCT,
             MockValues.IS_OP_TENSOR_CORE_ELIGIBLE,
             MockValues.IS_KERNEL_USING_TENSOR_CORE,
             MockValues.OP_NAME,

@@ -8,6 +8,7 @@ declare interface KernelStatsColumn {
   shmemBytes: number;
   blockDim: number;
   gridDim: number;
+  occupancyPct: number;
   isKernelUsingTensorCore: number;
   isOpTensorCoreEligible: number;
   opName: number;
@@ -46,6 +47,7 @@ export class KernelStatsTable implements OnChanges, OnInit {
     shmemBytes: 0,
     blockDim: 0,
     gridDim: 0,
+    occupancyPct: 0,
     isKernelUsingTensorCore: 0,
     isOpTensorCoreEligible: 0,
     opName: 0,
@@ -135,6 +137,9 @@ export class KernelStatsTable implements OnChanges, OnInit {
         case 'grid_dim':
           this.columns.gridDim = i;
           break;
+        case 'occupancy_pct':
+          this.columns.occupancyPct = i;
+          break;
         case 'is_kernel_using_tensor_core':
           this.columns.isKernelUsingTensorCore = i;
           break;
@@ -188,6 +193,7 @@ export class KernelStatsTable implements OnChanges, OnInit {
       this.columns.shmemBytes,
       this.columns.blockDim,
       this.columns.gridDim,
+      this.columns.occupancyPct,
       this.columns.isKernelUsingTensorCore,
       this.columns.isOpTensorCoreEligible,
       this.columns.opName,

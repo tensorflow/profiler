@@ -1471,6 +1471,7 @@ export const DATA_PLUGIN_PROFILE_KERNEL_STATS_DATA = [
       {'id': 'shmem_bytes', 'label': 'Shared Mem bytes', 'type': 'number'},
       {'id': 'block_dim', 'label': 'Block dim', 'type': 'string'},
       {'id': 'grid_dim', 'label': 'Grid dim', 'type': 'string'},
+      {'id': 'occupancy_pct', 'label': 'Occupancy %', 'type': 'number'},
       {
         'id': 'is_op_tensor_core_eligible',
         'label': 'Op is TensorCore eligible',
@@ -1496,17 +1497,17 @@ export const DATA_PLUGIN_PROFILE_KERNEL_STATS_DATA = [
       {
         'c': [
           {'v': 1}, {'v': 'volta_sgemm_64x64_nn'}, {'v': 126}, {'v': 8448},
-          {'v': '64,1,1'}, {'v': '4,1547,1'}, {'v': true}, {'v': false},
-          {'v': 'model_1/dense/MatMul'}, {'v': 520}, {'v': 473852.691},
-          {'v': 911.261}, {'v': 904.191}, {'v': 922.621}
+          {'v': '64,1,1'}, {'v': '4,1547,1'}, {'v': 0}, {'v': true},
+          {'v': false}, {'v': 'model_1/dense/MatMul'}, {'v': 520},
+          {'v': 473852.691}, {'v': 911.261}, {'v': 904.191}, {'v': 922.621}
         ]
       },
       {
         'c': [
           {'v': 2}, {'v': 'volta_sgemm_32x128_nn'}, {'v': 55}, {'v': 16384},
-          {'v': '256,1,1'}, {'v': '4,774,1'}, {'v': false}, {'v': false},
-          {'v': 'model_1/dense_1/MatMul'}, {'v': 520}, {'v': 265960.752},
-          {'v': 511.462}, {'v': 505.852}, {'v': 519.17}
+          {'v': '256,1,1'}, {'v': '4,774,1'}, {'v': 0}, {'v': false},
+          {'v': false}, {'v': 'model_1/dense_1/MatMul'}, {'v': 520},
+          {'v': 265960.752}, {'v': 511.462}, {'v': 505.852}, {'v': 519.17}
         ]
       },
       {
@@ -1515,8 +1516,8 @@ export const DATA_PLUGIN_PROFILE_KERNEL_STATS_DATA = [
             'v': 'void tensorflow::BiasNHWCKernel(int, float const*, float co' +
                 'nst*, flot*, int)'
           },
-          {'v': 20}, {'v': 0}, {'v': '1024,1,1'}, {'v': '80,1,1'}, {'v': false},
-          {'v': true}, {'v': 'model_1/dense/BiasAdd'}, {'v': 520},
+          {'v': 20}, {'v': 0}, {'v': '1024,1,1'}, {'v': '80,1,1'}, {'v': 0},
+          {'v': false}, {'v': true}, {'v': 'model_1/dense/BiasAdd'}, {'v': 520},
           {'v': 153061.981}, {'v': 294.352}, {'v': 289.791}, {'v': 302.082}
         ]
       },
@@ -1531,9 +1532,10 @@ export const DATA_PLUGIN_PROFILE_KERNEL_STATS_DATA = [
                 'ap, 16, Eigen::MakePointer> const> const, Eigen::GpuDevice>,' +
                 ' int)'
           },
-          {'v': 16}, {'v': 0}, {'v': '1024,1,1'}, {'v': '160,1,1'}, {'v': true},
-          {'v': true}, {'v': 'model_1/concatenate/concat'}, {'v': 1040},
-          {'v': 142534.251}, {'v': 137.052}, {'v': 134.142}, {'v': 141.313}
+          {'v': 16}, {'v': 0}, {'v': '1024,1,1'}, {'v': '160,1,1'}, {'v': 0},
+          {'v': true}, {'v': true}, {'v': 'model_1/concatenate/concat'},
+          {'v': 1040}, {'v': 142534.251}, {'v': 137.052}, {'v': 134.142},
+          {'v': 141.313}
         ]
       },
       {
@@ -1549,7 +1551,7 @@ export const DATA_PLUGIN_PROFILE_KERNEL_STATS_DATA = [
                 'ryNullaryOp, Eigen::TensorMap, 16, Eigen::MakePointer> const' +
                 '> const> const> const, Eigen::GpuDevice>, long)'
           },
-          {'v': 26}, {'v': 0}, {'v': '1024,1,1'}, {'v': '160,1,1'},
+          {'v': 26}, {'v': 0}, {'v': '1024,1,1'}, {'v': '160,1,1'}, {'v': 0},
           {'v': false}, {'v': false}, {'v': 'model_1/dense/Relu'}, {'v': 520},
           {'v': 132006.561}, {'v': 253.861}, {'v': 250.881}, {'v': 258.051}
         ]
@@ -1560,10 +1562,10 @@ export const DATA_PLUGIN_PROFILE_KERNEL_STATS_DATA = [
             'v': 'void tensorflow::GatherOpKernel(float const*, int const*, f' +
                 'loat*, long long, long long, long long, long long)'
           },
-          {'v': 22}, {'v': 0}, {'v': '1024,1,1'}, {'v': '80,1,1'}, {'v': true},
-          {'v': true}, {'v': 'model_1/embedding_user/embedding_lookup'},
-          {'v': 520}, {'v': 128865.962}, {'v': 247.821}, {'v': 244.742},
-          {'v': 253.95}
+          {'v': 22}, {'v': 0}, {'v': '1024,1,1'}, {'v': '80,1,1'}, {'v': 0},
+          {'v': true}, {'v': true},
+          {'v': 'model_1/embedding_user/embedding_lookup'}, {'v': 520},
+          {'v': 128865.962}, {'v': 247.821}, {'v': 244.742}, {'v': 253.95}
         ]
       },
       {
@@ -1572,10 +1574,10 @@ export const DATA_PLUGIN_PROFILE_KERNEL_STATS_DATA = [
             'v': 'void tensorflow::GatherOpKernel(float const*, int const*, f' +
                 'loat*, long long, long long, long long, long long)'
           },
-          {'v': 22}, {'v': 0}, {'v': '1024,1,1'}, {'v': '80,1,1'}, {'v': true},
-          {'v': true}, {'v': 'model_1/embedding_item/embedding_lookup'},
-          {'v': 520}, {'v': 124522.141}, {'v': 239.461}, {'v': 236.542},
-          {'v': 247.811}
+          {'v': 22}, {'v': 0}, {'v': '1024,1,1'}, {'v': '80,1,1'}, {'v': 0},
+          {'v': true}, {'v': true},
+          {'v': 'model_1/embedding_item/embedding_lookup'}, {'v': 520},
+          {'v': 124522.141}, {'v': 239.461}, {'v': 236.542}, {'v': 247.811}
         ]
       },
       {
@@ -1584,17 +1586,18 @@ export const DATA_PLUGIN_PROFILE_KERNEL_STATS_DATA = [
             'v': 'void tensorflow::BiasNHWCKernel(int, float const*, float co' +
                 'nst*, float*, int)'
           },
-          {'v': 20}, {'v': 0}, {'v': '1024,1,1'}, {'v': '80,1,1'}, {'v': true},
-          {'v': false}, {'v': 'model_1/dense_1/BiasAdd'}, {'v': 520},
-          {'v': 76828.481}, {'v': 147.751}, {'v': 145.411}, {'v': 155.652}
+          {'v': 20}, {'v': 0}, {'v': '1024,1,1'}, {'v': '80,1,1'}, {'v': 0},
+          {'v': true}, {'v': false}, {'v': 'model_1/dense_1/BiasAdd'},
+          {'v': 520}, {'v': 76828.481}, {'v': 147.751}, {'v': 145.411},
+          {'v': 155.652}
         ]
       },
       {
         'c': [
           {'v': 9}, {'v': 'volta_sgemm_32x128_nn'}, {'v': 55}, {'v': 16384},
-          {'v': '256,1,1'}, {'v': '2,774,1'}, {'v': false}, {'v': false},
-          {'v': 'model_1/dense_2/MatMul'}, {'v': 519}, {'v': 76154.662},
-          {'v': 146.731}, {'v': 144.382}, {'v': 148.481}
+          {'v': '256,1,1'}, {'v': '2,774,1'}, {'v': 0}, {'v': false},
+          {'v': false}, {'v': 'model_1/dense_2/MatMul'}, {'v': 519},
+          {'v': 76154.662}, {'v': 146.731}, {'v': 144.382}, {'v': 148.481}
         ]
       },
       {
@@ -1608,7 +1611,8 @@ export const DATA_PLUGIN_PROFILE_KERNEL_STATS_DATA = [
                 'ap, 16, Eigen::MakePointer> const> const, Eigen::GpuDevice>,' +
                 ' int)'
           },
-          {'v': 16}, {'v': 0}, {'v': '1024,1,1'}, {'v': '160,1,1'},
+          {'v': 16}, {'v': 0}, {'v': '1024,1,1'}, {'v': '160,1,1'}, {'v': 0},
+
           {'v': false}, {'v': true}, {'v': 'model_1/concatenate_1/concat'},
           {'v': 1038}, {'v': 73137.971}, {'v': 70.461}, {'v': 68.611},
           {'v': 72.702}
@@ -1627,7 +1631,7 @@ export const DATA_PLUGIN_PROFILE_KERNEL_STATS_DATA = [
                 'yNullaryOp, Eigen::TensorMap, 16, Eigen::MakePointer> const>' +
                 ' const> const> const, Eigen::GpuDevice>, int)'
           },
-          {'v': 16}, {'v': 0}, {'v': '1024,1,1'}, {'v': '160,1,1'},
+          {'v': 16}, {'v': 0}, {'v': '1024,1,1'}, {'v': '160,1,1'}, {'v': 0},
           {'v': false}, {'v': false},
           {'v': 'model_1/embedding_user_mip/strided_slice'}, {'v': 520},
           {'v': 70798.131}, {'v': 136.151}, {'v': 133.121}, {'v': 148.482}
@@ -1646,7 +1650,7 @@ export const DATA_PLUGIN_PROFILE_KERNEL_STATS_DATA = [
                 'yNullaryOp, Eigen::TensorMap, 16, Eigen::MakePointer> const>' +
                 ' const> const> const, Eigen::GpuDevice>, int)'
           },
-          {'v': 16}, {'v': 0}, {'v': '1024,1,1'}, {'v': '160,1,1'},
+          {'v': 16}, {'v': 0}, {'v': '1024,1,1'}, {'v': '160,1,1'}, {'v': 0},
           {'v': false}, {'v': false},
           {'v': 'model_1/embedding_item_mip/strided_slice'}, {'v': 520},
           {'v': 70783.822}, {'v': 136.121}, {'v': 133.121}, {'v': 149.502}
