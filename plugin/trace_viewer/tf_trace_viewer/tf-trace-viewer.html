@@ -191,6 +191,7 @@ dashboard would integrate trace viewer app using iframe.
       _dirty: {type: Boolean, value: false},
       _model: Object,
       _resolution: {type: Number, value: 1000},
+      _dataRegenerated: {type: Boolean, value: false},
     },
 
     ready: function() {
@@ -236,8 +237,6 @@ dashboard would integrate trace viewer app using iframe.
             this._isStreaming = components[1] === 'true';
           } else if (components[0] == 'hosts_data_url') {
             this.hostsDataUrl = decodeURIComponent(components[1]);
-          } else if (components[0] == 'resolution') {
-            this._resolution = Number(components[1]) / tf_component_traceviewer.ZOOM_RATIO;
           }
         }
       }
@@ -446,10 +445,11 @@ dashboard would integrate trace viewer app using iframe.
       // resolution if appropriate.
       var requestURL = this._buildBaseURL();
       var ZOOM_RATIO = tf_component_traceviewer.ZOOM_RATIO;
-      requestURL.searchParams.set(
-        'resolution',
-        requestURL.searchParams.has("selected_group_ids") ?
-            0 : this._resolution * ZOOM_RATIO);
+      if (requestURL.searchParams.has('selected_group_ids')) {
+        requestURL.searchParams.set('resolution', 0);
+      } else if (!requestURL.searchParams.has('resolution')) {
+        requestURL.searchParams.set('resolution', this._resolution * ZOOM_RATIO);
+      }
       if (requestedRange != null) {
         requestURL.searchParams.set('start_time_ms', requestedRange.min);
         requestURL.searchParams.set('end_time_ms', requestedRange.max);
@@ -635,6 +635,13 @@ dashboard would integrate trace viewer app using iframe.
       for (let i = 0; i < checkboxDivs.length; ++i) {
         const checkbox = checkboxDivs[i].getElementsByTagName('input')[0];
         requestURL.searchParams.set(checkbox.name, checkbox.checked);
+      }
+      if (requestURL.searchParams.has('use_saved_result')) {
+        if (this._dataRegenerated) {
+          requestURL.searchParams.delete('use_saved_result');
+        } else {
+          this._dataRegenerated = true;
+        }
       }
       return requestURL;
     },
