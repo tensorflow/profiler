@@ -20,6 +20,15 @@ class DataTableForTesting {
 
     return -1;
   }
+  getColumnLabel(columnIndex: number): string {
+    if (!this.data || !this.data.cols) {
+      return '';
+    }
+    if (columnIndex >= this.data.cols.length) {
+      return '';
+    }
+    return this.data.cols[columnIndex].label as string;
+  }
   getDistinctValues() {
     return [];
   }
@@ -40,6 +49,16 @@ class DataTableForTesting {
   sort() {}
 }
 
+class DataViewForTesting {
+  constructor(public table: DataTableForTesting) {}
+  getNumberOfColumns() {
+    return this.table.getNumberOfColumns();
+  }
+  getColumnLabel(columnIndex: number) {
+    return this.table.getColumnLabel(columnIndex);
+  }
+}
+
 /** The GViz object for testing */
 export const GVIZ_FOR_TESTING = {
   charts: {
@@ -57,6 +76,9 @@ export const GVIZ_FOR_TESTING = {
     },
     DataTable: (data: SimpleDataTableOrNull = null) => {
       return new DataTableForTesting(data);
+    },
+    DataView: (table: DataTableForTesting) => {
+      return new DataViewForTesting(table);
     },
     Table: () => {},
   },
