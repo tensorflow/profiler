@@ -11,34 +11,42 @@
         </div>
       </div>
       <div class="info-content">
-        <div class="info" [hidden]="!utilization">
+        <div class="info" [hidden]="!flopsUtilization">
           <div class="title">FLOPS utilization:</div>
           <div class="bar-container">
             <div
               class="bar"
-              [style.width]="utilization"
+              [style.width]="flopsUtilization"
               [style.background-color]="flopsColor">
-              &nbsp;{{utilization}}
+              &nbsp;{{flopsUtilization}}
             </div>
           </div>
         </div>
-        <div class="info" [hidden]="!memoryUtilization">
+        <div class="info" [hidden]="!memoryBandwidthUtilization">
           <div class="title">Memory bandwidth utilization:</div>
           <div class="bar-container">
             <div
               class="bar"
-              [style.width]="memoryUtilization"
+              [style.width]="memoryBandwidthUtilization"
               [style.background-color]="bwColor">
-              &nbsp;{{memoryUtilization}}
+              &nbsp;{{memoryBandwidthUtilization}}
             </div>
           </div>
         </div>
+        <div class="info" [hidden]="!flopsRate">
+          <div class="title">FLOP rate:</div>
+          <code class="expression">{{flopsRate}}</code>
+        </div>
+        <div class="info" [hidden]="!memoryBandwidth">
+          <div class="title">Memory bandwidth:</div>
+          <code class="expression">{{memoryBandwidth}}</code>
+        </div>
         <div class="info" [hidden]="!expression">
-          <div class="title">XLA Expression:</div>
+          <div class="title">XLA expression:</div>
           <code class="expression">{{expression}}</code>
         </div>
         <div class="info" [hidden]="!provenance">
-          <div class="title">TensorFlow Name:</div>
+          <div class="title">Long Op Name:</div>
           <code class="expression">{{provenance}}</code>
         </div>
         <div class="info" [hidden]="!fused">

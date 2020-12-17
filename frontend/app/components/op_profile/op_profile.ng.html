@@ -2,11 +2,11 @@
   <div class="mat-headline">
     <div>
       Overall {{deviceType}} FLOPS utilization is
-      <span [style.color]="data.flopsColor">{{data.utilizationPercent}}</span>
+      <span [style.color]="data.flopsColor">{{data.flopsUtilizationPercent}}</span>
     </div>
     <div>
       Memory bandwidth utilization is
-      <span [style.color]="data.bwColor">{{data.memoryUtilizationPercent}}</span>
+      <span [style.color]="data.bwColor">{{data.memoryBandwidthUtilizationPercent}}</span>
     </div>
   </div>
   <div class="description">
@@ -55,7 +55,7 @@
         <mat-icon
                   class="tooltip-icon"
                   matTooltip="Wasted time is defined by RuntimeFraction *
-                              (1 - max(FlopsUtilization, MemoryUtilization))."
+                              (1 - max(FlopsUtilization, MemoryBandwidthUtilization))."
                   matTooltipPosition="above">
               info
         </mat-icon>

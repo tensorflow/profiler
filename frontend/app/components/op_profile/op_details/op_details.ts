@@ -16,9 +16,11 @@ export class OpDetails {
   color: string = '';
   name: string = '';
   subheader: string = '';
-  utilization: string = '';
+  flopsRate: string = '';
+  flopsUtilization: string = '';
   flopsColor: string = '';
-  memoryUtilization: string = '';
+  memoryBandwidth: string = '';
+  memoryBandwidthUtilization: string = '';
   bwColor: string = '';
   expression: string = '';
   provenance: string = '';
@@ -80,24 +82,42 @@ export class OpDetails {
       return;
     }
     this.color =
-        utils.flameColor(utils.utilization(this.node), 0.7, 1, Math.sqrt);
+        utils.flameColor(utils.flopsUtilization(this.node), 0.7, 1, Math.sqrt);
     this.name = this.node.name || '';
     this.subheader = this.getSubheader();
 
-    if (utils.hasFlops(this.node)) {
-      const utilization = utils.utilization(this.node);
-      this.utilization = utils.percent(utilization);
-      this.flopsColor = utils.flopsColor(utilization);
+    if (utils.hasFlopsUtilization(this.node)) {
+      const flopsUtilization = utils.flopsUtilization(this.node);
+      this.flopsUtilization = utils.percent(flopsUtilization);
+      this.flopsColor = utils.flopsColor(flopsUtilization);
     } else {
-      this.utilization = '';
+      this.flopsUtilization = '';
     }
 
-    if (utils.hasMemoryUtilization(this.node)) {
-      const utilization = utils.memoryUtilization(this.node);
-      this.memoryUtilization = utils.percent(utilization);
+    const flopsRate = utils.flopsRate(this.node);
+    // Flops rate shouldn't be higher than 1EFLOPS.
+    if (isNaN(flopsRate) || flopsRate > 1E18) {
+      this.flopsRate = '';
+    } else {
+      this.flopsRate = utils.humanReadableText(
+          flopsRate, {si: true, dp: 2, suffix: 'FLOP/s'});
+    }
+
+    if (utils.hasMemoryBandwidthUtilization(this.node)) {
+      const utilization = utils.memoryBandwidthUtilization(this.node);
+      this.memoryBandwidthUtilization = utils.percent(utilization);
       this.bwColor = utils.bwColor(utilization);
     } else {
-      this.memoryUtilization = '';
+      this.memoryBandwidthUtilization = '';
+    }
+
+    const memoryBW = utils.memoryBandwidth(this.node);
+    // Memory bandwidth shouldn't be higher than 10TiB/s.
+    if (isNaN(memoryBW) || memoryBW > 1E13) {
+      this.memoryBandwidth = '';
+    } else {
+      this.memoryBandwidth =
+          utils.humanReadableText(memoryBW, {si: true, dp: 2, suffix: 'B/s'});
     }
 
     if (this.node.xla && this.node.xla.expression) {

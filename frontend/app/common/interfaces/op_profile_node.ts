@@ -8,4 +8,7 @@ declare interface Metrics {
   time?: number;
   flops?: number;
   memoryBandwidth?: number;
+  rawTime?: number;
+  rawFlops?: number;
+  rawBytesAccessed?: number;
 }

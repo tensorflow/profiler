@@ -5,23 +5,23 @@ import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 export class OpProfileData {
   bwColor?: string;
   flopsColor?: string;
-  memoryUtilizationPercent?: string;
-  utilizationPercent?: string;
+  memoryBandwidthUtilizationPercent?: string;
+  flopsUtilizationPercent?: string;
 
   update(node?: Node) {
     if (node) {
-      let utilization = utils.utilization(node);
+      let utilization = utils.flopsUtilization(node);
       this.flopsColor = utils.flopsColor(utilization);
-      this.utilizationPercent = utils.percent(utilization);
+      this.flopsUtilizationPercent = utils.percent(utilization);
 
-      utilization = utils.memoryUtilization(node);
+      utilization = utils.memoryBandwidthUtilization(node);
       this.bwColor = utils.bwColor(utilization);
-      this.memoryUtilizationPercent = utils.percent(utilization);
+      this.memoryBandwidthUtilizationPercent = utils.percent(utilization);
     } else {
       this.bwColor = undefined;
       this.flopsColor = undefined;
-      this.memoryUtilizationPercent = undefined;
-      this.utilizationPercent = undefined;
+      this.memoryBandwidthUtilizationPercent = undefined;
+      this.flopsUtilizationPercent = undefined;
     }
   }
 }

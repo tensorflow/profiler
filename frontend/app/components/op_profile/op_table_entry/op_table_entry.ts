@@ -43,7 +43,7 @@ export class OpTableEntry implements OnChanges {
   percent: string = '';
   provenance: string = '';
   timeWasted: string = '';
-  utilization: string = '';
+  flopsUtilization: string = '';
   numLeftOut: number = 0;
 
   ngOnChanges(changes: SimpleChanges) {
@@ -65,15 +65,15 @@ export class OpTableEntry implements OnChanges {
       this.percent = '';
     }
     this.flameColor =
-        utils.flameColor(utils.utilization(this.node), 0.7, 1, Math.sqrt);
-    this.hideFlopsUtilization = !utils.hasFlops(this.node);
+        utils.flameColor(utils.flopsUtilization(this.node), 0.7, 1, Math.sqrt);
+    this.hideFlopsUtilization = !utils.hasFlopsUtilization(this.node);
     this.name = (this.node && this.node.name) ? this.node.name : '';
     this.offset = this.level.toString() + 'em';
     this.provenance = (this.node && this.node.xla && this.node.xla.provenance) ?
         this.node.xla.provenance.replace(/^.*(:|\/)/, '') :
         '';
     this.timeWasted = utils.percent(utils.timeWasted(this.node));
-    this.utilization = utils.percent(utils.utilization(this.node));
+    this.flopsUtilization = utils.percent(utils.flopsUtilization(this.node));
   }
 
   private get90ChildrenIndex() {

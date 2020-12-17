@@ -85,6 +85,25 @@ export function bytesToMiB(numBytes: number): number {
 }
 
 /**
+ * Format the number as human-readable text.
+ * @param num Number to convert.
+ * @param si True to use metric (SI) units, aka powers of 1000. False to use
+ *           binary (IEC), aka powers of 1024.
+ * @param dp Number of decimal places to display.
+ * @param suffix Text to append to the string as common unit, e.g. FLOP/s.
+ */
+export function humanReadableText(
+    num: number, {si = false, dp = 2, suffix = 'B'} = {}): string {
+  const base = si ? 1000 : 1024;
+  const units = si ? ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'] :
+                     ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi'];
+  const i = num === 0 ? 0 : Math.floor(Math.log(num) / Math.log(base));
+  return (Number(num / Math.pow(base, i)).toFixed(dp) + ' ' + units[i] +
+          suffix) ||
+      '';
+}
+
+/**
  * Returns a color for chart item by index.
  */
 export function getChartItemColorByIndex(index: number): string {
@@ -149,9 +168,9 @@ export function bwColor(fraction: number): string {
 }
 
 /**
- * Computes an utilization for fused operations.
+ * Computes the utilization for operations.
  */
-export function utilization(node: OpProfileNode): number {
+export function flopsUtilization(node: OpProfileNode): number {
   // NaN indicates undefined utilization for fused operations (we can't
   // measure performance inside a fusion). It could also indicate operations
   // with zero time, but they currently don't appear in the profile.
@@ -160,26 +179,49 @@ export function utilization(node: OpProfileNode): number {
 }
 
 /**
- * Computes a memory utilization.
+ * Computes the flops rate for operations.
  */
-export function memoryUtilization(node: OpProfileNode): number {
-  // NaN indicates undefined memory utilization (th profile was collected
-  // from older versions of profiler).
+export function flopsRate(node: OpProfileNode): number {
+  // NaN indicates undefined flops for fused operations (we can't
+  // measure performance inside a fusion). It could also indicate operations
+  // with zero time, but they currently don't appear in the profile.
+  if (!node || !node.metrics || !node.metrics.rawTime) return NaN;
+  // The unit of rawTime is picoseconds.
+  return (node.metrics.rawFlops || 0) * 1E12 / node.metrics.rawTime;
+}
+
+/**
+ * Computes a memory bandwidth utilization.
+ */
+export function memoryBandwidthUtilization(node: OpProfileNode): number {
+  // NaN indicates undefined memory bandwidth utilization (the profile was
+  // collected from older versions of profiler).
   if (!node || !node.metrics || !node.metrics.memoryBandwidth) return NaN;
   return node.metrics.memoryBandwidth;
 }
 
 /**
- * Returns whether a node has flops.
+ * Computes the memory bandwidth for operations.
  */
-export function hasFlops(node: OpProfileNode): boolean {
+export function memoryBandwidth(node: OpProfileNode): number {
+  // NaN indicates undefined memory utilization (the profile was collected
+  // from older versions of profiler).
+  if (!node || !node.metrics || !node.metrics.rawTime) return NaN;
+  // The unit of rawTime is picoseconds.
+  return (node.metrics.rawBytesAccessed || 0) * 1E12 / node.metrics.rawTime;
+}
+
+/**
+ * Returns whether a node has flops utilization.
+ */
+export function hasFlopsUtilization(node: OpProfileNode): boolean {
   return !!node && !!node.metrics && !!node.metrics.time;
 }
 
 /**
- * Returns whether a node has a memory utilization.
+ * Returns whether a node has memory bandwidth utilization.
  */
-export function hasMemoryUtilization(node: OpProfileNode): boolean {
+export function hasMemoryBandwidthUtilization(node: OpProfileNode): boolean {
   return !!node && !!node.metrics && !!node.metrics.memoryBandwidth;
 }
 
@@ -202,7 +244,7 @@ export function timeWasted(node: OpProfileNode): number {
   if (!node || !node.metrics) return NaN;
   return (
       (node.metrics.time || 0) *
-      (1 - Math.max(utilization(node), memoryUtilization(node))));
+      (1 - Math.max(flopsUtilization(node), memoryBandwidthUtilization(node))));
 }
 
 /**
