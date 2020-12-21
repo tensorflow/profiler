@@ -33,7 +33,7 @@
             <b>Memory Capacity</b>
           </td>
           <td class="item-value">
-            <div>{{ memoryCapacityGB }} GiBs</div>
+            <div>{{ memoryCapacity }}</div>
           </td>
         </tr>
       </table>
@@ -46,7 +46,7 @@
             <div class="description">high water mark in lifetime</div>
           </td>
           <td class="item-value">
-            <div>{{ peakHeapUsageLifetimeGB }} GiBs</div>
+            <div>{{ peakHeapUsageLifetime }}</div>
           </td>
         </tr>
       </table>
@@ -59,16 +59,16 @@
             <div class="description">stack + heap, within profiling window</div>
           </td>
           <td class="item-value">
-            <div>{{ peakMemUsageProfileGB }} GiBs</div>
+            <div>{{ peakMemUsageProfile }} </div>
           </td>
         </tr>
       </table>
     </div>
     <ul>
       <li class="primary-content">Timestamp: {{ timestampAtPeakMs }} ms</li>
-      <li class="primary-content">Stack Reservation: {{ stackAtPeakGB }} GiBs</li>
-      <li class="primary-content">Heap Allocation: {{ heapAtPeakGB }} GiBs</li>
-      <li class="primary-content">Free Memory: {{ freeAtPeakGB }} GiBs</li>
+      <li class="primary-content">Stack Reservation: {{ stackAtPeak }}</li>
+      <li class="primary-content">Heap Allocation: {{ heapAtPeak }} </li>
+      <li class="primary-content">Free Memory: {{ freeAtPeak }} </li>
       <li class="primary-content">Fragmentation: {{ fragmentationAtPeakPct }}</li>
     </ul>
   </mat-card-content>
