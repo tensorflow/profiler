@@ -13,6 +13,7 @@ ng_module(
         "@npm//@angular/core",
         "@npm//@angular/router",
         "@npm//@ngrx/store",
+        "@npm//rxjs",
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/store",

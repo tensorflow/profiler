@@ -1,9 +1,11 @@
-import {Component} from '@angular/core';
+import {Component, OnDestroy} from '@angular/core';
 import {Store} from '@ngrx/store';
 
 import {HeapObject} from 'org_xprof/frontend/app/common/interfaces/heap_object';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {getActiveHeapObjectState} from 'org_xprof/frontend/app/store/selectors';
+import {ReplaySubject} from 'rxjs';
+import {takeUntil} from 'rxjs/operators';
 
 /** A buffer details view component. */
 @Component({
@@ -11,7 +13,10 @@ import {getActiveHeapObjectState} from 'org_xprof/frontend/app/store/selectors';
   templateUrl: './buffer_details.ng.html',
   styleUrls: ['./buffer_details.scss']
 })
-export class BufferDetails {
+export class BufferDetails implements OnDestroy {
+  /** Handles on-destroy Subject, used to unsubscribe. */
+  private readonly destroyed = new ReplaySubject<void>(1);
+
   heapObject: HeapObject|null = null;
   instructionName?: string;
   opcode?: string;
@@ -26,6 +31,7 @@ export class BufferDetails {
 
   constructor(private readonly store: Store<{}>) {
     this.store.select(getActiveHeapObjectState)
+        .pipe(takeUntil(this.destroyed))
         .subscribe((heapObject: HeapObject|null) => {
           this.update(heapObject);
         });
@@ -61,5 +67,11 @@ export class BufferDetails {
       this.expansion = '';
       this.color = 'rgb(192,192,192)';
     }
+  }
+
+  ngOnDestroy() {
+    // Unsubscribes all pending subscriptions.
+    this.destroyed.next();
+    this.destroyed.complete();
   }
 }

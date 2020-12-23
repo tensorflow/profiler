@@ -17,6 +17,7 @@ ng_module(
         "@npm//@angular/core",
         "@npm//@angular/router",
         "@npm//@ngrx/store",
+        "@npm//rxjs",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/components/memory_viewer/memory_usage",
         "@org_xprof//frontend/app/components/memory_viewer/memory_viewer_main",

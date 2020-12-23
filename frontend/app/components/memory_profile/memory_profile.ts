@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, OnDestroy} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {Store} from '@ngrx/store';
 import {MemoryProfileProtoOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
@@ -6,6 +6,8 @@ import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigati
 import {MemoryProfileBase} from 'org_xprof/frontend/app/components/memory_profile/memory_profile_base';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
 import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
+import {ReplaySubject} from 'rxjs';
+import {takeUntil} from 'rxjs/operators';
 
 /** A Memory Profile component. */
 @Component({
@@ -13,7 +15,10 @@ import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
   templateUrl: './memory_profile.ng.html',
   styleUrls: ['./memory_profile.css']
 })
-export class MemoryProfile extends MemoryProfileBase {
+export class MemoryProfile extends MemoryProfileBase implements OnDestroy {
+  /** Handles on-destroy Subject, used to unsubscribe. */
+  private readonly destroyed = new ReplaySubject<void>(1);
+
   run = '';
   tag = '';
   host = '';
@@ -22,7 +27,7 @@ export class MemoryProfile extends MemoryProfileBase {
       route: ActivatedRoute, private readonly dataService: DataService,
       private readonly store: Store<{}>) {
     super();
-    route.params.subscribe(params => {
+    route.params.pipe(takeUntil(this.destroyed)).subscribe((params) => {
       this.update(params as NavigationEvent);
     });
   }
@@ -40,6 +45,7 @@ export class MemoryProfile extends MemoryProfileBase {
     }));
 
     this.dataService.getData(this.run, this.tag, this.host)
+        .pipe(takeUntil(this.destroyed))
         .subscribe(data => {
           this.store.dispatch(setLoadingStateAction({
             loadingState: {
@@ -49,5 +55,11 @@ export class MemoryProfile extends MemoryProfileBase {
           }));
           this.parseData(data as MemoryProfileProtoOrNull);
         });
+  }
+
+  ngOnDestroy() {
+    // Unsubscribes all pending subscriptions.
+    this.destroyed.next();
+    this.destroyed.complete();
   }
 }
