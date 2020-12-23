@@ -1,9 +1,11 @@
 import {PlatformLocation} from '@angular/common';
 import {HttpParams} from '@angular/common/http';
-import {Component} from '@angular/core';
+import {Component, OnDestroy} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {API_PREFIX, DATA_API, PLUGIN_NAME} from 'org_xprof/frontend/app/common/constants/constants';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
+import {ReplaySubject} from 'rxjs';
+import {takeUntil} from 'rxjs/operators';
 
 /** A trace viewer component. */
 @Component({
@@ -11,7 +13,10 @@ import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigati
   templateUrl: './trace_viewer.ng.html',
   styleUrls: ['./trace_viewer.css']
 })
-export class TraceViewer {
+export class TraceViewer implements OnDestroy {
+  /** Handles on-destroy Subject, used to unsubscribe. */
+  private readonly destroyed = new ReplaySubject<void>(1);
+
   url = '';
   pathPrefix = '';
 
@@ -20,7 +25,7 @@ export class TraceViewer {
       this.pathPrefix =
           String(platformLocation.pathname).split(API_PREFIX + PLUGIN_NAME)[0];
     }
-    route.params.subscribe(params => {
+    route.params.pipe(takeUntil(this.destroyed)).subscribe((params) => {
       this.update(params as NavigationEvent);
     });
   }
@@ -36,5 +41,11 @@ export class TraceViewer {
         '/trace_viewer_index.html' +
         '?is_streaming=' + isStreaming.toString() +
         '&trace_data_url=' + encodeURIComponent(traceDataUrl);
+  }
+
+  ngOnDestroy() {
+    // Unsubscribes all pending subscriptions.
+    this.destroyed.next();
+    this.destroyed.complete();
   }
 }

@@ -1,4 +1,4 @@
-import {Component, EventEmitter, Input, Output} from '@angular/core';
+import {Component, EventEmitter, Input, OnDestroy, Output} from '@angular/core';
 import {Store} from '@ngrx/store';
 import {DEFAULT_HOST} from 'org_xprof/frontend/app/common/constants/constants';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
@@ -6,6 +6,8 @@ import {Tool} from 'org_xprof/frontend/app/common/interfaces/tool';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
 import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
 import {getCurrentTool} from 'org_xprof/frontend/app/store/selectors';
+import {ReplaySubject} from 'rxjs';
+import {takeUntil} from 'rxjs/operators';
 
 /** A side navigation component. */
 @Component({
@@ -13,7 +15,7 @@ import {getCurrentTool} from 'org_xprof/frontend/app/store/selectors';
   templateUrl: './sidenav.ng.html',
   styleUrls: ['./sidenav.scss']
 })
-export class SideNav {
+export class SideNav implements OnDestroy {
   /** The tool datasets. */
   @Input()
   set datasets(tools: Tool[]|null) {
@@ -28,6 +30,9 @@ export class SideNav {
   /** Navigation Update Event */
   @Output() update = new EventEmitter<NavigationEvent>();
 
+  /** Handles on-destroy Subject, used to unsubscribe. */
+  private readonly destroyed = new ReplaySubject<void>(1);
+
   private tools: Tool[] = [];
 
   runs: string[] = [];
@@ -40,9 +45,11 @@ export class SideNav {
   constructor(
       private readonly dataService: DataService,
       private readonly store: Store<{}>) {
-    store.select(getCurrentTool).subscribe((currentTool: string) => {
-      this.updateTags(currentTool);
-    });
+    store.select(getCurrentTool)
+        .pipe(takeUntil(this.destroyed))
+        .subscribe((currentTool: string) => {
+          this.updateTags(currentTool);
+        });
   }
 
   getDisplayTagName(tag: string): string {
@@ -91,25 +98,27 @@ export class SideNav {
     const tag = this.selectedTag;
     this.hosts = [];
     this.selectedHost = '';
-    this.dataService.getHosts(run, tag).subscribe(response => {
-      let hosts = (response as string[]) || [''];
-      if (hosts.length === 0) {
-        hosts.push('');
-      }
-      hosts = hosts.map(host => {
-        if (host === null) {
-          return '';
-        } else if (host === '') {
-          return DEFAULT_HOST;
-        }
-        return host;
-      });
-      if (run === this.selectedRun && tag === this.selectedTag) {
-        this.hosts = hosts;
-        this.selectedHost = this.hosts[0];
-        this.emitUpdateEvent();
-      }
-    });
+    this.dataService.getHosts(run, tag)
+        .pipe(takeUntil(this.destroyed))
+        .subscribe((response) => {
+          let hosts = (response as string[]) || [''];
+          if (hosts.length === 0) {
+            hosts.push('');
+          }
+          hosts = hosts.map(host => {
+            if (host === null) {
+              return '';
+            } else if (host === '') {
+              return DEFAULT_HOST;
+            }
+            return host;
+          });
+          if (run === this.selectedRun && tag === this.selectedTag) {
+            this.hosts = hosts;
+            this.selectedHost = this.hosts[0];
+            this.emitUpdateEvent();
+          }
+        });
   }
 
   emitUpdateEvent() {
@@ -125,5 +134,11 @@ export class SideNav {
       tag: this.selectedTag,
       host: this.selectedHost === DEFAULT_HOST ? '' : this.selectedHost
     });
+  }
+
+  ngOnDestroy() {
+    // Unsubscribes all pending subscriptions.
+    this.destroyed.next();
+    this.destroyed.complete();
   }
 }

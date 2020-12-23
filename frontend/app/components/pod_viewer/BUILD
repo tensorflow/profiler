@@ -20,6 +20,7 @@ ng_module(
         "@org_xprof//frontend/app/common/angular:angular_material_slider",
         "@npm//@angular/router",
         "@npm//@ngrx/store",
+        "@npm//rxjs",
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/utils",

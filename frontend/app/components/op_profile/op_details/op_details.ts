@@ -1,9 +1,11 @@
-import {Component} from '@angular/core';
+import {Component, OnDestroy} from '@angular/core';
 import {Store} from '@ngrx/store';
 
 import {Node} from 'org_xprof/frontend/app/common/interfaces/op_profile.proto';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {getActiveOpProfileNodeState} from 'org_xprof/frontend/app/store/selectors';
+import {ReplaySubject} from 'rxjs';
+import {takeUntil} from 'rxjs/operators';
 
 /** An op details view component. */
 @Component({
@@ -12,6 +14,9 @@ import {getActiveOpProfileNodeState} from 'org_xprof/frontend/app/store/selector
   styleUrls: ['./op_details.scss']
 })
 export class OpDetails {
+  /** Handles on-destroy Subject, used to unsubscribe. */
+  private readonly destroyed = new ReplaySubject<void>(1);
+
   node?: Node;
   color: string = '';
   name: string = '';
@@ -31,6 +36,7 @@ export class OpDetails {
 
   constructor(private readonly store: Store<{}>) {
     this.store.select(getActiveOpProfileNodeState)
+        .pipe(takeUntil(this.destroyed))
         .subscribe((node: Node|null) => {
           this.update(node);
         });
@@ -140,5 +146,11 @@ export class OpDetails {
     if (this.node.xla && this.node.xla.layout) {
       this.dimensions = this.node.xla.layout.dimensions || [];
     }
+  }
+
+  ngOnDestroy() {
+    // Unsubscribes all pending subscriptions.
+    this.destroyed.next();
+    this.destroyed.complete();
   }
 }

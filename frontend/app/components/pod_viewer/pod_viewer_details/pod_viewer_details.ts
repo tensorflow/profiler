@@ -1,9 +1,11 @@
-import {Component} from '@angular/core';
+import {Component, OnDestroy} from '@angular/core';
 import {Store} from '@ngrx/store';
 
 import {AllReduceOpInfo, ChannelInfo, PodStatsRecord} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {getActivePodViewerInfoState} from 'org_xprof/frontend/app/store/selectors';
+import {ReplaySubject} from 'rxjs';
+import {takeUntil} from 'rxjs/operators';
 
 interface DetailInfo {
   title: string;
@@ -16,7 +18,10 @@ interface DetailInfo {
   templateUrl: './pod_viewer_details.ng.html',
   styleUrls: ['./pod_viewer_details.scss']
 })
-export class PodViewerDetails {
+export class PodViewerDetails implements OnDestroy {
+  /** Handles on-destroy Subject, used to unsubscribe. */
+  private readonly destroyed = new ReplaySubject<void>(1);
+
   info?: AllReduceOpInfo|ChannelInfo|PodStatsRecord;
   name = '';
   details: DetailInfo[] = [];
@@ -26,6 +31,7 @@ export class PodViewerDetails {
 
   constructor(private readonly store: Store<{}>) {
     this.store.select(getActivePodViewerInfoState)
+        .pipe(takeUntil(this.destroyed))
         .subscribe((info: AllReduceOpInfo|ChannelInfo|PodStatsRecord|null) => {
           this.update(info);
         });
@@ -120,5 +126,11 @@ export class PodViewerDetails {
     } else {
       this.updateAllReduceOpInfo(info as AllReduceOpInfo);
     }
+  }
+
+  ngOnDestroy() {
+    // Unsubscribes all pending subscriptions.
+    this.destroyed.next();
+    this.destroyed.complete();
   }
 }

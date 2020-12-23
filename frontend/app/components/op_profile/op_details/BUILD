@@ -18,6 +18,7 @@ ng_module(
         "@npm//@angular/core",
         "@org_xprof//frontend/app/common/angular:angular_material_card",
         "@npm//@ngrx/store",
+        "@npm//rxjs",
         "@org_xprof//frontend/app/common/interfaces:op_profile_proto_defs",
         "@org_xprof//frontend/app/common/utils",
         "@org_xprof//frontend/app/store",

@@ -1,9 +1,11 @@
-import {Component, ElementRef, EventEmitter, Input, OnChanges, Output} from '@angular/core';
+import {Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output} from '@angular/core';
 import {Store} from '@ngrx/store';
 import {KELLY_COLORS} from 'org_xprof/frontend/app/common/constants/constants';
 import {AllReduceOpInfo, ChannelInfo, PodStatsRecord, PodViewerTopology, StepBreakdownEvent} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {getActivePodViewerInfoState} from 'org_xprof/frontend/app/store/selectors';
+import {ReplaySubject} from 'rxjs';
+import {takeUntil} from 'rxjs/operators';
 
 interface ColorInfo {
   color: string;
@@ -45,7 +47,7 @@ const NODE_COLORS = [
   templateUrl: './topology_graph.ng.html',
   styleUrls: ['./topology_graph.scss']
 })
-export class TopologyGraph implements OnChanges {
+export class TopologyGraph implements OnChanges, OnDestroy {
   /** The channel dababase. */
   @Input() channelDb?: ChannelInfo[];
 
@@ -67,6 +69,9 @@ export class TopologyGraph implements OnChanges {
 
   /** The event when the selection of the channel is changed. */
   @Output() selected = new EventEmitter<number>();
+
+  /** Handles on-destroy Subject, used to unsubscribe. */
+  private readonly destroyed = new ReplaySubject<void>(1);
 
   hosts: ElementInfo[] = [];
   labels: ElementInfo[] = [];
@@ -100,9 +105,11 @@ export class TopologyGraph implements OnChanges {
   constructor(
       private readonly elRef: ElementRef, private readonly store: Store<{}>) {
     this.createColorInfos();
-    this.store.select(getActivePodViewerInfoState).subscribe((info) => {
-      this.updateReplicaGroupColoring(info as AllReduceOpInfo);
-    });
+    this.store.select(getActivePodViewerInfoState)
+        .pipe(takeUntil(this.destroyed))
+        .subscribe((info) => {
+          this.updateReplicaGroupColoring(info as AllReduceOpInfo);
+        });
   }
 
   ngOnChanges() {
@@ -503,5 +510,11 @@ export class TopologyGraph implements OnChanges {
     this.updateNodes();
     this.selectMetric(0, '');
     this.updateChannels();
+  }
+
+  ngOnDestroy() {
+    // Unsubscribes all pending subscriptions.
+    this.destroyed.next();
+    this.destroyed.complete();
   }
 }

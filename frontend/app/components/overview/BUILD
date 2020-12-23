@@ -21,6 +21,7 @@ ng_module(
         "@npm//@angular/router",
         "@org_xprof//frontend/third_party/google_visualization",
         "@npm//@ngrx/store",
+        "@npm//rxjs",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/utils",
         "@org_xprof//frontend/app/components/diagnostics_view",

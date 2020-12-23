@@ -18,6 +18,7 @@ ng_module(
         "@org_xprof//frontend/app/common/angular:angular_common_http",
         "@npm//@angular/core",
         "@npm//@angular/router",
+        "@npm//rxjs",
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/pipes",

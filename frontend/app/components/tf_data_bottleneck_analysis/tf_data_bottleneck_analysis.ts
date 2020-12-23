@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, OnDestroy} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {Store} from '@ngrx/store';
 import {SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
@@ -6,6 +6,8 @@ import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigati
 import {Dashboard} from 'org_xprof/frontend/app/components/chart/dashboard/dashboard';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
 import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
+import {ReplaySubject} from 'rxjs';
+import {takeUntil} from 'rxjs/operators';
 
 const EVENT_DATA_INDEX = 0;
 const SUMMARY_DATA_INDEX = 1;
@@ -28,7 +30,10 @@ const TRUE_STR = 'true';
   templateUrl: './tf_data_bottleneck_analysis.ng.html',
   styleUrls: ['./tf_data_bottleneck_analysis.scss']
 })
-export class TfDataBottleneckAnalysis extends Dashboard {
+export class TfDataBottleneckAnalysis extends Dashboard implements OnDestroy {
+  /** Handles on-destroy Subject, used to unsubscribe. */
+  private readonly destroyed = new ReplaySubject<void>(1);
+
   isInputBound = false;
   summaryMessage: string|undefined;
 
@@ -42,7 +47,7 @@ export class TfDataBottleneckAnalysis extends Dashboard {
       route: ActivatedRoute, private readonly dataService: DataService,
       private readonly store: Store<{}>) {
     super();
-    route.params.subscribe(params => {
+    route.params.pipe(takeUntil(this.destroyed)).subscribe((params) => {
       this.update(params as NavigationEvent);
     });
   }
@@ -80,7 +85,8 @@ export class TfDataBottleneckAnalysis extends Dashboard {
         .getData(
             event.run || '', event.tag || 'tf_data_bottleneck_analysis',
             event.host || '')
-        .subscribe(data => {
+        .pipe(takeUntil(this.destroyed))
+        .subscribe((data) => {
           this.store.dispatch(setLoadingStateAction({
             loadingState: {
               loading: false,
@@ -118,5 +124,11 @@ export class TfDataBottleneckAnalysis extends Dashboard {
     const orgChartDataView = new google.visualization.DataView(this.dataView);
     orgChartDataView.setColumns([NAME_COLUMN_INDEX, PARENT_COLUMN_INDEX]);
     this.orgChartDataView = orgChartDataView;
+  }
+
+  ngOnDestroy() {
+    // Unsubscribes all pending subscriptions.
+    this.destroyed.next();
+    this.destroyed.complete();
   }
 }

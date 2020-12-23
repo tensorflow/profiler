@@ -25,6 +25,7 @@ ng_module(
         "@org_xprof//frontend/app/common/angular:angular_material_tooltip",
         "@npm//@angular/router",
         "@npm//@ngrx/store",
+        "@npm//rxjs",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/components/op_profile/op_table",
         "@org_xprof//frontend/app/services/data_service",
