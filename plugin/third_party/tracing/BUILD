@@ -13,9 +13,7 @@ genrule(
 # Catapult Trace Viewer (chrome://tracing):
 # git clone https://chromium.googlesource.com/catapult
 # cd catapult
-# git checkout 3f5c581d3b045f00847989a9611912e022021343
-# TODO(b/153902654): upstream patch, currently applied locally.
-# TODO(b/176299939): upstream patch, currently applied locally.
+# git checkout d9d7213a6c08cd636ae27cea934259f7fa03ee65
 # tracing/bin/vulcanize_trace_viewer
 # gzip tracing/bin/trace_viewer_full.html
 exports_files(["trace_viewer_full.html.gz"])
