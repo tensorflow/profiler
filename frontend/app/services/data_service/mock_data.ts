@@ -921,7 +921,7 @@ export const DATA_PLUGIN_PROFILE_MEMORY_PROFILE_DATA = {
           'requestedBytes': '4700',
           'stepId': '0',
           'tensorShape': 'unknown',
-          'tfOpName': 'preallocated/unknown'
+          'tfOpName': 'unused preallocated device memory'
         },
         {
           'address': '0',
