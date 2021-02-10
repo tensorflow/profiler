@@ -36,6 +36,11 @@ declare namespace google {
     interface Intervals {
       style?: string;
       color?: string;
+      barWidth?: number;
+      boxWidth?: number;
+      lineWidth?: number;
+      pointSize?: number;
+      fillOpacity?: number;
     }
 
     export interface LineChartOptions extends LineChartOptions {
