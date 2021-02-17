@@ -96,6 +96,10 @@
   <div *ngIf="showPprofLink">
     <div class="section-container">
       <div class="mat-headline">Pprof for Device-side TensorFlow operations</div>
+      <div>
+        If at least one complete step is captured, pprof is generated based on complete steps only.
+        Otherwise, it is generated for the entire session.
+      </div>
       <div [innerHtml]="devicePprofLink"></div>
     </div>
 
