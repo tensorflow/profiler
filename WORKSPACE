@@ -97,9 +97,9 @@ tf_workspace()
 
 http_archive(
     name = "org_tensorflow_tensorboard",
-    sha256 = "84a61d5b06c7f41402133b57b3e8bcb2d233911b26a837c4b873fdbf3b1abc4b",
-    strip_prefix = "tensorboard-2.1.0",
-    urls = ["https://github.com/tensorflow/tensorboard/archive/2.1.0.tar.gz"],  # 2019-12-06
+    sha256 = "2c394d3493b32002f38defebb3ac32fd3bf5f178b1dd4ac76ccf51f042e48e75",
+    strip_prefix = "tensorboard-2.2.2",
+    urls = ["https://github.com/tensorflow/tensorboard/archive/2.2.2.tar.gz"],
 )
 
 load("@org_tensorflow_tensorboard//third_party:workspace.bzl", "tensorboard_workspace")
