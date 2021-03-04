@@ -1,9 +1,9 @@
-load("@npm_angular_bazel//:index.bzl", "ng_module")
+load("//defs:defs.bzl", "xprof_ng_module")
 load("@npm_bazel_typescript//:index.bzl", "ts_library")
 
 package(default_visibility = ["//frontend:internal"])
 
-ng_module(
+xprof_ng_module(
     name = "chart",
     srcs = [
         "chart.ts",
@@ -15,7 +15,7 @@ ng_module(
     ],
 )
 
-ng_module(
+xprof_ng_module(
     name = "default_data_provider",
     srcs = [
         "default_data_provider.ts",

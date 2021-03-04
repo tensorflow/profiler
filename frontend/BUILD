@@ -1,5 +1,5 @@
 load("@npm_bazel_rollup//:index.bzl", "rollup_bundle")
-load("@npm_angular_bazel//:index.bzl", "ng_module")
+load("//defs:defs.bzl", "xprof_ng_module")
 load("@io_bazel_rules_sass//:defs.bzl", "sass_binary", "sass_library")
 
 package(default_visibility = ["//frontend:__subpackages__", "//plugin:__subpackages__"])
@@ -13,7 +13,7 @@ package_group(
     ],
 )
 
-ng_module(
+xprof_ng_module(
     name = "main",
     srcs = [
         "main.ts",

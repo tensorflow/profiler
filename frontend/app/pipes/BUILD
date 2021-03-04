@@ -1,8 +1,8 @@
-load("@npm_angular_bazel//:index.bzl", "ng_module")
+load("//defs:defs.bzl", "xprof_ng_module")
 
 package(default_visibility = ["//frontend:internal"])
 
-ng_module(
+xprof_ng_module(
     name = "pipes",
     srcs = [
         "pipes_module.ts",

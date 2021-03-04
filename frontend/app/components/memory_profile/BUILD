@@ -1,10 +1,10 @@
-load("@npm_angular_bazel//:index.bzl", "ng_module")
+load("//defs:defs.bzl", "xprof_ng_module")
 load("@npm_bazel_typescript//:index.bzl", "ts_library")
 load("@io_bazel_rules_sass//:defs.bzl", "sass_binary", "sass_library")
 
 package(default_visibility = ["//frontend:internal"])
 
-ng_module(
+xprof_ng_module(
     name = "memory_profile",
     srcs = [
         "memory_profile.ts",

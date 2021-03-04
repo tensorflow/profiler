@@ -1,9 +1,9 @@
-load("@npm_angular_bazel//:index.bzl", "ng_module")
+load("//defs:defs.bzl", "xprof_ng_module")
 load("@io_bazel_rules_sass//:defs.bzl", "sass_binary")
 
 package(default_visibility = ["//frontend:internal"])
 
-ng_module(
+xprof_ng_module(
     name = "kernel_stats_adapter",
     srcs = [
         "kernel_stats_adapter.ts",
@@ -20,7 +20,7 @@ ng_module(
     ],
 )
 
-ng_module(
+xprof_ng_module(
     name = "kernel_stats",
     srcs = [
         "kernel_stats.ts",
