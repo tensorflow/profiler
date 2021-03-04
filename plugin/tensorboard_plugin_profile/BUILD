@@ -12,7 +12,7 @@ py_library(
     srcs_version = "PY2AND3",
     deps = [
         "@org_pythonhosted_six",
-        "@org_tensorflow_tensorboard//tensorboard:expect_tensorflow_installed",
+        "//:expect_tensorflow_installed",
         "@org_pocoo_werkzeug",
         "@org_tensorflow_tensorboard//tensorboard/backend/event_processing:plugin_asset_util",
         "@org_tensorflow_tensorboard//tensorboard/plugins:base_plugin",
@@ -45,7 +45,7 @@ py_test(
         ":profile_plugin",
         ":profile_plugin_test_utils",
         requirement("absl-py"),
-        "@org_tensorflow_tensorboard//tensorboard:expect_tensorflow_installed",
+        "//:expect_tensorflow_installed",
         "@org_tensorflow_tensorboard//tensorboard/backend/event_processing:plugin_asset_util",
         "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
     ],

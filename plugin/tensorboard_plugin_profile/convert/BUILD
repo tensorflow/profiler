@@ -37,7 +37,7 @@ py_test(
     srcs_version = "PY2AND3",
     deps = [
         ":diagnostics",
-        "@org_tensorflow_tensorboard//tensorboard:expect_tensorflow_installed",
+        "//:expect_tensorflow_installed",
         "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
     ],
 )
@@ -63,7 +63,7 @@ py_test(
         ":input_pipeline_proto_to_gviz",
         requirement("absl-py"),
         requirement("gviz_api"),
-        "@org_tensorflow_tensorboard//tensorboard:expect_tensorflow_installed",
+        "//:expect_tensorflow_installed",
         "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
     ],
 )
@@ -90,7 +90,7 @@ py_test(
         ":overview_page_proto_to_gviz",
         requirement("absl-py"),
         requirement("gviz_api"),
-        "@org_tensorflow_tensorboard//tensorboard:expect_tensorflow_installed",
+        "//:expect_tensorflow_installed",
         "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
     ],
 )
@@ -113,7 +113,7 @@ py_test(
         ":tf_stats_proto_to_gviz",
         requirement("absl-py"),
         requirement("gviz_api"),
-        "@org_tensorflow_tensorboard//tensorboard:expect_tensorflow_installed",
+        "//:expect_tensorflow_installed",
         "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
     ],
 )
@@ -137,7 +137,7 @@ py_test(
     deps = [
         ":trace_events_json",
         requirement("absl-py"),
-        "@org_tensorflow_tensorboard//tensorboard:expect_tensorflow_installed",
+        "//:expect_tensorflow_installed",
         "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
     ],
 )
@@ -160,7 +160,7 @@ py_test(
         ":kernel_stats_proto_to_gviz",
         requirement("absl-py"),
         requirement("gviz_api"),
-        "@org_tensorflow_tensorboard//tensorboard:expect_tensorflow_installed",
+        "//:expect_tensorflow_installed",
         "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
     ],
 )
@@ -185,7 +185,7 @@ py_test(
         ":tf_data_stats_proto_to_gviz",
         requirement("absl-py"),
         requirement("gviz_api"),
-        "@org_tensorflow_tensorboard//tensorboard:expect_tensorflow_installed",
+        "//:expect_tensorflow_installed",
         "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
     ],
 )
