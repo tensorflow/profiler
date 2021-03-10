@@ -1,4 +1,4 @@
-import {Input, OnChanges, SimpleChanges} from '@angular/core';
+import {Directive, Input, OnChanges, SimpleChanges} from '@angular/core';
 
 import {RecommendationResult} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
@@ -14,6 +14,7 @@ interface TipInfo {
 }
 
 /** A common class of recommendation result view component. */
+@Directive()
 export class RecommendationResultViewCommon implements OnChanges {
   /** The recommendation result data. */
   @Input() recommendationResult?: RecommendationResult;
