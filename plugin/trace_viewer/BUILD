@@ -10,7 +10,7 @@ tf_web_library(
     srcs = ["trace_viewer.html"],
     path = "/",
     deps = [
-        "@org_tensorflow_tensorboard//tensorboard/components/tf_imports:polymer",
+        "@npm//@polymer/polymer",
         "@org_xprof//plugin/trace_viewer/tf_trace_viewer",
         "@org_xprof//plugin/trace_viewer/webcomponentsjs_polyfill",
     ],

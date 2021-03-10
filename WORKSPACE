@@ -14,6 +14,17 @@ http_archive(
 )
 
 http_archive(
+    name = "rules_rust",
+    sha256 = "acd759b6fe99a3ae518ea6380e8e95653d27bb9e4a6a2a443abf48cb51fecaa7",
+    strip_prefix = "rules_rust-d468cfa4820a156f850dab957b895d36ee0f4beb",
+    urls = [
+        # Master branch as of 2021-02-03
+        "http://mirror.tensorflow.org/github.com/bazelbuild/rules_rust/archive/d468cfa4820a156f850dab957b895d36ee0f4beb.tar.gz",
+        "https://github.com/bazelbuild/rules_rust/archive/d468cfa4820a156f850dab957b895d36ee0f4beb.tar.gz",
+    ],
+)
+
+http_archive(
     name = "io_bazel_rules_webtesting",
     sha256 = "f89ca8e91ac53b3c61da356c685bf03e927f23b97b086cc593db8edc088c143f",
     urls = [
@@ -41,8 +52,8 @@ rules_closure_dependencies(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    sha256 = "84abf7ac4234a70924628baa9a73a5a5cbad944c4358cf9abdb4aab29c9a5b77",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/1.7.0/rules_nodejs-1.7.0.tar.gz"],
+    sha256 = "b3521b29c7cb0c47a1a735cce7e7e811a4f80d8e3720cf3a1b624533e4bb7cb6",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/2.3.2/rules_nodejs-2.3.2.tar.gz"],
 )
 
 http_archive(
@@ -71,12 +82,6 @@ yarn_install(
     ],
 )
 
-load("@npm//:install_bazel_dependencies.bzl", "install_bazel_dependencies")
-install_bazel_dependencies()
-
-load("@npm_bazel_typescript//:index.bzl", "ts_setup_workspace")
-ts_setup_workspace()
-
 load("@io_bazel_rules_sass//sass:sass_repositories.bzl", "sass_repositories")
 sass_repositories()
 
@@ -97,9 +102,9 @@ tf_workspace()
 
 http_archive(
     name = "org_tensorflow_tensorboard",
-    sha256 = "2c394d3493b32002f38defebb3ac32fd3bf5f178b1dd4ac76ccf51f042e48e75",
-    strip_prefix = "tensorboard-2.2.2",
-    urls = ["https://github.com/tensorflow/tensorboard/archive/2.2.2.tar.gz"],
+    sha256 = "bcd63689364fa397f4a8740349cf281a0f58f6ff93e09f7f049dc3744623fa29",
+    strip_prefix = "tensorboard-0f4573b73838decf530bc8bcac53459fd4bc02e7",
+    urls = ["https://github.com/tensorflow/tensorboard/archive/0f4573b73838decf530bc8bcac53459fd4bc02e7.tar.gz"], # 2021-03-08
 )
 
 load("@org_tensorflow_tensorboard//third_party:workspace.bzl", "tensorboard_workspace")

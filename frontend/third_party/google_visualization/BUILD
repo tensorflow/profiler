@@ -1,7 +1,7 @@
 # Description:
 #  typings for google_visualization from http://definitelytyped.org/
 
-load("@npm_bazel_typescript//:index.bzl", "ts_library")
+load("@npm//@bazel/typescript:index.bzl", "ts_library")
 
 licenses(["notice"])
 

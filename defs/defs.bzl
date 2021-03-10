@@ -14,7 +14,7 @@
 
 """External-only delegates for various BUILD rules."""
 
-load("@npm_bazel_typescript//:index.bzl", "ts_library")
+load("@npm//@bazel/typescript:index.bzl", "ts_library")
 
 def xprof_ng_module(assets = [], **kwargs):
     """Wrapper for Angular modules for the external BUILD rules"""
