@@ -230,11 +230,14 @@ export function hasMemoryBandwidthUtilization(node: OpProfileNode): boolean {
  */
 export function percent(fraction: number): string {
   if (isNaN(fraction)) return '-';
-  return fraction >= 1.995 ?
-      '200%' :
-      fraction < 0.00001 ?
-      '0.00%' :
-      Number((fraction * 100).toPrecision(2)).toString() + '%';
+
+  if (fraction >= 1.995) {
+    return '200%';
+  } else if (fraction < 0.00001) {
+    return '0.00%';
+  } else {
+    return `${Math.round(fraction * 100)}%`;
+  }
 }
 
 /**
