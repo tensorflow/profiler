@@ -10,6 +10,7 @@ export class OpProfileBase {
   data = new OpProfileData();
   hasTwoProfiles: boolean = false;
   isByCategory: boolean = false;
+  excludeIdle: boolean = false;
   byWasted: boolean = false;
   showP90: boolean = false;
   childrenCount: number = 10;
@@ -25,12 +26,24 @@ export class OpProfileBase {
       this.rootNode = undefined;
       return;
     }
-    if (!this.hasTwoProfiles) {
-      this.rootNode = this.profile.byCategory || this.profile.byProgram;
+
+    if (this.excludeIdle) {
+      if (!this.hasTwoProfiles) {
+        this.rootNode = this.profile.byCategoryExcludeIdle ||
+            this.profile.byProgramExcludeIdle;
+      } else {
+        this.rootNode = this.isByCategory ? this.profile.byCategoryExcludeIdle :
+                                            this.profile.byProgramExcludeIdle;
+      }
     } else {
-      this.rootNode =
-          this.isByCategory ? this.profile.byCategory : this.profile.byProgram;
+      if (!this.hasTwoProfiles) {
+        this.rootNode = this.profile.byCategory || this.profile.byProgram;
+      } else {
+        this.rootNode = this.isByCategory ? this.profile.byCategory :
+                                            this.profile.byProgram;
+      }
     }
+
     this.deviceType = this.profile.deviceType || 'TPU';
   }
 
@@ -52,6 +65,12 @@ export class OpProfileBase {
   updateToggle() {
     this.isByCategory = !this.isByCategory;
     this.updateRoot();
+  }
+
+  updateExcludeIdle() {
+    this.excludeIdle = !this.excludeIdle;
+    this.updateRoot();
+    this.data.update(this.rootNode);
   }
 
   updateByWasted() {

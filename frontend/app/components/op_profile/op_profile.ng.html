@@ -25,6 +25,10 @@
       <div class="control-title">By category</div>
       <mat-slide-toggle [checked]="isByCategory" (toggleChange)="updateToggle()"></mat-slide-toggle>
     </div>
+    <div class="control">
+      <div class="control-title">Exclude Idle</div>
+      <mat-slide-toggle [checked]="excludeIdle" (toggleChange)="updateExcludeIdle()"></mat-slide-toggle>
+    </div>
     <div class="ops-control">
       <div class="ops-control-title">
         Show top&nbsp;
