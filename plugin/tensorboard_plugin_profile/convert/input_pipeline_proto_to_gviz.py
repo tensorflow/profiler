@@ -81,7 +81,7 @@ def get_step_breakdown_table_args(ipa):
                "-Device collectives: {:.2f} ms\n"
                "-Device to device: {:.2f} ms\n"
                "-Device compute: {:.2f} ms").format(
-                   details.step_number, details.step_time_ms,
+                   details.step_name, details.step_time_ms,
                    details.unknown_time_ms, details.host_compile_ms,
                    details.output_ms,
                    details.host_wait_input_ms + details.host_to_device_ms,
@@ -90,7 +90,7 @@ def get_step_breakdown_table_args(ipa):
                    details.device_compute_ms)
 
     row = [
-        str(details.step_number), details.device_compute_ms,
+        details.step_name, details.device_compute_ms,
         details.device_to_device_ms, details.device_collectives_ms,
         details.host_compute_ms, details.host_prepare_ms,
         details.host_wait_input_ms + details.host_to_device_ms,

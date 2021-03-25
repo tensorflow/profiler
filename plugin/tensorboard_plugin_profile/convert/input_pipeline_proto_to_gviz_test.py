@@ -86,6 +86,7 @@ class ProtoToGvizTest(tf.test.TestCase):
     for _ in range(0, 3):
       step_details = input_pipeline_pb2.PerGenericStepDetails()
       step_details.step_number = int(MockValues.STEP_NUMBER)
+      step_details.step_name = MockValues.STEP_NUMBER
       step_details.step_time_ms = int(MockValues.STEP_TIME_MS)
       step_details.unknown_time_ms = int(MockValues.UNKNOWN_TIME_MS)
       step_details.host_wait_input_ms = int(MockValues.HOST_WAIT_INPUT_MS)
