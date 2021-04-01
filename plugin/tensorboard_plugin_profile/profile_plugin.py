@@ -512,6 +512,10 @@ class ProfilePlugin(base_plugin.TBPlugin):
 
   @wrappers.Request.application
   def capture_route(self, request):
+    return self.capture_route_impl(request)
+
+  def capture_route_impl(self, request):
+    """Runs the client trace for capturing profiling information."""
     service_addr = request.args.get('service_addr')
     duration = int(request.args.get('duration', '1000'))
     is_tpu_name = request.args.get('is_tpu_name') == 'true'
