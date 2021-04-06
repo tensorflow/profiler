@@ -47,6 +47,18 @@ class DataTableForTesting {
   insertColumn() {}
   setColumn() {}
   sort() {}
+
+  /**
+   * Returns a JSON representation of this DataTableForTesting.
+   *
+   * @return A JSON representation of this DataTableForTesting.
+   */
+  toJSON(): string {
+    return JSON.stringify({
+      'cols': this.data?.cols,
+      'rows': this.data?.rows,
+    });
+  }
 }
 
 class DataViewForTesting {
