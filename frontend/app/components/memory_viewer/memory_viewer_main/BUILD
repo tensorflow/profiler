@@ -26,6 +26,7 @@ xprof_ng_module(
         "@org_xprof//frontend/app/common/utils",
         "@org_xprof//frontend/app/components/diagnostics_view",
         "@org_xprof//frontend/app/components/memory_viewer/max_heap_chart",
+        "@org_xprof//frontend/app/components/memory_viewer/max_heap_chart_downloader",
         "@org_xprof//frontend/app/components/memory_viewer/memory_usage",
         "@org_xprof//frontend/app/components/memory_viewer/program_order_chart",
         "@org_xprof//frontend/app/services/data_service",
