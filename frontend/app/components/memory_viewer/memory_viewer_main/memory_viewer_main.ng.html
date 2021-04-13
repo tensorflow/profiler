@@ -50,14 +50,6 @@
    (selected)="setSelectedHeapObject($event)">
 </max-heap-chart>
 
-<max-heap-chart-downloader
-  [moduleName]="moduleName"
-  chartType="by_program_order"
-  [heapObjects]="maxHeap"
-  [logicalBufferSpans]="usage ? usage.logicalBufferSpans : {}"
-  [heapSizes]="heapSizes"
-></max-heap-chart-downloader>
-
 <div [hidden]="!maxHeap.length">
   <mat-divider ></mat-divider>
 </div>
