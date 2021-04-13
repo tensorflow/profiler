@@ -37,7 +37,7 @@ xprof_ng_module(
         "@org_xprof//frontend/app/common/angular:angular_material_divider",
         "@org_xprof//frontend/app/common/angular:angular_material_icon",
         "@org_xprof//frontend/app/common/angular:angular_material_menu",
-        "@org_xprof//frontend/third_party/google_visualization",
+        "@npm//@types/google.visualization",
         "@npm//@ngrx/store",
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",

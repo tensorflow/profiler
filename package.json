@@ -38,6 +38,7 @@
     "@bazel/rollup": "^2.3.2",
     "@bazel/typescript": "^2.3.2",
     "@types/chai": "^4.2.7",
+    "@types/google.visualization": "0.0.64",
     "@types/jasmine": "^3.5.0",
     "@types/node": "^13.1.2",
     "@types/sinon": "^7.5.1",

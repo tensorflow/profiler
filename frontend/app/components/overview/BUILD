@@ -19,7 +19,7 @@ xprof_ng_module(
         "@npm//@angular/core",
         "@org_xprof//frontend/app/common/angular:angular_material_card",
         "@npm//@angular/router",
-        "@org_xprof//frontend/third_party/google_visualization",
+        "@npm//@types/google.visualization",
         "@npm//@ngrx/store",
         "@npm//rxjs",
         "@org_xprof//frontend/app/common/interfaces",
