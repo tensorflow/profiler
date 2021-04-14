@@ -25,6 +25,12 @@ http_archive(
 )
 
 http_archive(
+    name = "rules_python",
+    url = "https://github.com/bazelbuild/rules_python/releases/download/0.2.0/rules_python-0.2.0.tar.gz",
+    sha256 = "778197e26c5fbeb07ac2a2c5ae405b30f6cb7ad1f5510ea6fdac03bded96cc6f",
+)
+
+http_archive(
     name = "io_bazel_rules_webtesting",
     sha256 = "f89ca8e91ac53b3c61da356c685bf03e927f23b97b086cc593db8edc088c143f",
     urls = [
@@ -110,33 +116,10 @@ http_archive(
 load("@org_tensorflow_tensorboard//third_party:workspace.bzl", "tensorboard_workspace")
 tensorboard_workspace()
 
-http_archive(
-    name = "bazel_federation",
-    url = "https://github.com/bazelbuild/bazel-federation/releases/download/0.0.1/bazel_federation-0.0.1.tar.gz",
-    sha256 = "506dfbfd74ade486ac077113f48d16835fdf6e343e1d4741552b450cfc2efb53",
-)
+load("@rules_python//python:pip.bzl", "pip_install")
 
-load("@bazel_federation//:repositories.bzl", "rules_python_deps")
-rules_python_deps()
-
-load("@bazel_federation//setup:rules_python.bzl",  "rules_python_setup")
-rules_python_setup(use_pip=True)
-
-http_archive(
-    name = "rules_python",
-    url = "https://github.com/bazelbuild/rules_python/releases/download/0.0.1/rules_python-0.0.1.tar.gz",
-    sha256 = "aa96a691d3a8177f3215b14b0edc9641787abaaa30363a080165d06ab65e1161",
-)
-load("@rules_python//python:repositories.bzl", "py_repositories")
-py_repositories()
-
-load("@rules_python//python:pip.bzl", "pip_repositories", "pip_import")
-pip_repositories()
-
-pip_import(
+pip_install(
     name = "python_deps",
     requirements = "//:requirements.txt",
 )
 
-load("@python_deps//:requirements.bzl", "pip_install")
-pip_install()
