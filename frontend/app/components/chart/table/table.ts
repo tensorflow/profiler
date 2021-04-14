@@ -1,4 +1,3 @@
-import 'org_xprof/frontend/app/common/typing/google_visualization/google_visualization';
 import {Component, ElementRef, HostListener, Input, OnChanges, OnInit, SimpleChanges, ViewChild} from '@angular/core';
 
 /** A table view component. */

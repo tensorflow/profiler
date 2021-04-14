@@ -34,7 +34,6 @@ ts_library(
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/interfaces:chart",
-        "@org_xprof//frontend/app/common/typing/google_visualization",
         "@org_xprof//frontend/app/components/chart:default_data_provider",
         "@org_xprof//frontend/app/components/chart:utils",
     ],

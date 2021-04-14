@@ -1,4 +1,3 @@
-import 'org_xprof/frontend/app/common/typing/google_visualization/google_visualization';
 import {ChartDataProvider, CustomChartDataProcessor, DataTableOrDataViewOrNull} from 'org_xprof/frontend/app/common/interfaces/chart';
 
 /** A xy table data processor. */

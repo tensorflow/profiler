@@ -1,5 +1,3 @@
-import 'org_xprof/frontend/app/common/typing/google_visualization/google_visualization';
-
 import {EventEmitter} from '@angular/core';
 import {ChartClass, ChartDataProvider, ChartOptions, DataTableOrDataViewOrNull} from 'org_xprof/frontend/app/common/interfaces/chart';
 import {DataTableRow, SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
@@ -62,10 +60,8 @@ export class DefaultDataProvider implements ChartDataProvider {
     return this.chart || null;
   }
 
-  getDataTable(): google.visualization.DataTableExt|null {
-    return this.dataTable ?
-        (this.dataTable as google.visualization.DataTableExt) :
-        null;
+  getDataTable(): google.visualization.DataTable|null {
+    return this.dataTable ? this.dataTable : null;
   }
 
   getOptions(): ChartOptions|null {

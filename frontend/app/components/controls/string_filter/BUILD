@@ -19,7 +19,7 @@ xprof_ng_module(
         "@org_xprof//frontend/app/common/angular:angular_material_form_field",
         "@org_xprof//frontend/app/common/angular:angular_material_icon",
         "@org_xprof//frontend/app/common/angular:angular_material_input",
-        "@org_xprof//frontend/app/common/typing/google_visualization",
+        "@npm//@types/google.visualization",
     ],
 )
 

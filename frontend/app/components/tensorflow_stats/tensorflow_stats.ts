@@ -1,4 +1,3 @@
-import 'org_xprof/frontend/app/common/typing/google_visualization/google_visualization';
 import {Component} from '@angular/core';
 import {Store} from '@ngrx/store';
 import {IdleOption, OpExecutor, OpKind, OpType} from 'org_xprof/frontend/app/common/constants/enums';

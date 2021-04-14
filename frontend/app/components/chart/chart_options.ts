@@ -1,5 +1,3 @@
-import 'org_xprof/frontend/app/common/typing/google_visualization/google_visualization';
-
 /** The basic options of Google Charts table. */
 export const TABLE_OPTIONS: google.visualization.TableOptions = {
   allowHtml: true,

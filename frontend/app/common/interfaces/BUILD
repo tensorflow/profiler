@@ -74,8 +74,8 @@ ts_library(
         "heap_object.ts",
         "navigation_event.ts",
         "op_profile_node.ts",
-        "tool.ts",
         "summary_info.ts",
+        "tool.ts",
         "window.ts",
     ],
     deps = [
@@ -92,6 +92,6 @@ ts_library(
     ],
     deps = [
         ":interfaces",
-        "@org_xprof//frontend/app/common/typing/google_visualization",
+        "@npm//@types/google.visualization",
     ],
 )

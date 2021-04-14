@@ -8,7 +8,7 @@ ts_library(
         "dashboard.ts",
     ],
     deps = [
+        "@npm//@types/google.visualization",
         "@org_xprof//frontend/app/common/interfaces",
-        "@org_xprof//frontend/app/common/typing/google_visualization",
     ],
 )

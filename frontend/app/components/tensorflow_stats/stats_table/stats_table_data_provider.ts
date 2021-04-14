@@ -1,7 +1,5 @@
-import 'org_xprof/frontend/app/common/typing/google_visualization/google_visualization';
-
 import {EventEmitter} from '@angular/core';
-import {ChartClass, ChartDataInfo, ChartOptions} from 'org_xprof/frontend/app/common/interfaces/chart';
+import {ChartClass, ChartOptions} from 'org_xprof/frontend/app/common/interfaces/chart';
 import {TensorflowStatsDataOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {DefaultDataProvider} from 'org_xprof/frontend/app/components/chart/default_data_provider';

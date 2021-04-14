@@ -1,4 +1,3 @@
-import 'org_xprof/frontend/app/common/typing/google_visualization/google_visualization';
 import {Component, Input, OnChanges, SimpleChanges} from '@angular/core';
 import {ChartDataInfo} from 'org_xprof/frontend/app/common/interfaces/chart';
 import {SimpleDataTableOrNull, TensorflowStatsDataOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';

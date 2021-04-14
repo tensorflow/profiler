@@ -1,4 +1,3 @@
-import 'org_xprof/frontend/app/common/typing/google_visualization/google_visualization';
 import {Component, EventEmitter, Input, OnChanges, Output, SimpleChanges} from '@angular/core';
 
 /**
@@ -30,8 +29,7 @@ export class StringFilter implements OnChanges {
       return;
     }
 
-    this.columnIndex = (this.dataTable as google.visualization.DataTableExt)
-                           .getColumnIndex(this.column);
+    this.columnIndex = this.dataTable.getColumnIndex(this.column);
     if (this.columnIndex !== -1) {
       this.columnLabel = this.dataTable.getColumnLabel(this.columnIndex);
     }

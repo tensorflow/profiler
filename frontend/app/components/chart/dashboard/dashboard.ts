@@ -1,4 +1,3 @@
-import 'org_xprof/frontend/app/common/typing/google_visualization/google_visualization';
 import {SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 /** A base class for a google-charts dashboard. */

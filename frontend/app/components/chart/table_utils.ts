@@ -1,4 +1,3 @@
-import 'org_xprof/frontend/app/common/typing/google_visualization/google_visualization';
 import {ChartClass} from 'org_xprof/frontend/app/common/interfaces/chart';
 
 interface FormatDiffInfo {
@@ -361,10 +360,9 @@ export function computePivotTable(
     return null;
   }
 
-  const dataTableExt = dataTable as google.visualization.DataTableExt;
-  const columnIndex = dataTableExt.getColumnIndex(columnLabel);
-  const rowIndex = dataTableExt.getColumnIndex(rowLabel);
-  const valueIndex = dataTableExt.getColumnIndex(valueLabel);
+  const columnIndex = dataTable.getColumnIndex(columnLabel);
+  const rowIndex = dataTable.getColumnIndex(rowLabel);
+  const valueIndex = dataTable.getColumnIndex(valueLabel);
 
   if (sortByValue) {
     // Set sort columns

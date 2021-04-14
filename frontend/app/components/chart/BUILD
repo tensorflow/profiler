@@ -11,7 +11,6 @@ xprof_ng_module(
     deps = [
         "@npm//@angular/core",
         "@org_xprof//frontend/app/common/interfaces:chart",
-        "@org_xprof//frontend/app/common/typing/google_visualization",
     ],
 )
 
@@ -24,7 +23,6 @@ xprof_ng_module(
         "@npm//@angular/core",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/interfaces:chart",
-        "@org_xprof//frontend/app/common/typing/google_visualization",
     ],
 )
 
@@ -40,7 +38,6 @@ ts_library(
         ":utils",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/interfaces:chart",
-        "@org_xprof//frontend/app/common/typing/google_visualization",
     ],
 )
 
@@ -50,7 +47,7 @@ ts_library(
         "chart_options.ts",
     ],
     deps = [
-        "@org_xprof//frontend/app/common/typing/google_visualization",
+        "@npm//@types/google.visualization",
     ],
 )
 
@@ -61,7 +58,6 @@ ts_library(
     ],
     deps = [
         "@org_xprof//frontend/app/common/interfaces:chart",
-        "@org_xprof//frontend/app/common/typing/google_visualization",
     ],
 )
 

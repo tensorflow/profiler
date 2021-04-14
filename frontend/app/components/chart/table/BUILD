@@ -15,7 +15,7 @@ xprof_ng_module(
     ],
     deps = [
         "@npm//@angular/core",
-        "@org_xprof//frontend/app/common/typing/google_visualization",
+        "@npm//@types/google.visualization",
     ],
 )
 

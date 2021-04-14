@@ -1,4 +1,3 @@
-import 'org_xprof/frontend/app/common/typing/google_visualization/google_visualization';
 import {SimpleDataTableOrNull} from './data_table';
 
 /** The enumerator for Google Chart type. */
@@ -65,7 +64,7 @@ export interface ChartDataProvider {
   // When using the chart function in customChartDataProcessor, get the chart
   // through this function.
   getChart(): ChartClass|null;
-  getDataTable(): google.visualization.DataTableExt|null;
+  getDataTable(): google.visualization.DataTable|null;
   getOptions(): ChartOptions|null;
   setUpdateEventListener(callback: Function): void;
   notifyCharts(): void;

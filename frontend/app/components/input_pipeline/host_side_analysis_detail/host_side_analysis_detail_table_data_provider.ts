@@ -1,5 +1,3 @@
-import 'org_xprof/frontend/app/common/typing/google_visualization/google_visualization';
-
 import {EventEmitter} from '@angular/core';
 import {HostOpsColumn} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
