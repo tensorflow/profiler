@@ -418,6 +418,7 @@ export class MemoryUsage {
       logicalBufferId: buffer.id,
       unpaddedSizeMiB: utils.bytesToMiB(shape.unpaddedHeapSizeBytes()),
       tfOpName: inst.tfOpName,
+      sourceInfo: inst.sourceInfo,
       opcode: inst.opcode,
       sizeMiB: utils.bytesToMiB(buffer.size),
       color: this.nColor++,

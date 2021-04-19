@@ -47,8 +47,8 @@ If you cannot install `CUDA 10.2`, another option is via environment variable on
 
 `$ export TF_GPU_CUPTI_USE_ACTIVITY_API=false`
 
-However, this approach has a higher measurement overhead (~20%). Therefore, this mode can be used for debugging and improving the
-performance, but not recommended to compare and report absolute numbers.
+However, this approach has higher measurement overhead (~20%). Therefore, this mode can be used for debugging and improving the
+performance, but not recommend to compare and report absolute numbers.
 
 
 ## Known issues

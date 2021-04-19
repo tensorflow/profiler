@@ -10,6 +10,7 @@ export class HloInstruction {
   opcode: string;
   shape?: Shape;
   tfOpName?: string;
+  sourceInfo?: string;
 
   constructor(instruction?: proto.HloInstructionProto) {
     instruction = instruction || {};
@@ -20,6 +21,10 @@ export class HloInstruction {
     }
     if (instruction.metadata) {
       this.tfOpName = instruction.metadata.opName || '';
+      if (instruction.metadata.sourceFile && instruction.metadata.sourceLine) {
+        this.sourceInfo = instruction.metadata.sourceFile + ':' +
+            instruction.metadata.sourceLine.toString();
+      }
     }
   }
 }

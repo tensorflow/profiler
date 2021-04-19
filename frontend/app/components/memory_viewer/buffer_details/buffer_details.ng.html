@@ -38,6 +38,10 @@
           <div class="title">Tf Op Name:: </div>
           <div>{{tfOpName}}</div>
         </div>
+        <div class="info" [hidden]="!sourceInfo">
+          <div class="title">Source File/Line: </div>
+          <div>{{sourceInfo}}</div>
+        </div>
         <div class="info" [hidden]="!groupName">
           <div class="title">Allocation Type: </div>
           <div>{{groupName}}</div>

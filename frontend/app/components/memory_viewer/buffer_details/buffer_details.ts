@@ -28,6 +28,7 @@ export class BufferDetails implements OnDestroy {
   tfOpName?: string;
   groupName?: string;
   color?: string;
+  sourceInfo?: string;
 
   constructor(private readonly store: Store<{}>) {
     this.store.select(getActiveHeapObjectState)
@@ -50,6 +51,7 @@ export class BufferDetails implements OnDestroy {
     this.shape = heapObject.shape;
     this.tfOpName = heapObject.tfOpName;
     this.groupName = heapObject.groupName;
+    this.sourceInfo = heapObject.sourceInfo;
     if (unpaddedSizeMiB) {
       this.unpaddedSize = unpaddedSizeMiB.toFixed(2);
       const utilization = unpaddedSizeMiB / sizeMiB;

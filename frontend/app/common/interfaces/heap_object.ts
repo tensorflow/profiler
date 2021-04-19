@@ -6,6 +6,7 @@ export interface HeapObject {
   unpaddedSizeMiB?: number;
   tfOpName?: string;
   opcode?: string;
+  sourceInfo?: string;
   sizeMiB?: number;
   color?: number;
   shape?: string;
