@@ -8,7 +8,10 @@ licenses(["notice"])
 
 exports_files(["LICENSE"])  # Needed for internal repo.
 
-exports_files(["tsconfig.json"])
+exports_files([
+    "tsconfig.json",
+    "rollup.config.js",
+])
 
 py_library(
     name = "expect_tensorflow_installed",

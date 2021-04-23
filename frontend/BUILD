@@ -1,8 +1,11 @@
 load("@npm//@bazel/rollup:index.bzl", "rollup_bundle")
-load("//defs:defs.bzl", "xprof_ng_module")
 load("@io_bazel_rules_sass//:defs.bzl", "sass_binary", "sass_library")
+load("//defs:defs.bzl", "xprof_ng_module")
 
-package(default_visibility = ["//frontend:__subpackages__", "//plugin:__subpackages__"])
+package(default_visibility = [
+    "//frontend:__subpackages__",
+    "//plugin:__subpackages__",
+])
 
 licenses(["notice"])
 
@@ -20,7 +23,7 @@ xprof_ng_module(
     ],
     deps = [
         "@npm//@angular/core",
-        "@npm//@angular/platform-browser",
+        "@npm//@angular/platform-browser-dynamic",
         "@org_xprof//frontend/app",
     ],
 )
@@ -28,12 +31,16 @@ xprof_ng_module(
 rollup_bundle(
     name = "zone",
     srcs = ["@npm//:node_modules/zone.js/dist/zone.js"],
+    config_file = "//:rollup.config.js",
     entry_point = "@npm//:node_modules/zone.js/dist/zone.js",
+    link_workspace_root = True,
 )
 
 rollup_bundle(
     name = "bundle",
+    config_file = "//:rollup.config.js",
     entry_point = "main.ts",
+    link_workspace_root = True,
     deps = [
         ":main",
         "@npm//@angular/animations",
@@ -41,9 +48,11 @@ rollup_bundle(
         "@npm//@angular/core",
         "@npm//@angular/forms",
         "@npm//@angular/material",
-        "@npm//@angular/platform-browser",
+        "@npm//@angular/platform-browser-dynamic",
         "@npm//@angular/router",
         "@npm//@ngrx/store",
+        "@npm//@rollup/plugin-commonjs",
+        "@npm//@rollup/plugin-node-resolve",
     ],
 )
 
