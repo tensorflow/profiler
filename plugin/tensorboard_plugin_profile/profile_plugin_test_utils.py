@@ -21,7 +21,7 @@ from __future__ import print_function
 
 from werkzeug import Request
 
-from tensorboard.backend.event_processing import plugin_event_multiplexer
+from tensorboard.backend.event_processing import data_provider
 from tensorboard.plugins import base_plugin
 from tensorboard_plugin_profile import profile_plugin
 
@@ -33,21 +33,21 @@ class _FakeFlags(object):
     self.master_tpu_unsecure_channel = master_tpu_unsecure_channel
 
 
-def create_profile_plugin(logdir, master_tpu_unsecure_channel=''):
+def create_profile_plugin(logdir, multiplexer, master_tpu_unsecure_channel=''):
   """Instantiates ProfilePlugin with data from the specified directory.
 
   Args:
     logdir: Directory containing TensorBoard data.
+    multiplexer: A TensorBoard plugin_event_multiplexer.EventMultiplexer
     master_tpu_unsecure_channel: Master TPU address for streaming trace viewer.
 
   Returns:
     An instance of ProfilePlugin.
   """
-  multiplexer = plugin_event_multiplexer.EventMultiplexer()
-  multiplexer.AddRunsFromDirectory(logdir)
   context = base_plugin.TBContext(
       logdir=logdir,
       multiplexer=multiplexer,
+      data_provider=data_provider.MultiplexerDataProvider(multiplexer, logdir),
       flags=_FakeFlags(logdir, master_tpu_unsecure_channel))
   return profile_plugin.ProfilePlugin(context)
 
