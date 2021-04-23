@@ -19,8 +19,11 @@ from __future__ import division
 from __future__ import print_function
 
 import argparse
+import logging
 
 from tensorboard.plugins import base_plugin
+
+logger = logging.getLogger('tensorboard-plugin-profile')
 
 
 class ProfilePluginLoader(base_plugin.TBLoader):
@@ -64,7 +67,8 @@ class ProfilePluginLoader(base_plugin.TBLoader):
       # pylint: enable=g-direct-tensorflow-import
       del tensorflow
       del profiler_client
-    except ImportError:
+    except ImportError as err:
+      logger.warning('Unable to load profiler plugin. Import error: %s', err)
       return None
 
     # pylint: disable=g-import-not-at-top
