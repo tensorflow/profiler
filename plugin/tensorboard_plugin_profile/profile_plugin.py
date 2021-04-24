@@ -29,7 +29,6 @@ import tensorflow.compat.v2 as tf
 from werkzeug import wrappers
 
 from tensorboard.backend.event_processing import plugin_asset_util
-from tensorboard.context import RequestContext
 from tensorboard.plugins import base_plugin
 from tensorflow.python.profiler import profiler_client  # pylint: disable=g-direct-tensorflow-import
 from tensorflow.python.profiler import profiler_v2 as profiler  # pylint: disable=g-direct-tensorflow-import
@@ -267,15 +266,6 @@ def respond(body, content_type, code=200, content_encoding=None):
       body, content_type=content_type, status=code, headers=headers)
 
 
-def _plugin_assets(logdir, runs, plugin_name):
-  result = {}
-  for run in runs:
-    run_path = os.path.join(logdir, run)
-    assets = plugin_asset_util.ListAssets(run_path, plugin_name)
-    result[run] = assets
-  return result
-
-
 class ProfilePlugin(base_plugin.TBPlugin):
   """Profile Plugin for TensorBoard."""
 
@@ -289,7 +279,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
       context: A base_plugin.TBContext instance.
     """
     self.logdir = context.logdir
-    self.data_provider = context.data_provider
+    self.multiplexer = context.multiplexer
     self.stub = None
     self.master_tpu_unsecure_channel = context.flags.master_tpu_unsecure_channel
 
@@ -646,15 +636,14 @@ class ProfilePlugin(base_plugin.TBPlugin):
     tb_run_name, profile_run_name = os.path.split(run)
     if not tb_run_name:
       tb_run_name = '.'
-
-    if tb_run_name == '.' and tf.io.gfile.isdir(self.logdir):
-      tb_run_directory = self.logdir
-    else:
-      tb_run_directory = os.path.join(self.logdir, tb_run_name)
-
-    if not tf.io.gfile.isdir(tb_run_directory):
-      raise RuntimeError('No matching run directory for run %s' % run)
-
+    tb_run_directory = self.multiplexer.RunPaths().get(tb_run_name)
+    if tb_run_directory is None:
+      # Check if logdir is a directory to handle case where it's actually a
+      # multipart directory spec, which this plugin does not support.
+      if tb_run_name == '.' and tf.io.gfile.isdir(self.logdir):
+        tb_run_directory = self.logdir
+      else:
+        raise RuntimeError('No matching run directory for run %s' % run)
     plugin_directory = plugin_asset_util.PluginDirectory(
         tb_run_directory, PLUGIN_NAME)
     return os.path.join(plugin_directory, profile_run_name)
@@ -707,14 +696,8 @@ class ProfilePlugin(base_plugin.TBPlugin):
     """
     self.start_grpc_stub_if_necessary()
 
-    # Create a background context; we may not be in a request.
-    ctx = RequestContext()
-    tb_run_names_to_dirs = {
-        run.run_name: os.path.join(self.logdir, run.run_name)
-        for run in self.data_provider.list_runs(ctx, experiment_id='')
-    }
-    plugin_assets = _plugin_assets(self.logdir, list(tb_run_names_to_dirs),
-                                   PLUGIN_NAME)
+    plugin_assets = self.multiplexer.PluginAssets(PLUGIN_NAME)
+    tb_run_names_to_dirs = self.multiplexer.RunPaths()
 
     # Ensure that we also check the root logdir, even if it isn't a recognized
     # TensorBoard run (i.e. has no tfevents file directly under it), to remain
