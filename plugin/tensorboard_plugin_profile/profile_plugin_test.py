@@ -26,7 +26,6 @@ import os
 import tensorflow.compat.v2 as tf
 
 from tensorboard.backend.event_processing import plugin_asset_util
-from tensorboard.backend.event_processing import plugin_event_multiplexer
 from tensorboard_plugin_profile import profile_plugin
 from tensorboard_plugin_profile import profile_plugin_test_utils as utils
 from tensorboard_plugin_profile.protobuf import trace_events_pb2
@@ -100,11 +99,8 @@ class ProfilePluginTest(tf.test.TestCase):
   def setUp(self):
     super(ProfilePluginTest, self).setUp()
     self.logdir = self.get_temp_dir()
-
-    self.multiplexer = plugin_event_multiplexer.EventMultiplexer()
-    self.multiplexer.AddRunsFromDirectory(self.logdir)
-
-    self.plugin = utils.create_profile_plugin(self.logdir, self.multiplexer)
+    self.plugin = utils.create_profile_plugin(self.logdir)
+    self.multiplexer = self.plugin.multiplexer
 
   def testRuns_logdirWithoutEventFile(self):
     generate_testdata(self.logdir)
