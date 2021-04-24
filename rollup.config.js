@@ -14,8 +14,9 @@ module.exports = {
     sourcemap: false,
   },
   onwarn: (warning, warn) => {
-    // Angular code with rollup checks `this` for globals.
-    // rollup warns that it
+    // Typescript decorator transpiled code checks `this` in case there are
+    // global decorator. Rollup warns `this` is undefined.
+    // This is safe to ignore.
     if (warning.code === 'THIS_IS_UNDEFINED') {
       return;
     }
