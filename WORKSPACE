@@ -82,10 +82,6 @@ yarn_install(
     # removes source directory without `bazel clean` which creates broken
     # symlink into node_modules folder.
     symlink_node_modules = False,
-    data = [
-        # package.json contains postinstall that requires this file.
-        "//:angular-metadata.tsconfig.json",
-    ],
 )
 
 load("@io_bazel_rules_sass//sass:sass_repositories.bzl", "sass_repositories")
