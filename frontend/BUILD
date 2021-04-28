@@ -34,6 +34,7 @@ rollup_bundle(
     config_file = "//:rollup.config.js",
     entry_point = "@npm//:node_modules/zone.js/dist/zone.js",
     link_workspace_root = True,
+    format = "iife",
     deps = [
         "@npm//@rollup/plugin-commonjs",
         "@npm//@rollup/plugin-node-resolve",
@@ -45,6 +46,7 @@ rollup_bundle(
     config_file = "//:rollup.config.js",
     entry_point = "main.ts",
     link_workspace_root = True,
+    format = "iife",
     deps = [
         ":main",
         "@npm//@angular/animations",
