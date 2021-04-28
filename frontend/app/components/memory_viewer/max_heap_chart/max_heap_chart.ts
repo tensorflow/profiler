@@ -88,7 +88,7 @@ export class MaxHeapChart implements OnChanges, OnInit {
 
     google.visualization.events.addListener(
         this.chart, 'onmouseover',
-        (event: google.visualization.VisualizationSelectionArray) => {
+        (event: google.visualization.ChartSelection) => {
           event = event || {};
           const arr = [];
           arr.push(event);

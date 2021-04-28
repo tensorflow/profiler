@@ -80,7 +80,7 @@ export class StackBarChart implements OnChanges, OnInit {
 
       google.visualization.events.addListener(
           this.chart, 'onmouseover',
-          (event: google.visualization.VisualizationSelectionArray) => {
+          (event: google.visualization.ChartSelection) => {
             event = event || {};
             this.selected.emit(event.row || 0);
           });
