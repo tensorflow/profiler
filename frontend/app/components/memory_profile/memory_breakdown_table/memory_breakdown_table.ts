@@ -170,8 +170,7 @@ export class MemoryBreakdownTable implements OnChanges, OnInit {
       }, 100);
     }
 
-    // tslint:disable-next-line:no-any
-    (google.charts as any)['load']('current', {'packages': ['table']});
+    google.charts.safeLoad({'packages': ['table']});
     google.charts.setOnLoadCallback(() => {
       this.table = new google.visualization.Table(this.tableRef.nativeElement);
       this.drawTable();

@@ -210,7 +210,7 @@ export class ProgramOrderChart implements OnChanges, OnInit {
       }, 100);
     }
 
-    google.charts.load('current', {'packages': ['corechart']});
+    google.charts.safeLoad({'packages': ['corechart']});
     google.charts.setOnLoadCallback(() => {
       this.activeChart =
           new google.visualization.AreaChart(this.activeChartRef.nativeElement);

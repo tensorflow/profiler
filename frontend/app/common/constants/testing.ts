@@ -74,7 +74,6 @@ class DataViewForTesting {
 /** The GViz object for testing */
 export const GVIZ_FOR_TESTING = {
   charts: {
-    load: () => {},
     safeLoad: () => {},
     setOnLoadCallback: () => {},
   },

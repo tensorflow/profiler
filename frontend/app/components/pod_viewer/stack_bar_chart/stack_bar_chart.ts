@@ -73,7 +73,7 @@ export class StackBarChart implements OnChanges, OnInit {
       }, 100);
     }
 
-    google.charts.load('current', {'packages': ['corechart']});
+    google.charts.safeLoad({'packages': ['corechart']});
     google.charts.setOnLoadCallback(() => {
       this.chart =
           new google.visualization.BarChart(this.chartRef.nativeElement);

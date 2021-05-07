@@ -192,8 +192,7 @@ export class MemoryTimelineGraph implements AfterViewInit, OnChanges {
       }, 100);
     }
 
-    // tslint:disable-next-line:no-any
-    (google.charts as any)['load']('current', {'packages': ['corechart']});
+    google.charts.safeLoad({'packages': ['corechart']});
     google.charts.setOnLoadCallback(() => {
       this.chart =
           new google.visualization.AreaChart(this.chartRef.nativeElement);

@@ -246,7 +246,7 @@ export class KernelStatsTable implements OnChanges, OnInit {
       }, 100);
     }
 
-    google.charts.load('current', {'packages': ['table']});
+    google.charts.safeLoad({'packages': ['table']});
     google.charts.setOnLoadCallback(() => {
       this.table = new google.visualization.Table(this.tableRef.nativeElement);
       google.visualization.events.addListener(
