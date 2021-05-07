@@ -1,5 +1,5 @@
 import {Store} from '@ngrx/store';
-import {AllReduceOpInfo, ChannelInfo, PodStatsMap, PodStatsRecord, PodViewerDatabaseOrNull, PodViewerTopology, PrimitiveTypeNumberStringOrUndefined, StepBreakdownEvent} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {AllReduceOpInfo, ChannelInfo, LogicalId, PodStatsMap, PodStatsRecord, PodViewerDatabaseOrNull, PodViewerTopology, PrimitiveTypeNumberStringOrUndefined, StepBreakdownEvent} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {setActivePodViewerInfoAction} from 'org_xprof/frontend/app/store/actions';
@@ -15,7 +15,7 @@ export class PodViewerCommon {
   channelDb?: ChannelInfo[];
   channelDbForChart?: ChannelInfo[];
   channelChartData?: PrimitiveTypeNumberStringOrUndefined[][];
-  coreIdToReplicaIdMap?: {[key: /* uint32 */ string]: /* uint32 */ number};
+  coreIdToLogicalIdMap?: {[key: /* uint32 */ string]: LogicalId};
   diagnostics: Diagnostics = {info: [], warnings: [], errors: []};
   podStatsPerCore?: {[key: string]: PodStatsRecord};
   podStatsForChart?: PodStatsRecord[];
@@ -67,7 +67,7 @@ export class PodViewerCommon {
     }
     // Negative step number indicates incomplete step.
     this.selectedStep = (step >= 0) ? step.toString() : 'incomplete step';
-    this.coreIdToReplicaIdMap = podStats.coreIdToReplicaIdMap || {};
+    this.coreIdToLogicalIdMap = podStats.coreIdToLogicalIdMap || {};
     this.processAllReduceOpChart(podStats);
     this.processChannelDb(podStats);
     this.podStatsPerCore = podStats.podStatsPerCore;

@@ -1337,24 +1337,24 @@ export const DATA_PLUGIN_PROFILE_POD_VIEWER_DATA = {
             'dataSize': '30661632',
             'durationUs': 10811.50,
             'name': 'all-reduce',
-            'replicaGroups': [
-              {'replicaIds': ['0']},
+            'logicalIdGroups': [
+              {'logicalIds': [{'replicaId': 0, 'computationId': 0}]},
             ]
           },
           {
             'dataSize': '2048',
             'durationUs': 2521.16,
             'name': 'all-reduce.1',
-            'replicaGroups': [
-              {'replicaIds': ['0']},
+            'logicalIdGroups': [
+              {'logicalIds': [{'replicaId': 0, 'computationId': 0}]},
             ]
           },
           {
             'dataSize': '12356608',
             'durationUs': 463.57,
             'name': 'all-reduce.2',
-            'replicaGroups': [
-              {'replicaIds': ['0']},
+            'logicalIdGroups': [
+              {'logicalIds': [{'replicaId': 0, 'computationId': 0}]},
             ]
           },
         ],

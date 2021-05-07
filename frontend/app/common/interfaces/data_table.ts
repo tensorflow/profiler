@@ -303,9 +303,15 @@ export declare interface TensorflowStatsData {
   p?: TensorflowStatsProperty;
 }
 
-/** The base interface for a replica group. */
-declare interface ReplicaGroup {
-  replicaIds?: /* int64 */ string[];
+/** The base interface for a LogicalId. */
+export declare interface LogicalId {
+  replicaId?: /* int64 */ number;
+  computationId?: /* int64 */ number;
+}
+
+/** The base interface for a LogicalId group. */
+declare interface LogicalIdGroup {
+  logicalIds?: LogicalId[];
 }
 
 /** The base interface for all reduce op info . */
@@ -314,7 +320,7 @@ export declare interface AllReduceOpInfo {
   occurrences?: /* uint32 */ number;
   durationUs?: /* double */ number;
   dataSize?: /* uint64 */ string;
-  replicaGroups?: ReplicaGroup[];
+  logicalIdGroups?: LogicalIdGroup[];
   description?: string;
 }
 
@@ -348,7 +354,7 @@ export declare interface PodStatsMap {
   stepNum?: /* uint32 */ number;
   podStatsPerCore?: {[key: /* uint32 */ string]: PodStatsRecord};
   channelDb?: ChannelInfo[];
-  coreIdToReplicaIdMap?: {[key: /* uint32 */ string]: /* uint32 */ number};
+  coreIdToLogicalIdMap?: {[key: /* uint32 */ string]: LogicalId};
   allReduceOpDb?: AllReduceOpInfo[];
 }
 
@@ -440,9 +446,9 @@ declare interface TfFunctionExplanationTableProperty {
 
 /** The explanation table in tf-function stats. */
 export declare interface TfFunctionExplanationTable {
-    cols?: DataTableColumn[];
-    rows?: DataTableRow[];
-    p?: TfFunctionExplanationTableProperty;
+  cols?: DataTableColumn[];
+  rows?: DataTableRow[];
+  p?: TfFunctionExplanationTableProperty;
 }
 
 /** The explanation table in tf-function stats or null. */
@@ -457,9 +463,9 @@ declare interface TfFunctionDataTableProperty {
 
 /** The function table in tf-function stats. */
 export declare interface TfFunctionDataTable {
-    cols: DataTableColumn[];
-    rows: DataTableRow[];
-    p: TfFunctionDataTableProperty;
+  cols: DataTableColumn[];
+  rows: DataTableRow[];
+  p: TfFunctionDataTableProperty;
 }
 
 /** The function table in tf-function stats or null. */
@@ -467,14 +473,14 @@ export type TfFunctionDataTableOrNull = TfFunctionDataTable|null;
 
 /** The data table type in tf-function stats. */
 export type TfFunctionStatsTable =
-    TfFunctionDataTable | TfFunctionExplanationTable;
+    TfFunctionDataTable|TfFunctionExplanationTable;
 
 /** The data table type in tf-function stats or null. */
 export type TfFunctionStatsTableOrNull = TfFunctionStatsTable|null;
 
 /** All input pipeline page data table type. */
-export type InputPipelineDataTable =
-    InputPipelineDeviceAnalysis|InputPipelineHostAnalysis|MetaHostOpTable|HostOpTable|SimpleDataTable;
+export type InputPipelineDataTable = InputPipelineDeviceAnalysis|
+    InputPipelineHostAnalysis|MetaHostOpTable|HostOpTable|SimpleDataTable;
 
 /** The data table type for a PodViewerDatabase or null. */
 export type PodViewerDatabaseOrNull = PodViewerDatabase|null;
