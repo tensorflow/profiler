@@ -23,6 +23,7 @@ xprof_ng_module(
     ],
     deps = [
         "@npm//@angular/core",
+        "@npm//@angular/localize",
         "@npm//@angular/platform-browser-dynamic",
         "@org_xprof//frontend/app",
     ],
@@ -33,8 +34,8 @@ rollup_bundle(
     srcs = ["@npm//:node_modules/zone.js/dist/zone.js"],
     config_file = "//:rollup.config.js",
     entry_point = "@npm//:node_modules/zone.js/dist/zone.js",
-    link_workspace_root = True,
     format = "iife",
+    link_workspace_root = True,
     deps = [
         "@npm//@rollup/plugin-commonjs",
         "@npm//@rollup/plugin-node-resolve",
@@ -45,8 +46,8 @@ rollup_bundle(
     name = "bundle",
     config_file = "//:rollup.config.js",
     entry_point = "main.ts",
-    link_workspace_root = True,
     format = "iife",
+    link_workspace_root = True,
     deps = [
         ":main",
         "@npm//@angular/animations",

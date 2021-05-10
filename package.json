@@ -69,6 +69,7 @@
     "@angular/common": "^10.1.2",
     "@angular/core": "^10.1.2",
     "@angular/forms": "^10.1.2",
+    "@angular/localize": "^11.2.9",
     "@angular/material": "^10.1.2",
     "@angular/platform-browser": "^10.1.2",
     "@angular/platform-browser-dynamic": "^10.1.2",
