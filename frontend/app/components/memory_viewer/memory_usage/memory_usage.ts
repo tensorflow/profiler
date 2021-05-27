@@ -255,8 +255,8 @@ export class MemoryUsage {
   }
 
   /**
-   * From a list of heap simulator traces, identify the one uses 0 as memory
-   * space color.
+   * From a list of heap simulator traces, identify the one that has the largest
+   * number of memory events of <color>.
    */
   private getHeapTraceByColor(
       color: number,
@@ -264,15 +264,23 @@ export class MemoryUsage {
     if (!traces) {
       return null;
     }
+    let bestTrace: proto.HeapSimulatorTrace|null = null;
+    let bestEventCount = 0;
     for (const trace of traces) {
+      let eventCount = 0;
       for (const event of trace.events || []) {
         const buffer = this.idToBuffer[utils.toNumber(event.bufferId || '0')];
         if (!buffer) continue;
-        if (buffer.color !== color) break;
-        return trace;
+        if (buffer.color === color) {
+          eventCount += 1;
+        }
+      }
+      if (eventCount > bestEventCount) {
+        bestTrace = trace;
+        bestEventCount = eventCount;
       }
     }
-    return null;
+    return bestTrace;
   }
 
   /**
