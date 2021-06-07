@@ -367,8 +367,11 @@ class ProfilePlugin(base_plugin.TBPlugin):
 
   @wrappers.Request.application
   def tools_route(self, request):
-    run_to_tools = dict(self.generate_run_to_tools())
+    run_to_tools = self.tools_impl(request)
     return respond(run_to_tools, 'application/json')
+
+  def tools_impl(self, request):
+    return dict(self.generate_run_to_tools())
 
   def host_impl(self, run, tool):
     """Returns available hosts for the run and tool in the log directory.
@@ -738,15 +741,25 @@ class ProfilePlugin(base_plugin.TBPlugin):
           frontend_run = os.path.join(tb_run_name, profile_run)
         profile_run_dir = os.path.join(tb_plugin_dir, profile_run)
         if tf.io.gfile.isdir(profile_run_dir):
-          yield frontend_run, self._get_active_tools(profile_run_dir)
+          try:
+            filenames = tf.io.gfile.listdir(profile_run_dir)
+          except tf.errors.NotFoundError as e:
+            logger.warning('Cannot read asset directory: %s, NotFoundError %s',
+                           profile_run_dir, e)
+            filenames = []
 
-  def _get_active_tools(self, profile_run_dir):
-    try:
-      filenames = tf.io.gfile.listdir(profile_run_dir)
-    except tf.errors.NotFoundError as e:
-      logger.warning('Cannot read asset directory: %s, NotFoundError %s',
-                     profile_run_dir, e)
-      return []
+          yield frontend_run, self._get_active_tools(
+              filenames) if filenames else filenames
+
+  def _get_active_tools(self, filenames):
+    """Get a list of tools available given the filenames created by profiler.
+
+    Args:
+      filenames: List of strings that represent filenames
+
+    Returns:
+      A list of strings representing the available tools
+    """
     tools = _get_tools(filenames)
     if 'trace_viewer@' in tools:
       # streaming trace viewer always override normal trace viewer.
