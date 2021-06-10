@@ -206,6 +206,18 @@ dashboard would integrate trace viewer app using iframe.
       this._traceViewer.brushingStateController.addEventListener(
         'change', this.onSelectionChange.bind(this));
 
+      // Override the default behavior for find fitler such that pressing find
+      // previous, find next which cycles through events in the search filter results
+      // will zoom and focus the event in the timeline.
+      const boundFindFocusChanged =
+          this._traceViewer.brushingStateController.findFocusChangedTo.bind(
+              this._traceViewer.brushingStateController);
+      this._traceViewer.brushingStateController.findFocusChangedTo =
+          (currentFocus) => {
+            boundFindFocusChanged(currentFocus);
+            this._traceViewer.trackView.zoomToSelection();
+          };
+
       this._traceViewer.id = 'trace-viewer';
       this._traceViewer.globalMode = false;
 
