@@ -276,6 +276,25 @@ def _plugin_assets(logdir, runs, plugin_name):
   return result
 
 
+def filenames_to_hosts(filenames, tool):
+  """Convert a list of filenames to a list of host names given a tool.
+
+  Args:
+    filenames: A list of filenames.
+    tool: A string representing the profiling tool.
+
+  Returns:
+    A list of hostnames.
+  """
+  hosts = _get_hosts(filenames)
+  if len(hosts) > 1:
+    if tool in XPLANE_TOOLS_ALL_HOSTS_ONLY:
+      hosts = [ALL_HOSTS]
+    elif tool in XPLANE_TOOLS_ALL_HOSTS_SUPPORTED:
+      hosts.add(ALL_HOSTS)
+  return sorted(hosts)
+
+
 class ProfilePlugin(base_plugin.TBPlugin):
   """Profile Plugin for TensorBoard."""
 
@@ -373,7 +392,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
   def tools_impl(self, request):
     return dict(self.generate_run_to_tools())
 
-  def host_impl(self, run, tool):
+  def host_impl(self, run, tool, request=None):
     """Returns available hosts for the run and tool in the log directory.
 
     In the plugin log directory, each directory contains profile data for a
@@ -397,6 +416,8 @@ class ProfilePlugin(base_plugin.TBPlugin):
     Args:
       run: the frontend run name, e.g., 'run1' or 'run2' for the example above.
       tool: the requested tool, e.g., 'trace_viewer' for the example above.
+      request: Optional; werkzeug request used for grabbing ctx and experiment
+        id for other host implementations
 
     Returns:
       A list of host names, e.g. ["host1", "host2"] for the example above.
@@ -406,24 +427,20 @@ class ProfilePlugin(base_plugin.TBPlugin):
       logger.warning('Cannot find asset directory for: %s', run)
       return []
     tool_pattern = _make_filename('*', tool)
+    filenames = []
     try:
       filenames = tf.io.gfile.glob(os.path.join(run_dir, tool_pattern))
     except tf.errors.OpError as e:
       logger.warning('Cannot read asset directory: %s, OpError %s', run_dir, e)
     filenames = [os.path.basename(f) for f in filenames]
-    hosts = _get_hosts(filenames)
-    if len(hosts) > 1:
-      if tool in XPLANE_TOOLS_ALL_HOSTS_ONLY:
-        hosts = [ALL_HOSTS]
-      elif tool in XPLANE_TOOLS_ALL_HOSTS_SUPPORTED:
-        hosts.add(ALL_HOSTS)
-    return sorted(hosts)
+
+    return filenames_to_hosts(filenames, tool)
 
   @wrappers.Request.application
   def hosts_route(self, request):
     run = request.args.get('run')
     tool = request.args.get('tag')
-    hosts = self.host_impl(run, tool)
+    hosts = self.host_impl(run, tool, request)
     return respond(hosts, 'application/json')
 
   def data_impl(self, request):
