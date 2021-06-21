@@ -36,7 +36,6 @@ xprof_ng_module(
         "@npm//@ngrx/store",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/components/controls/export_as_csv",
-        "@org_xprof//frontend/app/components/kernel_stats/kernel_stats_chart",
         "@org_xprof//frontend/app/components/kernel_stats/kernel_stats_table",
         "@org_xprof//frontend/app/store/common_data_store",
     ],

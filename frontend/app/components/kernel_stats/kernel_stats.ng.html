@@ -6,12 +6,6 @@
     <div class="flex-space"></div>
     <export-as-csv tool="kernel_stats"></export-as-csv>
   </div>
-
-  <div [className]="hasDataRow ? 'auto-height' : 'hidden-content'">
-    <br>
-
-    <kernel-stats-chart [kernelStatsData]="data"></kernel-stats-chart>
-  </div>
 </div>
 
 <div [className]="hasDataRow ? 'auto-height' : 'hidden-content'">
