@@ -76,7 +76,7 @@ def generate_testdata(logdir):
       if tool not in profile_plugin.TOOLS:
         continue
       for host in RUN_TO_HOSTS[run]:
-        filename = profile_plugin._make_filename(host, tool)
+        filename = profile_plugin.make_filename(host, tool)
         tool_file = os.path.join(run_dir, filename)
         if tool == 'trace_viewer':
           trace = trace_events_pb2.Trace()

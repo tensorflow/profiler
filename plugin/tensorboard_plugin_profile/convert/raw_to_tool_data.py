@@ -45,13 +45,38 @@ def process_raw_trace(raw_trace):
   return ''.join(trace_events_json.TraceEventsJsonStream(trace))
 
 
-def xspace_to_tool_data(xspace_paths, tool, tqx):
+def xspace_to_tool_data_from_string(xspace_byte_list, filenames, tool, tqx):
+  """Helper function for getting an XSpace tool from a bytes string.
+
+  Args:
+    xspace_byte_list: A list of byte strings read from a XSpace proto file.
+    filenames: Names of the read files.
+    tool: A string of tool name.
+    tqx: Gviz output format.
+
+  Returns:
+    Returns a string of tool data.
+  """
+  def xspace_wrapper_func(xspace_arg, tool_arg):
+    return _pywrap_profiler.xspace_to_tool_data_from_string(
+        xspace_arg, filenames, tool_arg)
+
+  return xspace_to_tool_data(xspace_byte_list, tool, tqx, xspace_wrapper_func)
+
+
+def xspace_to_tool_data(
+    xspace_paths,
+    tool,
+    tqx,
+    xspace_wrapper_func=_pywrap_profiler.xspace_to_tools_data):
   """Converts XSpace to tool data string.
 
   Args:
     xspace_paths: A list of XSpace paths.
     tool: A string of tool name.
     tqx: Gviz output format.
+    xspace_wrapper_func: A callable that takes a list of strings and a tool and
+      returns the raw data.
 
   Returns:
     Returns a string of tool data.
@@ -62,22 +87,22 @@ def xspace_to_tool_data(xspace_paths, tool, tqx):
   if tool == 'trace_viewer':
     # Trace viewer handles one host at a time.
     assert len(xspace_paths) == 1
-    raw_data, success = _pywrap_profiler.xspace_to_tools_data(
+    raw_data, success = xspace_wrapper_func(
         xspace_paths, tool)
     if success:
       data = process_raw_trace(raw_data)
   elif tool == 'overview_page':
-    raw_data, success = _pywrap_profiler.xspace_to_tools_data(
+    raw_data, success = xspace_wrapper_func(
         xspace_paths, tool)
     if success:
       data = overview_page_proto_to_gviz.to_json(raw_data)
   elif tool == 'input_pipeline_analyzer':
-    raw_data, success = _pywrap_profiler.xspace_to_tools_data(
+    raw_data, success = xspace_wrapper_func(
         xspace_paths, tool)
     if success:
       data = input_pipeline_proto_to_gviz.to_json(raw_data)
   elif tool == 'tensorflow_stats':
-    raw_data, success = _pywrap_profiler.xspace_to_tools_data(
+    raw_data, success = xspace_wrapper_func(
         xspace_paths, tool)
     if success:
       if tqx == 'out:csv':
@@ -85,7 +110,7 @@ def xspace_to_tool_data(xspace_paths, tool, tqx):
       else:
         data = tf_stats_proto_to_gviz.to_json(raw_data)
   elif tool == 'kernel_stats':
-    raw_data, success = _pywrap_profiler.xspace_to_tools_data(
+    raw_data, success = xspace_wrapper_func(
         xspace_paths, tool)
     if success:
       if tqx == 'out:csv;':
@@ -95,17 +120,17 @@ def xspace_to_tool_data(xspace_paths, tool, tqx):
   elif tool == 'memory_profile':
     # Memory profile handles one host at a time.
     assert len(xspace_paths) == 1
-    raw_data, success = _pywrap_profiler.xspace_to_tools_data(
+    raw_data, success = xspace_wrapper_func(
         xspace_paths, tool)
     if success:
       data = raw_data
   elif tool == 'pod_viewer':
-    raw_data, success = _pywrap_profiler.xspace_to_tools_data(
+    raw_data, success = xspace_wrapper_func(
         xspace_paths, tool)
     if success:
       data = raw_data
   elif tool == 'tf_data_bottleneck_analysis':
-    raw_data, success = _pywrap_profiler.xspace_to_tools_data(
+    raw_data, success = xspace_wrapper_func(
         xspace_paths, tool)
     if success:
       data = tf_data_stats_proto_to_gviz.to_json(raw_data)

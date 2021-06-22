@@ -87,7 +87,7 @@ _FILENAME_RE = re.compile(r'(?:(.*)\.)?(' +
                           '|'.join(TOOLS.values()).replace('.', r'\.') + r')')
 
 # Tools that consume raw data.
-_RAW_DATA_TOOLS = frozenset(
+RAW_DATA_TOOLS = frozenset(
     tool for tool, extension in TOOLS.items()
     if extension.endswith('.json') or extension.endswith('.json.gz'))
 
@@ -118,11 +118,11 @@ XPLANE_TOOLS_ALL_HOSTS_ONLY = frozenset(
     ['overview_page^', 'pod_viewer^', 'tf_data_bottleneck_analysis^'])
 
 
-def _use_xplane(tool):
+def use_xplane(tool):
   return tool[-1] == '^'
 
 
-def _make_filename(host, tool):
+def make_filename(host, tool):
   """Returns the name of the file containing data for the given host and tool.
 
   Args:
@@ -134,7 +134,7 @@ def _make_filename(host, tool):
     'localhost.trace'.
   """
   filename = str(host) + '.' if host else ''
-  tool = 'xplane' if _use_xplane(tool) else tool
+  tool = 'xplane' if use_xplane(tool) else tool
   return filename + TOOLS[tool]
 
 
@@ -295,6 +295,30 @@ def filenames_to_hosts(filenames, tool):
   return sorted(hosts)
 
 
+def get_data_content_encoding(raw_data: bytes,
+                              tool: str,
+                              tqx: str):
+  """Converts raw tool proto into the correct tool data.
+
+  Args:
+    raw_data: bytes representing raw data from the tool.
+    tool: string of tool name.
+    tqx: Gviz output format.
+
+  Returns:
+    The converted data and the content encoding of the data.
+  """
+  data, content_encoding = None, None
+  if tool in RAW_DATA_TOOLS:
+    data = raw_data
+    if tool[-1] == '#':
+      content_encoding = 'gzip'
+  else:
+    data = convert.tool_proto_to_tool_data(raw_data, tool, tqx)
+
+  return data, content_encoding
+
+
 class ProfilePlugin(base_plugin.TBPlugin):
   """Profile Plugin for TensorBoard."""
 
@@ -426,7 +450,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
     if not run_dir:
       logger.warning('Cannot find asset directory for: %s', run)
       return []
-    tool_pattern = _make_filename('*', tool)
+    tool_pattern = make_filename('*', tool)
     filenames = []
     try:
       filenames = tf.io.gfile.glob(os.path.join(run_dir, tool_pattern))
@@ -461,7 +485,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
     # Profile plugin "run" is the last component of run dir.
     profile_run = os.path.basename(run_dir)
 
-    if tool not in TOOLS and not _use_xplane(tool):
+    if tool not in TOOLS and not use_xplane(tool):
       return None, None
 
     self.start_grpc_stub_if_necessary()
@@ -491,12 +515,12 @@ class ProfilePlugin(base_plugin.TBPlugin):
       grpc_response = self.stub.GetSessionToolData(grpc_request)
       return grpc_response.output, None
 
-    asset_path = os.path.join(run_dir, _make_filename(host, tool))
+    asset_path = os.path.join(run_dir, make_filename(host, tool))
 
     data, content_encoding = None, None
-    if _use_xplane(tool):
+    if use_xplane(tool):
       if host == ALL_HOSTS:
-        file_pattern = _make_filename('*', 'xplane')
+        file_pattern = make_filename('*', 'xplane')
         try:
           asset_paths = tf.io.gfile.glob(os.path.join(run_dir, file_pattern))
         except tf.errors.OpError as e:
@@ -523,13 +547,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
     if raw_data is None:
       return None, None
 
-    if tool in _RAW_DATA_TOOLS:
-      data = raw_data
-      if tool[-1] == '#':
-        content_encoding = 'gzip'
-    else:
-      data = convert.tool_proto_to_tool_data(raw_data, tool, tqx)
-    return data, content_encoding
+    return get_data_content_encoding(raw_data, tool, tqx)
 
   @wrappers.Request.application
   def data_route(self, request):
