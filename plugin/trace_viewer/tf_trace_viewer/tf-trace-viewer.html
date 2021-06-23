@@ -746,6 +746,21 @@ dashboard would integrate trace viewer app using iframe.
       // Only send "selected_device_ids" query param when Process Filter Dropdown is populated
       // with a list of devices (pids) checkboxes.
       if (dropdown.childNodes.length > 2) {
+        // If no devices (pids) are selected in the Process Filter Dropdown.
+        // We need to send at least one selected device (pid).
+        //
+        // This hack is needed because the XProf backend when filtering all events
+        // results in a Trace JSON without Metadata events.
+        // Without Metadata Events the Catapult Traceviewer would not know what Devices
+        // had trace profiles recorded on them and what to show on the Process Filter Dropdown.
+        // See: (b/191894254)
+        if (selectedDeviceIds.length == 0) {
+          const dropdown = Polymer.dom(document.getElementById("process_filter_dropdown"));
+          const label = dropdown.childNodes[2].getElementsByTagName('label')[0];
+          const pid = label.innerText.match(/pid (\d+)/)[1];
+          selectedDeviceIds.push(pid);
+        }
+
         requestURL.searchParams.set('selected_device_ids', selectedDeviceIds.join(','));
       }
 
