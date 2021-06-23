@@ -335,6 +335,9 @@ dashboard would integrate trace viewer app using iframe.
         hostSelector.children[1].selected = 'selected';
       }
       hostSelector.addEventListener("change", () => {
+        // When the host changes, we need to clear the Process Filter Dropdown
+        // since it contains devices (pids) associated with the previous host.
+        this._clearProcessList();
         this._loadTrace(null, /* replaceModel= */ true);  // reload data.
       });
 
@@ -568,6 +571,8 @@ dashboard would integrate trace viewer app using iframe.
       if (data['selected_device_ids']) {
         this._selectedDeviceIds = data['selected_device_ids'];
         delete data['selected_device_ids'];
+      } else {
+        this._selectedDeviceIds = null;
       }
 
       data.traceEvents = this._filterKnownTraceEvents(data.traceEvents);
@@ -578,15 +583,20 @@ dashboard would integrate trace viewer app using iframe.
         this._dirty = true;
       }
 
-      if (this._devices == null) {
-        const devices = {};
-        for (const pid in this._model.processes) {
-          devices[pid] = this._model.processes[pid].name;
-        }
-        this._devices = devices;
+      this._devices = {};
+      for (const pid in this._model.processes) {
+        this._devices[pid] = this._model.processes[pid].name;
       }
 
       return Promise.resolve();
+    },
+
+    // Remove all checkboxes in the Process Filter Dropdown.
+    _clearProcessList: function() {
+      const dropdown = Polymer.dom(document.getElementById("process_filter_dropdown"));
+      while (dropdown.firstChild) {
+        dropdown.removeChild(dropdown.firstChild);
+      }
     },
 
     // Only for XProf Streaming Mode we need to define our own _updateProcessList()
@@ -610,10 +620,7 @@ dashboard would integrate trace viewer app using iframe.
         selectedDeviceIds = Object.keys(this._devices);
       }
 
-      const dropdown = Polymer.dom(document.getElementById("process_filter_dropdown"));
-      while (dropdown.firstChild) {
-        dropdown.removeChild(dropdown.firstChild);
-      }
+      this._clearProcessList();
 
       const cboxes = [];
       const updateAll = (checked) => {
@@ -622,6 +629,7 @@ dashboard would integrate trace viewer app using iframe.
         }
       };
 
+      const dropdown = Polymer.dom(document.getElementById("process_filter_dropdown"));
       dropdown.appendChild(tr.ui.b.createButton('All', () => {
         updateAll(true);
         this._loadTrace(null, /* replaceModel= */ true);  // reload data.
@@ -723,20 +731,21 @@ dashboard would integrate trace viewer app using iframe.
       }
 
       // Populate query parameter "selected_device_ids".
+      const dropdown = Polymer.dom(document.getElementById("process_filter_dropdown"));
       const selectedDeviceIds = [];
-      const processSelector = document.getElementById("process_filter_dropdown");
-      const processorDialog = processSelector.getElementsByTagName('dialog')[0];
-      const spans = processorDialog.getElementsByTagName('span');
-      for (let i = 0; i < spans.length; ++i) {
-        const checkbox = spans[i].getElementsByTagName('input')[0];
+      // Checkbox nodes start at index 2 since the first two nodes are the "All" and "None" button.
+      for (let i = 2; i < dropdown.childNodes.length; ++i) {
+        const checkbox = dropdown.childNodes[i].getElementsByTagName('input')[0];
         if (checkbox.checked) {
-          const label = spans[i].getElementsByTagName('label')[0];
+          const label = dropdown.childNodes[i].getElementsByTagName('label')[0];
           const pid = label.innerText.match(/pid (\d+)/)[1];
           selectedDeviceIds.push(pid)
         }
       }
 
-      if (spans.length !== 0) {
+      // Only send "selected_device_ids" query param when Process Filter Dropdown is populated
+      // with a list of devices (pids) checkboxes.
+      if (dropdown.childNodes.length > 2) {
         requestURL.searchParams.set('selected_device_ids', selectedDeviceIds.join(','));
       }
 
