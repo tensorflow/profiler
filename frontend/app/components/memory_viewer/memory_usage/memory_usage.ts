@@ -254,11 +254,30 @@ export class MemoryUsage {
     }
   }
 
-  /**
-   * From a list of heap simulator traces, identify the one that has the largest
-   * number of memory events of <color>.
-   */
-  private getHeapTraceByColor(
+  private getHeapTraceByColorAndBufferAllocationIndex(
+      color: number,
+      traces?: proto.HeapSimulatorTrace[]): proto.HeapSimulatorTrace|null {
+    if (!traces) {
+      return null;
+    }
+    for (const trace of traces) {
+      const index = trace.bufferAllocationIndex;
+      if (!index || index === '0') continue;
+      const buffer = this.idToBufferAllocation[utils.toNumber(index)];
+      if (!buffer) continue;
+      // Find the heap simulator trace that corresponds to the HLO temporaries
+      // buffer allocation, where isThreadLocal, isEntryComputationParameter,
+      // isConstant, and maybeLiveOut will all be false.
+      if (buffer.color === color && !buffer.isThreadLocal &&
+          !buffer.isEntryComputationParameter && !buffer.isConstant &&
+          !buffer.maybeLiveOut) {
+        return trace;
+      }
+    }
+    return null;
+  }
+
+  private getHeapTraceByColorAndEvents(
       color: number,
       traces?: proto.HeapSimulatorTrace[]): proto.HeapSimulatorTrace|null {
     if (!traces) {
@@ -281,6 +300,19 @@ export class MemoryUsage {
       }
     }
     return bestTrace;
+  }
+
+  /**
+   * From a list of heap simulator traces, identify the one that has the largest
+   * number of memory events of <color>.
+   */
+  private getHeapTraceByColor(
+      color: number,
+      traces?: proto.HeapSimulatorTrace[]): proto.HeapSimulatorTrace|null {
+    const trace =
+        this.getHeapTraceByColorAndBufferAllocationIndex(color, traces);
+    if (trace) return trace;
+    return this.getHeapTraceByColorAndEvents(color, traces);
   }
 
   /**

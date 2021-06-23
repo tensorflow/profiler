@@ -10,7 +10,11 @@ import {BufferAllocationAssigned} from './buffer_allocation_assigned';
 export class BufferAllocation {
   index: number;
   size: number;
+  color: number;
   isThreadLocal: boolean;
+  isEntryComputationParameter: boolean;
+  isConstant: boolean;
+  maybeLiveOut: boolean;
   assigned: BufferAllocationAssigned[];
   groupName: string;
 
@@ -18,7 +22,12 @@ export class BufferAllocation {
     allocation = allocation || {};
     this.index = toNumber(allocation.index);
     this.size = toNumber(allocation.size);
+    this.color = toNumber(allocation.color);
     this.isThreadLocal = allocation.isThreadLocal || false;
+    this.isEntryComputationParameter =
+        allocation.isEntryComputationParameter || false;
+    this.isConstant = allocation.isConstant || false;
+    this.maybeLiveOut = allocation.maybeLiveOut || false;
     this.assigned = this.getAllocation(allocation);
     this.groupName = this.getGroupName(allocation);
   }
