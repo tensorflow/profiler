@@ -79,13 +79,6 @@ export class MaxHeapChart implements OnChanges, OnInit {
       }
     });
 
-    google.visualization.events.addListener(this.chart, 'onmouseout', () => {
-      if (this.chart) {
-        this.chart.setSelection([]);
-      }
-      this.selected.emit(-1);
-    });
-
     google.visualization.events.addListener(
         this.chart, 'onmouseover',
         (event: google.visualization.ChartSelection) => {
