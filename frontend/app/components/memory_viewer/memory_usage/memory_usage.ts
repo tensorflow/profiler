@@ -112,12 +112,12 @@ export class MemoryUsage {
   private findIndefiniteMemoryUsage(buffers: Set<number>, color: number):
       MemoryUsageBytes {
     const usageBytes: MemoryUsageBytes = {padded: 0, unpadded: 0};
-    buffers.forEach(id => {
+    for (const id of buffers) {
       const alloc = this.idToBufferAllocation[id];
       if (!alloc || alloc.isThreadLocal) {
-        return;
+        continue;
       }
-      if (!this.idToBuffer[id] || this.idToBuffer[id].color !== color) return;
+      if (!this.idToBuffer[id] || this.idToBuffer[id].color !== color) continue;
 
       if (!this.seenBufferAllocations.has(alloc.index)) {
         usageBytes.padded += alloc.size;
@@ -141,9 +141,11 @@ export class MemoryUsage {
           unpadded += shape ? shape.unpaddedHeapSizeBytes() : buffer.size;
           padded += buffer.size;
         });
-        usageBytes.unpadded += Math.floor(alloc.size * unpadded / padded);
+        if (padded) {
+          usageBytes.unpadded += Math.floor(alloc.size * unpadded / padded);
+        }
       }
-    });
+    }
     this.indefiniteMemoryUsageBytes = usageBytes;
     return usageBytes;
   }
