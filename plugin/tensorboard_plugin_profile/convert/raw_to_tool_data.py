@@ -45,7 +45,8 @@ def process_raw_trace(raw_trace):
   return ''.join(trace_events_json.TraceEventsJsonStream(trace))
 
 
-def xspace_to_tool_data_from_string(xspace_byte_list, filenames, tool, tqx):
+def xspace_to_tools_data_from_byte_string(xspace_byte_list, filenames, tool,
+                                          tqx):
   """Helper function for getting an XSpace tool from a bytes string.
 
   Args:
@@ -58,7 +59,7 @@ def xspace_to_tool_data_from_string(xspace_byte_list, filenames, tool, tqx):
     Returns a string of tool data.
   """
   def xspace_wrapper_func(xspace_arg, tool_arg):
-    return _pywrap_profiler.xspace_to_tool_data_from_string(
+    return _pywrap_profiler.xspace_to_tools_data_from_byte_string(
         xspace_arg, filenames, tool_arg)
 
   return xspace_to_tool_data(xspace_byte_list, tool, tqx, xspace_wrapper_func)
