@@ -1,7 +1,7 @@
 import {Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output} from '@angular/core';
 import {Store} from '@ngrx/store';
 import {KELLY_COLORS} from 'org_xprof/frontend/app/common/constants/constants';
-import {AllReduceOpInfo, ChannelInfo, PodStatsRecord, PodViewerTopology, StepBreakdownEvent} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {AllReduceOpInfo, ChannelInfo, LogicalId, PodStatsRecord, PodViewerTopology, StepBreakdownEvent} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {getActivePodViewerInfoState} from 'org_xprof/frontend/app/store/selectors';
 import {ReplaySubject} from 'rxjs';
@@ -14,7 +14,8 @@ interface ColorInfo {
 
 interface ElementInfo {
   id?: string;
-  rid?: number;
+  replicaId?: number;
+  computationId?: number;
   x: number;
   y: number;
 }
@@ -51,9 +52,8 @@ export class TopologyGraph implements OnChanges, OnDestroy {
   /** The channel dababase. */
   @Input() channelDb?: ChannelInfo[];
 
-  /** The replica id map with core id as key. */
-  @Input()
-  coreIdToReplicaIdMap?: {[key: /* uint32 */ string]: /* uint32 */ number};
+  /** The logical id map with core id as key. */
+  @Input() coreIdToLogicalIdMap?: {[key: /* uint32 */ string]: LogicalId};
 
   /** The metric list. */
   @Input() metricList: StepBreakdownEvent[] = [];
@@ -108,7 +108,7 @@ export class TopologyGraph implements OnChanges, OnDestroy {
     this.store.select(getActivePodViewerInfoState)
         .pipe(takeUntil(this.destroyed))
         .subscribe((info) => {
-          this.updateReplicaGroupColoring(info as AllReduceOpInfo);
+          this.updateLogicalIdGroupColoring(info as AllReduceOpInfo);
         });
   }
 
@@ -303,18 +303,21 @@ export class TopologyGraph implements OnChanges, OnDestroy {
       return;
     }
 
-    Object.keys(this.podStatsPerCore).forEach(coreId => {
+    for (const coreId of Object.keys(this.podStatsPerCore)) {
       const podStatsRecord = this.podStatsPerCore![coreId];
       const chipId = podStatsRecord.chipId || 0;
       const nodeId = podStatsRecord.nodeId || 0;
       const nodeInfo = this.getNodePosition(chipId, nodeId);
       nodeInfo.id = 'node-' + chipId.toString() + '-' + nodeId.toString();
-      if (this.coreIdToReplicaIdMap &&
-          this.coreIdToReplicaIdMap[coreId] !== undefined) {
-        nodeInfo.rid = this.coreIdToReplicaIdMap[coreId];
+      if (this.coreIdToLogicalIdMap &&
+          this.coreIdToLogicalIdMap[coreId]?.replicaId !== undefined &&
+          this.coreIdToLogicalIdMap[coreId]?.computationId !== undefined) {
+        nodeInfo.replicaId = this.coreIdToLogicalIdMap[coreId].replicaId;
+        nodeInfo.computationId =
+            this.coreIdToLogicalIdMap[coreId].computationId;
       }
       this.nodes.push(nodeInfo);
-    });
+    }
   }
 
   private updateSystemInfo() {
@@ -433,10 +436,13 @@ export class TopologyGraph implements OnChanges, OnDestroy {
     this.tooltipText += 'host: ' + (podStatsRecord.hostName || '') + '\n';
     this.tooltipText += 'chip id: ' + chipId.toString() + '\n';
     this.tooltipText += 'node id: ' + nodeId.toString() + '\n';
-    if (this.coreIdToReplicaIdMap &&
-        this.coreIdToReplicaIdMap[coreId] !== undefined) {
+    if (this.coreIdToLogicalIdMap &&
+        this.coreIdToLogicalIdMap[coreId]?.replicaId !== undefined &&
+        this.coreIdToLogicalIdMap[coreId]?.computationId !== undefined) {
       this.tooltipText +=
-          'replica id: ' + this.coreIdToReplicaIdMap[coreId].toString() + '\n';
+          `replica id: ${this.coreIdToLogicalIdMap[coreId]?.replicaId}\n`;
+      this.tooltipText += `computation id: ${
+          this.coreIdToLogicalIdMap[coreId]?.computationId}\n`;
     }
     if (this.selectedMetric && this.selectedMetricLabel) {
       const value: number = utils.getPodStatsRecordBreakdownProperty(
@@ -486,15 +492,16 @@ export class TopologyGraph implements OnChanges, OnDestroy {
     this.selected.emit(index || 0);
   }
 
-  updateReplicaGroupColoring(info: AllReduceOpInfo) {
-    if (!info || !info.replicaGroups || !info.replicaGroups.length) return;
-    // Colors the nodes within the same replica group to the same color.
-    for (let i = 0; i < info.replicaGroups.length; i++) {
-      const group = info.replicaGroups[i].replicaIds;
+  updateLogicalIdGroupColoring(info: AllReduceOpInfo) {
+    if (!info || !info.logicalIdGroups || !info.logicalIdGroups.length) return;
+    // Colors the nodes within the same logicalId group to the same color.
+    for (let i = 0; i < info.logicalIdGroups.length; i++) {
+      const group = info.logicalIdGroups[i].logicalIds;
       if (!group) continue;
       for (let j = 0; j < group.length; j++) {
         const groupEl = this.elRef.nativeElement.querySelectorAll(
-            '[rid="' + group[j] + '"]');
+            `[replicaId="${group[j].replicaId}"][computationId="${
+                group[j].computationId}"]`);
         groupEl.forEach((el: HTMLElement) => {
           el.style.backgroundColor = KELLY_COLORS[i % 20];
         });

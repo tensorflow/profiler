@@ -15,6 +15,11 @@
           <div class="title">Replica Groups</div>
           <code>{{replicaGroups}}</code>
         </div>
+        <div class="info scroll-x-auto" [hidden]="!logicalIdGroups">
+          <div class="title">Logical ID Groups</div>
+          <p>Each Logical ID is represented by a (replicaId, computationId) pair.</p>
+          <code><pre>{{logicalIdGroups}}</pre></code>
+        </div>
         <div class="info scroll-x-auto" [hidden]="!description">
           <div class="title">Description</div>
           <code>{{description}}</code>

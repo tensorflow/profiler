@@ -1,6 +1,5 @@
 import {Component, OnDestroy} from '@angular/core';
 import {Store} from '@ngrx/store';
-
 import {AllReduceOpInfo, ChannelInfo, PodStatsRecord} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {getActivePodViewerInfoState} from 'org_xprof/frontend/app/store/selectors';
@@ -27,6 +26,7 @@ export class PodViewerDetails implements OnDestroy {
   details: DetailInfo[] = [];
   hloNames = '';
   replicaGroups = '';
+  logicalIdGroups = '';
   description = '';
 
   constructor(private readonly store: Store<{}>) {
@@ -59,12 +59,28 @@ export class PodViewerDetails implements OnDestroy {
     this.info = info;
     this.name = info.name || '';
     this.updateSizeAndLatency(info);
-    (info.replicaGroups || []).forEach(replicaGroup => {
-      if (replicaGroup.replicaIds && replicaGroup.replicaIds.length > 0) {
-        this.replicaGroups += '{' + replicaGroup.replicaIds.join(',') + '} ';
+
+    if (info.logicalIdGroups && info.logicalIdGroups.length) {
+      this.logicalIdGroups += '{';
+      for (const logicalIdGroup of info.logicalIdGroups) {
+        if (logicalIdGroup.logicalIds && logicalIdGroup.logicalIds.length > 0) {
+          this.logicalIdGroups += '{' +
+              logicalIdGroup.logicalIds
+                  .map((id) => `(${id.replicaId},${id.computationId})`)
+                  .join(',') +
+              '},\n';
+        }
       }
-    });
+      this.logicalIdGroups += '}';
+    }
+
     this.description = info.description || '';
+
+    const hasReplicaGroups =
+        this.description.match(/replica_groups=({({(\d,?)+},?)*})/);
+    if (hasReplicaGroups) {
+      this.replicaGroups = hasReplicaGroups[1];
+    }
   }
 
   private updateChannelInfo(info: ChannelInfo) {
@@ -115,6 +131,7 @@ export class PodViewerDetails implements OnDestroy {
     this.details = [];
     this.hloNames = '';
     this.replicaGroups = '';
+    this.logicalIdGroups = '';
     if (!info) {
       this.info = undefined;
       return;
