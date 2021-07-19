@@ -302,10 +302,20 @@ dashboard would integrate trace viewer app using iframe.
           }
           module_name = this._lastSelectedHloModule ? this._lastSelectedHloModule : 'default';
           this._eventDetails.innerHTML =
-            '<a href="' + graphViewLink.href + '" target="_blank"> see hlo graph for ' +
-            hloOp + '@' + module_name + '</a>';
+            '<div><a href="' + graphViewLink.href + '" target="_blank"> see hlo graph for ' +
+            hloOp + '@' + module_name + '</a>' +
+            '<br>Note: Make sure that you have select the correct module by click on it first.' +
+            '</div>';
         } else if (event.parentContainer.name === 'XLA Modules') {
           this._lastSelectedHloModule = event.title;
+        }
+        if ('group_id' in event.args) {
+          const traceViewerStepLink =
+                new URL(window.location.origin + '/trace_viewer/' + this._sessionId);
+          traceViewerStepLink.searchParams.append("selected_group_ids", event.args['group_id']);
+          this._eventDetails.innerHTML += '<div><a href="' + traceViewerStepLink.href +
+            '" target="_blank"> see events ONLY for this step/group ' +
+            event.args['group_id'] + '</div>';
         }
       }
     },
