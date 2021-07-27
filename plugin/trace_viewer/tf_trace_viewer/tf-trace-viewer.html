@@ -63,6 +63,37 @@ Trace Viewer.
   #analysis {
     flex-flow: row nowrap;
   }
+
+  #eventSummaryTable table.tr-ui-b-table {
+    /* Make text content wrap when the container resizes. */
+    overflow-wrap: anywhere;
+
+    /* Table layout fixed is needed since otherwise the td element's width don't
+     * get calculated properly for `resize: horizontal`. We set width to 100% so the table still
+     * dynamically reflows based on window width. */
+    table-layout:fixed;
+    width: 100%;
+  }
+
+  /* Columns in Event Summary Table. */
+  #eventSummaryTable thead.tr-ui-b-table > tr.tr-ui-b-table > td.tr-ui-b-table {
+    /* Allow Event Summary Table Columns width to be resizable */
+    resize: horizontal;
+    min-width: 100px;
+  }
+
+  /* Name Column in Event Summary Table. */
+  #eventSummaryTable thead.tr-ui-b-table > tr.tr-ui-b-table > td.tr-ui-b-table:first-child {
+    min-width: 350px;
+    width: 500px;
+    max-width: 900px;
+  }
+
+  #eventSummaryTable tr-ui-a-analysis-link {
+    /* Override Catapult CSS which sets this as no-wrap preventing resizing the HTML element. */
+    white-space: normal;
+  }
+
 </style>
 
 <div class="no-webcomponents-container hidden">
