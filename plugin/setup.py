@@ -20,7 +20,7 @@ from __future__ import print_function
 import setuptools
 
 PROJECT_NAME = 'tensorboard_plugin_profile'
-VERSION = '2.4.0'
+VERSION = '2.5.0'
 REQUIRED_PACKAGES = [
     'gviz_api >= 1.9.0',
     'protobuf >= 3.6.0',
