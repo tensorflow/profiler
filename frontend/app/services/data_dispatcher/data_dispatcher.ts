@@ -20,11 +20,11 @@ export class DataDispatcher extends DataDispatcherBase {
     super(store);
   }
 
-  clearData(dataRequest: DataRequest) {
+  override clearData(dataRequest: DataRequest) {
     this.store.dispatch(this.getActions(dataRequest));
   }
 
-  exportAsCsv(tool: string) {
+  override exportAsCsv(tool: string) {
     if (!!tool && tool === this.params.tag) {
       this.dataService.exportDataAsCSV(
           this.params.run, this.params.tag, this.params.host);
@@ -32,7 +32,7 @@ export class DataDispatcher extends DataDispatcherBase {
   }
 
   // tslint:disable-next-line:no-any
-  load(dataRequest: DataRequest): Observable<any> {
+  override load(dataRequest: DataRequest): Observable<any> {
     const run = dataRequest.params.run || '';
     const tag = dataRequest.params.tag || '';
     const host = dataRequest.params.host || '';
@@ -48,7 +48,7 @@ export class DataDispatcher extends DataDispatcherBase {
   }
 
   // tslint:disable-next-line:no-any
-  parseData(dataRequest: DataRequest, data: any) {
+  override parseData(dataRequest: DataRequest, data: any) {
     if (dataRequest.type === DataRequestType.KERNEL_STATS) {
       data = (data || [{}])[0];
     }

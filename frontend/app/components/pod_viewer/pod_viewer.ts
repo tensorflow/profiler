@@ -21,7 +21,7 @@ export class PodViewer extends PodViewerCommon implements OnDestroy {
   private readonly destroyed = new ReplaySubject<void>(1);
   constructor(
       route: ActivatedRoute, private readonly dataService: DataService,
-      readonly store: Store<{}>) {
+      override readonly store: Store<{}>) {
     super(store);
     route.params.pipe(takeUntil(this.destroyed)).subscribe((params) => {
       this.update(params as NavigationEvent);

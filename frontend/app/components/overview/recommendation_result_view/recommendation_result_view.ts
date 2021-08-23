@@ -57,7 +57,7 @@ export class RecommendationResultView extends RecommendationResultViewCommon {
     return defaultValue;
   }
 
-  parseStatements() {
+  override parseStatements() {
     this.statements = [];
     STATEMENT_INFO.forEach(info => {
       const prop = this.getRecommendationResultProp(info.id);
@@ -67,7 +67,7 @@ export class RecommendationResultView extends RecommendationResultViewCommon {
     });
   }
 
-  parseTips() {
+  override parseTips() {
     const data = this.recommendationResult || {};
     const hostTips: string[] = [];
     const deviceTips: string[] = [];
@@ -124,7 +124,7 @@ export class RecommendationResultView extends RecommendationResultViewCommon {
     this.tipInfoArray = tipInfoArray.filter(tipInfo => tipInfo.tips.length > 0);
   }
 
-  onTipsClick(event: Event) {
+  override onTipsClick(event: Event) {
     if (!event || !event.target ||
         (event.target as HTMLElement).tagName !== 'A') {
       return;
