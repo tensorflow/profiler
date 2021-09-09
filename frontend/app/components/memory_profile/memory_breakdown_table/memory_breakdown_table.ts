@@ -61,7 +61,7 @@ export class MemoryBreakdownTable implements OnChanges, OnInit {
     }
 
     for (let i = 0; i < activeAllocations.length; i++) {
-      const index = Number(activeAllocations[i].snapshotIndex);
+      const index: number = Number(activeAllocations[i].snapshotIndex);
       const specialIndex = Number(activeAllocations[i].specialIndex);
       // Use snapshot index or special index, whichever is positve.
       let metadata;
