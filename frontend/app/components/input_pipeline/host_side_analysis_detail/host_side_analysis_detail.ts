@@ -60,7 +60,9 @@ export class HostSideAnalysisDetail implements OnInit, OnChanges {
   ngOnInit() {
     this.dataProviderForTable.setHasHostOpsChangedEventListener(
         (hasHostOps: boolean) => {
-          this.hasHostOps = hasHostOps;
+          Promise.resolve().then(() => {
+            this.hasHostOps = hasHostOps;
+          });
         });
   }
 
