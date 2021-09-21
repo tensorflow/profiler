@@ -94,6 +94,35 @@ Trace Viewer.
     white-space: normal;
   }
 
+  #trace-filter-config .checkboxes {
+    padding-left: 0;
+  }
+
+  #trace-filter-config .delete-btn {
+    margin-right: 10px;
+    background: #ee390b;
+  }
+
+  #trace-filter-config ul {
+    list-style: none;
+  }
+
+  #trace-filter-config li {
+    list-style: none;
+  }
+
+  #trace-filter-config #device-resource-filter {
+    border: 0.5px solid;
+    width: 300px;
+    padding: 10px;
+  }
+
+  #trace-filter-config details {
+      border: 1px solid #aaa;
+      border-radius: 4px;
+      padding: .5em .5em 0;
+      width: 500px;
+  }
 </style>
 
 <div class="no-webcomponents-container hidden">
@@ -185,6 +214,141 @@ dashboard would integrate trace viewer app using iframe.
 <script src="tf-trace-viewer-helper.js"></script>
 <script>
   'use strict';
+
+  class TraceEventFilter {
+    constructor(field, negation, op, value, type) {
+      this.field = field;
+      this.negation = negation;
+      this.op = op;
+      this.value = value;
+      this.type = type;
+    }
+
+    toString() {
+      const operators = ['=', '<', '>', '<=', '>='];
+      return `${this.field} ${this.negation ? 'NOT' : ''} ${operators[this.op]} ${this.value}  |  type: ${this.type}`;
+    }
+
+    toJSON() {
+      let json = {'field': this.field, 'negation': this.negation, 'op': this.op};
+
+      switch(this.type) {
+        case 'str':
+          json.str_value = this.value;
+          break;
+        case 'regex':
+          json.regex_value = this.value;
+          break;
+        case 'uint':
+          json.uint_value = this.value;
+          break;
+        case 'int':
+          json.int_value = this.value;
+          break;
+        case 'double':
+          json.double_value = this.value;
+          break;
+      }
+
+      return json;
+    }
+  }
+
+  class TraceFilter {
+    constructor() {
+      this.device_regexes = [];
+      this.resource_regexes = [];
+      this.trace_event_filters = [];
+      this.trace_event_arg_filters = [];
+      this.negation = false;
+    }
+  }
+
+  class TraceFilterConfig {
+    constructor() {
+      this.trace_filters = [];
+    }
+  }
+
+  const traceFilterHTMLTemplate = `
+    <details>
+        <summary>TraceFilter</summary>
+    <div id="device-resource-filter">
+
+    <form class="device-regex-form">
+      <p>Matches Device Regexes</p>
+      <ul id="device-regex-list" class="checkboxes">
+      </ul>
+      <input type="text">
+      <input type="submit" value="Add Device Regex">
+    </form>
+
+    <form class="resource-regex-form">
+      <p>Matches Resource Regexes</p>
+      <ul id="device-regex-list" class="checkboxes">
+      </ul>
+      <input type="text" placeholder="">
+      <input type="submit" value="Add Resource Regex">
+    </form>
+
+    </div>
+
+    <form class="event-regex-form">
+      <h4>Event Filter</h4>
+      Events that match the filter are filtered out.
+
+      <ul class="checkboxes">
+      </ul>
+      <input type="text" id="field" name="field" placeholder="event field">
+
+      <select id="negation" name="negation">
+        <option value="0"></option>
+        <option value="1">NOT</option>
+      </select>
+
+      <select id="operator" name="operator">
+        <option value="0">=</option>
+        <option value="1"><</option>
+        <option value="2">></option>
+        <option value="3"><=</option>
+        <option value="4">>=</option>
+      </select>
+
+      <input type="text" id="value" name="value" placeholder="value">
+
+      <br>
+
+      <label for="value_type">Value Type:</label>
+      <select id="value_type" name="value_type">
+        <option value="str">string</option>
+        <option value="regex">regex</option>
+        <option value="uint">uint</option>
+        <option value="int">int</option>
+        <option value="double">double</option>
+      </select>
+
+      <input type="submit" value="Add Event Filter">
+    </form>
+
+    <form class="event-arg-regex-form">
+      <h4>Event Arg Filter</h4>
+      Event Args that match the filter are filtered out.
+
+      <ul class="checkboxes">
+      </ul>
+      <input type="text">
+      <input type="submit" value="Add Event Arg Filter">
+    </form>
+
+    <ul class="checkboxes">
+      <li><input type="checkbox" class="invert-tracefilter">Invert TraceFilter</li>
+      <p>By default, TraceFilter will filter out events that don't match it. Checking this box means TraceFilter will instead filter out events that match it.</p>
+    </ul>
+
+    <input type="submit" value="Delete TraceFilter" class="delete-tracefilter">
+
+    </details>
+  `;
 
   /* tf-trace-viewer will work in two modes: static mode and streaming mode.
    * in static mode, data are load at 'ready' time,
@@ -307,6 +471,9 @@ dashboard would integrate trace viewer app using iframe.
         // associate divider with event details pane.
         verticalDivider.horizontal = false;
         verticalDivider.target = this._eventDetails;
+
+        // Create Trace Filter Config Dropdown.
+        this._createFilterSelector();
       }.bind(this));
     },
 
@@ -314,6 +481,7 @@ dashboard would integrate trace viewer app using iframe.
     _lastSelectedHloModule: string = '',
     _selectedDeviceIds: null,
     _devices: null,
+    _traceFilterConfig: new TraceFilterConfig(),
 
     onSelectionChange: function(e) {
       if (!this._sessionId) return;
@@ -560,6 +728,163 @@ dashboard would integrate trace viewer app using iframe.
       }
     },
 
+    _registerTraceFilterFieldForm: function(form, onCreate, onDelete) {
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const valueList = form.querySelector('ul');
+
+        const valueText = onCreate(form);
+        const valueLabel = document.createElement('li');
+
+        const valueDeleteBtn = document.createElement('input');
+        valueDeleteBtn.setAttribute('type', 'submit');
+        valueDeleteBtn.setAttribute('class', 'delete-btn');
+        valueDeleteBtn.value = "x";
+        valueDeleteBtn.addEventListener('click', (event) => {
+          event.preventDefault();
+          onDelete(valueText);
+          valueList.removeChild(valueLabel);
+        });
+
+        valueLabel.appendChild(valueDeleteBtn);
+        valueLabel.appendChild(document.createTextNode(valueText));
+
+        valueList.appendChild(valueLabel);
+      });
+    },
+
+    _registerTraceFilterForm: function(createdTraceFilterDialog, traceFilterConfig) {
+      const traceFilter = new TraceFilter();
+      traceFilterConfig.trace_filters.push(traceFilter);
+
+      const invertTraceFilterCheckBox = createdTraceFilterDialog.querySelector('.invert-tracefilter');
+      invertTraceFilterCheckBox.addEventListener('change', (event) => {
+        if (invertTraceFilterCheckBox.checked) {
+          traceFilter.negation = true;
+        } else {
+          traceFilter.negation = false;
+        }
+      });
+
+      createdTraceFilterDialog.querySelector('.delete-tracefilter').addEventListener('click',
+        (event) => {
+        traceFiltersList = document.querySelector('#created-trace-filter');
+        traceFiltersList.removeChild(createdTraceFilterDialog);
+
+        // Remove this TraceFilter from TraceFilterConfig.
+        const index = traceFilterConfig.trace_filters.indexOf(traceFilter);
+        if (index != -1) {
+          traceFilterConfig.trace_filters.splice(index, 1);
+        }
+      });
+
+      const regexOnCreate = (regexes, form) => {
+        const fieldInput = form.querySelector('input[type="text"]');
+        regexes.push(fieldInput.value);
+        return fieldInput.value;
+      };
+
+      const regexOnDelete = (regexes, valueText) => {
+        const index = regexes.indexOf(valueText);
+        if (index != -1) {
+          regexes.splice(index, 1);
+        }
+      };
+
+      const eventFilterOnCreate = (eventFilters, form) => {
+        const fieldNameInput = form.querySelector('input[name="field"]');
+        const negationInput = form.querySelector('select[name="negation"]');
+        const operatorInput = form.querySelector('select[name="operator"]');
+        const valueInput = form.querySelector('input[name="value"]');
+        const valueTypeInput = form.querySelector('select[name="value_type"]');
+
+        const traceEventFilter = new TraceEventFilter(fieldNameInput.value,
+                                                      Boolean(Number(negationInput.value)),
+                                                      Number(operatorInput.value),
+                                                      valueInput.value,
+                                                      valueTypeInput.value);
+        eventFilters.push(traceEventFilter);
+
+        return traceEventFilter.toString();
+      };
+
+      const eventFilterOnDelete = (eventFilters, valueText) => {
+        let foundIndex = -1;
+        for (let i = 0; i < eventFilters.length; i++) {
+          if (eventFilters[i].toString() == valueText) {
+            foundIndex = i;
+            break;
+          }
+        }
+
+        if (foundIndex != -1) {
+          eventFilters.splice(foundIndex, 1);
+        }
+      };
+
+      const deviceRegexForm = createdTraceFilterDialog.querySelector('.device-regex-form');
+      this._registerTraceFilterFieldForm(deviceRegexForm,
+                        (form) => {return regexOnCreate(traceFilter.device_regexes, form)},
+                        (valueText) => {regexOnDelete(traceFilter.device_regexes, valueText)});
+
+      const resourceRegexForm = createdTraceFilterDialog.querySelector('.resource-regex-form');
+      this._registerTraceFilterFieldForm(resourceRegexForm,
+                        (form) => {return regexOnCreate(traceFilter.resource_regexes, form)},
+                        (valueText) => {regexOnDelete(traceFilter.resource_regexes, valueText)});
+
+      const eventRegexForm = createdTraceFilterDialog.querySelector('.event-regex-form');
+      this._registerTraceFilterFieldForm(eventRegexForm,
+                        (form) => {return eventFilterOnCreate(traceFilter.trace_event_filters,
+                                                              form)},
+                        (valueText) => {eventFilterOnDelete(traceFilter.trace_event_filters,
+                                                            valueText)});
+
+      const eventArgRegexForm = createdTraceFilterDialog.querySelector('.event-arg-regex-form');
+      this._registerTraceFilterFieldForm(eventArgRegexForm,
+                        (form) => {return eventFilterOnCreate(traceFilter.trace_event_arg_filters,
+                                                              form)},
+                        (valueText) => {eventFilterOnDelete(traceFilter.trace_event_arg_filters,
+                                                            valueText)});
+    },
+
+    _createFilterSelector: function() {
+      const filterSelector = document.createElement('tr-ui-b-dropdown');
+      filterSelector.setAttribute('id', 'filter_selector');
+      Polymer.dom(this._traceViewer.leftControls).appendChild(filterSelector);
+
+      filterSelector.label = "Trace Filter Config";
+      const filterDialog = filterSelector.getElementsByTagName('dialog')[0];
+
+      filterDialog.innerHTML = `
+        <div id="trace-filter-config">
+        <div id="created-trace-filter">
+        </div>
+        <br>
+        <input type="submit" id="create-trace-filter" value="Create TraceFilter">
+        <br>
+        <input type="checkbox" name="toggle-tracefilter-config">
+        <label for="toggle-tracefilter-config">Apply Trace Filter Config</label>
+        </div>
+      `;
+
+      filterSelector.style.display = 'flex';
+
+      document.querySelector('input[name="toggle-tracefilter-config"]').addEventListener('change',
+        (event) => {
+          this._loadTrace(null, /* replaceModel= */ true);  // reload data.
+      });
+
+      const createTraceFilterButton = document.querySelector('#create-trace-filter');
+      createTraceFilterButton.addEventListener('click', (event) => {
+        traceFiltersList = document.querySelector('#created-trace-filter');
+
+        traceFiltersList.insertAdjacentHTML('beforeend', traceFilterHTMLTemplate);
+        createdTraceFilterDialog = traceFiltersList.children[traceFiltersList.children.length - 1];
+
+        this._registerTraceFilterForm(createdTraceFilterDialog, this._traceFilterConfig);
+      });
+    },
+
     // Updates the model with data returned by the JSON endpoint.
     // If replaceModel is true, the data set is completely replaced; otherwise,
     // the new data is merged with the old data.
@@ -788,6 +1113,12 @@ dashboard would integrate trace viewer app using iframe.
       // with a list of devices (pids) checkboxes.
       if (dropdown.childNodes.length > 2) {
         requestURL.searchParams.set('selected_device_ids', selectedDeviceIds.join(','));
+      }
+
+      // Only send "trace_filter_config" query param when the "Apply TraceFilter Config" checkbox
+      // is toggled on.
+      if (document.querySelector('input[name="toggle-tracefilter-config"]').checked) {
+        requestURL.searchParams.set('trace_filter_config', JSON.stringify(this._traceFilterConfig));
       }
 
       if (requestURL.searchParams.has('use_saved_result')) {
