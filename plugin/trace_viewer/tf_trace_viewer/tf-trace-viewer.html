@@ -335,8 +335,8 @@ dashboard would integrate trace viewer app using iframe.
           this._eventDetails.innerHTML =
             '<div><a href="' + graphViewLink.href + '" target="_blank"> see hlo graph for ' +
             hloOp + '@' + module_name + '</a>' +
-            '<br>Note: Make sure that you have select the correct module by click on it first.' +
-            '</div>';
+            '<br>Note: "Make sure that you have selected the correct module by clicking on it ' +
+            'first.</div>';
         } else if (event.parentContainer.name === 'XLA Modules') {
           this._lastSelectedHloModule = event.title;
         }
