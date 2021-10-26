@@ -2,8 +2,11 @@ load("@python_deps//:requirements.bzl", "requirement")
 
 # Description:
 #   Converter from protobuf to gviz/json formats.
+
+visibility = ["//plugin:internal"]
+
 package(
-    default_visibility = ["//plugin:internal"],
+    default_visibility = visibility,
     licenses = ["notice"],  # Apache 2.0
 )
 
@@ -194,6 +197,9 @@ py_library(
     name = "raw_to_tool_data",
     srcs = ["raw_to_tool_data.py"],
     srcs_version = "PY2AND3",
+    visibility = visibility + [
+        "//cloud/ai/platform/tensorboard/webserver/plugins:__pkg__",
+    ],
     deps = [
         ":input_pipeline_proto_to_gviz",
         ":kernel_stats_proto_to_gviz",
