@@ -58,12 +58,25 @@ export class MemoryTimelineGraph implements AfterViewInit, OnChanges {
     if (!snapshots) return;
     snapshots.sort((a, b) => Number(a.timeOffsetPs) - Number(b.timeOffsetPs));
 
+    // CPU allocator does not provide the free memory bytes stats, in this case,
+    // do not display the free memory line in timeline graph.
+    let hasFreeMemoryData = false;
+    for (let i = 0; i < snapshots.length; i++) {
+      const stats = snapshots[i].aggregationStats;
+      if (stats && stats.freeMemoryBytes !== '0') {
+        hasFreeMemoryData = true;
+        break;
+      }
+    }
+
     const dataTable = new google.visualization.DataTable();
     dataTable.addColumn('number', 'timestamp(ps)');
     dataTable.addColumn('number', 'stack');
     dataTable.addColumn('number', 'heap');
     dataTable.addColumn({type: 'string', role: 'tooltip'});
-    dataTable.addColumn('number', 'free');
+    if (hasFreeMemoryData) {
+      dataTable.addColumn('number', 'free');
+    }
     dataTable.addColumn('number', 'fragmentation');
 
     for (let i = 0; i < snapshots.length; i++) {
@@ -71,15 +84,38 @@ export class MemoryTimelineGraph implements AfterViewInit, OnChanges {
       if (!stats || !snapshots[i].timeOffsetPs) {
         continue;
       }
-      dataTable.addRow([
+      const row = [
         this.picoToMilli(snapshots[i].timeOffsetPs),
         this.bytesToGiBs(stats.stackReservedBytes),
         this.bytesToGiBs(stats.heapAllocatedBytes),
-        this.getMetadataTooltip(snapshots[i]),
-        this.bytesToGiBs(stats.freeMemoryBytes),
-        (stats.fragmentation || 0) * 100,
-      ]);
+        this.getMetadataTooltip(snapshots[i])
+      ];
+      if (hasFreeMemoryData) {
+        row.push(this.bytesToGiBs(stats.freeMemoryBytes));
+      }
+      row.push((stats.fragmentation || 0) * 100);
+      dataTable.addRow(row);
     }
+
+
+    const fragmentationProperty = {
+      'targetAxisIndex': 1,  // Using string parameter to prevent renaming.
+      type: 'line',
+      lineDashStyle: [4, 4],
+    };
+    const lineProperty = {'targetAxisIndex': 0};
+    const seriesWithFreeMemory = {
+      0: lineProperty,
+      1: lineProperty,
+      2: lineProperty,
+      3: fragmentationProperty,
+    };
+    const seriesWithoutFreeMemory = {
+      0: lineProperty,
+      1: lineProperty,
+      2: fragmentationProperty,
+    };
+
 
     const options = {
       curveType: 'none',
@@ -101,16 +137,8 @@ export class MemoryTimelineGraph implements AfterViewInit, OnChanges {
           textStyle: {bold: true},
         },
       },
-      series: {
-        0: {'targetAxisIndex': 0},
-        1: {'targetAxisIndex': 0},
-        2: {'targetAxisIndex': 0},
-        3: {
-          'targetAxisIndex': 1,  // Using string parameter to prevent renaming.
-          type: 'line',
-          lineDashStyle: [4, 4],
-        },
-      },
+      series: hasFreeMemoryData ? seriesWithFreeMemory :
+                                  seriesWithoutFreeMemory,
       // tslint:disable-next-line:no-any
       legend: {position: 'top' as any},
       tooltip: {
