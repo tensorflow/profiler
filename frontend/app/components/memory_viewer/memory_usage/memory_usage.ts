@@ -1,4 +1,4 @@
-import * as proto from 'org_xprof/frontend/app/common/interfaces/hlo.proto';
+import * as proto from 'org_xprof/frontend/app/common/interfaces/hlo.jsonpb_decls';
 import {HeapObject} from 'org_xprof/frontend/app/common/interfaces/heap_object';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {BufferAllocation} from 'org_xprof/frontend/app/components/memory_viewer/xla/buffer_allocation';

@@ -1,4 +1,4 @@
-import {Node} from 'org_xprof/frontend/app/common/interfaces/op_profile.proto';
+import {Node} from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 
 /** An op profile data class. */

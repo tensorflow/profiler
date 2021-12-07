@@ -1,4 +1,4 @@
-import * as proto from 'org_xprof/frontend/app/common/interfaces/xla_data.proto';
+import * as proto from 'org_xprof/frontend/app/common/interfaces/xla_data.jsonpb_decls';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {Layout} from './layout';
 

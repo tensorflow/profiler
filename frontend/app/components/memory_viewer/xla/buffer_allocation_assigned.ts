@@ -1,4 +1,4 @@
-import * as proto from 'org_xprof/frontend/app/common/interfaces/hlo.proto';
+import * as proto from 'org_xprof/frontend/app/common/interfaces/hlo.jsonpb_decls';
 import {toNumber} from 'org_xprof/frontend/app/common/utils/utils';
 
 /**

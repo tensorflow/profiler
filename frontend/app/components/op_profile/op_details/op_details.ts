@@ -1,7 +1,7 @@
 import {Component, OnDestroy} from '@angular/core';
 import {Store} from '@ngrx/store';
 
-import {Node} from 'org_xprof/frontend/app/common/interfaces/op_profile.proto';
+import {Node} from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {getActiveOpProfileNodeState} from 'org_xprof/frontend/app/store/selectors';
 import {ReplaySubject} from 'rxjs';
