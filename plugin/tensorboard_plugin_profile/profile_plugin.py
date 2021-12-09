@@ -295,9 +295,7 @@ def filenames_to_hosts(filenames, tool):
   return sorted(hosts)
 
 
-def get_data_content_encoding(raw_data: bytes,
-                              tool: str,
-                              tqx: str):
+def get_data_content_encoding(raw_data, tool, tqx):
   """Converts raw tool proto into the correct tool data.
 
   Args:
@@ -388,6 +386,26 @@ class ProfilePlugin(base_plugin.TBPlugin):
   def frontend_metadata(self):
     return base_plugin.FrontendMetadata(es_module_path='/index.js')
 
+  def _read_static_file_impl(self, filename):
+    """Reads contents from a filename.
+
+    Args:
+      filename (str): Name of the file.
+
+    Returns:
+      Contents of the file.
+    Raises:
+      IOError: File could not be read or found.
+    """
+    filepath = os.path.join(os.path.dirname(__file__), 'static', filename)
+
+    try:
+      with open(filepath, 'rb') as infile:
+        contents = infile.read()
+    except IOError as io_error:
+      raise io_error
+    return contents
+
   @wrappers.Request.application
   def static_file_route(self, request):
     filename = os.path.basename(request.path)
@@ -400,10 +418,8 @@ class ProfilePlugin(base_plugin.TBPlugin):
       mimetype = 'application/javascript'
     else:
       mimetype = 'application/octet-stream'
-    filepath = os.path.join(os.path.dirname(__file__), 'static', filename)
     try:
-      with open(filepath, 'rb') as infile:
-        contents = infile.read()
+      contents = self._read_static_file_impl(filename)
     except IOError:
       return respond('404 Not Found', 'text/plain', code=404)
     return respond(contents, mimetype)
