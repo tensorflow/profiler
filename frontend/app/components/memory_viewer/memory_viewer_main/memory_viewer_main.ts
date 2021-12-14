@@ -1,7 +1,7 @@
 import {Component, Input, OnChanges, OnDestroy} from '@angular/core';
 import {Store} from '@ngrx/store';
 import {BufferAllocationInfo} from 'org_xprof/frontend/app/common/interfaces/buffer_allocation_info';
-import {HloProtoOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {HloProtoOrNull, MemoryViewerPreprocessResultOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 import {HeapObject} from 'org_xprof/frontend/app/common/interfaces/heap_object';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
@@ -22,6 +22,10 @@ interface BufferSpan {
 export class MemoryViewerMain implements OnDestroy, OnChanges {
   /** XLA Hlo proto */
   @Input() hloProto: HloProtoOrNull = null;
+
+  /** Preprocessed result for memory viewer */
+  @Input()
+  memoryViewerPreprocessResult: MemoryViewerPreprocessResultOrNull = null;
 
   /** XLA memory space color */
   @Input() memorySpaceColor: number = 0;
@@ -135,6 +139,12 @@ export class MemoryViewerMain implements OnDestroy, OnChanges {
   update() {
     const data = this.hloProto;
     this.diagnostics = {errors: [], warnings: [], info: []};
+    if (!this.hloProto && this.memoryViewerPreprocessResult) {
+      this.diagnostics.errors.push(
+          'Not yet implemented error: Input data is a memory viewer ' +
+          'preprocessed result.');
+      return;
+    }
     if (!data || !data.hloModule) {
       this.diagnostics.errors.push(
           'We failed to fetch a valid input. The input is empty or too large.');

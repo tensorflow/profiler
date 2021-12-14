@@ -1,6 +1,7 @@
 import * as hloProto from 'org_xprof/frontend/app/common/interfaces/hlo.jsonpb_decls';
 import * as diagnosticsProto from 'org_xprof/frontend/app/common/interfaces/diagnostics.jsonpb_decls';
 import * as memoryProfileProto from 'org_xprof/frontend/app/common/interfaces/memory_profile.jsonpb_decls';
+import * as memoryViewerPreprocess from 'org_xprof/frontend/app/common/interfaces/memory_viewer_preprocess.jsonpb_decls';
 import * as opProfileProto from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
 
 /** The base interface for a cell.  */
@@ -402,6 +403,10 @@ export type TensorflowStatsDataOrNull = TensorflowStatsData|null;
 /** The data table type for a HloProto or null. */
 export type HloProtoOrNull = (hloProto.HloProto)|null;
 
+/** The data table type for a preprocessed memory viewer or null. */
+export type MemoryViewerPreprocessResultOrNull =
+    (memoryViewerPreprocess.PreprocessResult)|null;
+
 /** The data table type for a MemoryProfile or null. */
 export type MemoryProfileProtoOrNull = (memoryProfileProto.MemoryProfile)|null;
 
@@ -485,5 +490,6 @@ export type PrimitiveTypeNumberStringOrUndefined = number|string|undefined;
 /** All data table type. */
 export type DataTable =
     OverviewDataTable[]|InputPipelineDataTable[]|TensorflowStatsData[]|
-    hloProto.HloProto|memoryProfileProto.MemoryProfile|opProfileProto.Profile|
-    PodViewerDatabase|null;
+    hloProto.HloProto|memoryViewerPreprocess.PreprocessResult|
+    memoryProfileProto.MemoryProfile|opProfileProto.Profile|PodViewerDatabase|
+    null;
