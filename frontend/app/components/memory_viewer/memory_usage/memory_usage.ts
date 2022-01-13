@@ -1,4 +1,6 @@
 import * as proto from 'org_xprof/frontend/app/common/interfaces/hlo.jsonpb_decls';
+import * as preprocessedProto from 'org_xprof/frontend/app/common/interfaces/memory_viewer_preprocess.jsonpb_decls';
+import {HloProtoOrNull, MemoryViewerPreprocessResultOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {HeapObject} from 'org_xprof/frontend/app/common/interfaces/heap_object';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {BufferAllocation} from 'org_xprof/frontend/app/components/memory_viewer/xla/buffer_allocation';
@@ -44,9 +46,13 @@ export class MemoryUsage {
 
   smallBufferSize: number;
 
+  diagnostics: {errors: string[], warnings: string[], info: string[]};
+  moduleName: string;
+
+  // Only one of hloProto or preprocess is valid to construct MemoryUsage.
   constructor(
-      hloProto: proto.HloProto, memorySpaceColor: number,
-      private readonly includeNotSimulated: boolean) {
+      hloProto: HloProtoOrNull, preprocess: MemoryViewerPreprocessResultOrNull,
+      memorySpaceColor: number, private readonly includeNotSimulated: boolean) {
     this.buffers = [];
     this.idToBuffer = {};
     this.idToBufferAllocation = {};
@@ -73,10 +79,91 @@ export class MemoryUsage {
     this.maxHeapToByPaddingSize = [];
     this.logicalBufferSpans = {};
     this.smallBufferSize = 16 * 1024;
+    this.diagnostics = {errors: [], warnings: [], info: []};
+    this.moduleName = '';
 
-    this.initHloInstructions(hloProto.hloModule);
-    this.initMemoryUsage(memorySpaceColor, hloProto.bufferAssignment);
-    this.initMaxHeap();
+    // Both input sources (HLOProto and preprocessed data) are invalid.
+    if (!hloProto && !preprocess) {
+      this.diagnostics.errors.push(
+          'We failed to fetch a valid input. The input is empty or too large.');
+      return;
+    }
+
+    if (hloProto) {
+      // Initialize memory viewer usage from HLOProto.
+      if (!this.sanityCheckHloProto(hloProto)) {
+        return;
+      }
+      this.initHloInstructions(hloProto.hloModule);
+      this.initMemoryUsage(memorySpaceColor, hloProto.bufferAssignment);
+      this.initMaxHeap();
+    } else if (preprocess) {
+      // Initialize memory viewer from preprocessed data.
+      this.initMemoryUsageFromPrecomputed(preprocess);
+    }
+  }
+
+  /**
+   * Initializes memory usage from precomputed results.
+   */
+  private initMemoryUsageFromPrecomputed(
+      preprocess: preprocessedProto.PreprocessResult) {
+    // Copy the fields from preprocessed result.
+    this.moduleName = preprocess.moduleName || '';
+    this.peakHeapSizeBytes = (preprocess.peakHeapMib || 0) * 1024 * 1024;
+    this.unpaddedPeakHeapSizeBytes =
+        (preprocess.peakUnpaddedHeapMib || 0) * 1024 * 1024;
+    this.peakHeapSizePosition = (preprocess.peakHeapSizePosition || 0);
+    this.heapSizes = preprocess.heapSizes || [];
+    this.unpaddedHeapSizes = preprocess.unpaddedHeapSizes || [];
+    if (preprocess.logicalBufferSpans) {
+      for (const [key, value] of Object.entries(
+               preprocess.logicalBufferSpans)) {
+        this.logicalBufferSpans[utils.toNumber(key)] =
+            [value.start || 0, value.limit || 0];
+      }
+    }
+    for (const heapObject of preprocess.maxHeap || []) {
+      this.maxHeap.push({
+        instructionName: heapObject.instructionName,
+        shape: heapObject.shapeString,
+        tfOpName: heapObject.tfOpName,
+        sizeMiB: heapObject.logicalBufferSizeMib,
+        unpaddedSizeMiB: heapObject.unpaddedShapeMib,
+        color: this.nColor++,
+        groupName: heapObject.groupName,
+        opcode: heapObject.opCode,
+        logicalBufferId: heapObject.logicalBufferId,
+      });
+    }
+    this.createMaxHeapIndex();
+  }
+
+  /**
+   * Do a sanity check of the given HLO proto.
+   * Return false if there are errors that will fail the initialization of
+   * memory viewer.
+   */
+  private sanityCheckHloProto(hloProto: proto.HloProto) {
+    if (!hloProto.hloModule) {
+      this.diagnostics.errors.push(
+          'The HloProto does not contain a valid hlo module');
+      return false;
+    }
+
+    if (!hloProto.bufferAssignment) {
+      this.diagnostics.errors.push(
+          'The HloProto does not contain a buffer assignment. ' +
+          'Therefore, we don\'t know the memory usage.');
+      return false;
+    }
+
+    if (!hloProto.bufferAssignment.heapSimulatorTraces ||
+        !hloProto.bufferAssignment.heapSimulatorTraces.length) {
+      this.diagnostics.warnings.push(
+          'The HloProto does not contain a heap simulator trace.');
+    }
+    return true;
   }
 
   /**
@@ -360,6 +447,7 @@ export class MemoryUsage {
           'Missing hloModule, skipping unpadded allocation size analysis');
       return;
     }
+    this.moduleName = hloModule.name || '';
     for (const comp of hloModule.computations || []) {
       for (const inst of comp.instructions || []) {
         if (!inst.name) continue;
@@ -369,27 +457,10 @@ export class MemoryUsage {
   }
 
   /**
-   * Accumulate data for use in a stacked bar plot.
-   * We accumulate it in "program order" -- the order in which it was placed
-   * into the logical_buffers sequence above was program order, and we iterate
-   * that order to create data points.
+   * Create index for this.maxHeap so it can be selected by size, unpadded size
+   * and etc.
    */
-  private initMaxHeap() {
-    for (const id of this.peakLogicalBuffers) {
-      const alloc = this.idToBufferAllocation[id];
-      const groupName = alloc ? alloc.groupName : '';
-      this.addHeapObject(this.idToBuffer[id], groupName);
-    }
-    if (this.rest !== 0) {
-      const small = `${this.smallBufferCount} small buffers (<${
-          this.smallBufferSize / 1024} KiB)`;
-      this.maxHeap.push({
-        instructionName: small,
-        sizeMiB: utils.bytesToMiB(this.rest),
-        color: this.nColor++,
-        groupName: small,
-      });
-    }
+  private createMaxHeapIndex() {
     const indexedMaxHeap = this.maxHeap.map((e, i) => {
       return {ind: i, val: e};
     });
@@ -421,6 +492,31 @@ export class MemoryUsage {
     for (let i = 0; i < this.byPaddingSizeToMaxHeap.length; i++) {
       this.maxHeapToByPaddingSize[this.byPaddingSizeToMaxHeap[i]] = i;
     }
+  }
+
+  /**
+   * Accumulate data for use in a stacked bar plot.
+   * We accumulate it in "program order" -- the order in which it was placed
+   * into the logical_buffers sequence above was program order, and we iterate
+   * that order to create data points.
+   */
+  private initMaxHeap() {
+    for (const id of this.peakLogicalBuffers) {
+      const alloc = this.idToBufferAllocation[id];
+      const groupName = alloc ? alloc.groupName : '';
+      this.addHeapObject(this.idToBuffer[id], groupName);
+    }
+    if (this.rest !== 0) {
+      const small = `${this.smallBufferCount} small buffers (<${
+          this.smallBufferSize / 1024} KiB)`;
+      this.maxHeap.push({
+        instructionName: small,
+        sizeMiB: utils.bytesToMiB(this.rest),
+        color: this.nColor++,
+        groupName: small,
+      });
+    }
+    this.createMaxHeapIndex();
   }
 
   /**

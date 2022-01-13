@@ -137,33 +137,14 @@ export class MemoryViewerMain implements OnDestroy, OnChanges {
   }
 
   update() {
-    const data = this.hloProto;
-    this.diagnostics = {errors: [], warnings: [], info: []};
-    if (!this.hloProto && this.memoryViewerPreprocessResult) {
-      this.diagnostics.errors.push(
-          'Not yet implemented error: Input data is a memory viewer ' +
-          'preprocessed result.');
+    this.usage = new MemoryUsage(
+        this.hloProto, this.memoryViewerPreprocessResult, this.memorySpaceColor,
+        this.includeNotSimulated);
+    if (this.usage.diagnostics.errors.length > 0) {
       return;
     }
-    if (!data || !data.hloModule) {
-      this.diagnostics.errors.push(
-          'We failed to fetch a valid input. The input is empty or too large.');
-      return;
-    }
-    if (!data.bufferAssignment) {
-      this.diagnostics.errors.push(
-          'The HloProto does not contain a buffer assignment. ' +
-          'Therefore, we don\'t know the memory usage.');
-      return;
-    }
-    if (!data.bufferAssignment.heapSimulatorTraces ||
-        !data.bufferAssignment.heapSimulatorTraces.length) {
-      this.diagnostics.warnings.push(
-          'The HloProto does not contain a heap simulator trace.');
-    }
-    this.moduleName = data.hloModule.name || '';
-    this.usage =
-        new MemoryUsage(data, this.memorySpaceColor, this.includeNotSimulated);
+
+    this.moduleName = this.usage.moduleName;
 
     this.peakHeapSizeMiB =
         utils.bytesToMiB(this.usage.peakHeapSizeBytes).toFixed(2);

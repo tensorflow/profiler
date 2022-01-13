@@ -9,6 +9,7 @@ ts_library(
     ],
     deps = [
         "@org_xprof//frontend/app/common/interfaces",
+        "@org_xprof//frontend/app/common/interfaces:memory_viewer_preprocess_proto_defs",
         "@org_xprof//frontend/app/common/interfaces:xla_proto_defs",
         "@org_xprof//frontend/app/common/utils",
         "@org_xprof//frontend/app/components/memory_viewer/xla",
