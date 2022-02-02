@@ -16,6 +16,7 @@ xprof_ng_module(
         ":recommendation_result_view_css",
         "recommendation_result_view.ng.html",
     ],
+    strict_templates = False,
     deps = [
         "@npm//@angular/common",
         "@npm//@angular/core",

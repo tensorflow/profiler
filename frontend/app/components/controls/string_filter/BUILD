@@ -13,6 +13,7 @@ xprof_ng_module(
         "string_filter.ng.html",
         "string_filter_css",
     ],
+    strict_templates = False,
     deps = [
         "@npm//@angular/common",
         "@npm//@angular/core",

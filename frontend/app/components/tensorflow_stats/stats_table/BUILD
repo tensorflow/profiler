@@ -13,6 +13,7 @@ xprof_ng_module(
         ":stats_table_css",
         "stats_table.ng.html",
     ],
+    strict_templates = False,
     deps = [
         ":stats_table_data_provider",
         "@npm//@angular/core",

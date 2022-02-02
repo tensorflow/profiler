@@ -14,6 +14,7 @@ xprof_ng_module(
         ":device_side_analysis_detail_css",
         "device_side_analysis_detail.ng.html",
     ],
+    strict_templates = False,
     deps = [
         ":device_side_analysis_detail_data_provider",
         "@npm//@angular/core",

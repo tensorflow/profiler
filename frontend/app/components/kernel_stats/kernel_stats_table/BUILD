@@ -13,6 +13,7 @@ xprof_ng_module(
         ":kernel_stats_table_css",
         "kernel_stats_table.ng.html",
     ],
+    strict_templates = False,
     deps = [
         "@npm//@angular/core",
         "@org_xprof//frontend/app/common/angular:angular_material_form_field",

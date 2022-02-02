@@ -14,6 +14,7 @@ xprof_ng_module(
         ":overview_css",
         "overview.ng.html",
     ],
+    strict_templates = False,
     deps = [
         "@npm//@angular/common",
         "@npm//@angular/core",

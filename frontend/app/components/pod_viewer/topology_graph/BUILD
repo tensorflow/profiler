@@ -13,6 +13,7 @@ xprof_ng_module(
         ":topology_graph_css",
         "topology_graph.ng.html",
     ],
+    strict_templates = False,
     deps = [
         "@npm//@angular/common",
         "@npm//@angular/core",

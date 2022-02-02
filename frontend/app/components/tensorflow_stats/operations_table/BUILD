@@ -14,6 +14,7 @@ xprof_ng_module(
         ":operations_table_css",
         "operations_table.ng.html",
     ],
+    strict_templates = False,
     deps = [
         ":operations_table_data_provider",
         "@npm//@angular/core",
