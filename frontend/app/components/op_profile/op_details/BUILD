@@ -1,3 +1,4 @@
+load("@npm//@bazel/typescript:index.bzl", "ts_library")
 load("//defs:defs.bzl", "xprof_ng_module")
 load("@io_bazel_rules_sass//:defs.bzl", "sass_binary")
 
@@ -36,4 +37,18 @@ sass_binary(
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],
+)
+
+ts_library(
+    name = "op_details_ts",
+    srcs = [
+        "op_details.ts",
+        "op_details_module.ts",
+    ],
+)
+
+ts_library(
+    name = "op_details_tests",
+    testonly = True,
+    srcs = ["op_details_test.ts"],
 )
