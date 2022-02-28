@@ -15,9 +15,14 @@ xprof_ng_module(
     ],
     deps = [
         "@npm//@angular/core",
+        "@org_xprof//frontend/app/common/angular:angular_material_core",
+        "@org_xprof//frontend/app/common/angular:angular_material_form_field",
+        "@org_xprof//frontend/app/common/angular:angular_material_select",
         "@npm//@types/google.visualization",
     ],
 )
+
+
 
 sass_binary(
     name = "table_css",

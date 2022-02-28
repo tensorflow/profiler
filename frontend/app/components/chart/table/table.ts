@@ -10,6 +10,7 @@ export class Table implements OnChanges, OnInit {
   @Input() dataView?: google.visualization.DataView;
   @Input() showRowNumber = false;
   @Input() page = 'disable';
+  @Input() pageSizeOptions: number[] = [];
   @Input() pageSize = 10;
 
   table?: google.visualization.Table;
@@ -19,6 +20,7 @@ export class Table implements OnChanges, OnInit {
 
   ngOnInit() {
     this.loadGoogleChart();
+    this.populateDefaultPageSize();
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -53,6 +55,18 @@ export class Table implements OnChanges, OnInit {
     this.table.draw(this.dataView, options);
 
     this.onResize();
+  }
+
+  displayPageSizeSelector() {
+    return this.pageSizeOptions.length > 0;
+  }
+
+  populateDefaultPageSize() {
+    // when passing pageSizeOptions from parent, pageSize will by default be the
+    // 1st element in the list
+    if (this.pageSizeOptions.length > 0) {
+      this.pageSize = this.pageSizeOptions[0];
+    }
   }
 
   loadGoogleChart() {
