@@ -315,7 +315,6 @@ dashboard would integrate trace viewer app using iframe.
     },
 
     _sessionId: string = '',
-    _lastSelectedHloModule: string = '',
     _selectedDeviceIds: null,
     _devices: null,
 
@@ -326,23 +325,34 @@ dashboard would integrate trace viewer app using iframe.
       if (events === undefined) return;
       if (events.length != 1) return;
 
-      for (const event of events) {
+      for (const event of events) {  // only loop once.
         if (event.parentContainer.name === 'XLA Ops') {
-          hloOp = event.title;
+          var hloOp = event.title;
+          var hloModule = 'default';
+          var current_thread = event.parentContainer;
+          var current_process = current_thread.parent;
+          for (t in current_process.threads) {
+            var thread = current_process.threads[t];
+            if (thread.name != 'XLA Modules') continue;
+            // Perform a linear search for containing module, because we are not expecting too
+            // many modules per session. But binary search is possible here because the modules
+            // array seems sorted.
+            for (const module of thread.sliceGroup.slices) {
+              if (module.start < event.start && module.start + module.duration > event.start) {
+                hloModule = module.title;
+                break;
+              }
+            }
+          }
           const graphViewLink =
                 new URL(window.location.origin + '/graph_viewer/' + this._sessionId);
           graphViewLink.searchParams.append("node_name", hloOp);
-          if (this._lastSelectedHloModule) {
-            graphViewLink.searchParams.append("module_name", this._lastSelectedHloModule);
+          if (hloModule != 'default') {
+            graphViewLink.searchParams.append("module_name", hloModule);
           }
-          module_name = this._lastSelectedHloModule ? this._lastSelectedHloModule : 'default';
           this._eventDetails.innerHTML =
             '<div><a href="' + graphViewLink.href + '" target="_blank"> see hlo graph for ' +
-            hloOp + '@' + module_name + '</a>' +
-            '<br>Note: "Make sure that you have selected the correct module by clicking on it ' +
-            'first.</div>';
-        } else if (event.parentContainer.name === 'XLA Modules') {
-          this._lastSelectedHloModule = event.title;
+            hloOp + '@' + hloModule + '</a></div>';
         }
         if ('group_id' in event.args) {
           const traceViewerStepLink =
