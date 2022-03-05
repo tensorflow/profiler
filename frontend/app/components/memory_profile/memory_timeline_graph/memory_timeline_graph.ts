@@ -51,9 +51,16 @@ export class MemoryTimelineGraph implements AfterViewInit, OnChanges {
     this.width =
         Math.min(MAX_CHART_WIDTH, this.chartRef.nativeElement.offsetWidth);
 
-    const snapshots =
+    let snapshots =
         this.memoryProfileProtoOrNull.memoryProfilePerAllocator[this.memoryId]
             .memoryProfileSnapshots;
+    // If version is set to 1, this means the backend is using the new snapshot
+    // sampling algorithm, timeline data is stored in sampledTimelineSnapshots.
+    if (this.memoryProfileProtoOrNull.version === 1) {
+      snapshots =
+          this.memoryProfileProtoOrNull.memoryProfilePerAllocator[this.memoryId]
+              .sampledTimelineSnapshots;
+    }
 
     if (!snapshots) return;
     snapshots.sort((a, b) => Number(a.timeOffsetPs) - Number(b.timeOffsetPs));

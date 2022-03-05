@@ -34,8 +34,14 @@ export class MemoryProfileSummary implements AfterViewInit, OnChanges {
 
     const summary =
         this.data.memoryProfilePerAllocator[this.memoryId].profileSummary;
-    const snapshots = this.data.memoryProfilePerAllocator[this.memoryId]
+    let snapshots = this.data.memoryProfilePerAllocator[this.memoryId]
                           .memoryProfileSnapshots;
+    // If version is set to 1, this means the backend is using the new snapshot
+    // sampling algorithm, timeline data is stored in sampledTimelineSnapshots.
+    if (this.data.version === 1) {
+      snapshots = this.data.memoryProfilePerAllocator[this.memoryId]
+                      .sampledTimelineSnapshots;
+    }
     if (!summary || !snapshots) {
       return;
     }
