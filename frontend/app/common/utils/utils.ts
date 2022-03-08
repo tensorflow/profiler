@@ -174,8 +174,8 @@ export function flopsUtilization(node: OpProfileNode): number {
   // NaN indicates undefined utilization for fused operations (we can't
   // measure performance inside a fusion). It could also indicate operations
   // with zero time, but they currently don't appear in the profile.
-  if (!node || !node.metrics || !node.metrics.time) return NaN;
-  return (node.metrics.flops || 0) / node.metrics.time;
+  if (!node || !node.metrics || !node.metrics.timeFraction) return NaN;
+  return (node.metrics.flops || 0) / node.metrics.timeFraction;
 }
 
 /**
@@ -215,7 +215,7 @@ export function memoryBandwidth(node: OpProfileNode): number {
  * Returns whether a node has flops utilization.
  */
 export function hasFlopsUtilization(node: OpProfileNode): boolean {
-  return !!node && !!node.metrics && !!node.metrics.time;
+  return !!node && !!node.metrics && !!node.metrics.timeFraction;
 }
 
 /**
@@ -246,7 +246,7 @@ export function percent(fraction: number): string {
 export function timeWasted(node: OpProfileNode): number {
   if (!node || !node.metrics) return NaN;
   return (
-      (node.metrics.time || 0) *
+      (node.metrics.timeFraction || 0) *
       (1 - Math.max(flopsUtilization(node), memoryBandwidthUtilization(node))));
 }
 
