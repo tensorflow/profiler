@@ -34,10 +34,10 @@ xprof_ng_module(
     
     deps = [
         "@npm//@angular/core",
-        "@org_xprof//frontend/app/common/angular:angular_material_button",
         "@org_xprof//frontend/app/common/angular:angular_material_divider",
         "@org_xprof//frontend/app/common/angular:angular_material_icon",
-        "@org_xprof//frontend/app/common/angular:angular_material_menu",
+        "@org_xprof//frontend/app/common/angular:angular_material_mdc_button",
+        "@org_xprof//frontend/app/common/angular:angular_material_mdc_menu",
         "@npm//@types/google.visualization",
         "@npm//@ngrx/store",
         "@org_xprof//frontend/app/common/constants",

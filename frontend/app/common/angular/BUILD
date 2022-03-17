@@ -59,6 +59,14 @@ ts_library(
 )
 
 ts_library(
+    name = "angular_material_mdc_button",
+    srcs = [],
+    deps = [
+        "@npm//@angular/material",
+    ],
+)
+
+ts_library(
     name = "angular_material_button",
     srcs = [],
     deps = [
@@ -68,6 +76,14 @@ ts_library(
 
 ts_library(
     name = "angular_material_divider",
+    srcs = [],
+    deps = [
+        "@npm//@angular/material",
+    ],
+)
+
+ts_library(
+    name = "angular_material_mdc_menu",
     srcs = [],
     deps = [
         "@npm//@angular/material",
