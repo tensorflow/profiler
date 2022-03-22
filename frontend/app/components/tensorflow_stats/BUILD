@@ -31,7 +31,7 @@ xprof_ng_module(
         ":tensorflow_stats_css",
         "tensorflow_stats.ng.html",
     ],
-    strict_templates = False,
+    
     deps = [
         "@npm//@angular/core",
         "@org_xprof//frontend/app/common/angular:angular_material_button",

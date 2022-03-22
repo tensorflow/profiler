@@ -14,7 +14,7 @@ xprof_ng_module(
         ":op_profile_css",
         "op_profile.ng.html",
     ],
-    strict_templates = False,
+    
     deps = [
         ":op_profile_base",
         "@npm//@angular/core",

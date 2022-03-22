@@ -13,7 +13,7 @@ xprof_ng_module(
         ":memory_breakdown_table_css",
         "memory_breakdown_table.ng.html",
     ],
-    strict_templates = False,
+    
     deps = [
         "@npm//@angular/core",
         "@org_xprof//frontend/app/common/angular:angular_material_form_field",

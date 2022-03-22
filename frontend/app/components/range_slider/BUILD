@@ -13,7 +13,7 @@ xprof_ng_module(
         ":range_slider_css",
         "range_slider.ng.html",
     ],
-    strict_templates = False,
+    
     deps = [
         "@npm//@angular/core",
         "@org_xprof//frontend/app/common/angular:angular_material_slider",

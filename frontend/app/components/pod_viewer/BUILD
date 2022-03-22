@@ -14,7 +14,7 @@ xprof_ng_module(
         ":pod_viewer_css",
         "pod_viewer.ng.html",
     ],
-    strict_templates = False,
+    
     deps = [
         "@npm//@angular/core",
         "@org_xprof//frontend/app/common/angular:angular_material_divider",

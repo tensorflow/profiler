@@ -13,7 +13,7 @@ xprof_ng_module(
         ":flop_rate_chart_css",
         "flop_rate_chart.ng.html",
     ],
-    strict_templates = False,
+    
     deps = [
         "@npm//@angular/core",
         "@org_xprof//frontend/app/common/angular:angular_material_card",

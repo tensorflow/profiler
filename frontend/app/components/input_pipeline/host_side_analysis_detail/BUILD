@@ -13,7 +13,7 @@ xprof_ng_module(
         ":host_side_analysis_detail_css",
         "host_side_analysis_detail.ng.html",
     ],
-    strict_templates = False,
+    
     deps = [
         ":host_side_analysis_detail_table_data_provider",
         "@npm//@angular/core",
