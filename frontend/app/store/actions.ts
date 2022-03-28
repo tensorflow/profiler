@@ -3,7 +3,7 @@ import {Node} from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_d
 import {AllReduceOpInfo, ChannelInfo, PodStatsRecord} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {HeapObject} from 'org_xprof/frontend/app/common/interfaces/heap_object';
 
-import {DataRequest, LoadingState} from './state';
+import {DataRequest, LoadingState, ToolsInfoState} from './state';
 import {ActionCreatorAny} from './types';
 
 /** Action to set active heap object */
@@ -64,4 +64,10 @@ export const setExportAsCsvStateAction: ActionCreatorAny = createAction(
 export const setErrorMessageStateAction: ActionCreatorAny = createAction(
     '[App State] Set error message state',
     props<{errorMessage: string}>(),
+);
+
+/** Action to set tools info state */
+export const setToolsInfoStateAction: ActionCreatorAny = createAction(
+    '[App State] Set tools info state',
+    props<{toolsInfo: ToolsInfoState}>(),
 );

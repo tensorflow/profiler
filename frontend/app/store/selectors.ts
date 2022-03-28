@@ -45,6 +45,10 @@ export const getLoadingState: MemoizedSelectorAny =
 export const getCurrentTool: MemoizedSelectorAny =
     createSelector(appState, (appState: AppState) => appState.currentTool);
 
+/** Selector for ToolsInfoState */
+export const getToolsInfoState: MemoizedSelectorAny =
+    createSelector(appState, (appState: AppState) => appState.toolsInfoState);
+
 /** Selector for DataRequestType */
 export const getDataRequest: MemoizedSelectorAny =
     createSelector(appState, (appState: AppState) => appState.dataRequest);

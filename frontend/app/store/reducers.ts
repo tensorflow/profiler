@@ -71,6 +71,15 @@ export const reducer: ActionReducer<AppState, Action> = createReducer(
         },
         ),
     on(
+        actions.setToolsInfoStateAction,
+        (state: AppState, action: ActionCreatorAny) => {
+          return {
+            ...state,
+            toolsInfoState: action.toolsInfoState,
+          };
+        },
+        ),
+    on(
         actions.setDataRequestStateAction,
         (state: AppState, action: ActionCreatorAny) => {
           return {

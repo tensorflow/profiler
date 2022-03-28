@@ -39,6 +39,18 @@ export interface LoadingState {
 /** Type for current tool state */
 type CurrentToolState = string;
 
+/** Interface for tool info */
+export interface ToolInfo {
+  key: string;
+  label: string;
+  url?: string;
+  version?: string;
+  isRouteLink?: boolean;
+}
+
+/** Type for tools info state */
+export type ToolsInfoState = ToolInfo[]|[];
+
 /** The interface of params of DataRequest */
 interface DataRequestParams {
   run?: string;
@@ -68,6 +80,7 @@ export interface AppState {
   podViewerState: PodViewerState;
   capturingProfile: CapturingProfileState;
   loadingState: LoadingState;
+  toolsInfoState: ToolsInfoState;
   currentTool: CurrentToolState;
   dataRequest: DataRequest;
   exportAsCsv: ExportAsCsvState;
@@ -110,6 +123,9 @@ export const INIT_LOADING_STATE: LoadingState = {
 /** Initial state of current tool */
 const INIT_CURRENT_TOOL_STATE: CurrentToolState = '';
 
+/** Initial state of tools info */
+const INIT_TOOLS_INFO_STATE: ToolsInfoState = [];
+
 /** Initial state of request data */
 const INIT_REQUEST_DATA_STATE: DataRequest = {
   type: DataRequestType.UNKNOWN,
@@ -130,6 +146,7 @@ export const INIT_APP_STATE: AppState = {
   capturingProfile: INIT_CAPTURING_PROFILE_STATE,
   loadingState: INIT_LOADING_STATE,
   currentTool: INIT_CURRENT_TOOL_STATE,
+  toolsInfoState: INIT_TOOLS_INFO_STATE,
   dataRequest: INIT_REQUEST_DATA_STATE,
   exportAsCsv: INIT_EXPORT_AS_CSV_STATE,
   errorMessage: INIT_ERROR_MESSAGE_STATE,
