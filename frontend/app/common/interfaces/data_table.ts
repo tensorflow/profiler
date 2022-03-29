@@ -1,5 +1,5 @@
+import * as diagnosticsProto from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 import * as hloProto from 'org_xprof/frontend/app/common/interfaces/hlo.jsonpb_decls';
-import * as diagnosticsProto from 'org_xprof/frontend/app/common/interfaces/diagnostics.jsonpb_decls';
 import * as memoryProfileProto from 'org_xprof/frontend/app/common/interfaces/memory_profile.jsonpb_decls';
 import * as memoryViewerPreprocess from 'org_xprof/frontend/app/common/interfaces/memory_viewer_preprocess.jsonpb_decls';
 import * as opProfileProto from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
