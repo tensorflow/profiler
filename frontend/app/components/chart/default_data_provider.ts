@@ -79,7 +79,7 @@ export class DefaultDataProvider implements ChartDataProvider {
 
 /** A chart data provider that accepts array data. */
 export class ArrayDataProvider extends DefaultDataProvider {
-  override parseData(data: SimpleDataTable|Array<Array<(string | number)>>|null) {
+   parseData(data: SimpleDataTable|Array<Array<(string | number)>>|null) {
     if (data) {
       /* tslint:disable no-any */
       this.dataTable = google.visualization.arrayToDataTable(data as any[]);
@@ -101,7 +101,7 @@ export class ReplicaGroupDataProvider extends DefaultDataProvider {
   hloOpNameIndex?: number;   // 'operation' column
   selfTimeIndex?: number;    // 'total_self_time' column
 
-  override parseData(data: SimpleDataTable) {
+   parseData(data: SimpleDataTable) {
     const rowWithReplicaGroups: DataTableRow[] = [];
 
     if (!data || !data.cols || !data.rows) return;

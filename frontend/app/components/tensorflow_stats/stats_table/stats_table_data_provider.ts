@@ -43,7 +43,7 @@ export class StatsTableDataProvider extends DefaultDataProvider {
 
   private readonly totalOperationsChanged = new EventEmitter<string>();
 
-  override setChart(chart: ChartClass) {
+   setChart(chart: ChartClass) {
     this.chart = chart;
     google.visualization.events.addListener(
         this.chart, 'sort', (event: SortEvent) => {
@@ -53,7 +53,7 @@ export class StatsTableDataProvider extends DefaultDataProvider {
         });
   }
 
-  override parseData(data: SimpleDataTable|Array<Array<(string | number)>>|null) {
+   parseData(data: SimpleDataTable|Array<Array<(string | number)>>|null) {
     if (!data) return;
     const dataTable = new google.visualization.DataTable(data);
     if (this.hasDiff && this.diffTable) {
@@ -69,14 +69,14 @@ export class StatsTableDataProvider extends DefaultDataProvider {
         undefined;
   }
 
-  override setFilters(filters: google.visualization.DataTableCellFilter[]) {
+   setFilters(filters: google.visualization.DataTableCellFilter[]) {
     this.filters = filters;
     if (this.dataTable) {
       this.update.emit();
     }
   }
 
-  override process(): google.visualization.DataTable|google.visualization.DataView|null {
+   process(): google.visualization.DataTable|google.visualization.DataView|null {
     if (!this.dataTable) {
       return null;
     }
@@ -102,7 +102,7 @@ export class StatsTableDataProvider extends DefaultDataProvider {
     return dataView;
   }
 
-  override getOptions(): ChartOptions|null {
+   getOptions(): ChartOptions|null {
     this.options.sortAscending = this.sortAscending;
     this.options.sortColumn = this.sortColumn;
     return this.options;

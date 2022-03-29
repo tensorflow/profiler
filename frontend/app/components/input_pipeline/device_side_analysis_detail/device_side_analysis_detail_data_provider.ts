@@ -9,7 +9,7 @@ export class DeviceSideAnalysisDetailDataProvider extends DefaultDataProvider {
     this.columnIds = columnIds;
   }
 
-  override parseData(data: SimpleDataTable|Array<Array<(string | number)>>|null) {
+   parseData(data: SimpleDataTable|Array<Array<(string | number)>>|null) {
     if (!data) return;
     const dataTable = new google.visualization.DataTable(data);
 
