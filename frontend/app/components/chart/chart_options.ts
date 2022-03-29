@@ -57,3 +57,21 @@ export const BAR_CHART_OPTIONS: google.visualization.BarChartOptions = {
     ignoreBounds: true,
   },
 };
+
+/** The basic options for Google Charts Scatter chart */
+export const SCATTER_CHART_OPTIONS: google.visualization.ScatterChartOptions = {
+  backgroundColor: 'transparent',
+  width: 550,
+  height: 200,
+  chartArea: {
+    left: 70,
+    top: 10,
+    width: '60%',
+    height: '80%',
+  },
+  legend: {position: 'none'},
+  tooltip: {
+    isHtml: true,
+    ignoreBounds: true,
+  },
+};

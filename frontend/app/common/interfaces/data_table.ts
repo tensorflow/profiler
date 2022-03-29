@@ -4,6 +4,12 @@ import * as memoryProfileProto from 'org_xprof/frontend/app/common/interfaces/me
 import * as memoryViewerPreprocess from 'org_xprof/frontend/app/common/interfaces/memory_viewer_preprocess.jsonpb_decls';
 import * as opProfileProto from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
 
+/** The base interface for a table filter.  */
+export declare interface Filter {
+  column: number;
+  value: string|number;
+}
+
 /** The base interface for a cell.  */
 declare interface Cell<T> {
   v?: T;
@@ -33,11 +39,23 @@ export declare interface DataTableRow {
 /** The base interface for an empty property. */
 declare interface EmptyProperty {}
 
+/** The base interface for a genreal property object. */
+declare interface GeneralProperty {
+  [name: string]: string;
+}
+
 /** The base interface for data table without perperty. */
 export declare interface SimpleDataTable {
   cols?: DataTableColumn[];
   rows?: DataTableRow[];
   p?: EmptyProperty;
+}
+
+/** The base interface for data table with. */
+export declare interface GeneralDataTable {
+  cols?: DataTableColumn[];
+  rows?: DataTableRow[];
+  p?: GeneralProperty;
 }
 
 /** The data table type for data table without perperty or null. */

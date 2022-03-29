@@ -25,7 +25,9 @@ export class Dashboard {
     if (filter.column === -1) {
       return;
     }
-    if ('value' in filter || 'minValue' in filter || 'maxValue' in filter ||
+    if (('value' in filter && filter.value !== undefined) ||
+        ('minValue' in filter && filter.minValue !== undefined) ||
+        ('maxValue' in filter && filter.maxValue !== undefined) ||
         'test' in filter) {
       this.filters.set(filter.column, filter);
     } else {
