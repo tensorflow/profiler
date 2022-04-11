@@ -227,6 +227,7 @@ dashboard would integrate trace viewer app using iframe.
       _model: Object,
       _resolution: {type: Number, value: 1000},
       _dataRegenerated: {type: Boolean, value: false},
+      _isInitialLoad: {type: Boolean, value: true},
     },
 
     ready: function() {
@@ -430,30 +431,50 @@ dashboard would integrate trace viewer app using iframe.
       req.send(null);
     },
 
-    _loadTrace: function(requestedRange, replaceModel) {
+    _loadTrace: async function(requestedRange, replaceModel) {
       this._throbber.className = 'active';
+      this._isLoading = true;
       if (!this._isStreaming) {
-        // Send HTTP request to get the trace data.
-        var req = new XMLHttpRequest();
-        req.open('GET', this.traceDataUrl, true);
+        await this._loadNonStreamingTrace();
+      } else {
+        await this._loadStreamingTrace(requestedRange, replaceModel);
+      }
+      this._isLoading = false;
+      this._throbber.className = 'inactive';
+      if(this._isInitialLoad) {
+        // measure the timing since browser start loading
+        window.parent.gtag('event', 'timing_complete', {
+          'name': 'load',
+          'value': performance.now(),
+          'event_category': 'JS Dependency',
+          'event_label': `trace_viewer_${this._isStreaming ? 'streaming' : 'nonstreaming'}`,
+        });
+        this._isInitialLoad = false;
+      }
+    },
 
+    _loadNonStreamingTrace: async function() {
+      // Send HTTP request to get the trace data.
+      var req = new XMLHttpRequest();
+      req.open('GET', this.traceDataUrl, true);
+
+      // Promisify and await this to make the loading trace synchronized
+      await new Promise(resolve => {
         req.onreadystatechange = (event) => {
           if (req.readyState !== 4) {
             return;
           }
           window.setTimeout(() => {
             if (req.status === 200) {
-              this._throbber.className = 'inactive';
               this.set('_traceData', req.responseText);
             } else {
               this._displayOverlay(req.status, 'Failed to fetch data');
             }
+            resolve();
           }, 0);
         };
         req.send(null);
-      } else {
-        this._loadStreamingTrace(requestedRange, replaceModel);
-      }
+      });
     },
 
     // Something has changed, so consider reloading the data:
@@ -486,23 +507,22 @@ dashboard would integrate trace viewer app using iframe.
       }
     },
 
-    _loadStreamingTrace: function(requestedRange, replaceModel) {
+    _loadStreamingTrace: async function(requestedRange, replaceModel) {
       var success = true;
-      this._isLoading = true;
 
-      this._loadJSON(requestedRange)
+      await this._loadJSON(requestedRange)
         .then((data) => {
           this._updateModel(data, replaceModel);
         })
-        .then(() => {
-          this._updateView(requestedRange);
+        .then(async () => {
+          // Wait for the Promise in requestAnimationFrame callback
+          // to be resolved so we can make the load trace flow synchronized
+          await this._updateView(requestedRange);
         })
         .catch((err) => {
           this._displayOverlay('Trace Viewer', err);
         })
         .then(() => {
-          this._isLoading = false;
-          this._throbber.className = 'inactive';
           // Don't immediately load new data after the very first load. When
           // we first load the trace viewer, the actual view is not properly
           // initialized and we get an incorrect viewport leading to a spurious
@@ -709,7 +729,7 @@ dashboard would integrate trace viewer app using iframe.
     },
 
     // Updates the view based on the current model.
-    _updateView: function(requestedRange) {
+    _updateView: async function(requestedRange) {
       if (requestedRange == null) {
         this._fullBounds = {
           min: this._model.bounds.min,
@@ -730,7 +750,8 @@ dashboard would integrate trace viewer app using iframe.
       // delayed indefinitely if the tab is backgrounded. This version of polymer
       // doesn't provide a direct way to observe the viewer being attached.
       // This is a workaround: the browser won't paint until the viewer is attached.
-      window.requestAnimationFrame(
+      // Promisify this to make the trace loading process synchronized
+      await new Promise(resolve => window.requestAnimationFrame(
         function() {
           this._traceViewer.model = this._model;
           if (this._traceViewer.trackView != null) {
@@ -744,8 +765,9 @@ dashboard would integrate trace viewer app using iframe.
             );
           }
           this._traceViewer.viewTitle = '';
+          resolve();
         }.bind(this)
-      );
+      ));
     },
 
     // Access the {min, max} range of a trackView.
