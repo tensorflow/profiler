@@ -52,7 +52,7 @@
     "@rollup/plugin-node-resolve": "^10.0.0",
     "jasmine": "^2.99.0",
     "jasmine-core": "^2.99.0",
-    "karma": "^6.0.0",
+    "karma": "^6.3.16",
     "karma-chrome-launcher": "^2.0.0",
     "karma-firefox-launcher": "^1.0.0",
     "karma-jasmine": "^2.0.0",
@@ -80,5 +80,13 @@
     "tslib": "^2.0.1",
     "rxjs": "^6.5.4",
     "zone.js": "^0.10.3"
+  },
+  "overrides": {
+    "minimist" : "1.2.6",
+    "follow-redirects": "1.14.8",
+    "log4js" : "6.4.0",
+    "engine.io" : "4.1.2",
+    "ansi-regex" : "5.0.1",
+    "tar" : "4.4.19"
   }
 }
