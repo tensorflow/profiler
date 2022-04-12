@@ -1,3 +1,4 @@
+load("@npm//@bazel/typescript:index.bzl", "ts_library")
 load("//defs:defs.bzl", "xprof_ng_module")
 load("@io_bazel_rules_sass//:defs.bzl", "sass_binary")
 
@@ -41,4 +42,18 @@ sass_binary(
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],
+)
+
+ts_library(
+    name = "capture_profile_dialog_ts",
+    srcs = [
+        "capture_profile_dialog.ts",
+        "capture_profile_dialog_module.ts",
+    ],
+)
+
+ts_library(
+    name = "capture_profile_dialog_tests",
+    testonly = True,
+    srcs = ["capture_profile_dialog_test.ts"],
 )
