@@ -6,7 +6,8 @@ import {computeGroupView} from './table_utils';
 export class CategoryTableDataProcessor implements CustomChartDataProcessor {
   constructor(
       private readonly filters: google.visualization.DataTableCellFilter[],
-      private readonly gColumn: number, private readonly vColumn: number) {}
+      private readonly gColumn: number, private readonly vColumn: number,
+      private readonly showSingleCategory: boolean = true) {}
 
   process(dataProvider: ChartDataProvider): DataTableOrDataViewOrNull {
     if (!dataProvider) {
@@ -19,6 +20,7 @@ export class CategoryTableDataProcessor implements CustomChartDataProcessor {
     }
 
     return computeGroupView(
-        dataTable, this.filters, this.gColumn, this.vColumn);
+        dataTable, this.filters, this.gColumn, this.vColumn,
+        this.showSingleCategory);
   }
 }

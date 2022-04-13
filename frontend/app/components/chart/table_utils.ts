@@ -405,11 +405,14 @@ export function computePivotTable(
  * @param filters Filters on the data to be displayed.
  * @param gColumn The column index to group the data.
  * @param vColumn The column index that has data value.
+ * @param showSingleGroup If false, no data will be returned if only 1 group
+ *     exists.
  */
 export function computeGroupView(
     dataTable: google.visualization.DataTable,
     filters: google.visualization.DataTableCellFilter[], gColumn: number,
-    vColumn: number): google.visualization.DataView {
+    vColumn: number,
+    showSingleGroup: boolean = true): google.visualization.DataView {
   const numberFormatter =
       new google.visualization.NumberFormat({'fractionDigits': 0});
   const dataView = new google.visualization.DataView(dataTable);
@@ -424,6 +427,9 @@ export function computeGroupView(
         'aggregation': google.visualization.data.sum,
         'type': 'number',
       }]);
+  if (!showSingleGroup && dataGroup.getNumberOfRows() === 1) {
+    dataGroup.removeRow(0);
+  }
   dataGroup.sort({column: 1, desc: true});
   numberFormatter.format(dataGroup, 1);
   return new google.visualization.DataView(dataGroup);
