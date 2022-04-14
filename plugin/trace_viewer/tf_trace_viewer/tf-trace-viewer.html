@@ -271,7 +271,7 @@ dashboard would integrate trace viewer app using iframe.
         var parts = queryString.split('&');
         for (var i = 0; i < parts.length; i++) {
           var components = parts[i].split('=');
-          if (components[0] == 'trace_data_url') {
+          if (components[0] === 'trace_data_url') {
             this.traceDataUrl = decodeURIComponent(components[1]);
             if (this.traceDataUrl) {
               try {
@@ -281,10 +281,12 @@ dashboard would integrate trace viewer app using iframe.
                 console.log('cannot find session id');
               }
             }
-          } else if (components[0] == 'is_streaming') {
+          } else if (components[0] === 'is_streaming') {
             this._isStreaming = components[1] === 'true';
-          } else if (components[0] == 'hosts_data_url') {
+          } else if (components[0] === 'hosts_data_url') {
             this.hostsDataUrl = decodeURIComponent(components[1]);
+          } else if (components[0] === 'resolution') {
+            this._resolution = Number(components[1]);
           }
         }
       }
@@ -482,7 +484,7 @@ dashboard would integrate trace viewer app using iframe.
     //   - if we have scrolled too close to missing data regions
     // We ensure there's only ever one request in flight.
     _maybeLoad: function() {
-      if (this._isLoading || this._resolution == 0) return;
+      if (this._isLoading || this._resolution === 0) return;
       // We have several ranges of interest:
       //             [viewport]           - what's on-screen
       //         [----preserve----]       - issue loads to keep this full of data
