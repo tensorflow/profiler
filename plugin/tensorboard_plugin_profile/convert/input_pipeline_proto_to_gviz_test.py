@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 
-# Lint as: python3
 """Tests for input_pipeline_proto_to_gviz."""
 
 from __future__ import absolute_import

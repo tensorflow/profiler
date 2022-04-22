@@ -18,7 +18,6 @@
                   [--port PORT] [--version 2.2]
 """
 
-# Lint as: python3
 
 import argparse
 import os
