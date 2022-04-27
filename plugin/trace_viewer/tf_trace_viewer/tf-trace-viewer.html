@@ -434,6 +434,7 @@ dashboard would integrate trace viewer app using iframe.
     },
 
     _loadTrace: async function(requestedRange, replaceModel) {
+      const startTime = performance.now();
       this._throbber.className = 'active';
       this._isLoading = true;
       if (!this._isStreaming) {
@@ -443,6 +444,8 @@ dashboard would integrate trace viewer app using iframe.
       }
       this._isLoading = false;
       this._throbber.className = 'inactive';
+      const endTime = performance.now();
+      const duration = endTime - startTime;
       if(this._isInitialLoad) {
         // measure the timing since browser start loading
         window.parent.gtag('event', 'timing_complete', {
@@ -452,6 +455,14 @@ dashboard would integrate trace viewer app using iframe.
           'event_label': `trace_viewer_${this._isStreaming ? 'streaming' : 'nonstreaming'}`,
         });
         this._isInitialLoad = false;
+      } else {
+         // measure time consuming for page reloading when streaming
+         window.parent.gtag('event', 'timing_complete', {
+          'name': 'load',
+          'value': duration,
+          'event_category': 'data',
+          'event_label': 'trace_viewer_reloading',
+        });
       }
     },
 
