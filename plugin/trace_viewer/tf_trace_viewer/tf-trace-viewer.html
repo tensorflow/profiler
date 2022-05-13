@@ -555,6 +555,7 @@ dashboard would integrate trace viewer app using iframe.
         requestURL.searchParams.set('resolution', 0);
       } else if (!requestURL.searchParams.has('resolution')) {
         requestURL.searchParams.set('resolution', this._resolution * ZOOM_RATIO);
+        requestURL.searchParams.set('resolution_customized', false);
       }
       if (requestedRange != null) {
         requestURL.searchParams.set('start_time_ms', requestedRange.min);
@@ -617,6 +618,8 @@ dashboard would integrate trace viewer app using iframe.
         this._dirty = true;
         this._model = new tr.Model();
         this._loadedTraceEvents = new Set();
+        // If JSON metadata shows the data is full, set _resolution to 0 so no further reloading will happen
+        this._resolution = data['metadata']['isFullData'] ? 0 : this._resolution;
       } else {
         // Delete fields to prevent traceviewer from accumulating them.
         delete data['metadata'];
