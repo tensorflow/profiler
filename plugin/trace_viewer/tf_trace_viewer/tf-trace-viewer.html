@@ -267,30 +267,26 @@ dashboard would integrate trace viewer app using iframe.
 
       this._resolution = this._resolutionFromViewerWidth(this._traceViewer.clientWidth);
       // Retrieve the URL of trace data.
-      var queryString = window.location.href.split('?')[1];
-      if (queryString) {
-        var parts = queryString.split('&');
-        for (var i = 0; i < parts.length; i++) {
-          var components = parts[i].split('=');
-          if (components[0] === 'trace_data_url') {
-            this.traceDataUrl = decodeURIComponent(components[1]);
-            if (this.traceDataUrl) {
-              try {
-                traceViewerLink = new URL(window.location.origin + this.traceDataUrl);
-                this._sessionId = traceViewerLink.searchParams.get('session_id');
-              } catch(err) {  // not fatal.
-                console.log('cannot find session id');
-              }
+      var query = new URL(window.location.href);
+      query.searchParams.forEach(function(value, key, searchParams) {
+        if (key === 'trace_data_url') {
+          this.traceDataUrl = value;
+          if (this.traceDataUrl) {
+            try {
+              traceViewerLink = new URL(window.location.origin + this.traceDataUrl);
+              this._sessionId = traceViewerLink.searchParams.get('session_id');
+            } catch(err) {  // not fatal.
+              console.log('cannot find session id');
             }
-          } else if (components[0] === 'is_streaming') {
-            this._isStreaming = components[1] === 'true';
-          } else if (components[0] === 'hosts_data_url') {
-            this.hostsDataUrl = decodeURIComponent(components[1]);
-          } else if (components[0] === 'resolution') {
-            this._resolution = Number(components[1]);
           }
+        } else if (key === 'is_streaming') {
+          this._isStreaming = value === 'true';
+        } else if (key === 'hosts_data_url') {
+          this.hostsDataUrl = value;
+        } else if (key === 'resolution') {
+          this._resolution = Number(value);
         }
-      }
+      }.bind(this));
 
       if (!this.traceDataUrl) {
         this._displayOverlay('Trace data URL is not provided.', 'Trace Viewer');
