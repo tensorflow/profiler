@@ -226,6 +226,7 @@ dashboard would integrate trace viewer app using iframe.
       _dirty: {type: Boolean, value: false},
       _model: Object,
       _resolution: {type: Number, value: 1000},
+      __filteredByVisibility: {type: Boolean, value: false},
       _dataRegenerated: {type: Boolean, value: false},
       _isInitialLoad: {type: Boolean, value: true},
     },
@@ -490,12 +491,16 @@ dashboard would integrate trace viewer app using iframe.
       });
     },
 
+    _reloadingDisabled() {
+      return (this._resolution === 0) || !this._filteredByVisibility;
+    },
+
     // Something has changed, so consider reloading the data:
     //   - if we have zoomed in enough to need more detail
     //   - if we have scrolled too close to missing data regions
     // We ensure there's only ever one request in flight.
     _maybeLoad: function() {
-      if (this._isLoading || this._resolution === 0) return;
+      if (this._isLoading || this._reloadingDisabled()) return;
       // We have several ranges of interest:
       //             [viewport]           - what's on-screen
       //         [----preserve----]       - issue loads to keep this full of data
@@ -617,11 +622,14 @@ dashboard would integrate trace viewer app using iframe.
         this._dirty = true;
         this._model = new tr.Model();
         this._loadedTraceEvents = new Set();
+        this._filteredByVisibility = data['filteredByVisibility'];
       } else {
         // Delete fields to prevent traceviewer from accumulating them.
         delete data['metadata'];
         delete data['displayTimeUnit'];
         delete data['tasks'];
+        delete data['filteredByVisibility'];
+        delete data['returnedEventsSize'];
       }
 
       // Populate and show "details" selector.
