@@ -315,20 +315,14 @@ export function parseDiagnosticsDataTable(
  * Sets the global loading state.
  */
 export function setLoadingState(
-    beingLoaded: boolean, store: Store<{}>) {
-  if (beingLoaded) {
-    store.dispatch(setLoadingStateAction({
-      loadingState: {
-        loading: true,
-        message: 'Loading data',
-      }
-    }));
-  } else {
-    store.dispatch(setLoadingStateAction({
-      loadingState: {
-        loading: false,
-        message: '',
-      }
-    }));
+    loading: boolean, store: Store<{}>, message: string = '') {
+  if (loading) {
+    message = message || 'Loading data';
   }
+  store.dispatch(setLoadingStateAction({
+    loadingState: {
+      loading,
+      message,
+    }
+  }));
 }
