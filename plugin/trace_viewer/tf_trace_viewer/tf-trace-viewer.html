@@ -309,7 +309,11 @@ dashboard would integrate trace viewer app using iframe.
           const response = await fetch(perfettoURL);
           if (response.ok) {
             const trace = await response.arrayBuffer();
-            this._postDataToPerfettoWindow(trace, this._sessionId, window.location.href);
+            if (trace.byteLength == 0) {
+              this._displayOverlay('Trace data too big for perfetto.', 'Trace Viewer');
+            } else {
+              this._postDataToPerfettoWindow(trace, this._sessionId, window.location.href);
+            }
           }
           this._throbber.className = 'inactive';
         });
