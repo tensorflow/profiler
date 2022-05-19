@@ -292,7 +292,7 @@ dashboard would integrate trace viewer app using iframe.
       }.bind(this));
 
       if (!this.traceDataUrl) {
-        this._displayOverlay('Trace data URL is not provided.', 'Trace Viewer');
+        this._displayOverlay('Trace Viewer', 'Trace data URL is not provided.');
         return null;
       }
       if (this._isStreaming) {
@@ -310,7 +310,7 @@ dashboard would integrate trace viewer app using iframe.
           if (response.ok) {
             const trace = await response.arrayBuffer();
             if (trace.byteLength == 0) {
-              this._displayOverlay('Trace data too big for perfetto.', 'Trace Viewer');
+              this._displayOverlay('Trace Viewer', 'Trace data too big for perfetto.');
             } else {
               this._postDataToPerfettoWindow(trace, this._sessionId, window.location.href);
             }
