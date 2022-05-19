@@ -879,6 +879,8 @@ dashboard would integrate trace viewer app using iframe.
       if (host.value) requestURL.searchParams.set(hostSelector.name, host.value);
       requestURL.searchParams.set('resolution', 0);
       requestURL.searchParams.set('perfetto', 1);
+      requestURL.searchParams.set('full_dma', 'true');
+      requestURL.searchParams.set('overlay', 'true');
       requestURL.searchParams.delete('selected_group_ids');
       requestURL.searchParams.delete('selected_device_ids');
       return requestURL;
