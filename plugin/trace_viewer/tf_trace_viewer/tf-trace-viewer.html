@@ -230,6 +230,7 @@ dashboard would integrate trace viewer app using iframe.
       _filteredByVisibility: {type: Boolean, value: false},
       _dataRegenerated: {type: Boolean, value: false},
       _isInitialLoad: {type: Boolean, value: true},
+      _hosts: {type: Array, value: []},
     },
 
     ready: function() {
@@ -295,12 +296,7 @@ dashboard would integrate trace viewer app using iframe.
         this._displayOverlay('Trace Viewer', 'Trace data URL is not provided.');
         return null;
       }
-      if (this._isStreaming) {
-        this._loadHosts();
-        this._traceViewer.updateProcessList_ = this._updateProcessList.bind(this);
-      } else {
-        this._loadTrace(null, /* replaceModel= */ true);
-      }
+      this._init();
 
       if (this._showPerfetto) {
         let button = tr.ui.b.createButton('Perfetto', async () => {
@@ -386,8 +382,8 @@ dashboard would integrate trace viewer app using iframe.
       }
     },
 
-    _createFilters: function(hosts) {
-      hosts = hosts || [];
+    _createFilters: function() {
+      hosts = this._hosts || [];
       const hostSelector = document.createElement('select');
       hostSelector.setAttribute('name', 'host');
       hostSelector.setAttribute('id', 'host_selector');
@@ -425,30 +421,25 @@ dashboard would integrate trace viewer app using iframe.
       Polymer.dom(this._traceViewer.leftControls).appendChild(detailsSelector);
     },
 
-    _loadHosts: function() {
+    _loadHosts: async function () {
       if (!this.hostsDataUrl) {
-        this._createFilters([]);
-        this._loadTrace(null, /* replaceModel= */ true);
         return;
       }
+      const response = await fetch(this.hostsDataUrl);
+      if (response.ok) {
+        this._hosts = await response.json();
+      } else {
+        this._displayOverlay(response.status, 'Failed to fetch hosts data');
+      }
+    },
 
-      const req = new XMLHttpRequest();
-      req.open('GET', this.hostsDataUrl, true);
-
-      req.onreadystatechange = (event) => {
-        if (req.readyState !== 4) {
-          return;
-        }
-        window.setTimeout(() => {
-          if (req.status === 200) {
-            this._createFilters(JSON.parse(req.responseText));
-            this._loadTrace(null, /* replaceModel= */ true);
-          } else {
-            this._displayOverlay(req.status, 'Failed to fetch data');
-          }
-        }, 0);
-      };
-      req.send(null);
+    _init: async function() {
+      if (this._isStreaming) {
+        await this._loadHosts();
+        this._createFilters();
+        this._traceViewer.updateProcessList_ = this._updateProcessList.bind(this);
+      }
+      this._loadTrace(null, /* replaceModel= */ true);
     },
 
     _loadTrace: async function(requestedRange, replaceModel) {
