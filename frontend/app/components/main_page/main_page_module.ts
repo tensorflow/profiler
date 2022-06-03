@@ -1,5 +1,5 @@
 import {NgModule} from '@angular/core';
-import {MatProgressBarModule} from '@angular/material/progress-bar';
+import {MatProgressBarModule} from '@angular/material/mdc-progress-bar';
 import {MatSidenavModule} from '@angular/material/sidenav';
 import {RouterModule, Routes} from '@angular/router';
 import {EmptyPage} from 'org_xprof/frontend/app/components/empty_page/empty_page';
