@@ -67,7 +67,7 @@
     "@angular/animations": "^10.1.2",
     "@angular/cdk": "^10.1.2",
     "@angular/common": "^10.1.2",
-    "@angular/core": "^10.1.2",
+    "@angular/core": "^11.0.5",
     "@angular/forms": "^10.1.2",
     "@angular/localize": "^11.2.9",
     "@angular/material": "^10.1.2",
