@@ -298,23 +298,9 @@ dashboard would integrate trace viewer app using iframe.
       }
       this._init();
 
-      if (this._showPerfetto) {
-        let button = tr.ui.b.createButton('Perfetto', async () => {
-          this._throbber.className = 'active';
-          var perfettoURL = this._buildPerfettoDataURL();
-          const response = await fetch(perfettoURL);
-          if (response.ok) {
-            const trace = await response.arrayBuffer();
-            if (trace.byteLength == 0) {
-              this._displayOverlay('Trace Viewer', 'Trace data too big for perfetto.');
-            } else {
-              this._postDataToPerfettoWindow(trace, this._sessionId, window.location.href);
-            }
-          }
-          this._throbber.className = 'inactive';
-        });
-        Polymer.dom(this._traceViewer.leftControls).appendChild(button);
-      }
+      // Run here hoping to have hosts data ready when creating the button
+      // TODO: improve this when decouple hosts data fetching out of the loadTrace call
+      this._createPerfettoButton();
 
       window.addEventListener('load', function(e) {
         element = document.getElementById('analysis');
@@ -421,7 +407,16 @@ dashboard would integrate trace viewer app using iframe.
       Polymer.dom(this._traceViewer.leftControls).appendChild(detailsSelector);
     },
 
-    _loadHosts: async function () {
+    _createPerfettoButton: function() {
+      if (this._showPerfetto) {
+        const button = tr.ui.b.createButton('Perfetto', this._perfettoButtonOnclickCallback.bind(this));
+        // Control bar has a height of 22px, using icon size 20px
+        button.setAttribute('style', 'background:url("https://perfetto.dev/assets/favicon.png") no-repeat left;background-size:20px;padding-left:25px;')
+        Polymer.dom(this._traceViewer.leftControls).appendChild(button);
+      }
+    },
+
+    _loadHosts: async function() {
       if (!this.hostsDataUrl) {
         return;
       }
@@ -865,6 +860,21 @@ dashboard would integrate trace viewer app using iframe.
       return requestURL;
     },
 
+    _perfettoButtonOnclickCallback: async function() {
+      this._throbber.className = 'active';
+      const perfettoDataUrl = this._buildPerfettoDataURL();
+      const response = await fetch(perfettoDataUrl);
+      if (response.ok) {
+        const trace = await response.arrayBuffer();
+        if (trace.byteLength == 0) {
+          this._displayOverlay('Trace Viewer', 'Trace data too big for perfetto.');
+        } else {
+          this._postDataToPerfettoWindow(trace, this._sessionId, perfettoDataUrl);
+        }
+      }
+      this._throbber.className = 'inactive';
+    },
+
     // Builds a base URL for fetching perfetto data.
     _buildPerfettoDataURL: function() {
       const requestURL = new URL(this.traceDataUrl, window.location.href);
@@ -881,26 +891,28 @@ dashboard would integrate trace viewer app using iframe.
       return requestURL;
     },
 
-    _postDataToPerfettoWindow: function(trace, session_id, session_url) {
-      const url = 'https://ui.perfetto.dev';
-      let win = window.open(url);
+    _postDataToPerfettoWindow: function(trace, sessionId, perfettoDataUrl) {
+      const perfettoUrl = 'https://ui.perfetto.dev';
+      let win = window.open(perfettoUrl);
       let thetimer = null;
       window.addEventListener("message", function(evt) {
-        if (evt.data !== "PONG") {
+        if (evt.data !== "PONG" || !win) {
           return;
         }
         clearInterval(thetimer);
+        // TODO: is it secure to pass the dataUrl to perfetto?
+        const shareUrl = new URL(`/perfetto/${sessionId}#dataUrl=${perfettoDataUrl}`, window.location.href);
         win.postMessage(
           {
-            perfetto: {
+            'perfetto': {
               buffer: trace,
-              title: "xprof session " + session_id,
-              url: session_url,  // TODO(yinzz): make a better share URL.
+              title: `xprof session ${sessionId}`,
+              url: shareUrl.toString(),
             }
-          }, url);
+          }, perfettoUrl);
       });
       thetimer = setInterval(function() {
-        win.postMessage("PING", url);
+        win.postMessage("PING", perfettoUrl);
       }, 250);
     },
 
