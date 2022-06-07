@@ -142,6 +142,8 @@ def get_overview_page_analysis_table_args(overview_page_analysis):
       overview_page_analysis.device_compute_32bit_percent)
   remark_text = overview_page_analysis.remark_text
   remark_color = overview_page_analysis.remark_color
+  mxu_utilization_percent = "{:.1f}%".format(
+      overview_page_analysis.mxu_utilization_percent)
 
   custom_properties = {
       "host_tf_op_percent": host_tf_op_percent,
@@ -152,6 +154,7 @@ def get_overview_page_analysis_table_args(overview_page_analysis):
       "device_compute_32bit_percent": device_compute_32bit_percent,
       "remark_text": remark_text,
       "remark_color": remark_color,
+      "mxu_utilization_percent": mxu_utilization_percent,
   }
 
   return (table_description, data, custom_properties)
