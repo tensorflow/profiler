@@ -46,6 +46,7 @@ export interface ToolInfo {
   url?: string;
   version?: string;
   isRouteLink?: boolean;
+  queryParams?: {[key: string]: string};
 }
 
 /** Type for tools info state */
