@@ -1028,40 +1028,35 @@ export const DATA_PLUGIN_PROFILE_MEMORY_VIEWER_DATA = {
         'id': '0',
         'size': '1048576',
         'definedAt': {
-          'computationName': 'comp',
-          'instructionName': 'ins-0',
+          'instructionId': '0',
         },
       },
       {
         'id': '1',
         'size': '2097512',
         'definedAt': {
-          'computationName': 'comp',
-          'instructionName': 'ins-1',
+          'instructionId': '1',
         },
       },
       {
         'id': '2',
         'size': '3145728',
         'definedAt': {
-          'computationName': 'comp',
-          'instructionName': 'ins-2',
+          'instructionId': '2',
         },
       },
       {
         'id': '3',
         'size': '5242880',
         'definedAt': {
-          'computationName': 'comp',
-          'instructionName': 'ins-3',
+          'instructionId': '3',
         },
       },
       {
         'id': '4',
         'size': '1048576',
         'definedAt': {
-          'computationName': 'comp',
-          'instructionName': 'ins-4',
+          'instructionId': '4',
         },
       },
     ],

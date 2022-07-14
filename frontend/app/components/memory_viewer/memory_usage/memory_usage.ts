@@ -21,7 +21,7 @@ export class MemoryUsage {
   private readonly buffers: LogicalBuffer[];
   private readonly idToBuffer: {[key: number]: LogicalBuffer};
   private readonly idToBufferAllocation: {[key: number]: BufferAllocation};
-  private readonly nameToHlo: {[key: string]: HloInstruction};
+  private readonly idToHlo: {[key: number]: HloInstruction};
   private readonly unSeenLogicalBuffers: Set<number>;
   private readonly seenBufferAllocations: Set<number>;
   private nColor: number;
@@ -56,7 +56,7 @@ export class MemoryUsage {
     this.buffers = [];
     this.idToBuffer = {};
     this.idToBufferAllocation = {};
-    this.nameToHlo = {};
+    this.idToHlo = {};
     this.unSeenLogicalBuffers = new Set();
     this.seenBufferAllocations = new Set();
     this.nColor = 0;
@@ -178,8 +178,8 @@ export class MemoryUsage {
     }
     let shape = new Shape();
     let inst = new HloInstruction();
-    if (buffer.instructionName) {
-      inst = this.nameToHlo[buffer.instructionName];
+    if (buffer.instructionId) {
+      inst = this.idToHlo[buffer.instructionId];
       if (inst && inst.shape) {
         shape = inst.shape.resolveShapeIndex(buffer.shapeIndex);
       }
@@ -218,8 +218,8 @@ export class MemoryUsage {
         alloc.assigned.forEach(assigned => {
           const buffer = this.idToBuffer[assigned.logicalBufferId];
           let shape = null;
-          if (buffer.instructionName) {
-            const hlo = this.nameToHlo[buffer.instructionName];
+          if (buffer.instructionId) {
+            const hlo = this.idToHlo[buffer.instructionId];
             if (hlo && hlo.shape) {
               shape = hlo.shape.resolveShapeIndex(buffer.shapeIndex);
             }
@@ -264,8 +264,8 @@ export class MemoryUsage {
           this.seenBufferAllocations.add(alloc.index);
         }
         let shape: Shape|null = null;
-        if (buffer.instructionName && buffer.instructionName !== '') {
-          const hlo = this.nameToHlo[buffer.instructionName];
+        if (buffer.instructionId && buffer.instructionId !== 0) {
+          const hlo = this.idToHlo[buffer.instructionId];
           if (hlo && hlo.shape) {
             shape = hlo.shape.resolveShapeIndex(buffer.shapeIndex);
           }
@@ -450,8 +450,8 @@ export class MemoryUsage {
     this.moduleName = hloModule.name || '';
     for (const comp of hloModule.computations || []) {
       for (const inst of comp.instructions || []) {
-        if (!inst.name) continue;
-        this.nameToHlo[inst.name] = new HloInstruction(inst);
+        if (!inst.id) continue;
+        this.idToHlo[utils.toNumber(inst.id)] = new HloInstruction(inst);
       }
     }
   }
@@ -552,7 +552,7 @@ export class MemoryUsage {
     const shapeIndex =
         buffer.shapeIndex.length ? ' {' + buffer.shapeIndex.join() + '}' : '';
     return {
-      instructionName: buffer.instructionName + shapeIndex,
+      instructionName: inst.name + shapeIndex,
       logicalBufferId: buffer.id,
       unpaddedSizeMiB: utils.bytesToMiB(shape.unpaddedHeapSizeBytes()),
       tfOpName: inst.tfOpName,
