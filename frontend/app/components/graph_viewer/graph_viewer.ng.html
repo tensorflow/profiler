@@ -1,0 +1,13 @@
+<mat-sidenav-container>
+  <mat-sidenav mode="side" opened>
+    <graph-config [params]="{moduleList,selectedModule,opName,graphWidth,showMetadata,mergeFusion}" (plot)="onPlot($event)"></graph-config>
+  </mat-sidenav>
+  <mat-sidenav-content>
+    <diagnostics-view [diagnostics]="diagnostics"></diagnostics-view>
+    <div class="progress-container" [hidden]="!loading">
+      <div class="loading-message">Loading graph viewer data</div>
+      <mat-progress-bar color="primary" mode="indeterminate"></mat-progress-bar>
+    </div>
+    <iframe #iframe [src]="graphvizUri | safe"></iframe>
+  </mat-sidenav-content>
+</mat-sidenav-container>

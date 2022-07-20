@@ -17,6 +17,7 @@ const DELAY_TIME_MS = 1000;
 export class DataService {
   isLocalDevelopment = false;
   pathPrefix = '';
+  searchParams?: URLSearchParams;
 
   constructor(
       private readonly httpClient: HttpClient, platformLocation: PlatformLocation) {
@@ -25,6 +26,7 @@ export class DataService {
       this.pathPrefix =
           String(platformLocation.pathname).split(API_PREFIX + PLUGIN_NAME)[0];
     }
+    this.searchParams = new URLSearchParams(window.location.search);
   }
 
   captureProfile(options: CaptureProfileOptions):
@@ -107,5 +109,11 @@ export class DataService {
                        .set('host', host)
                        .set('tqx', 'out:csv;');
     window.open(this.pathPrefix + DATA_API + '?' + params.toString(), '_blank');
+  }
+
+  // TODO: update to real api call later
+  getModuleList(tool: string, sessionId: string) {
+    return of('a_inference_step_fn_10028__XlaMustCompile_true_config_proto_6001324581131673121_executor_type_11160318154034397263_,a_inference_step_fn_10160__XlaMustCompile_true_config_proto_6001324581131673121_executor_type_11160318154034397263_')
+        .pipe(delay(DELAY_TIME_MS));
   }
 }
