@@ -34,3 +34,13 @@ export const KELLY_COLORS = [
   'B3446C', 'DCD300', '8DB600', '654522', '222222', '882D17', 'F3C300',
   '875692', 'F38400', 'A1CAF1', 'BE0032', 'C2B280', '848482', '2B3D26',
 ];
+
+/**
+ * Empty diagnostic content
+ * diagnostics is input to the <diagnostic-view> component, used by graph viewer
+ */
+export const DIAGNOSTICS_DEFAULT = {
+  info: [] as string[],
+  warnings: [] as string[],
+  errors: [] as string[],
+};

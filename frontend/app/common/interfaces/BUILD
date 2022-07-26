@@ -94,6 +94,7 @@ ts_library(
         "summary_info.ts",
         "tool.ts",
         "window.ts",
+        "graph_viewer.ts",
     ],
     deps = [
         ":memory_profile_proto_defs",

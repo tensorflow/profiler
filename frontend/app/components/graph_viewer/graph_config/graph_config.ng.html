@@ -1,0 +1,52 @@
+<div class="item-container">
+  <form (ngSubmit)="onSubmit()">
+    <!-- the xla module list selection can be a separate component, used also in memory viewer -->
+    <div class="row">
+      <div [ngClass]="{'mat-subheading-2': true}">
+        XLA Modules ({{moduleList.length}})
+      </div>
+    </div>
+    <mat-form-field class="full-width">
+      <mat-select panelClass="panel-override" [(value)]="selectedModule">
+        <mat-option *ngFor="let module of moduleList" [value]="module">
+          {{module}}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field class="full-width">
+      <input
+              matInput
+              placeholder="Enter op name"
+              aria-label="op-name"
+              required
+              autocomplete="off"
+              [(ngModel)]="opName"
+              (ngModelChange)="updateOpName($event)"
+              name="op"/>
+    </mat-form-field>
+    <div>
+      <mat-form-field class="full-width">
+        <input
+                matInput
+                placeholder="Graph width (1-10)"
+                aria-label="graph-width"
+                type="number"
+                min="1"
+                max="10"
+                step="1"
+                [(ngModel)]="graphWidth"
+                name="graph"/>
+      </mat-form-field>
+      <mat-checkbox [(ngModel)]="showMetadata" name="meta">Show Metadata</mat-checkbox>
+      <mat-checkbox [(ngModel)]="mergeFusion" name="fusion"
+                    matTooltip="Hide the fusion subcomputations in the rendered graph">
+        Merge Fusion
+      </mat-checkbox>
+    </div>
+    <div class="search-button">
+      <button mat-fab extended type="submit" color="primary" appearance="fill" [disabled]="!validToSubmit()">
+        <mat-icon>search</mat-icon> Search Graph
+      </button>
+    </div>
+  </form>
+</div>
