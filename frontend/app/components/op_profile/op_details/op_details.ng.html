@@ -78,6 +78,10 @@
             </div>
           </div>
         </div>
+        <div class="info" [hidden]="!computationPrimitiveSize">
+          <div class="title"> Hardware Computation Size:</div>
+          <code class="expression">{{computationPrimitiveSize}}</code>
+        </div>
       </div>
     </mat-card-content>
   </mat-card>

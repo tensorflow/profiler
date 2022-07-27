@@ -33,6 +33,7 @@ export class OpDetails {
   hasCategory: boolean = false;
   hasLayout: boolean = false;
   dimensions: Node.XLAInstruction.LayoutAnalysis.Dimension[] = [];
+  computationPrimitiveSize: string = '';
 
   constructor(private readonly store: Store<{}>) {
     this.store.select(getActiveOpProfileNodeState)
@@ -146,6 +147,11 @@ export class OpDetails {
     if (this.node.xla && this.node.xla.layout) {
       this.dimensions = this.node.xla.layout.dimensions || [];
     }
+
+    this.computationPrimitiveSize =
+        ((this.node?.xla?.computationPrimitiveSize) ?
+             `${this.node.xla.computationPrimitiveSize} bits` :
+             '');
   }
 
   ngOnDestroy() {
