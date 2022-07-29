@@ -1,4 +1,4 @@
-import {Component, EventEmitter, Input, OnChanges, OnDestroy, Output} from '@angular/core';
+import {Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges} from '@angular/core';
 import {GraphConfigInput} from 'org_xprof/frontend/app/common/interfaces/graph_viewer';
 import {ReplaySubject} from 'rxjs';
 
@@ -12,47 +12,61 @@ export class GraphConfig implements OnDestroy, OnChanges {
   /** Handles on-destroy Subject, used to unsubscribe. */
   private readonly destroyed = new ReplaySubject<void>(1);
 
-  @Output() readonly plot = new EventEmitter<GraphConfigInput>();
+  @Output() readonly plot = new EventEmitter<void>();
+  @Output()
+  readonly update =
+      new EventEmitter<{[key: string]: string | number | boolean}>();
 
   /** Form inputs properties */
-  @Input() params: GraphConfigInput|undefined;
+  @Input() initialInputs: GraphConfigInput|undefined = undefined;
+  @Input() moduleList: string[] = [];
 
-  // Initiate with property values (read from url query parameters)
-  // once onPlot triggered, emit to parent and update the url
-  moduleList: string[] = [];
-  selectedModule = '';
-  opName = '';
-  graphWidth = 3;
-  showMetadata = false;
-  mergeFusion = false;
+  inputsInited = false;
+  params: GraphConfigInput = {
+    selectedModule: '',
+    opName: '',
+    graphWidth: 3,
+    showMetadata: false,
+    mergeFusion: false,
+  };
 
-  ngOnChanges() {
-    this.moduleList = this.params?.moduleList || this.moduleList;
-    this.selectedModule = this.params?.selectedModule || this.selectedModule;
-    this.opName = this.params?.opName || this.opName;
-    this.graphWidth = this.params?.graphWidth || this.graphWidth;
-    this.showMetadata = this.params?.showMetadata || this.showMetadata;
-    this.mergeFusion = this.params?.mergeFusion || this.mergeFusion;
+  ngOnChanges(changes: SimpleChanges) {
+    // Initiate once with property values (read from url query parameters)
+    if (!this.inputsInited && changes.hasOwnProperty('initialInputs') &&
+        Object.entries(changes['initialInputs'].currentValue).length) {
+      this.params = {...this.initialInputs as GraphConfigInput};
+      this.params.selectedModule = this.params.selectedModule;
+      this.inputsInited = true;
+    }
+
+    // Update default module name once moduleList is updated
+    if (changes.hasOwnProperty('moduleList')) {
+      this.params.selectedModule =
+          this.params.selectedModule || changes['moduleList'].currentValue[0];
+    }
   }
 
   updateOpName(value: string) {
-    this.opName = value.trim();
+    this.params.opName = value.trim();
   }
 
   validToSubmit() {
-    return this.opName && this.selectedModule;
+    return this.params.opName && this.params.selectedModule;
+  }
+
+  onUpdateParam(update: Partial<GraphConfigInput>) {
+    // Doing this instead of this.params[key]=value due to "type cannot be
+    // assigned to never" error
+    this.params = {
+      ...this.params,
+      ...update,
+    };
+    this.update.emit(update);
   }
 
   onSubmit() {
     if (!this.validToSubmit()) return;
-    this.plot.emit({
-      moduleList: this.moduleList,
-      selectedModule: this.selectedModule,
-      opName: this.opName,
-      graphWidth: this.graphWidth,
-      showMetadata: this.showMetadata,
-      mergeFusion: this.mergeFusion,
-    });
+    this.plot.emit();
   }
 
   ngOnDestroy() {

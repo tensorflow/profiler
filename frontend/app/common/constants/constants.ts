@@ -44,3 +44,7 @@ export const DIAGNOSTICS_DEFAULT = {
   warnings: [] as string[],
   errors: [] as string[],
 };
+
+/** The keys for form inputs for generating graph viewer */
+export const GRAPH_CONFIG_KEYS =
+    ['selectedModule', 'opName', 'graphWidth', 'showMetadata', 'mergeFusion'];

@@ -7,7 +7,7 @@
       </div>
     </div>
     <mat-form-field class="full-width">
-      <mat-select panelClass="panel-override" [(value)]="selectedModule">
+      <mat-select panelClass="panel-override" [ngModel]="params.selectedModule" (ngModelChange)="onUpdateParam({selectedModule: $event})" name="selectedModule">
         <mat-option *ngFor="let module of moduleList" [value]="module">
           {{module}}
         </mat-option>
@@ -20,9 +20,9 @@
               aria-label="op-name"
               required
               autocomplete="off"
-              [(ngModel)]="opName"
-              (ngModelChange)="updateOpName($event)"
-              name="op"/>
+              [ngModel]="params.opName"
+              (ngModelChange)="onUpdateParam({opName: $event.trim()})"
+              name="opName"/>
     </mat-form-field>
     <div>
       <mat-form-field class="full-width">
@@ -34,12 +34,15 @@
                 min="1"
                 max="10"
                 step="1"
-                [(ngModel)]="graphWidth"
-                name="graph"/>
+                [ngModel]="params.graphWidth"
+                (ngModelChange)="onUpdateParam({graphWidth: $event})"
+                name="graphWidth"/>
       </mat-form-field>
-      <mat-checkbox [(ngModel)]="showMetadata" name="meta">Show Metadata</mat-checkbox>
-      <mat-checkbox [(ngModel)]="mergeFusion" name="fusion"
-                    matTooltip="Hide the fusion subcomputations in the rendered graph">
+
+      <mat-checkbox [ngModel]="params.showMetadata" name="showMetadata" (ngModelChange)="onUpdateParam({showMetadata: $event})">Show Metadata</mat-checkbox>
+      <mat-checkbox [ngModel]="params.mergeFusion" name="mergeFusion"
+                    matTooltip="Hide the fusion subcomputations in the rendered graph"
+                    (ngModelChange)="onUpdateParam({mergeFusion: $event})">
         Merge Fusion
       </mat-checkbox>
     </div>
