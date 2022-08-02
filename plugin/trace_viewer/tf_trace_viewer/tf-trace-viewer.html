@@ -219,7 +219,7 @@ dashboard would integrate trace viewer app using iframe.
       _throbber: Object,
       _eventDetails: Object,
       _isStreaming: {type: Boolean, value: false},
-      _showPerfetto: {type: Boolean, value: false},
+      _showPerfetto: {type: Boolean, value: true},
       _loadedRange: Object,
       _loadedTraceEents: Object,
       _fullBounds: Object,
@@ -297,10 +297,6 @@ dashboard would integrate trace viewer app using iframe.
         return null;
       }
       this._init();
-
-      // Run here hoping to have hosts data ready when creating the button
-      // TODO: improve this when decouple hosts data fetching out of the loadTrace call
-      this._createPerfettoButton();
 
       window.addEventListener('load', function(e) {
         element = document.getElementById('analysis');
@@ -397,6 +393,7 @@ dashboard would integrate trace viewer app using iframe.
         // since it contains devices (pids) associated with the previous host.
         this._clearProcessList();
         this._loadTrace(null, /* replaceModel= */ true);  // reload data.
+        this._updatePerfettoButton();
       });
 
       Polymer.dom(this._traceViewer.leftControls).appendChild(hostSelector);
@@ -407,12 +404,28 @@ dashboard would integrate trace viewer app using iframe.
       Polymer.dom(this._traceViewer.leftControls).appendChild(detailsSelector);
     },
 
+    _allHostsSelected: function() {
+      const hostSelector = document.getElementById("host_selector");
+      return hostSelector.value === '';
+    },
+
+    _updatePerfettoButton: function() {
+      const perfettoButton = document.getElementById('perfetto');
+      if (this._allHostsSelected()) {
+        perfettoButton?.setAttribute('disabled', true);
+      } else if (perfettoButton.disabled) {
+        perfettoButton?.removeAttribute('disabled');
+      }
+    },
+
     _createPerfettoButton: function() {
       if (this._showPerfetto) {
         const button = tr.ui.b.createButton('Perfetto', this._perfettoButtonOnclickCallback.bind(this));
+        button.setAttribute('id', 'perfetto');
         // Control bar has a height of 22px, using icon size 20px
         button.setAttribute('style', 'background:url("https://perfetto.dev/assets/favicon.png") no-repeat left;background-size:20px;padding-left:25px;')
-        Polymer.dom(this._traceViewer.leftControls).appendChild(button);
+        const hostSelector = document.getElementById("host_selector");
+        Polymer.dom(this._traceViewer.leftControls).insertBefore(button, hostSelector);
       }
     },
 
@@ -433,6 +446,7 @@ dashboard would integrate trace viewer app using iframe.
         await this._loadHosts();
         this._createFilters();
         this._traceViewer.updateProcessList_ = this._updateProcessList.bind(this);
+        this._createPerfettoButton();
       }
       this._loadTrace(null, /* replaceModel= */ true);
     },
@@ -820,9 +834,8 @@ dashboard would integrate trace viewer app using iframe.
     _buildBaseURL: function() {
       const requestURL = new URL(this.traceDataUrl, window.location.href);
       const hostSelector = document.getElementById("host_selector");
-      const host = hostSelector.options[hostSelector.selectedIndex];
       // Don't set "host" parameter for "all hosts".
-      if (host.value) requestURL.searchParams.set(hostSelector.name, host.value);
+      if (hostSelector.value) requestURL.searchParams.set(hostSelector.name, hostSelector.value);
       const detailsSelector = document.getElementById("details_selector");
       const detailsDialog = detailsSelector.getElementsByTagName('dialog')[0];
       const checkboxDivs = detailsDialog.getElementsByTagName('div');
@@ -879,9 +892,8 @@ dashboard would integrate trace viewer app using iframe.
     _buildPerfettoDataURL: function() {
       const requestURL = new URL(this.traceDataUrl, window.location.href);
       const hostSelector = document.getElementById("host_selector");
-      const host = hostSelector.options[hostSelector.selectedIndex];
       // Don't set "host" parameter for "all hosts".
-      if (host.value) requestURL.searchParams.set(hostSelector.name, host.value);
+      if (hostSelector.value) requestURL.searchParams.set(hostSelector.name, hostSelector.value);
       requestURL.searchParams.set('resolution', 0);
       requestURL.searchParams.set('perfetto', 1);
       requestURL.searchParams.set('full_dma', 'true');
