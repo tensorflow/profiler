@@ -1,7 +1,7 @@
 import {Component, OnDestroy} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {Store} from '@ngrx/store';
-import {HloProtoOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {HloProtoOrNull, MemoryViewerPreprocessResultOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
 import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
@@ -16,6 +16,8 @@ import {takeUntil} from 'rxjs/operators';
 })
 export class MemoryViewer implements OnDestroy {
   hloProto: HloProtoOrNull = null;
+  memoryViewerPreprocessResult: MemoryViewerPreprocessResultOrNull = null;
+
   /** Handles on-destroy Subject, used to unsubscribe. */
   private readonly destroyed = new ReplaySubject<void>(1);
 
@@ -47,7 +49,13 @@ export class MemoryViewer implements OnDestroy {
               message: '',
             }
           }));
-          this.hloProto = data as HloProtoOrNull;
+          if (!data) return;
+          if (data.hasOwnProperty('hloModule')) {
+            this.hloProto = data as HloProtoOrNull;
+          } else {
+            this.memoryViewerPreprocessResult =
+                data as MemoryViewerPreprocessResultOrNull;
+          }
         });
   }
 
