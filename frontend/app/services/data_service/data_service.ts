@@ -17,6 +17,7 @@ const DELAY_TIME_MS = 1000;
 export class DataService {
   isLocalDevelopment = false;
   pathPrefix = '';
+  searchParams?: URLSearchParams;
 
   constructor(
       private readonly httpClient: HttpClient, platformLocation: PlatformLocation) {
@@ -25,6 +26,7 @@ export class DataService {
       this.pathPrefix =
           String(platformLocation.pathname).split(API_PREFIX + PLUGIN_NAME)[0];
     }
+    this.searchParams = new URLSearchParams(window.location.search);
   }
 
   captureProfile(options: CaptureProfileOptions):
@@ -107,5 +109,10 @@ export class DataService {
                        .set('host', host)
                        .set('tqx', 'out:csv;');
     window.open(this.pathPrefix + DATA_API + '?' + params.toString(), '_blank');
+  }
+
+  // TODO(b/237807471): update to actual api call when integration ready
+  getModuleList(run: string, tag: string, host?: string) {
+    return of('module1,module2').pipe(delay(DELAY_TIME_MS));
   }
 }
