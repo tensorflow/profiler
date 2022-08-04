@@ -3,30 +3,6 @@ load("@npm//@bazel/typescript:index.bzl", "ts_library")
 package(default_visibility = ["//frontend:internal"])
 
 ts_library(
-    name = "angular_common_http",
-    srcs = [],
-    deps = [
-        "@npm//@angular/common",
-    ],
-)
-
-ts_library(
-    name = "angular_platform-browser_animation",
-    srcs = [],
-    deps = [
-        "@npm//@angular/platform-browser",
-    ],
-)
-
-ts_library(
-    name = "angular_material_expansion",
-    srcs = [],
-    deps = [
-        "@npm//@angular/material",
-    ],
-)
-
-ts_library(
     name = "angular_material_progress_bar",
     srcs = [],
     deps = [
@@ -184,4 +160,12 @@ ts_library(
     deps = [
         "@npm//@angular/material",
     ],
+)
+
+ts_library(
+    name = "angular_material_mdc_button",
+    srcs = [],
+    deps = [
+        "@npm//@angular/forms",
+    ]
 )
