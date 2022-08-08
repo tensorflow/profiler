@@ -306,6 +306,7 @@ dashboard would integrate trace viewer app using iframe.
         // add a event details pane as child.
         this._eventDetails = document.createElement('div');
         this._eventDetails.id = 'event-details';
+        this._eventDetails.style = 'display: block;';
         element.appendChild(this._eventDetails);
         // associate divider with event details pane.
         verticalDivider.horizontal = false;
@@ -319,7 +320,8 @@ dashboard would integrate trace viewer app using iframe.
 
     onSelectionChange: function(e) {
       if (!this._sessionId) return;
-      this._eventDetails.innerHTML = "";
+      this._eventDetails.innerHTML = '<div id="event-details" ' +
+            'style="display: block;"></div>';
       events = this._traceViewer.brushingStateController.currentBrushingState.selection;
       if (events === undefined) return;
       if (events.length != 1) return;
@@ -349,17 +351,33 @@ dashboard would integrate trace viewer app using iframe.
           if (hloModule != 'default') {
             graphViewLink.searchParams.append("module_name", hloModule);
           }
-          this._eventDetails.innerHTML =
-            '<div><a href="' + graphViewLink.href + '" target="_blank"> see hlo graph for ' +
-            hloOp + '@' + hloModule + '</a></div>';
+          const graphViewLinkElement = document.createElement('div');
+          graphViewLinkElement.innerHTML = '<a href="' + graphViewLink.href +
+                '" target="_blank"> see hlo graph for ' +
+                hloOp + '@' + hloModule + '</a>';
+          this._eventDetails.appendChild(graphViewLinkElement);
         }
-        if ('group_id' in event.args) {
+        if ('connected_group_ids' in event.args) {
+          const traceViewerConnectedEventsLink =
+                new URL(window.location.origin + '/trace_viewer/' + this._sessionId);
+          traceViewerConnectedEventsLink.searchParams.append(
+                "selected_group_ids", event.args['connected_group_ids']);
+          const traceViewerConnectedEventsLinkElement = document.createElement('div');
+          traceViewerConnectedEventsLinkElement.innerHTML = '<a href="' +
+                traceViewerConnectedEventsLink.href +
+                '" target="_blank"> see events for step/group ' +
+                event.args['group_id'] +
+                ' and other steps/groups connected to it';
+          this._eventDetails.appendChild(traceViewerConnectedEventsLinkElement);
+        } else if ('group_id' in event.args) {
           const traceViewerStepLink =
                 new URL(window.location.origin + '/trace_viewer/' + this._sessionId);
           traceViewerStepLink.searchParams.append("selected_group_ids", event.args['group_id']);
-          this._eventDetails.innerHTML += '<div><a href="' + traceViewerStepLink.href +
-            '" target="_blank"> see events ONLY for this step/group ' +
-            event.args['group_id'] + '</div>';
+          const traceViewerStepLinkElement = document.createElement('div');
+          traceViewerStepLinkElement.innerHTML = '<a href="' + traceViewerStepLink.href +
+                '" target="_blank"> see events ONLY for this step/group ' +
+                event.args['group_id'];
+          this._eventDetails.appendChild(traceViewerStepLinkElement);
         }
       }
     },
