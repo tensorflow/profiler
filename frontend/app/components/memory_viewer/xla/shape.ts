@@ -1,5 +1,6 @@
 import * as proto from 'org_xprof/frontend/app/common/interfaces/xla_data.jsonpb_decls';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
+
 import {Layout} from './layout';
 
 /**
@@ -75,15 +76,11 @@ export class Shape {
       return INT64_BYTES * this.tupleShapes.length;
     }
     let byteSize = 0;
-    if (!this.layout || this.layout.format === 'DENSE') {
+    if (!this.layout || this.layout.isDense()) {
       const allocatedElementCount =
           this.dimensions.reduce((count, item) => count * item, 1);
       byteSize += allocatedElementCount *
           utils.byteSizeOfPrimitiveType(this.elementType);
-    } else if (this.layout.format === 'SPARSE') {
-      const maxElements = this.layout.maxSparseElements;
-      byteSize = maxElements * utils.byteSizeOfPrimitiveType(this.elementType);
-      byteSize += maxElements * this.dimensions.length * INT64_BYTES;
     }
     return byteSize;
   }

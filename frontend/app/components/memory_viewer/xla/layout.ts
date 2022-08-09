@@ -15,22 +15,23 @@ interface Dimension {
  */
 export class Layout {
   dimensions: Dimension[];
-  format: string;
-  maxSparseElements: number;
   minorToMajor: number[];
+  dimLevelTypes: string[];
 
   constructor(
       layout?: proto.LayoutProto, dimensions: number[] = [],
       elementType: string = '') {
     layout = layout || {};
-    this.format = layout.format || '';
     this.minorToMajor = [];
     this.dimensions = [];
-    this.maxSparseElements = 0;
+    this.dimLevelTypes = [];
     if (layout.minorToMajor) {
       this.minorToMajor = layout.minorToMajor.map(item => Number(item));
       this.dimensions =
           this.analyzeLayout(dimensions, this.minorToMajor, elementType);
+    }
+    if (layout.dimLevelTypes) {
+      this.dimLevelTypes = layout.dimLevelTypes;
     }
   }
 
@@ -38,7 +39,7 @@ export class Layout {
       dimensions: number[], minorToMajor: number[],
       elementType: string): Dimension[] {
     const result = [];
-    for (let index of minorToMajor) {
+    for (const index of minorToMajor) {
       const size = dimensions[index];
       let alignment = 0;
       if (result.length === 0) {
@@ -66,11 +67,22 @@ export class Layout {
    * @return {string}
    */
   humanLayoutString(): string {
-    if (this.format === 'SPARSE') {
-      return 'sparse{' + this.maxSparseElements.toString() + '}';
-    } else if (this.format === 'DENSE') {
+    if (this.minorToMajor.length > 0) {
       return '{' + this.minorToMajor.join() + '}';
     }
     return '';
+  }
+
+  /**
+   * Returns true iff the layout represents a dense array.
+   * @return {boolean}
+   */
+  isDense(): boolean {
+    for (const dimLevelType of this.dimLevelTypes) {
+      if (dimLevelType !== 'DIM_DENSE') {
+        return false;
+      }
+    }
+    return true;
   }
 }
