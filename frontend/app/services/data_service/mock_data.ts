@@ -20,6 +20,12 @@ export const DATA_PLUGIN_PROFILE_TOOLS = {
   ]
 };
 
+/** Mock data for runs API */
+export const DATA_PLUGIN_PROFILE_RUNS = ['foo', 'empty', 'bar'];
+
+/** Mock data for run_tools API */
+export const DATA_PLUGIN_PROFILE_RUN_TOOLS = ['overview_page', 'trace_viewer'];
+
 /** Mock data for hosts API */
 export const DATA_PLUGIN_PROFILE_HOSTS = ['device', 'host'];
 

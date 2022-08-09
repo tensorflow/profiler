@@ -1,7 +1,7 @@
 import {PlatformLocation} from '@angular/common';
 import {HttpClient, HttpParams} from '@angular/common/http';
 import {Injectable} from '@angular/core';
-import {API_PREFIX, CAPTURE_PROFILE_API, DATA_API, HOSTS_API, LOCAL_URL, PLUGIN_NAME, TOOLS_API} from 'org_xprof/frontend/app/common/constants/constants';
+import {API_PREFIX, CAPTURE_PROFILE_API, DATA_API, HOSTS_API, LOCAL_URL, PLUGIN_NAME, RUNS_API, TOOLS_API, RUN_TOOLS_API} from 'org_xprof/frontend/app/common/constants/constants';
 import {CaptureProfileOptions, CaptureProfileResponse} from 'org_xprof/frontend/app/common/interfaces/capture_profile';
 import {DataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {Observable, of} from 'rxjs';
@@ -59,6 +59,21 @@ export class DataService {
     }
     const params = new HttpParams().set('run', run).set('tag', tag);
     return this.httpClient.get(this.pathPrefix + HOSTS_API, {params});
+  }
+
+  getRuns() {
+    if (this.isLocalDevelopment) {
+      return of(mockData.DATA_PLUGIN_PROFILE_RUNS);
+    }
+    return this.httpClient.get(this.pathPrefix + RUNS_API);
+  }
+
+  getRunTools(run: string) {
+    if (this.isLocalDevelopment) {
+      return of(mockData.DATA_PLUGIN_PROFILE_RUN_TOOLS);
+    }
+    const params = new HttpParams().set('run', run);
+    return this.httpClient.get(this.pathPrefix + RUN_TOOLS_API, {params});
   }
 
   getData(run: string, tag: string, host: string): Observable<DataTable> {

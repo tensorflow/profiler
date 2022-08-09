@@ -40,6 +40,9 @@ export class App implements OnInit {
 
   ngOnInit() {
     this.dataService.getTools().subscribe(tools => {
+      // TODO(b/241842487): update the datasets here to cache run to tools list,
+      // intially populating tools list with 1st run
+      // updating the datasets as user call other runs to get more tools list
       this.datasets =
           this.processTools((tools || {}) as {[key: string]: string[]});
       this.dataFound = this.datasets.length !== 0;

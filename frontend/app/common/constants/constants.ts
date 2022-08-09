@@ -10,6 +10,12 @@ export const API_PREFIX = '/data/plugin/';
 /** Tools API */
 export const TOOLS_API = API_PREFIX + PLUGIN_NAME + '/tools';
 
+/** Runs API */
+export const RUNS_API = API_PREFIX + PLUGIN_NAME + '/runs';
+
+/** Tools per run API */
+export const RUN_TOOLS_API = API_PREFIX + PLUGIN_NAME + '/run_tools';
+
 /** Hosts API */
 export const HOSTS_API = API_PREFIX + PLUGIN_NAME + '/hosts';
 

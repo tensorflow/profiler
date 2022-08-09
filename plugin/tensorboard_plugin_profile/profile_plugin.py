@@ -52,6 +52,8 @@ TRACE_VIEWER_INDEX_JS_ROUTE = '/trace_viewer_index.js'
 ZONE_JS_ROUTE = '/zone.js'
 DATA_ROUTE = '/data'
 TOOLS_ROUTE = '/tools'
+RUNS_ROUTE = '/runs'
+RUN_TOOLS_ROUTE = '/run_tools'
 HOSTS_ROUTE = '/hosts'
 CAPTURE_ROUTE = '/capture_profile'
 
@@ -339,6 +341,8 @@ class ProfilePlugin(base_plugin.TBPlugin):
     self._is_active = False
     # Lock to ensure at most one thread computes _is_active at a time.
     self._is_active_lock = threading.Lock()
+    # Cache to map profile run name to corresponding tensorboard dir name
+    self._run_to_profile_run_dir = {}
 
   def is_active(self):
     """Whether this plugin is active and has any profile data to show.
@@ -378,6 +382,8 @@ class ProfilePlugin(base_plugin.TBPlugin):
         TRACE_VIEWER_INDEX_JS_ROUTE: self.static_file_route,
         ZONE_JS_ROUTE: self.static_file_route,
         TOOLS_ROUTE: self.tools_route,
+        RUNS_ROUTE: self.runs_route,
+        RUN_TOOLS_ROUTE: self.run_tools_route,
         HOSTS_ROUTE: self.hosts_route,
         DATA_ROUTE: self.data_route,
         CAPTURE_ROUTE: self.capture_route,
@@ -431,6 +437,36 @@ class ProfilePlugin(base_plugin.TBPlugin):
 
   def tools_impl(self, request):
     return dict(self.generate_run_to_tools())
+
+  @wrappers.Request.application
+  def runs_route(self, request):
+    runs = self.runs_imp(request)
+    return respond(runs, 'application/json')
+
+  def runs_imp(self, request=None):
+    """Returns a list all runs for the profile plugin.
+
+    Args:
+      request: Optional; werkzeug request used for grabbing ctx and experiment
+          id for other host implementations
+    """
+    return list(self.generate_runs())
+
+  @wrappers.Request.application
+  def run_tools_route(self, request):
+    run = request.args.get('run')
+    run_tools = self.run_tools_imp(run, request)
+    return respond(run_tools, 'application/json')
+
+  def run_tools_imp(self, run, request=None):
+    """Returns a list of tools given a single run.
+
+    Args:
+      run: the frontend run name, item is list returned by runs_imp
+      request: Optional; werkzeug request used for grabbing ctx and experiment
+          id for other host implementations
+    """
+    return list(self.generate_tools_of_run(run))
 
   def host_impl(self, run, tool, request=None):
     """Returns available hosts for the run and tool in the log directory.
@@ -713,6 +749,92 @@ class ProfilePlugin(base_plugin.TBPlugin):
         tb_run_directory, PLUGIN_NAME)
     return os.path.join(plugin_directory, profile_run_name)
 
+  def generate_runs(self):
+    """Generator for a list of runs.
+
+    RUNS_ROUTE and RUN_TOOLS_ROUTE are split implementation of original
+    TOOLS_ROUTE. `generate_run_to_tools` will traverse and parse all
+    runs and tools at once, but `generate_runs` will get all runs first,
+    and get tools list from `generate_tools_of_run` for a single run due
+    to expensive processing for xspace data to parse the tools.
+    Example:
+      logs/
+        plugins/
+          profile/
+            run1/
+              hostA.trace
+        train/
+          events.out.tfevents.foo
+          plugins/
+            profile/
+              run1/
+                hostA.trace
+                hostB.trace
+              run2/
+                hostA.trace
+        validation/
+          events.out.tfevents.foo
+          plugins/
+            profile/
+              run1/
+                hostA.trace
+    Yields:
+    A sequence of string that are "frontend run names".
+    For the above example, this would be:
+        "run1", "train/run1", "train/run2", "validation/run1"
+    """
+    self.start_grpc_stub_if_necessary()
+
+    # Create a background context; we may not be in a request.
+    ctx = RequestContext()
+    tb_run_names_to_dirs = {
+        run.run_name: os.path.join(self.logdir, run.run_name)
+        for run in self.data_provider.list_runs(ctx, experiment_id='')
+    }
+    plugin_assets = _plugin_assets(self.logdir, list(tb_run_names_to_dirs),
+                                   PLUGIN_NAME)
+
+    # Ensure that we also check the root logdir, even if it isn't a recognized
+    # TensorBoard run (i.e. has no tfevents file directly under it), to remain
+    # backwards compatible with previously profile plugin behavior. Note that we
+    # check if logdir is a directory to handle case where it's actually a
+    # multipart directory spec, which this plugin does not support.
+    if '.' not in plugin_assets and tf.io.gfile.isdir(self.logdir):
+      tb_run_names_to_dirs['.'] = self.logdir
+      plugin_assets['.'] = plugin_asset_util.ListAssets(self.logdir,
+                                                        PLUGIN_NAME)
+
+    for tb_run_name, profile_runs in six.iteritems(plugin_assets):
+      tb_run_dir = tb_run_names_to_dirs[tb_run_name]
+      tb_plugin_dir = plugin_asset_util.PluginDirectory(tb_run_dir, PLUGIN_NAME)
+
+      for profile_run in profile_runs:
+        # Remove trailing separator; some filesystem implementations emit this.
+        profile_run = profile_run.rstrip(os.sep)
+        if tb_run_name == '.':
+          frontend_run = profile_run
+        else:
+          frontend_run = os.path.join(tb_run_name, profile_run)
+        profile_run_dir = os.path.join(tb_plugin_dir, profile_run)
+        if tf.io.gfile.isdir(profile_run_dir):
+          self._run_to_profile_run_dir[frontend_run] = profile_run_dir
+          yield frontend_run
+
+  def generate_tools_of_run(self, run):
+    """Generate a list of tools given a certain run."""
+    profile_run_dir = self._run_to_profile_run_dir[run]
+    if tf.io.gfile.isdir(profile_run_dir):
+      try:
+        filenames = tf.io.gfile.listdir(profile_run_dir)
+      except tf.errors.NotFoundError as e:
+        logger.warning('Cannot read asset directory: %s, NotFoundError %s',
+                       profile_run_dir, e)
+        filenames = []
+      if filenames:
+        for tool in self._get_active_tools(filenames):
+          yield tool
+
+  # TODO(b/241842487) Remove this when the API migration is done.
   def generate_run_to_tools(self):
     """Generator for pairs of "run name" and a list of tools for that run.
 
