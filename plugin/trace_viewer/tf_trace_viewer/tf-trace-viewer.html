@@ -317,6 +317,7 @@ dashboard would integrate trace viewer app using iframe.
     _sessionId: string = '',
     _selectedDeviceIds: null,
     _devices: null,
+    _selectedHostIndex: 0,
 
     onSelectionChange: function(e) {
       if (!this._sessionId) return;
@@ -362,6 +363,7 @@ dashboard would integrate trace viewer app using iframe.
                 new URL(window.location.origin + '/trace_viewer/' + this._sessionId);
           traceViewerConnectedEventsLink.searchParams.append(
                 "selected_group_ids", event.args['connected_group_ids']);
+          this._addSelectedHostIndexToURL(traceViewerConnectedEventsLink);
           const traceViewerConnectedEventsLinkElement = document.createElement('div');
           traceViewerConnectedEventsLinkElement.innerHTML = '<a href="' +
                 traceViewerConnectedEventsLink.href +
@@ -373,6 +375,7 @@ dashboard would integrate trace viewer app using iframe.
           const traceViewerStepLink =
                 new URL(window.location.origin + '/trace_viewer/' + this._sessionId);
           traceViewerStepLink.searchParams.append("selected_group_ids", event.args['group_id']);
+          this._addSelectedHostIndexToURL(traceViewerStepLink);
           const traceViewerStepLinkElement = document.createElement('div');
           traceViewerStepLinkElement.innerHTML = '<a href="' + traceViewerStepLink.href +
                 '" target="_blank"> see events ONLY for this step/group ' +
@@ -403,12 +406,23 @@ dashboard would integrate trace viewer app using iframe.
       if (hostSelector.children.length <= 2) {
         hostSelector.hidden = true;
       } else {
-        // children[0] is all hosts.
-        hostSelector.children[1].selected = 'selected';
+        // By default select host 1, which is the first host except from all hosts.
+        this._selectedHostIndex = 1;
+        const hostsDataLink = new URL(this.hostsDataUrl, window.location.origin);
+        const selectedHostIdParam = hostsDataLink.searchParams.get('host');
+        const selectedHostId = Number(selectedHostIdParam);
+        if (selectedHostId) {
+          if (selectedHostId < hostSelector.children.length - 1) {
+            // Select host based on host query parameter.
+            this._selectedHostIndex = selectedHostId + 1;
+          }
+        }
+        hostSelector.children[this._selectedHostIndex].selected = 'selected';
       }
       hostSelector.addEventListener("change", () => {
         // When the host changes, we need to clear the Process Filter Dropdown
         // since it contains devices (pids) associated with the previous host.
+        this._selectedHostIndex = document.getElementById('host_selector').selectedIndex;
         this._clearProcessList();
         this._loadTrace(null, /* replaceModel= */ true);  // reload data.
         this._updatePerfettoButton();
@@ -420,6 +434,13 @@ dashboard would integrate trace viewer app using iframe.
       detailsSelector.setAttribute('id', 'details_selector');
       detailsSelector.style.display = 'none';
       Polymer.dom(this._traceViewer.leftControls).appendChild(detailsSelector);
+    },
+
+    _addSelectedHostIndexToURL: function(url) {
+      if (this._selectedHostIndex >= 1) {
+        // Skip All Hosts selection.
+        url.searchParams.append("host", this._selectedHostIndex - 1);
+      }
     },
 
     _allHostsSelected: function() {
