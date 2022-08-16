@@ -60,3 +60,11 @@ export const getExportAsCsv: MemoizedSelectorAny =
 /** Selector for ErrorMessage */
 export const getErrorMessage: MemoizedSelectorAny =
     createSelector(appState, (appState: AppState) => appState.errorMessage);
+
+/** Selector for runTools */
+export const getRunToolsMap: MemoizedSelectorAny =
+    createSelector(appState, (appState: AppState) => appState.runToolsMap);
+
+/** Selector for current run */
+export const getCurrentRun: MemoizedSelectorAny =
+    createSelector(appState, (appState: AppState) => appState.currentRun);
