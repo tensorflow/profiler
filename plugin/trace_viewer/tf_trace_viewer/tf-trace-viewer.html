@@ -385,6 +385,14 @@ dashboard would integrate trace viewer app using iframe.
       }
     },
 
+    // Only pushes a new state to history, won't reload the page
+    _updateUrlHostIndex: function() {
+      const queryParams = new URLSearchParams(window.parent.location.search);
+      queryParams.set('host_index', this._selectedHostIndex - 1);
+      const url = `${window.location.origin}/trace_viewer/${this._sessionId}${queryParams.toString()}`;
+      window.parent.history.pushState({}, '', url);
+    },
+
     _createFilters: function() {
       hosts = this._hosts || [];
       const hostSelector = document.createElement('select');
@@ -409,13 +417,10 @@ dashboard would integrate trace viewer app using iframe.
         // By default select host 1, which is the first host except from all hosts.
         this._selectedHostIndex = 1;
         const hostsDataLink = new URL(this.hostsDataUrl, window.location.origin);
-        const selectedHostIdParam = hostsDataLink.searchParams.get('host');
-        const selectedHostId = Number(selectedHostIdParam);
-        if (selectedHostId) {
-          if (selectedHostId < hostSelector.children.length - 1) {
-            // Select host based on host query parameter.
-            this._selectedHostIndex = selectedHostId + 1;
-          }
+        const urlHostIndex = Number(hostsDataLink.searchParams.get('host_index'));
+        if (urlHostIndex && urlHostIndex < hostSelector.children.length - 1) {
+          // Select host based on host query parameter.
+          this._selectedHostIndex = urlHostIndex + 1;
         }
         hostSelector.children[this._selectedHostIndex].selected = 'selected';
       }
@@ -423,6 +428,7 @@ dashboard would integrate trace viewer app using iframe.
         // When the host changes, we need to clear the Process Filter Dropdown
         // since it contains devices (pids) associated with the previous host.
         this._selectedHostIndex = document.getElementById('host_selector').selectedIndex;
+        this._updateUrlHostIndex();
         this._clearProcessList();
         this._loadTrace(null, /* replaceModel= */ true);  // reload data.
         this._updatePerfettoButton();
@@ -439,7 +445,7 @@ dashboard would integrate trace viewer app using iframe.
     _addSelectedHostIndexToURL: function(url) {
       if (this._selectedHostIndex >= 1) {
         // Skip All Hosts selection.
-        url.searchParams.append("host", this._selectedHostIndex - 1);
+        url.searchParams.append("host_index", this._selectedHostIndex - 1);
       }
     },
 
@@ -872,6 +878,7 @@ dashboard would integrate trace viewer app using iframe.
     // all filtering URL parameters, except resolution and range.
     _buildBaseURL: function() {
       const requestURL = new URL(this.traceDataUrl, window.location.href);
+      requestURL.searchParams.delete('host_index');
       const hostSelector = document.getElementById("host_selector");
       // Don't set "host" parameter for "all hosts".
       if (hostSelector.value) requestURL.searchParams.set(hostSelector.name, hostSelector.value);
@@ -939,6 +946,7 @@ dashboard would integrate trace viewer app using iframe.
       requestURL.searchParams.set('overlay', 'true');
       requestURL.searchParams.delete('selected_group_ids');
       requestURL.searchParams.delete('selected_device_ids');
+      requestURL.searchParams.delete('host_index');
       return requestURL;
     },
 
