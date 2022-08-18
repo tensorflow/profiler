@@ -722,7 +722,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
     to the Profile plugin's "run" concept (which is a subdirectory of the
     plugins/profile directory representing an individual run of the tool), with
     the special case that TensorBoard run is the logdir root (which is the run
-    named '.') then only the Profile plugin "run" name is used, for backwards
+    named '') then only the Profile plugin "run" name is used, for backwards
     compatibility.
 
     Args:
@@ -737,9 +737,9 @@ class ProfilePlugin(base_plugin.TBPlugin):
     run = run.rstrip(os.sep)
     tb_run_name, profile_run_name = os.path.split(run)
     if not tb_run_name:
-      tb_run_name = '.'
+      tb_run_name = ''
 
-    if tb_run_name == '.' and tf.io.gfile.isdir(self.logdir):
+    if not tb_run_name and tf.io.gfile.isdir(self.logdir):
       tb_run_directory = self.logdir
     else:
       tb_run_directory = os.path.join(self.logdir, tb_run_name)
@@ -801,10 +801,9 @@ class ProfilePlugin(base_plugin.TBPlugin):
     # backwards compatible with previously profile plugin behavior. Note that we
     # check if logdir is a directory to handle case where it's actually a
     # multipart directory spec, which this plugin does not support.
-    if '.' not in plugin_assets and tf.io.gfile.isdir(self.logdir):
-      tb_run_names_to_dirs['.'] = self.logdir
-      plugin_assets['.'] = plugin_asset_util.ListAssets(self.logdir,
-                                                        PLUGIN_NAME)
+    if '' not in plugin_assets and tf.io.gfile.isdir(self.logdir):
+      tb_run_names_to_dirs[''] = self.logdir
+      plugin_assets[''] = plugin_asset_util.ListAssets(self.logdir, PLUGIN_NAME)
 
     for tb_run_name, profile_runs in six.iteritems(plugin_assets):
       tb_run_dir = tb_run_names_to_dirs[tb_run_name]
@@ -813,7 +812,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
       for profile_run in profile_runs:
         # Remove trailing separator; some filesystem implementations emit this.
         profile_run = profile_run.rstrip(os.sep)
-        if tb_run_name == '.':
+        if not tb_run_name:
           frontend_run = profile_run
         else:
           frontend_run = os.path.join(tb_run_name, profile_run)
@@ -899,10 +898,9 @@ class ProfilePlugin(base_plugin.TBPlugin):
     # backwards compatible with previously profile plugin behavior. Note that we
     # check if logdir is a directory to handle case where it's actually a
     # multipart directory spec, which this plugin does not support.
-    if '.' not in plugin_assets and tf.io.gfile.isdir(self.logdir):
-      tb_run_names_to_dirs['.'] = self.logdir
-      plugin_assets['.'] = plugin_asset_util.ListAssets(self.logdir,
-                                                        PLUGIN_NAME)
+    if '' not in plugin_assets and tf.io.gfile.isdir(self.logdir):
+      tb_run_names_to_dirs[''] = self.logdir
+      plugin_assets[''] = plugin_asset_util.ListAssets(self.logdir, PLUGIN_NAME)
 
     for tb_run_name, profile_runs in six.iteritems(plugin_assets):
       tb_run_dir = tb_run_names_to_dirs[tb_run_name]
@@ -910,7 +908,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
       for profile_run in profile_runs:
         # Remove trailing separator; some filesystem implementations emit this.
         profile_run = profile_run.rstrip(os.sep)
-        if tb_run_name == '.':
+        if not tb_run_name:
           frontend_run = profile_run
         else:
           frontend_run = os.path.join(tb_run_name, profile_run)
