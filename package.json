@@ -78,7 +78,7 @@
     "@ngrx/store": "^9.2.1",
     "@polymer/polymer": "^3.4.1",
     "tslib": "^2.0.1",
-    "rxjs": "^6.5.4",
+    "rxjs": "7.0.0-beta.4",
     "zone.js": "^0.10.3"
   },
   "overrides": {
