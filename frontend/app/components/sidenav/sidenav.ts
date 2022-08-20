@@ -1,12 +1,13 @@
-import {Component, EventEmitter, Input, OnDestroy, Output} from '@angular/core';
+import {Component, OnDestroy} from '@angular/core';
+import {Router} from '@angular/router';
 import {Store} from '@ngrx/store';
 import {DEFAULT_HOST} from 'org_xprof/frontend/app/common/constants/constants';
-import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
-import {Tool} from 'org_xprof/frontend/app/common/interfaces/tool';
+import {RunToolsMap} from 'org_xprof/frontend/app/common/interfaces/tool';
+import {setLoadingState} from 'org_xprof/frontend/app/common/utils/utils';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
-import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
-import {getCurrentTool} from 'org_xprof/frontend/app/store/selectors';
-import {ReplaySubject} from 'rxjs';
+import {setCurrentRunAction, updateRunToolsMapAction} from 'org_xprof/frontend/app/store/actions';
+import {getCurrentRun, getRunToolsMap} from 'org_xprof/frontend/app/store/selectors';
+import {firstValueFrom, Observable, ReplaySubject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 
 /** A side navigation component. */
@@ -16,25 +17,14 @@ import {takeUntil} from 'rxjs/operators';
   styleUrls: ['./sidenav.scss']
 })
 export class SideNav implements OnDestroy {
-  /** The tool datasets. */
-  @Input()
-  set datasets(tools: Tool[]|null) {
-    if (tools && tools.length > 0) {
-      this.tools = tools;
-      this.runs = tools.map(tool => tool.name);
-      this.selectedRun = tools[0].name;
-      this.updateTags();
-    }
-  }
-
-  /** Navigation Update Event */
-  @Output() update = new EventEmitter<NavigationEvent>();
-
   /** Handles on-destroy Subject, used to unsubscribe. */
   private readonly destroyed = new ReplaySubject<void>(1);
+  runToolsMap$: Observable<RunToolsMap> =
+      this.store.select(getRunToolsMap).pipe(takeUntil(this.destroyed));
+  currentRun$: Observable<string> =
+      this.store.select(getCurrentRun).pipe(takeUntil(this.destroyed));
 
-  private tools: Tool[] = [];
-
+  runToolsMap: RunToolsMap = {};
   runs: string[] = [];
   tags: string[] = [];
   hosts: string[] = [];
@@ -43,13 +33,21 @@ export class SideNav implements OnDestroy {
   selectedHost = '';
 
   constructor(
+      private readonly router: Router,
       private readonly dataService: DataService,
       private readonly store: Store<{}>) {
-    store.select(getCurrentTool)
-        .pipe(takeUntil(this.destroyed))
-        .subscribe((currentTool: string) => {
-          this.updateTags(currentTool);
-        });
+    // TODO(b/241842487): stream is not updated when the state change, should
+    // trigger subscribe reactively
+    this.runToolsMap$.subscribe((runTools: RunToolsMap) => {
+      this.runToolsMap = runTools;
+      this.runs = Object.keys(this.runToolsMap);
+    });
+    this.currentRun$.subscribe(run => {
+      if (run && !this.selectedRun) {
+        this.selectedRun = run;
+        this.afterUpdateRun();
+      }
+    });
   }
 
   getDisplayTagName(tag: string): string {
@@ -60,80 +58,104 @@ export class SideNav implements OnDestroy {
         tag || '';
   }
 
-  updateTags(targetTag: string = '') {
-    this.store.dispatch(setLoadingStateAction({
-      loadingState: {
-        loading: true,
-        message: 'Loading data',
-      }
-    }));
+  resetTag() {
+    this.tags = [];
+    this.selectedTag = '';
+  }
 
-    const tool = this.tools.find(tool => tool.name === this.selectedRun);
-    if (tool && tool.activeTools && tool.activeTools.length > 0) {
-      this.tags = tool.activeTools;
-      this.selectedTag =
-          this.tags.find(
-              tag => tag === targetTag || tag === targetTag + '@' ||
-                  tag === targetTag + '#' || tag === targetTag + '^') ||
+  resetHost() {
+    this.hosts = [];
+    this.selectedHost = '';
+  }
+
+  async getToolsForSelectedRun() {
+    setLoadingState(true, this.store, 'Loading tools data for run');
+    const tools =
+        await firstValueFrom(this.dataService.getRunTools(this.selectedRun)
+                                 .pipe(takeUntil(this.destroyed)));
+    setLoadingState(false, this.store);
+
+    this.store.dispatch(updateRunToolsMapAction({
+      run: this.selectedRun,
+      tools,
+    }));
+    return tools;
+  }
+
+  async getHostsForSelectedTag() {
+    setLoadingState(true, this.store, 'Loading hosts data for tag');
+    const response = await firstValueFrom(
+        this.dataService.getHosts(this.selectedRun, this.selectedTag)
+            .pipe(takeUntil(this.destroyed)));
+    setLoadingState(false, this.store);
+
+    let hosts = (response as string[]) || [];
+    if (hosts.length === 0) {
+      hosts.push('');
+    }
+    hosts = hosts.map(host => {
+      if (host === null) {
+        return '';
+      } else if (host === '') {
+        return DEFAULT_HOST;
+      }
+      return host;
+    });
+    return hosts;
+  }
+
+  afterUpdateRun() {
+    this.store.dispatch(setCurrentRunAction({
+      currentRun: this.selectedRun,
+    }));
+    this.updateTags();
+  }
+
+  async updateTags() {
+    this.tags = this.runToolsMap[this.selectedRun] || [];
+    if (!this.tags.length) {
+      this.tags = (await this.getToolsForSelectedRun() || []) as string[];
+    }
+    if (this.tags.length > 0) {
+      // Try to match the same tag when tags changes, use default if no match
+      this.selectedTag = this.tags.find(
+                             tag => tag === this.selectedTag ||
+                                 tag === this.selectedTag + '@' ||
+                                 tag === this.selectedTag + '#' ||
+                                 tag === this.selectedTag + '^' ||
+                                 tag.slice(0, -1) === this.selectedTag) ||
           this.tags[0];
-      this.updateHosts();
+      this.afterUpdateTag();
     } else {
-      this.tags = [];
-      this.selectedTag = '';
-      this.hosts = [];
-      this.selectedHost = '';
-      this.emitUpdateEvent();
+      this.resetTag();
+      this.resetHost();
+      this.navigateTools();
     }
   }
 
-  updateHosts() {
-    this.store.dispatch(setLoadingStateAction({
-      loadingState: {
-        loading: true,
-        message: 'Loading data',
-      }
-    }));
-
-    const run = this.selectedRun;
-    const tag = this.selectedTag;
-    this.hosts = [];
-    this.selectedHost = '';
-    this.dataService.getHosts(run, tag)
-        .pipe(takeUntil(this.destroyed))
-        .subscribe((response) => {
-          let hosts = (response as string[]) || [''];
-          if (hosts.length === 0) {
-            hosts.push('');
-          }
-          hosts = hosts.map(host => {
-            if (host === null) {
-              return '';
-            } else if (host === '') {
-              return DEFAULT_HOST;
-            }
-            return host;
-          });
-          if (run === this.selectedRun && tag === this.selectedTag) {
-            this.hosts = hosts;
-            this.selectedHost = this.hosts[0];
-            this.emitUpdateEvent();
-          }
-        });
+  afterUpdateTag() {
+    this.updateHosts();
   }
 
-  emitUpdateEvent() {
-    this.store.dispatch(setLoadingStateAction({
-      loadingState: {
-        loading: false,
-        message: '',
-      }
-    }));
+  async updateHosts() {
+    this.resetHost();
+    this.hosts = await this.getHostsForSelectedTag();
+    this.selectedHost = this.hosts[0];
+    this.afterUpdateHost();
+  }
 
-    this.update.emit({
-      run: this.selectedRun,
-      tag: this.selectedTag,
-      host: this.selectedHost === DEFAULT_HOST ? '' : this.selectedHost
-    });
+  afterUpdateHost() {
+    this.navigateTools();
+  }
+
+  navigateTools() {
+    this.router.navigate([
+      this.selectedTag || 'empty', {
+        run: this.selectedRun,
+        tag: this.selectedTag,
+        host: this.selectedHost === DEFAULT_HOST ? '' : this.selectedHost,
+      }
+    ]);
   }
 
   ngOnDestroy() {

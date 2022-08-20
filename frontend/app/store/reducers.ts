@@ -115,7 +115,36 @@ export const reducer: ActionReducer<AppState, Action> = createReducer(
           };
         },
         ),
-);
+    on(
+        actions.setCurrentRunAction,
+        (state: AppState, action: ActionCreatorAny) => {
+          return {
+            ...state,
+            currentRun: action.currentRun,
+          };
+        },
+        ),
+    on(
+        actions.updateRunToolsMapAction,
+        (state: AppState, action: ActionCreatorAny) => {
+          const {run, tools} = action;
+          const updatedRunToolsMap = state.runToolsMap;
+          updatedRunToolsMap[run] = tools;
+          return {
+            ...state,
+            runToolsMap: updatedRunToolsMap,
+          };
+        },
+        ),
+    on(
+        actions.setRunToolsMapAction,
+        (state: AppState, action: ActionCreatorAny) => {
+          return {
+            ...state,
+            runToolsMap: action.runToolsMap,
+          };
+        },
+        ));
 
 /** Reducer */
 export function rootReducer(state: AppState|undefined, action: Action) {
