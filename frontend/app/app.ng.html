@@ -1,6 +1,6 @@
 <div *ngIf="!loading; else progress_bar">
   <div *ngIf="dataFound; else emptypage">
-    <main-page [datasets]="datasets"></main-page>
+    <main-page></main-page>
   </div>
 
   <ng-template #emptypage>

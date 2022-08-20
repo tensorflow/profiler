@@ -2,6 +2,7 @@ import {Node} from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_d
 import {DataRequestType} from 'org_xprof/frontend/app/common/constants/enums';
 import {AllReduceOpInfo, ChannelInfo, PodStatsRecord} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {HeapObject} from 'org_xprof/frontend/app/common/interfaces/heap_object';
+import {RunToolsMap} from 'org_xprof/frontend/app/common/interfaces/tool';
 
 /** Type for active heap object state */
 type ActiveHeapObjectState = HeapObject|null;
@@ -83,9 +84,12 @@ export interface AppState {
   loadingState: LoadingState;
   toolsInfoState: ToolsInfoState;
   currentTool: CurrentToolState;
-  dataRequest: DataRequest;
   exportAsCsv: ExportAsCsvState;
   errorMessage: ErrorMessageState;
+  // OSS only
+  dataRequest: DataRequest;
+  runToolsMap: RunToolsMap;
+  currentRun: string;
 }
 
 /** Initial state of active heap object */
@@ -139,6 +143,12 @@ const INIT_EXPORT_AS_CSV_STATE: ExportAsCsvState = '';
 /** Initial state of error message */
 const INIT_ERROR_MESSAGE_STATE: ErrorMessageState = '';
 
+/** Initial state of run tools map */
+const INIT_RUN_TOOLS_MAP: RunToolsMap = {};
+
+/** Initial state of current run */
+const INIT_CURRENT_RUN = '';
+
 /** Initial state object */
 export const INIT_APP_STATE: AppState = {
   memoryViewerState: INIT_MEMORY_VIEWER_STATE,
@@ -151,6 +161,8 @@ export const INIT_APP_STATE: AppState = {
   dataRequest: INIT_REQUEST_DATA_STATE,
   exportAsCsv: INIT_EXPORT_AS_CSV_STATE,
   errorMessage: INIT_ERROR_MESSAGE_STATE,
+  runToolsMap: INIT_RUN_TOOLS_MAP,
+  currentRun: INIT_CURRENT_RUN,
 };
 
 /** Feature key for store */

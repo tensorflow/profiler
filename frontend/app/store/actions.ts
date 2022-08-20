@@ -2,6 +2,7 @@ import {createAction, props} from '@ngrx/store';
 import {Node} from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
 import {AllReduceOpInfo, ChannelInfo, PodStatsRecord} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {HeapObject} from 'org_xprof/frontend/app/common/interfaces/heap_object';
+import {RunToolsMap} from 'org_xprof/frontend/app/common/interfaces/tool';
 
 import {DataRequest, LoadingState, ToolsInfoState} from './state';
 import {ActionCreatorAny} from './types';
@@ -70,4 +71,20 @@ export const setErrorMessageStateAction: ActionCreatorAny = createAction(
 export const setToolsInfoStateAction: ActionCreatorAny = createAction(
     '[App State] Set tools info state',
     props<{toolsInfo: ToolsInfoState}>(),
+);
+
+/** Action to set current run */
+export const setCurrentRunAction: ActionCreatorAny = createAction(
+    '[App State] Set current run state',
+    props<{currentRun: string}>(),
+);
+
+/** Action to set run tools map */
+export const setRunToolsMapAction: ActionCreatorAny =
+    createAction('[App State] set run - tools map state', props<RunToolsMap>());
+
+/** Action to update run - tools state */
+export const updateRunToolsMapAction: ActionCreatorAny = createAction(
+    '[App State] Update run - tools map state',
+    props<{run: string, tools: string[]}>(),
 );
