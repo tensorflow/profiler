@@ -3,7 +3,7 @@ load("@org_tensorflow_tensorboard//tensorboard/defs:vulcanize.bzl", "tensorboard
 
 package(default_visibility = ["//plugin:internal"])
 
-licenses(["notice"])  # Apache 2.0
+licenses(["notice"])
 
 tf_web_library(
     name = "trace_viewer",

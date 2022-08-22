@@ -2,7 +2,7 @@ load("@org_tensorflow_tensorboard//tensorboard/defs:web.bzl", "tf_web_library")
 
 package(default_visibility = ["//plugin:internal"])
 
-licenses(["notice"])  # Apache 2.0
+licenses(["notice"])
 
 tf_web_library(
     name = "webcomponentsjs_polyfill",
