@@ -79,11 +79,12 @@ def xspace_to_tool_data(
       returns the raw data.
 
   Returns:
-    Returns a string of tool data.
+    Returns a string of tool data and the content type for the response.
   """
   assert tool[-1] == '^'
   tool = tool[:-1]  # xplane tool name ends with '^'
   data = None
+  content_type = 'application/json'
   if tool == 'trace_viewer':
     # Trace viewer handles one host at a time.
     assert len(xspace_paths) == 1
@@ -140,7 +141,7 @@ def xspace_to_tool_data(
       data = raw_data
   else:
     logger.warning('%s is not a known xplane tool', tool)
-  return data
+  return data, content_type
 
 
 def tool_proto_to_tool_data(tool_proto, tool, tqx):

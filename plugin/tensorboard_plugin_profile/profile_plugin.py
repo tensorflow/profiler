@@ -309,9 +309,10 @@ def get_data_content_encoding(raw_data, tool, tqx):
     tqx: Gviz output format.
 
   Returns:
-    The converted data and the content encoding of the data.
+    The converted data and the content encoding of the data and content type for
+    the response.
   """
-  data, content_encoding = None, None
+  data, content_type, content_encoding = None, 'application/json', None
   if tool in RAW_DATA_TOOLS:
     data = raw_data
     if tool[-1] == '#':
@@ -319,7 +320,7 @@ def get_data_content_encoding(raw_data, tool, tqx):
   else:
     data = convert.tool_proto_to_tool_data(raw_data, tool, tqx)
 
-  return data, content_encoding
+  return data, content_type, content_encoding
 
 
 class ProfilePlugin(base_plugin.TBPlugin):
@@ -537,11 +538,12 @@ class ProfilePlugin(base_plugin.TBPlugin):
     host = request.args.get('host')
     tqx = request.args.get('tqx')
     run_dir = self._run_dir(run)
+    content_type = 'application/json'
     # Profile plugin "run" is the last component of run dir.
     profile_run = os.path.basename(run_dir)
 
     if tool not in TOOLS and not use_xplane(tool):
-      return None, None
+      return None, content_type, None
 
     self.start_grpc_stub_if_necessary()
     if tool == 'trace_viewer@' and self.stub is not None:
@@ -568,7 +570,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
       if request.args.get('end_time_ms') is not None:
         grpc_request.parameters['end_time_ms'] = request.args.get('end_time_ms')
       grpc_response = self.stub.GetSessionToolData(grpc_request)
-      return grpc_response.output, None
+      return grpc_response.output, content_type, None
 
     asset_path = os.path.join(run_dir, make_filename(host, tool))
 
@@ -585,10 +587,10 @@ class ProfilePlugin(base_plugin.TBPlugin):
         asset_paths = [asset_path]
 
       try:
-        data = convert.xspace_to_tool_data(asset_paths, tool, tqx)
+        data, content_type = convert.xspace_to_tool_data(asset_paths, tool, tqx)
       except AttributeError:
         logger.warning('XPlane converters are available after Tensorflow 2.4')
-      return data, content_encoding
+      return data, content_type, content_encoding
 
     raw_data = None
     try:
@@ -600,7 +602,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
       logger.warning("Couldn't read asset path: %s, OpError %s", asset_path, e)
 
     if raw_data is None:
-      return None, None
+      return None, content_type, None
 
     return get_data_content_encoding(raw_data, tool, tqx)
 
@@ -608,10 +610,10 @@ class ProfilePlugin(base_plugin.TBPlugin):
   def data_route(self, request):
     # params
     #   request: XMLHTTPRequest.
-    data, content_encoding = self.data_impl(request)
+    data, content_type, content_encoding = self.data_impl(request)
     if data is None:
       return respond('404 Not Found', 'text/plain', code=404)
-    return respond(data, 'application/json', content_encoding=content_encoding)
+    return respond(data, content_type, content_encoding=content_encoding)
 
   @wrappers.Request.application
   def capture_route(self, request):

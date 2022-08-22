@@ -199,15 +199,15 @@ class ProfilePluginTest(tf.test.TestCase):
     write_empty_event_file(subdir_a)
     self.multiplexer.AddRunsFromDirectory(self.logdir)
     self.multiplexer.Reload()
-    data, _ = self.plugin.data_impl(
+    data, _, _ = self.plugin.data_impl(
         utils.make_data_request('foo', 'trace_viewer', 'host0'))
     trace = json.loads(data)
     self.assertEqual(trace, EXPECTED_TRACE_DATA)
-    data, _ = self.plugin.data_impl(
+    data, _, _ = self.plugin.data_impl(
         utils.make_data_request('a/foo', 'trace_viewer', 'host0'))
     trace_a = json.loads(data)
     self.assertEqual(trace_a, EXPECTED_TRACE_DATA)
-    data, _ = self.plugin.data_impl(
+    data, _, _ = self.plugin.data_impl(
         utils.make_data_request('qux', 'trace_viewer'))
     trace_qux = json.loads(data)
     expected_trace_qux = copy.deepcopy(EXPECTED_TRACE_DATA)
@@ -215,25 +215,25 @@ class ProfilePluginTest(tf.test.TestCase):
     self.assertEqual(trace_qux, expected_trace_qux)
 
     # Invalid tool/run/host.
-    data, _ = self.plugin.data_impl(
+    data, _, _ = self.plugin.data_impl(
         utils.make_data_request('foo', 'nonono', 'host0'))
     self.assertIsNone(data)
-    data, _ = self.plugin.data_impl(
+    data, _, _ = self.plugin.data_impl(
         utils.make_data_request('foo', 'trace_viewer', ''))
     self.assertIsNone(data)
-    data, _ = self.plugin.data_impl(
+    data, _, _ = self.plugin.data_impl(
         utils.make_data_request('bar', 'unsupported', 'host1'))
     self.assertIsNone(data)
-    data, _ = self.plugin.data_impl(
+    data, _, _ = self.plugin.data_impl(
         utils.make_data_request('bar', 'trace_viewer', 'host0'))
     self.assertIsNone(data)
-    data, _ = self.plugin.data_impl(
+    data, _, _ = self.plugin.data_impl(
         utils.make_data_request('qux', 'trace_viewer', 'host'))
     self.assertIsNone(data)
-    data, _ = self.plugin.data_impl(
+    data, _, _ = self.plugin.data_impl(
         utils.make_data_request('empty', 'trace_viewer', ''))
     self.assertIsNone(data)
-    data, _ = self.plugin.data_impl(
+    data, _, _ = self.plugin.data_impl(
         utils.make_data_request('a', 'trace_viewer', ''))
     self.assertIsNone(data)
 
