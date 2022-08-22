@@ -43,6 +43,7 @@ export const routes: Routes = [
   {path: 'memory_profile^', component: MemoryProfile},
   {path: 'memory_viewer', component: MemoryViewer},
   {path: 'op_profile', component: OpProfile},
+  {path: 'op_profile^', component: OpProfile},
   {path: 'pod_viewer', component: PodViewer},
   {path: 'pod_viewer^', component: PodViewer},
   {path: 'tf_data_bottleneck_analysis^', component: TfDataBottleneckAnalysis},

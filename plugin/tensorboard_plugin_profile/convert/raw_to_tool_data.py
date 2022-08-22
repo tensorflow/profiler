@@ -134,6 +134,10 @@ def xspace_to_tool_data(
         xspace_paths, tool)
     if success:
       data = tf_data_stats_proto_to_gviz.to_json(raw_data)
+  elif tool == 'op_profile':
+    raw_data, success = xspace_wrapper_func(xspace_paths, tool)
+    if success:
+      data = raw_data
   else:
     logger.warning('%s is not a known xplane tool', tool)
   return data
