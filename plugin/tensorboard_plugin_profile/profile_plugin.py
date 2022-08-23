@@ -275,10 +275,29 @@ def respond(body, content_type, code=200, content_encoding=None):
 def _plugin_assets(logdir, runs, plugin_name):
   result = {}
   for run in runs:
-    run_path = os.path.join(logdir, run)
+    run_path = _tb_run_directory(logdir, run)
     assets = plugin_asset_util.ListAssets(run_path, plugin_name)
     result[run] = assets
   return result
+
+
+def _tb_run_directory(logdir, run):
+  """Returns the TensorBoard run directory for a TensorBoard run name.
+
+  This helper returns the TensorBoard-level run directory (the one that would)
+  contain tfevents files) for a given TensorBoard run name (aka the relative
+  path from the logdir root to this directory). For the root run '.' this is
+  the bare logdir path; for all other runs this is the logdir joined with the
+  run name.
+
+  Args:
+    logdir: the TensorBoard log directory root path
+    run: the TensorBoard run name, e.g. '.' or 'train'
+
+  Returns:
+    The TensorBoard run directory path, e.g. my/logdir or my/logdir/train.
+  """
+  return logdir if run == '.' else os.path.join(logdir, run)
 
 
 def filenames_to_hosts(filenames, tool):
@@ -741,12 +760,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
     tb_run_name, profile_run_name = os.path.split(run)
     if not tb_run_name:
       tb_run_name = '.'
-
-    if tb_run_name == '.' and tf.io.gfile.isdir(self.logdir):
-      tb_run_directory = self.logdir
-    else:
-      tb_run_directory = os.path.join(self.logdir, tb_run_name)
-
+    tb_run_directory = _tb_run_directory(self.logdir, tb_run_name)
     if not tf.io.gfile.isdir(tb_run_directory):
       raise RuntimeError('No matching run directory for run %s' % run)
 
@@ -792,23 +806,22 @@ class ProfilePlugin(base_plugin.TBPlugin):
 
     # Create a background context; we may not be in a request.
     ctx = RequestContext()
-    tb_run_names_to_dirs = {
-        run.run_name: os.path.join(self.logdir, run.run_name)
+    tb_runs = [
+        run.run_name
         for run in self.data_provider.list_runs(ctx, experiment_id='')
-    }
-    plugin_assets = _plugin_assets(self.logdir, list(tb_run_names_to_dirs),
-                                   PLUGIN_NAME)
-
+    ]
     # Ensure that we also check the root logdir, even if it isn't a recognized
     # TensorBoard run (i.e. has no tfevents file directly under it), to remain
     # backwards compatible with previously profile plugin behavior. Note that we
     # check if logdir is a directory to handle case where it's actually a
     # multipart directory spec, which this plugin does not support.
-    if '.' not in plugin_assets and tf.io.gfile.isdir(self.logdir):
-      tb_run_names_to_dirs['.'] = self.logdir
-      plugin_assets['.'] = plugin_asset_util.ListAssets(self.logdir,
-                                                        PLUGIN_NAME)
-
+    if '.' not in tb_runs and tf.io.gfile.isdir(self.logdir):
+      tb_runs.append('.')
+    tb_run_names_to_dirs = {
+        run: _tb_run_directory(self.logdir, run) for run in tb_runs
+    }
+    plugin_assets = _plugin_assets(self.logdir, list(tb_run_names_to_dirs),
+                                   PLUGIN_NAME)
     for tb_run_name, profile_runs in six.iteritems(plugin_assets):
       tb_run_dir = tb_run_names_to_dirs[tb_run_name]
       tb_plugin_dir = plugin_asset_util.PluginDirectory(tb_run_dir, PLUGIN_NAME)
@@ -890,23 +903,22 @@ class ProfilePlugin(base_plugin.TBPlugin):
 
     # Create a background context; we may not be in a request.
     ctx = RequestContext()
-    tb_run_names_to_dirs = {
-        run.run_name: os.path.join(self.logdir, run.run_name)
+    tb_runs = [
+        run.run_name
         for run in self.data_provider.list_runs(ctx, experiment_id='')
-    }
-    plugin_assets = _plugin_assets(self.logdir, list(tb_run_names_to_dirs),
-                                   PLUGIN_NAME)
-
+    ]
     # Ensure that we also check the root logdir, even if it isn't a recognized
     # TensorBoard run (i.e. has no tfevents file directly under it), to remain
     # backwards compatible with previously profile plugin behavior. Note that we
     # check if logdir is a directory to handle case where it's actually a
     # multipart directory spec, which this plugin does not support.
-    if '.' not in plugin_assets and tf.io.gfile.isdir(self.logdir):
-      tb_run_names_to_dirs['.'] = self.logdir
-      plugin_assets['.'] = plugin_asset_util.ListAssets(self.logdir,
-                                                        PLUGIN_NAME)
-
+    if '.' not in tb_runs and tf.io.gfile.isdir(self.logdir):
+      tb_runs.append('.')
+    tb_run_names_to_dirs = {
+        run: _tb_run_directory(self.logdir, run) for run in tb_runs
+    }
+    plugin_assets = _plugin_assets(self.logdir, list(tb_run_names_to_dirs),
+                                   PLUGIN_NAME)
     for tb_run_name, profile_runs in six.iteritems(plugin_assets):
       tb_run_dir = tb_run_names_to_dirs[tb_run_name]
       tb_plugin_dir = plugin_asset_util.PluginDirectory(tb_run_dir, PLUGIN_NAME)

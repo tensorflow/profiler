@@ -22,6 +22,7 @@ from __future__ import print_function
 import copy
 import json
 import os
+from unittest import mock
 
 import tensorflow.compat.v2 as tf
 
@@ -100,11 +101,26 @@ class ProfilePluginTest(tf.test.TestCase):
   def setUp(self):
     super(ProfilePluginTest, self).setUp()
     self.logdir = self.get_temp_dir()
-
     self.multiplexer = plugin_event_multiplexer.EventMultiplexer()
     self.multiplexer.AddRunsFromDirectory(self.logdir)
-
     self.plugin = utils.create_profile_plugin(self.logdir, self.multiplexer)
+
+    # Fail if we call PluginDirectory with a non-normalized logdir path, since
+    # that won't work on GCS, as a regression test for b/235606632.
+    original_plugin_directory = plugin_asset_util.PluginDirectory
+    plugin_directory_patcher = mock.patch.object(plugin_asset_util,
+                                                 'PluginDirectory')
+    mock_plugin_directory = plugin_directory_patcher.start()
+    self.addCleanup(plugin_directory_patcher.stop)
+
+    def plugin_directory_spy(logdir, plugin_name):
+      if os.path.normpath(logdir) != logdir:
+        self.fail(
+            'PluginDirectory called with a non-normalized logdir path: %r' %
+            logdir)
+      return original_plugin_directory(logdir, plugin_name)
+
+    mock_plugin_directory.side_effect = plugin_directory_spy
 
   def testRuns_logdirWithoutEventFile(self):
     generate_testdata(self.logdir)
