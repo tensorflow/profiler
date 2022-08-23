@@ -16,10 +16,10 @@ xprof_ng_module(
     deps = [
         "@npm//@angular/common",
         "@npm//@angular/core",
-        "@org_xprof//frontend/app/common/angular:angular_material_core",
-        "@org_xprof//frontend/app/common/angular:angular_material_progress_bar",
-        "@org_xprof//frontend/app/common/angular:angular_material_sidenav",
         "@npm//@angular/router",
+        "//third_party/javascript/angular_components:material_core",
+        "//third_party/javascript/angular_components:material_progress_bar",
+        "//third_party/javascript/angular_components:material_sidenav",
         "@npm//@ngrx/store",
         "@npm//rxjs",
         "@org_xprof//frontend/app/common/constants",

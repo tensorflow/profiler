@@ -17,7 +17,7 @@ xprof_ng_module(
     deps = [
         ":host_side_analysis_detail_table_data_provider",
         "@npm//@angular/core",
-        "@org_xprof//frontend/app/common/angular:angular_material_expansion",
+        "//third_party/javascript/angular_components:material_expansion",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/interfaces:chart",
         "@org_xprof//frontend/app/components/chart",

@@ -16,9 +16,9 @@ xprof_ng_module(
     
     deps = [
         "@npm//@angular/core",
-        "@org_xprof//frontend/app/common/angular:angular_material_form_field",
-        "@org_xprof//frontend/app/common/angular:angular_material_input",
-        "@org_xprof//frontend/app/common/angular:angular_material_slider",
+        "//third_party/javascript/angular_components:material_form_field",
+        "//third_party/javascript/angular_components:material_input",
+        "//third_party/javascript/angular_components:material_slider",
         "@npm//@types/google.visualization",
         "@org_xprof//frontend/app/common/interfaces",
     ],

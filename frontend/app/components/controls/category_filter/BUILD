@@ -16,9 +16,9 @@ xprof_ng_module(
     deps = [
         "@npm//@angular/common",
         "@npm//@angular/core",
-        "@org_xprof//frontend/app/common/angular:angular_material_core",
-        "@org_xprof//frontend/app/common/angular:angular_material_form_field",
-        "@org_xprof//frontend/app/common/angular:angular_material_select",
+        "//third_party/javascript/angular_components:material_core",
+        "//third_party/javascript/angular_components:material_form_field",
+        "//third_party/javascript/angular_components:material_select",
         "@npm//@types/google.visualization",
     ],
 )
