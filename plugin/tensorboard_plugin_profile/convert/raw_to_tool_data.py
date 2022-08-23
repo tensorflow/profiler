@@ -151,12 +151,19 @@ def xspace_to_tool_data(
     raw_data, success = xspace_wrapper_func(xspace_paths, tool)
     if success:
       data = raw_data
-  # TODO(b/237807471) Need to change content_type here and complete the loop.
-  # elif tool == 'graph_viewer':
-  #   options = params.get('graph_viewer_options', {})
-  #   raw_data, success = xspace_wrapper_func(xspace_paths, tool, options)
-  #   if success:
-  #     data = raw_data
+  elif tool == 'graph_viewer':
+    options = params.get('graph_viewer_options', {})
+    raw_data, success = xspace_wrapper_func(xspace_paths, tool, options)
+    if success:
+      data = raw_data
+  elif tool == 'memory_viewer':
+    # contains 'hlo_module_name' option used by the memory viewer
+    options = {key: value for key, value in
+               params.get('graph_viewer_options', {}).items()
+               if key == 'hlo_module_name'}
+    raw_data, success = xspace_wrapper_func(xspace_paths, tool, options)
+    if success:
+      data = raw_data
   else:
     logger.warning('%s is not a known xplane tool', tool)
   return data, content_type
