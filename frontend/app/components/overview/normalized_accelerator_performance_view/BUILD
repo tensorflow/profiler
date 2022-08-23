@@ -16,7 +16,7 @@ xprof_ng_module(
     deps = [
         "@npm//@angular/common",
         "@npm//@angular/core",
-        "@org_xprof//frontend/app/common/angular:angular_material_expansion",
+        "//third_party/javascript/angular_components:material_expansion",
         "@org_xprof//frontend/app/common/interfaces",
     ],
 )

@@ -15,10 +15,10 @@ xprof_ng_module(
     ],
     deps = [
         "@npm//@angular/core",
-        "@org_xprof//frontend/app/common/angular:angular_material_core",
-        "@org_xprof//frontend/app/common/angular:angular_material_form_field",
-        "@org_xprof//frontend/app/common/angular:angular_material_select",
         "@npm//@angular/router",
+        "//third_party/javascript/angular_components:material_core",
+        "//third_party/javascript/angular_components:material_form_field",
+        "//third_party/javascript/angular_components:material_select",
         "@npm//@ngrx/store",
         "@npm//rxjs",
         "@org_xprof//frontend/app/common/constants",

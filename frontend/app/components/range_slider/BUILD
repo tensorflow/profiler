@@ -16,7 +16,7 @@ xprof_ng_module(
     
     deps = [
         "@npm//@angular/core",
-        "@org_xprof//frontend/app/common/angular:angular_material_slider",
+        "//third_party/javascript/angular_components:material_slider",
     ],
 )
 
