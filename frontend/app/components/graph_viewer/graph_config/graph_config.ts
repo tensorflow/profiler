@@ -33,7 +33,7 @@ export class GraphConfig implements OnDestroy, OnChanges {
   ngOnChanges(changes: SimpleChanges) {
     // Initiate once with property values (read from url query parameters)
     if (!this.inputsInited && changes.hasOwnProperty('initialInputs') &&
-        Object.entries(changes['initialInputs'].currentValue).length) {
+        Object.entries(changes['initialInputs'].currentValue || {}).length) {
       this.params = {...this.initialInputs as GraphConfigInput};
       this.params.selectedModule = this.params.selectedModule;
       this.inputsInited = true;

@@ -319,13 +319,13 @@ def filenames_to_hosts(filenames, tool):
   return sorted(hosts)
 
 
-def get_data_content_encoding(raw_data, tool, tqx):
+def get_data_content_encoding(raw_data, tool, params):
   """Converts raw tool proto into the correct tool data.
 
   Args:
     raw_data: bytes representing raw data from the tool.
     tool: string of tool name.
-    tqx: Gviz output format.
+    params: user input parameters
 
   Returns:
     The converted data and the content encoding of the data and content type for
@@ -337,7 +337,7 @@ def get_data_content_encoding(raw_data, tool, tqx):
     if tool[-1] == '#':
       content_encoding = 'gzip'
   else:
-    data = convert.tool_proto_to_tool_data(raw_data, tool, tqx)
+    data = convert.tool_proto_to_tool_data(raw_data, tool, params)
 
   return data, content_type, content_encoding
 
@@ -471,7 +471,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
 
     Args:
       request: Optional; werkzeug request used for grabbing ctx and experiment
-          id for other host implementations
+        id for other host implementations
     """
     return list(self.generate_runs())
 
@@ -487,7 +487,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
     Args:
       run: the frontend run name, item is list returned by runs_imp
       request: Optional; werkzeug request used for grabbing ctx and experiment
-          id for other host implementations
+        id for other host implementations
     """
     return list(self.generate_tools_of_run(run))
 
@@ -556,6 +556,8 @@ class ProfilePlugin(base_plugin.TBPlugin):
     tool = request.args.get('tag')
     host = request.args.get('host')
     tqx = request.args.get('tqx')
+    graph_viewer_options = self._get_graph_viewer_options(request)
+    params = {'graph_viewer_options': graph_viewer_options, 'tqx': tqx}
     run_dir = self._run_dir(run)
     content_type = 'application/json'
     # Profile plugin "run" is the last component of run dir.
@@ -606,7 +608,8 @@ class ProfilePlugin(base_plugin.TBPlugin):
         asset_paths = [asset_path]
 
       try:
-        data, content_type = convert.xspace_to_tool_data(asset_paths, tool, tqx)
+        data, content_type = convert.xspace_to_tool_data(
+            asset_paths, tool, params)
       except AttributeError:
         logger.warning('XPlane converters are available after Tensorflow 2.4')
       return data, content_type, content_encoding
@@ -623,7 +626,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
     if raw_data is None:
       return None, content_type, None
 
-    return get_data_content_encoding(raw_data, tool, tqx)
+    return get_data_content_encoding(raw_data, tool, params)
 
   @wrappers.Request.application
   def data_route(self, request):
@@ -712,6 +715,22 @@ class ProfilePlugin(base_plugin.TBPlugin):
           'application/json',
           code=200,
       )
+
+  def _get_graph_viewer_options(self, request):
+    node_name = request.args.get('node_name')
+    module_name = request.args.get('module_name')
+    graph_width = request.args.get('graph_width')
+    show_metadata = request.args.get('show_metadata')
+    merge_fusion = request.args.get('merge_fusion')
+    return {
+        'node_name': node_name,
+        'module_name': module_name,
+        'graph_width': graph_width,
+        'show_metadata': show_metadata,
+        'merge_fusion': merge_fusion,
+        'format': request.args.get('format'),
+        'type': request.args.get('type')
+    }
 
   def start_grpc_stub_if_necessary(self):
     # We will enable streaming trace viewer on two conditions:

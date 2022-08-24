@@ -15,8 +15,8 @@
 """For conversion of raw files to tool data.
 
 Usage:
-    data = xspace_to_tool_data(xplane, tool, tqx)
-    data = tool_proto_to_tool_data(tool_proto, tool, tqx)
+    data = xspace_to_tool_data(xplane, tool, params)
+    data = tool_proto_to_tool_data(tool_proto, tool, params)
 """
 
 from __future__ import absolute_import
@@ -45,36 +45,38 @@ def process_raw_trace(raw_trace):
 
 
 def xspace_to_tools_data_from_byte_string(xspace_byte_list, filenames, tool,
-                                          tqx):
+                                          params):
   """Helper function for getting an XSpace tool from a bytes string.
 
   Args:
     xspace_byte_list: A list of byte strings read from a XSpace proto file.
     filenames: Names of the read files.
     tool: A string of tool name.
-    tqx: Gviz output format.
+    params: user input parameters.
 
   Returns:
     Returns a string of tool data.
   """
+
   def xspace_wrapper_func(xspace_arg, tool_arg):
     return _pywrap_profiler.xspace_to_tools_data_from_byte_string(
         xspace_arg, filenames, tool_arg)
 
-  return xspace_to_tool_data(xspace_byte_list, tool, tqx, xspace_wrapper_func)
+  return xspace_to_tool_data(xspace_byte_list, tool, params,
+                             xspace_wrapper_func)
 
 
 def xspace_to_tool_data(
     xspace_paths,
     tool,
-    tqx,
+    params,
     xspace_wrapper_func=_pywrap_profiler.xspace_to_tools_data):
   """Converts XSpace to tool data string.
 
   Args:
     xspace_paths: A list of XSpace paths.
     tool: A string of tool name.
-    tqx: Gviz output format.
+    params: user input parameters.
     xspace_wrapper_func: A callable that takes a list of strings and a tool and
       returns the raw data.
 
@@ -85,34 +87,31 @@ def xspace_to_tool_data(
   tool = tool[:-1]  # xplane tool name ends with '^'
   data = None
   content_type = 'application/json'
+  # tqx: gViz output format
+  tqx = params.get('tqx', '')
   if tool == 'trace_viewer':
     # Trace viewer handles one host at a time.
     assert len(xspace_paths) == 1
-    raw_data, success = xspace_wrapper_func(
-        xspace_paths, tool)
+    raw_data, success = xspace_wrapper_func(xspace_paths, tool)
     if success:
       data = process_raw_trace(raw_data)
   elif tool == 'overview_page':
-    raw_data, success = xspace_wrapper_func(
-        xspace_paths, tool)
+    raw_data, success = xspace_wrapper_func(xspace_paths, tool)
     if success:
       data = overview_page_proto_to_gviz.to_json(raw_data)
   elif tool == 'input_pipeline_analyzer':
-    raw_data, success = xspace_wrapper_func(
-        xspace_paths, tool)
+    raw_data, success = xspace_wrapper_func(xspace_paths, tool)
     if success:
       data = input_pipeline_proto_to_gviz.to_json(raw_data)
   elif tool == 'tensorflow_stats':
-    raw_data, success = xspace_wrapper_func(
-        xspace_paths, tool)
+    raw_data, success = xspace_wrapper_func(xspace_paths, tool)
     if success:
       if tqx == 'out:csv':
         data = tf_stats_proto_to_gviz.to_csv(raw_data)
       else:
         data = tf_stats_proto_to_gviz.to_json(raw_data)
   elif tool == 'kernel_stats':
-    raw_data, success = xspace_wrapper_func(
-        xspace_paths, tool)
+    raw_data, success = xspace_wrapper_func(xspace_paths, tool)
     if success:
       if tqx == 'out:csv;':
         data = kernel_stats_proto_to_gviz.to_csv(raw_data)
@@ -121,41 +120,46 @@ def xspace_to_tool_data(
   elif tool == 'memory_profile':
     # Memory profile handles one host at a time.
     assert len(xspace_paths) == 1
-    raw_data, success = xspace_wrapper_func(
-        xspace_paths, tool)
+    raw_data, success = xspace_wrapper_func(xspace_paths, tool)
     if success:
       data = raw_data
   elif tool == 'pod_viewer':
-    raw_data, success = xspace_wrapper_func(
-        xspace_paths, tool)
+    raw_data, success = xspace_wrapper_func(xspace_paths, tool)
     if success:
       data = raw_data
   elif tool == 'tf_data_bottleneck_analysis':
-    raw_data, success = xspace_wrapper_func(
-        xspace_paths, tool)
+    raw_data, success = xspace_wrapper_func(xspace_paths, tool)
     if success:
       data = tf_data_stats_proto_to_gviz.to_json(raw_data)
   elif tool == 'op_profile':
     raw_data, success = xspace_wrapper_func(xspace_paths, tool)
     if success:
       data = raw_data
+  # TODO(b/237807471) Need to change content_type here and complete the loop.
+  # elif tool == 'graph_viewer':
+  #   options = params.get('graph_viewer_options', {})
+  #   raw_data, success = xspace_wrapper_func(xspace_paths, tool, options)
+  #   if success:
+  #     data = raw_data
   else:
     logger.warning('%s is not a known xplane tool', tool)
   return data, content_type
 
 
-def tool_proto_to_tool_data(tool_proto, tool, tqx):
+def tool_proto_to_tool_data(tool_proto, tool, params):
   """Converts the serialized tool proto to tool data string.
 
   Args:
     tool_proto: A serialized tool proto string.
     tool: A string of tool name.
-    tqx: Gviz output format.
+    params: user input parameters.
 
   Returns:
     Returns a string of tool data.
   """
   data = ''
+  # tqx: gViz output format
+  tqx = params.get('tqx', '')
   if tool == 'trace_viewer':
     data = process_raw_trace(tool_proto)
   elif tool == 'tensorflow_stats':

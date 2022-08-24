@@ -1,7 +1,8 @@
+import {PlatformLocation} from '@angular/common';
 import {Component, OnDestroy, ViewChild} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {Store} from '@ngrx/store';
-import {DIAGNOSTICS_DEFAULT, GRAPH_CONFIG_KEYS} from 'org_xprof/frontend/app/common/constants/constants';
+import {API_PREFIX, DATA_API, DIAGNOSTICS_DEFAULT, GRAPH_CONFIG_KEYS, PLUGIN_NAME} from 'org_xprof/frontend/app/common/constants/constants';
 import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 import {GraphConfigInput, GraphViewerQueryParams} from 'org_xprof/frontend/app/common/interfaces/graph_viewer';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
@@ -40,16 +41,22 @@ export class GraphViewer implements OnDestroy {
   diagnostics: Diagnostics = {...DIAGNOSTICS_DEFAULT};
   loading = false;
   graphvizUri = '';
+  pathPrefix = '';
 
   constructor(
       private readonly route: ActivatedRoute,
       private readonly dataService: DataService,
       private readonly store: Store<{}>,
+      platformLocation: PlatformLocation,
   ) {
     this.route.params.pipe(takeUntil(this.destroyed)).subscribe((params) => {
       this.update(params as NavigationEvent);
     });
     this.store.dispatch(setCurrentToolStateAction({currentTool: this.tag}));
+    if (String(platformLocation.pathname).includes(API_PREFIX + PLUGIN_NAME)) {
+      this.pathPrefix =
+          String(platformLocation.pathname).split(API_PREFIX + PLUGIN_NAME)[0];
+    }
   }
 
   update(event: NavigationEvent) {
@@ -140,14 +147,16 @@ export class GraphViewer implements OnDestroy {
     const searchParams = new URLSearchParams();
     // Replace session_id with run
     searchParams.set('run', this.run);
+    searchParams.set('tag', this.tag);
+    searchParams.set('host', this.host);
     for (const [key, value] of Object.entries(queryParams)) {
       searchParams.set(key, value.toString());
     }
     searchParams.set('format', 'html');
     searchParams.set('type', 'graph');
-    this.graphvizUri =
-        `${location.origin}/${this.tag}.json?${searchParams.toString()}`;
-    console.log('getting graph viz url: ', this.graphvizUri);
+    // Use hard code 'graph viewer' since tag could contain suffix characters
+    this.graphvizUri = `${window.origin}/${this.pathPrefix}/${DATA_API}?${
+        searchParams.toString()}`;
   }
 
   setLoadingStatus(loading: boolean, diagnostics?: Diagnostics) {
