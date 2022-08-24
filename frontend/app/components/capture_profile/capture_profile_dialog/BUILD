@@ -17,6 +17,7 @@ xprof_ng_module(
         "@npm//@angular/common",
         "@npm//@angular/core",
         "@npm//@angular/forms",
+        "@npm//@angular/platform-browser",
         "@org_xprof//frontend/app/common/angular:angular_material_button",
         "@org_xprof//frontend/app/common/angular:angular_material_dialog",
         "@org_xprof//frontend/app/common/angular:angular_material_expansion",
@@ -25,7 +26,6 @@ xprof_ng_module(
         "@org_xprof//frontend/app/common/angular:angular_material_radio",
         "@org_xprof//frontend/app/common/angular:angular_material_select",
         "@org_xprof//frontend/app/common/angular:angular_material_tooltip",
-        "@npm//@angular/platform-browser",
         "@org_xprof//frontend/app/common/interfaces",
     ],
 )

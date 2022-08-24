@@ -18,8 +18,8 @@ xprof_ng_module(
     deps = [
         "@npm//@angular/common",
         "@npm//@angular/core",
-        "@org_xprof//frontend/app/common/angular:angular_material_card",
         "@npm//@angular/router",
+        "@org_xprof//frontend/app/common/angular:angular_material_card",
         "@npm//@types/google.visualization",
         "@npm//@ngrx/store",
         "@npm//rxjs",

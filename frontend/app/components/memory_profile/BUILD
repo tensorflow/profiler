@@ -17,11 +17,11 @@ xprof_ng_module(
     deps = [
         ":memory_profile_base",
         "@npm//@angular/core",
+        "@npm//@angular/router",
         "@org_xprof//frontend/app/common/angular:angular_material_core",
         "@org_xprof//frontend/app/common/angular:angular_material_divider",
         "@org_xprof//frontend/app/common/angular:angular_material_icon",
         "@org_xprof//frontend/app/common/angular:angular_material_select",
-        "@npm//@angular/router",
         "@npm//@ngrx/store",
         "@npm//rxjs",
         "@org_xprof//frontend/app/common/interfaces",

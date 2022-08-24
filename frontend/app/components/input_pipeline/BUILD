@@ -16,8 +16,8 @@ xprof_ng_module(
     ],
     deps = [
         "@npm//@angular/core",
-        "@org_xprof//frontend/app/common/angular:angular_material_divider",
         "@npm//@angular/router",
+        "@org_xprof//frontend/app/common/angular:angular_material_divider",
         "@npm//@ngrx/store",
         "@npm//rxjs",
         "@org_xprof//frontend/app/common/interfaces",
