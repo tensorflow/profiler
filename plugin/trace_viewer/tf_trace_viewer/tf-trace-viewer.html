@@ -935,6 +935,7 @@ dashboard would integrate trace viewer app using iframe.
     },
 
     // Builds a base URL for fetching perfetto data.
+    // Please update internal perfetto.ts when changed here
     _buildPerfettoDataURL: function() {
       const requestURL = new URL(this.traceDataUrl, window.location.href);
       const hostSelector = document.getElementById("host_selector");
@@ -950,6 +951,7 @@ dashboard would integrate trace viewer app using iframe.
       return requestURL;
     },
 
+    // Please update internal perfetto.ts when the posting message logic is changed
     _postDataToPerfettoWindow: function(trace, sessionId, perfettoDataUrl) {
       const perfettoUrl = 'https://ui.perfetto.dev';
       let win = window.open(perfettoUrl);
@@ -959,7 +961,6 @@ dashboard would integrate trace viewer app using iframe.
           return;
         }
         clearInterval(thetimer);
-        // TODO: is it secure to pass the dataUrl to perfetto?
         const shareUrl = new URL(`/perfetto/${sessionId}#dataUrl=${perfettoDataUrl}`, window.location.href);
         win.postMessage(
           {
