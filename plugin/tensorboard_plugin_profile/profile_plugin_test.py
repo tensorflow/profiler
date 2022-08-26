@@ -125,32 +125,23 @@ class ProfilePluginTest(tf.test.TestCase):
   def testRuns_logdirWithoutEventFile(self):
     generate_testdata(self.logdir)
     self.multiplexer.Reload()
-    runs = dict(self.plugin.generate_run_to_tools())
     all_runs = list(self.plugin.generate_runs())
-    self.assertSetEqual(frozenset(runs.keys()), frozenset(RUN_TO_TOOLS.keys()))
     self.assertSetEqual(frozenset(all_runs), frozenset(RUN_TO_HOSTS.keys()))
 
-    self.assertListEqual(runs['foo'], RUN_TO_TOOLS['foo'])
     self.assertListEqual(
         list(self.plugin.generate_tools_of_run('foo')), RUN_TO_TOOLS['foo'])
-    self.assertEmpty(runs['bar'])
     self.assertEmpty(list(self.plugin.generate_tools_of_run('bar')))
-    self.assertListEqual(runs['baz'], RUN_TO_TOOLS['baz'])
     self.assertListEqual(
         list(self.plugin.generate_tools_of_run('baz')), RUN_TO_TOOLS['baz'])
-    self.assertListEqual(runs['qux'], RUN_TO_TOOLS['qux'])
     self.assertListEqual(
         list(self.plugin.generate_tools_of_run('qux')), RUN_TO_TOOLS['qux'])
-    self.assertEmpty(runs['empty'])
     self.assertEmpty(list(self.plugin.generate_tools_of_run('empty')))
 
   def testRuns_logdirWithEventFIle(self):
     write_empty_event_file(self.logdir)
     generate_testdata(self.logdir)
     self.multiplexer.Reload()
-    runs = dict(self.plugin.generate_run_to_tools())
     all_runs = self.plugin.generate_runs()
-    self.assertSetEqual(frozenset(runs.keys()), frozenset(RUN_TO_TOOLS.keys()))
     self.assertSetEqual(frozenset(all_runs), frozenset(RUN_TO_HOSTS.keys()))
 
   def testRuns_withSubdirectories(self):
@@ -167,14 +158,12 @@ class ProfilePluginTest(tf.test.TestCase):
     write_empty_event_file(subdir_b_c)
     self.multiplexer.AddRunsFromDirectory(self.logdir)
     self.multiplexer.Reload()
-    runs = dict(self.plugin.generate_run_to_tools())
     all_runs = list(self.plugin.generate_runs())
     # Expect runs for the logdir root, 'a', and 'b/c' but not for 'b'
     # because it doesn't contain a tfevents file.
     expected = set(RUN_TO_TOOLS.keys())
     expected.update(set('a/' + run for run in RUN_TO_TOOLS.keys()))
     expected.update(set('b/c/' + run for run in RUN_TO_TOOLS.keys()))
-    self.assertSetEqual(frozenset(runs.keys()), expected)
     self.assertSetEqual(frozenset(all_runs), expected)
 
   def testHosts(self):

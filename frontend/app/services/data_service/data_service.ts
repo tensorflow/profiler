@@ -1,7 +1,7 @@
 import {PlatformLocation} from '@angular/common';
 import {HttpClient, HttpParams} from '@angular/common/http';
 import {Injectable} from '@angular/core';
-import {API_PREFIX, CAPTURE_PROFILE_API, DATA_API, HOSTS_API, LOCAL_URL, PLUGIN_NAME, RUNS_API, TOOLS_API, RUN_TOOLS_API} from 'org_xprof/frontend/app/common/constants/constants';
+import {API_PREFIX, CAPTURE_PROFILE_API, DATA_API, HOSTS_API, LOCAL_URL, PLUGIN_NAME, RUNS_API, RUN_TOOLS_API} from 'org_xprof/frontend/app/common/constants/constants';
 import {CaptureProfileOptions, CaptureProfileResponse} from 'org_xprof/frontend/app/common/interfaces/capture_profile';
 import {DataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {Observable, of} from 'rxjs';
@@ -46,13 +46,6 @@ export class DataService {
             .set('python_tracer_level', options.pythonTracerLevel.toString())
             .set('delay', options.delay.toString());
     return this.httpClient.get(this.pathPrefix + CAPTURE_PROFILE_API, {params});
-  }
-
-  getTools() {
-    if (this.isLocalDevelopment) {
-      return of(mockData.DATA_PLUGIN_PROFILE_TOOLS);
-    }
-    return this.httpClient.get(this.pathPrefix + TOOLS_API);
   }
 
   getHosts(run: string, tag: string) {

@@ -51,7 +51,6 @@ TRACE_VIEWER_INDEX_HTML_ROUTE = '/trace_viewer_index.html'
 TRACE_VIEWER_INDEX_JS_ROUTE = '/trace_viewer_index.js'
 ZONE_JS_ROUTE = '/zone.js'
 DATA_ROUTE = '/data'
-TOOLS_ROUTE = '/tools'
 RUNS_ROUTE = '/runs'
 RUN_TOOLS_ROUTE = '/run_tools'
 HOSTS_ROUTE = '/hosts'
@@ -386,7 +385,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
       else:
 
         def compute_is_active():
-          self._is_active = any(self.generate_run_to_tools())
+          self._is_active = any(self.generate_runs())
           self._is_active_lock.release()
 
         new_thread = threading.Thread(
@@ -404,7 +403,6 @@ class ProfilePlugin(base_plugin.TBPlugin):
         TRACE_VIEWER_INDEX_HTML_ROUTE: self.static_file_route,
         TRACE_VIEWER_INDEX_JS_ROUTE: self.static_file_route,
         ZONE_JS_ROUTE: self.static_file_route,
-        TOOLS_ROUTE: self.tools_route,
         RUNS_ROUTE: self.runs_route,
         RUN_TOOLS_ROUTE: self.run_tools_route,
         HOSTS_ROUTE: self.hosts_route,
@@ -452,14 +450,6 @@ class ProfilePlugin(base_plugin.TBPlugin):
     except IOError:
       return respond('404 Not Found', 'text/plain', code=404)
     return respond(contents, mimetype)
-
-  @wrappers.Request.application
-  def tools_route(self, request):
-    run_to_tools = self.tools_impl(request)
-    return respond(run_to_tools, 'application/json')
-
-  def tools_impl(self, request):
-    return dict(self.generate_run_to_tools())
 
   @wrappers.Request.application
   def runs_route(self, request):
@@ -790,11 +780,21 @@ class ProfilePlugin(base_plugin.TBPlugin):
   def generate_runs(self):
     """Generator for a list of runs.
 
-    RUNS_ROUTE and RUN_TOOLS_ROUTE are split implementation of original
-    TOOLS_ROUTE. `generate_run_to_tools` will traverse and parse all
-    runs and tools at once, but `generate_runs` will get all runs first,
-    and get tools list from `generate_tools_of_run` for a single run due
-    to expensive processing for xspace data to parse the tools.
+    The "run name" here is a "frontend run name" - see _run_dir() for the
+    definition of a "frontend run name" and how it maps to a directory of
+    profile data for a specific profile "run". The profile plugin concept of
+    "run" is different from the normal TensorBoard run; each run in this case
+    represents a single instance of profile data collection, more similar to a
+    "step" of data in typical TensorBoard semantics. These runs reside in
+    subdirectories of the plugins/profile directory within any regular
+    TensorBoard run directory (defined as a subdirectory of the logdir that
+    contains at least one tfevents file) or within the logdir root directory
+    itself (even if it contains no tfevents file and would thus not be
+    considered a normal TensorBoard run, for backwards compatibility).
+
+    `generate_runs` will get all runs first, and get tools list from
+    `generate_tools_of_run` for a single run due to expensive processing for
+    xspace data to parse the tools.
     Example:
       logs/
         plugins/
@@ -870,95 +870,6 @@ class ProfilePlugin(base_plugin.TBPlugin):
       if filenames:
         for tool in self._get_active_tools(filenames):
           yield tool
-
-  # TODO(b/241842487) Remove this when the API migration is done.
-  def generate_run_to_tools(self):
-    """Generator for pairs of "run name" and a list of tools for that run.
-
-    The "run name" here is a "frontend run name" - see _run_dir() for the
-    definition of a "frontend run name" and how it maps to a directory of
-    profile data for a specific profile "run". The profile plugin concept of
-    "run" is different from the normal TensorBoard run; each run in this case
-    represents a single instance of profile data collection, more similar to a
-    "step" of data in typical TensorBoard semantics. These runs reside in
-    subdirectories of the plugins/profile directory within any regular
-    TensorBoard run directory (defined as a subdirectory of the logdir that
-    contains at least one tfevents file) or within the logdir root directory
-    itself (even if it contains no tfevents file and would thus not be
-    considered a normal TensorBoard run, for backwards compatibility).
-    Within those "profile run directories", there are files in the directory
-    that correspond to different profiling tools. The file that contains profile
-    for a specific tool "x" will have a suffix name TOOLS["x"].
-    Example:
-      logs/
-        plugins/
-          profile/
-            run1/
-              hostA.trace
-        train/
-          events.out.tfevents.foo
-          plugins/
-            profile/
-              run1/
-                hostA.trace
-                hostB.trace
-              run2/
-                hostA.trace
-        validation/
-          events.out.tfevents.foo
-          plugins/
-            profile/
-              run1/
-                hostA.trace
-    Yields:
-      A sequence of tuples mapping "frontend run names" to lists of tool names
-      available for those runs. For the above example, this would be:
-          ("run1", ["trace_viewer"])
-          ("train/run1", ["trace_viewer"])
-          ("train/run2", ["trace_viewer"])
-          ("validation/run1", ["trace_viewer"])
-    """
-    self.start_grpc_stub_if_necessary()
-
-    # Create a background context; we may not be in a request.
-    ctx = RequestContext()
-    tb_runs = [
-        run.run_name
-        for run in self.data_provider.list_runs(ctx, experiment_id='')
-    ]
-    # Ensure that we also check the root logdir, even if it isn't a recognized
-    # TensorBoard run (i.e. has no tfevents file directly under it), to remain
-    # backwards compatible with previously profile plugin behavior. Note that we
-    # check if logdir is a directory to handle case where it's actually a
-    # multipart directory spec, which this plugin does not support.
-    if '.' not in tb_runs and tf.io.gfile.isdir(self.logdir):
-      tb_runs.append('.')
-    tb_run_names_to_dirs = {
-        run: _tb_run_directory(self.logdir, run) for run in tb_runs
-    }
-    plugin_assets = _plugin_assets(self.logdir, list(tb_run_names_to_dirs),
-                                   PLUGIN_NAME)
-    for tb_run_name, profile_runs in six.iteritems(plugin_assets):
-      tb_run_dir = tb_run_names_to_dirs[tb_run_name]
-      tb_plugin_dir = plugin_asset_util.PluginDirectory(tb_run_dir, PLUGIN_NAME)
-      for profile_run in profile_runs:
-        # Remove trailing separator; some filesystem implementations emit this.
-        profile_run = profile_run.rstrip(os.sep)
-        if tb_run_name == '.':
-          frontend_run = profile_run
-        else:
-          frontend_run = os.path.join(tb_run_name, profile_run)
-        profile_run_dir = os.path.join(tb_plugin_dir, profile_run)
-        if tf.io.gfile.isdir(profile_run_dir):
-          try:
-            filenames = tf.io.gfile.listdir(profile_run_dir)
-          except tf.errors.NotFoundError as e:
-            logger.warning('Cannot read asset directory: %s, NotFoundError %s',
-                           profile_run_dir, e)
-            filenames = []
-
-          yield frontend_run, self._get_active_tools(
-              filenames) if filenames else filenames
 
   def _get_active_tools(self, filenames):
     """Get a list of tools available given the filenames created by profiler.
