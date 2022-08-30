@@ -66,6 +66,22 @@ def xspace_to_tools_data_from_byte_string(xspace_byte_list, filenames, tool,
                              xspace_wrapper_func)
 
 
+def xspace_to_tool_names(xspace_paths):
+  """Converts XSpace to all the available tool names.
+
+  Args:
+    xspace_paths: A list of XSpace paths.
+
+  Returns:
+    Returns a list of tool names.
+  """
+  raw_data, success = _pywrap_profiler.xspace_to_tools_data(
+      xspace_paths, 'tool_names')
+  if success:
+    return [tool + '^' for tool in raw_data.decode().split(',')]
+  return []
+
+
 def xspace_to_tool_data(
     xspace_paths,
     tool,
