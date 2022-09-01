@@ -389,7 +389,7 @@ dashboard would integrate trace viewer app using iframe.
     _updateUrlHostIndex: function() {
       const queryParams = new URLSearchParams(window.parent.location.search);
       queryParams.set('host_index', this._selectedHostIndex - 1);
-      const url = `${window.location.origin}/trace_viewer/${this._sessionId}${queryParams.toString()}`;
+      const url = `${window.location.origin}/trace_viewer/${this._sessionId}?${queryParams.toString()}`;
       window.parent.history.pushState({}, '', url);
     },
 
