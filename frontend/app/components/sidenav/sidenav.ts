@@ -1,7 +1,7 @@
 import {Component, OnDestroy} from '@angular/core';
 import {Router} from '@angular/router';
 import {Store} from '@ngrx/store';
-import {DEFAULT_HOST} from 'org_xprof/frontend/app/common/constants/constants';
+import {DEFAULT_HOST, HLO_TOOLS} from 'org_xprof/frontend/app/common/constants/constants';
 import {RunToolsMap} from 'org_xprof/frontend/app/common/interfaces/tool';
 import {setLoadingState} from 'org_xprof/frontend/app/common/utils/utils';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
@@ -31,6 +31,8 @@ export class SideNav implements OnDestroy {
   selectedRun = '';
   selectedTag = '';
   selectedHost = '';
+  // The text to display on host selector.
+  hostSelectorDisplayName = 'Hosts';
 
   constructor(
       private readonly router: Router,
@@ -61,6 +63,7 @@ export class SideNav implements OnDestroy {
   resetTag() {
     this.tags = [];
     this.selectedTag = '';
+    this.updateHostSelectorDisplayName();
   }
 
   resetHost() {
@@ -134,6 +137,7 @@ export class SideNav implements OnDestroy {
   }
 
   afterUpdateTag() {
+    this.updateHostSelectorDisplayName();
     this.updateHosts();
   }
 
@@ -156,6 +160,21 @@ export class SideNav implements OnDestroy {
         host: this.selectedHost === DEFAULT_HOST ? '' : this.selectedHost,
       }
     ]);
+  }
+
+  updateHostSelectorDisplayName() {
+    // For HLO tools, user selects HLO modules instead of hosts.
+    let isHloTool = false;
+    for (const hloTool of HLO_TOOLS) {
+      if (this.selectedTag.startsWith(hloTool)) {
+        this.hostSelectorDisplayName = 'Modules';
+        isHloTool = true;
+        break;
+      }
+    }
+    if (!isHloTool) {
+      this.hostSelectorDisplayName = 'Hosts';
+    }
   }
 
   ngOnDestroy() {
