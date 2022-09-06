@@ -42,6 +42,7 @@ export const routes: Routes = [
   {path: 'memory_profile#', component: MemoryProfile},
   {path: 'memory_profile^', component: MemoryProfile},
   {path: 'memory_viewer', component: MemoryViewer},
+  {path: 'memory_viewer^', component: MemoryViewer},
   {path: 'op_profile', component: OpProfile},
   {path: 'op_profile^', component: OpProfile},
   {path: 'pod_viewer', component: PodViewer},

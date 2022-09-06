@@ -77,6 +77,7 @@ TOOLS = {
     'kernel_stats': 'kernel_stats.pb',
     'memory_profile#': 'memory_profile.json.gz',
     'xplane': 'xplane.pb',
+    'hlo_proto': 'hlo_proto.pb',
     'tf_data_bottleneck_analysis': 'tf_data_bottleneck_analysis.json',
 }
 
@@ -126,6 +127,14 @@ def use_xplane(tool):
   return tool[-1] == '^'
 
 
+# HLO generated tools.
+HLO_TOOLS = frozenset(['graph_viewer^', 'memory_viewer^'])
+
+
+def use_hlo(tool):
+  return tool in HLO_TOOLS
+
+
 def make_filename(host, tool):
   """Returns the name of the file containing data for the given host and tool.
 
@@ -138,7 +147,10 @@ def make_filename(host, tool):
     'localhost.trace'.
   """
   filename = str(host) + '.' if host else ''
-  tool = 'xplane' if use_xplane(tool) else tool
+  if use_hlo(tool):
+    tool = 'hlo_proto'
+  elif use_xplane(tool):
+    tool = 'xplane'
   return filename + TOOLS[tool]
 
 
@@ -197,6 +209,8 @@ def _get_tools(filenames, profile_run_dir):
     _, tool = _parse_filename(name)
     if tool == 'xplane':
       xplane_filenames.append(os.path.join(profile_run_dir, name))
+      continue
+    elif tool == 'hlo_proto':
       continue
     elif tool:
       tools.add(tool)
@@ -495,6 +509,10 @@ class ProfilePlugin(base_plugin.TBPlugin):
   def host_impl(self, run, tool, request=None):
     """Returns available hosts for the run and tool in the log directory.
 
+    For HLO tools like memory_viewer and graph_viewer, this functions returns
+    the module names for the run and tool instead of host names, because these
+    tools are based on HLO protos.
+
     In the plugin log directory, each directory contains profile data for a
     single run (identified by the directory name), and files in the run
     directory contains data for different tools and hosts. The file that
@@ -507,6 +525,8 @@ class ProfilePlugin(base_plugin.TBPlugin):
             profile/
               host1.trace
               host2.trace
+              module1.hlo_proto.pb
+              module2.hlo_proto.pb
         run2/
           plugins/
             profile/
@@ -520,7 +540,9 @@ class ProfilePlugin(base_plugin.TBPlugin):
         id for other host implementations
 
     Returns:
-      A list of host names, e.g. ["host1", "host2"] for the example above.
+      A list of host names, e.g.:
+        host_impl(run1, trace_viewer) --> ["host1", "host2"]
+        host_impl(run1, memory_viewer) --> ["module1", "module2"]
     """
     run_dir = self._run_dir(run)
     if not run_dir:
@@ -558,7 +580,14 @@ class ProfilePlugin(base_plugin.TBPlugin):
     host = request.args.get('host')
     tqx = request.args.get('tqx')
     graph_viewer_options = self._get_graph_viewer_options(request)
-    params = {'graph_viewer_options': graph_viewer_options, 'tqx': tqx}
+    # Host param is used by HLO tools to identify the module.
+    # 
+    # neded.
+    params = {
+        'graph_viewer_options': graph_viewer_options,
+        'tqx': tqx,
+        'host': host
+    }
     run_dir = self._run_dir(run)
     content_type = 'application/json'
     # Profile plugin "run" is the last component of run dir.

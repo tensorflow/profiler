@@ -157,6 +157,11 @@ def xspace_to_tool_data(
   #   raw_data, success = xspace_wrapper_func(xspace_paths, tool, options)
   #   if success:
   #     data = raw_data
+  elif tool == 'memory_viewer':
+    options = {'hlo_module_name': params.get('host')}
+    raw_data, success = xspace_wrapper_func(xspace_paths, tool, options)
+    if success:
+      data = raw_data
   else:
     logger.warning('%s is not a known xplane tool', tool)
   return data, content_type
