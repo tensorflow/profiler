@@ -118,9 +118,4 @@ export class DataService {
                        .set('tqx', 'out:csv;');
     window.open(this.pathPrefix + DATA_API + '?' + params.toString(), '_blank');
   }
-
-  // TODO(b/237807471): update to actual api call when integration ready
-  getModuleList(run: string, tag: string, host?: string) {
-    return of('module1,module2').pipe(delay(DELAY_TIME_MS));
-  }
 }

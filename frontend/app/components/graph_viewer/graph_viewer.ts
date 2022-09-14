@@ -7,7 +7,6 @@ import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics'
 import {GraphConfigInput, GraphViewerQueryParams} from 'org_xprof/frontend/app/common/interfaces/graph_viewer';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import {GraphConfig} from 'org_xprof/frontend/app/components/graph_viewer/graph_config/graph_config';
-import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
 import {setCurrentToolStateAction} from 'org_xprof/frontend/app/store/actions';
 import {ReplaySubject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
@@ -45,7 +44,6 @@ export class GraphViewer implements OnDestroy {
 
   constructor(
       private readonly route: ActivatedRoute,
-      private readonly dataService: DataService,
       private readonly store: Store<{}>,
       platformLocation: PlatformLocation,
   ) {
@@ -63,24 +61,8 @@ export class GraphViewer implements OnDestroy {
     this.run = event.run || '';
     this.tag = event.tag || 'graph_viewer';
     this.host = event.host || '';
-
-    this.loadModuleList();
-  }
-
-  setParamsFromUrl() {
-    // Plot the graph if node_name (op name) is provided in URL.
-    this.opName = this.dataService.searchParams?.get('node_name') || '';
-    this.selectedModule =
-        this.dataService.searchParams?.get('module_name') || '';
-    this.graphWidth =
-        Number(this.dataService.searchParams?.get('graph_width')) ||
-        this.graphWidth;
-    this.showMetadata =
-        this.dataService.searchParams?.get('show_metadata') === 'true' ||
-        this.showMetadata;
-    this.mergeFusion =
-        this.dataService.searchParams?.get('merge_fusion') === 'true' ||
-        this.mergeFusion;
+    // host equals to module name for graph viewer
+    this.selectedModule = this.host;
     this.initialParams = {
       opName: this.opName,
       selectedModule: this.selectedModule,
@@ -88,31 +70,7 @@ export class GraphViewer implements OnDestroy {
       showMetadata: this.showMetadata,
       mergeFusion: this.mergeFusion,
     };
-  }
-
-  loadModuleList() {
-    // Graph viewer does not use the central loading progress bar since it only
-    // refreshes partial page - the graph area
-    this.setLoadingStatus(true);
-    this.dataService.getModuleList(this.tag, this.run)
-        .pipe(takeUntil(this.destroyed))
-        .subscribe({
-          next: (moduleList: string) => {
-            this.loading = false;
-            if (moduleList) {
-              this.moduleList = moduleList.split(',');
-              if (!this.selectedModule) {
-                // If moduleName not set in url, use default and try plot again
-                this.selectedModule = this.moduleList[0];
-                this.onPlot();
-              }
-            }
-          },
-          error: (err) => {
-            this.loading = false;
-            this.diagnostics.errors.push(err.error);
-          }
-        });
+    this.onPlot();
   }
 
   // Update single param value

@@ -104,8 +104,6 @@ XPLANE_TOOLS = [
     'pod_viewer^',
     'tf_data_bottleneck_analysis^',
     'op_profile^',
-    # TODO(b/237807471): enable this when the integration is done
-    # 'graph_viewer^',
 ]
 
 # XPlane generated tools that support all host mode.
