@@ -685,6 +685,8 @@ dashboard would integrate trace viewer app using iframe.
         this._model = new tr.Model();
         this._loadedTraceEvents = new Set();
         this._filteredByVisibility = data['filteredByVisibility'];
+        const fullTimespan = data['fullTimespan'];
+        this._fullBounds = {min: fullTimespan[0], max: fullTimespan[1]};
       } else {
         // Delete fields to prevent traceviewer from accumulating them.
         delete data['metadata'];
@@ -814,10 +816,6 @@ dashboard would integrate trace viewer app using iframe.
     // Updates the view based on the current model.
     _updateView: async function(requestedRange) {
       if (requestedRange == null) {
-        this._fullBounds = {
-          min: this._model.bounds.min,
-          max: this._model.bounds.max,
-        };
         this._loadedRange = tf_component_traceviewer.expand(
           this._fullBounds,
           tf_component_traceviewer.FETCH_RATIO
