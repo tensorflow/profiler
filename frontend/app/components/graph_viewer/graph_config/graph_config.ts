@@ -20,6 +20,8 @@ export class GraphConfig implements OnDestroy, OnChanges {
   /** Form inputs properties */
   @Input() initialInputs: GraphConfigInput|undefined = undefined;
   @Input() moduleList: string[] = [];
+  // Temparary indicator to hide the module name selection for 1vm graph viewer
+  @Input() isHloOssTool: boolean = false;
 
   inputsInited = false;
   params: GraphConfigInput = {
