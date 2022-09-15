@@ -13,7 +13,7 @@ genrule(
 # Catapult Trace Viewer (chrome://tracing):
 # git clone https://chromium.googlesource.com/catapult
 # cd catapult
-# git checkout d9d7213a6c08cd636ae27cea934259f7fa03ee65
+# git checkout 0d1854ab10b0950252ac4346e867639cec0ab6d2
 # tracing/bin/vulcanize_trace_viewer
 # gzip tracing/bin/trace_viewer_full.html
 exports_files(["trace_viewer_full.html.gz"])
