@@ -110,7 +110,9 @@ export class GraphViewer implements OnDestroy {
     for (const [key, value] of Object.entries(queryParams)) {
       searchParams.set(key, value.toString());
     }
-    searchParams.set('format', 'html');
+    // TODO(b/237807471) render dot diagram for now, enable graph rendering in
+    // the future
+    searchParams.set('format', 'dot');
     searchParams.set('type', 'graph');
     // Use hard code 'graph viewer' since tag could contain suffix characters
     this.graphvizUri = `${window.origin}/${this.pathPrefix}/${DATA_API}?${

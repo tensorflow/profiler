@@ -151,14 +151,14 @@ def xspace_to_tool_data(
     raw_data, success = xspace_wrapper_func(xspace_paths, tool)
     if success:
       data = raw_data
-  # TODO(b/237807471) Need to change content_type here and complete the loop.
   elif tool == 'graph_viewer':
     options = params.get('graph_viewer_options', {})
     raw_data, success = xspace_wrapper_func(xspace_paths, tool, options)
     if success:
       data = raw_data
+      content_type = 'text/html'
   elif tool == 'memory_viewer':
-    options = {'hlo_module_name': params.get('host')}
+    options = {'module_name': params.get('host')}
     raw_data, success = xspace_wrapper_func(xspace_paths, tool, options)
     if success:
       data = raw_data
