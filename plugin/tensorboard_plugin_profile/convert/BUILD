@@ -198,7 +198,7 @@ py_library(
     srcs = ["raw_to_tool_data.py"],
     srcs_version = "PY2AND3",
     visibility = visibility + [
-        "//cloud/ai/platform/tensorboard/webserver/plugins:__pkg__",
+        "//cloud/ai/platform/tensorboard/webserver/plugins/tf_profiler:__pkg__",
     ],
     deps = [
         ":input_pipeline_proto_to_gviz",
