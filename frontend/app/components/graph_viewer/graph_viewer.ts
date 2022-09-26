@@ -98,10 +98,10 @@ export class GraphViewer implements OnDestroy {
       'merge_fusion': this.mergeFusion,
     };
 
-    this.renderGraphvizHtml(queryParams);
+    this.graphvizUri = this.getGraphvizUri(queryParams);
   }
 
-  renderGraphvizHtml(queryParams: GraphViewerQueryParams) {
+  getGraphvizUri(queryParams: GraphViewerQueryParams) {
     const searchParams = new URLSearchParams();
     // Replace session_id with run
     searchParams.set('run', this.run);
@@ -110,12 +110,10 @@ export class GraphViewer implements OnDestroy {
     for (const [key, value] of Object.entries(queryParams)) {
       searchParams.set(key, value.toString());
     }
-    // TODO(b/237807471) render dot diagram for now, enable graph rendering in
-    // the future
-    searchParams.set('format', 'dot');
+
+    searchParams.set('format', 'html');
     searchParams.set('type', 'graph');
-    // Use hard code 'graph viewer' since tag could contain suffix characters
-    this.graphvizUri = `${window.origin}/${this.pathPrefix}/${DATA_API}?${
+    return `${window.origin}/${this.pathPrefix}/${DATA_API}?${
         searchParams.toString()}`;
   }
 

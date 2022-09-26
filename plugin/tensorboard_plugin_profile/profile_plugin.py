@@ -282,6 +282,14 @@ def respond(body, content_type, code=200, content_encoding=None):
           'blob:',
           'data:',
       ],
+      'script-src-elem': [
+          "'self'",
+          "'unsafe-inline'",
+          # Remember to restrict on integrity when importing from jsdelivr
+          # Whitelist this domain to support hlo_graph_dumper html format
+          'https://cdn.jsdelivr.net/npm/',
+          'https://www.gstatic.com',
+      ],
   }
   csp = ';'.join((' '.join([k] + v) for (k, v) in csp_parts.items()))
   headers = [
