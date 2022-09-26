@@ -44,7 +44,7 @@
   </mat-form-field>
 </div>
 
-<div [hidden]="selectedTag != 'memory_viewer'">
+<div [hidden]="!selectedTag.startsWith('memory_viewer')">
   <buffer-details></buffer-details>
 </div>
 
