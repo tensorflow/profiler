@@ -48,7 +48,7 @@
   <buffer-details></buffer-details>
 </div>
 
-<div [hidden]="selectedTag != 'op_profile'">
+<div [hidden]="!selectedTag.startsWith('op_profile')">
   <op-details></op-details>
 </div>
 
