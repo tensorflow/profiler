@@ -85,7 +85,7 @@ class DataTableForTesting {
     if (!this.data || !this.data.rows) {
       return [];
     }
-    if (filters === []) {
+    if (filters === ([] as AnyDuringTs48Migration)) {
       return [
         ...Array.from<number>({length: this.data.rows.length}).fill(0).keys()
       ];
