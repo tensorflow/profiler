@@ -464,6 +464,13 @@ dashboard would integrate trace viewer app using iframe.
       }
     },
 
+    _perfettoButtonOnclickCallback: function() {
+      const hostSelector = document.getElementById("host_selector");
+      const sessionPerfettoUrl = new URL(`/perfetto/${this._sessionId}`, window.location.href);
+      sessionPerfettoUrl.searchParams.set(hostSelector.name, hostSelector.value);
+      window.open(sessionPerfettoUrl.toString());
+    },
+
     _createPerfettoButton: function() {
       if (this._showPerfetto) {
         const button = tr.ui.b.createButton('Perfetto', this._perfettoButtonOnclickCallback.bind(this));
@@ -916,63 +923,6 @@ dashboard would integrate trace viewer app using iframe.
         }
       }
       return requestURL;
-    },
-
-    _perfettoButtonOnclickCallback: async function() {
-      this._throbber.className = 'active';
-      const perfettoDataUrl = this._buildPerfettoDataURL();
-      const response = await fetch(perfettoDataUrl);
-      if (response.ok) {
-        const trace = await response.arrayBuffer();
-        if (trace.byteLength == 0) {
-          this._displayOverlay('Trace Viewer', 'Trace data too big for perfetto.');
-        } else {
-          this._postDataToPerfettoWindow(trace, this._sessionId, perfettoDataUrl);
-        }
-      }
-      this._throbber.className = 'inactive';
-    },
-
-    // Builds a base URL for fetching perfetto data.
-    // Please update internal perfetto.ts when changed here
-    _buildPerfettoDataURL: function() {
-      const requestURL = new URL(this.traceDataUrl, window.location.href);
-      const hostSelector = document.getElementById("host_selector");
-      // Don't set "host" parameter for "all hosts".
-      if (hostSelector.value) requestURL.searchParams.set(hostSelector.name, hostSelector.value);
-      requestURL.searchParams.set('resolution', 0);
-      requestURL.searchParams.set('perfetto', 1);
-      requestURL.searchParams.set('full_dma', 'true');
-      requestURL.searchParams.set('overlay', 'true');
-      requestURL.searchParams.delete('selected_group_ids');
-      requestURL.searchParams.delete('selected_device_ids');
-      requestURL.searchParams.delete('host_index');
-      return requestURL;
-    },
-
-    // Please update internal perfetto.ts when the posting message logic is changed
-    _postDataToPerfettoWindow: function(trace, sessionId, perfettoDataUrl) {
-      const perfettoUrl = 'https://ui.perfetto.dev';
-      let win = window.open(perfettoUrl);
-      let thetimer = null;
-      window.addEventListener("message", function(evt) {
-        if (evt.data !== "PONG" || !win) {
-          return;
-        }
-        clearInterval(thetimer);
-        const shareUrl = new URL(`/perfetto/${sessionId}#dataUrl=${perfettoDataUrl}`, window.location.href);
-        win.postMessage(
-          {
-            'perfetto': {
-              buffer: trace,
-              title: `xprof session ${sessionId}`,
-              url: shareUrl.toString(),
-            }
-          }, perfettoUrl);
-      });
-      thetimer = setInterval(function() {
-        win.postMessage("PING", perfettoUrl);
-      }, 250);
     },
 
     _traceDataChanged: function(data) {
