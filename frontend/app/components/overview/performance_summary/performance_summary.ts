@@ -158,7 +158,8 @@ export class PerformanceSummary implements OnChanges {
     this.summaryInfoBefore = [...this.firstSummaryInfo];
     this.summaryInfoAfter = [];
 
-    if (this.propertyValues && this.propertyValues.length) {
+    if (this.propertyValues && this.propertyValues.length &&
+        inputPipelineProps.steptime_ms_average !== '0.0') {
       this.summaryInfoBefore.push({
         title: 'Average Step Time',
         descriptions: [
@@ -184,19 +185,23 @@ export class PerformanceSummary implements OnChanges {
 
     this.initializeSummary(inputPipelineProps);
 
-    this.summaryInfoBefore.push({
-      title: 'TPU Duty Cycle',
-      tooltip: this.deviceDutyCycleTooltipMessage,
-      descriptions: ['higher is better'],
-      value: generalProps.device_duty_cycle_percent,
-    });
+    if (generalProps.device_duty_cycle_percent) {
+      this.summaryInfoBefore.push({
+        title: 'TPU Duty Cycle',
+        tooltip: this.deviceDutyCycleTooltipMessage,
+        descriptions: ['higher is better'],
+        value: generalProps.device_duty_cycle_percent,
+      });
+    }
 
-    this.summaryInfoAfter.push({
-      title: 'Memory Bandwidth Utilization',
-      tooltip: this.memoryBandwidthTooltipMessage,
-      descriptions: ['higher is better'],
-      value: generalProps.memory_bw_utilization_relative_to_hw_limit,
-    });
+    if (generalProps.memory_bw_utilization_relative_to_hw_limit) {
+      this.summaryInfoAfter.push({
+        title: 'Memory Bandwidth Utilization',
+        tooltip: this.memoryBandwidthTooltipMessage,
+        descriptions: ['higher is better'],
+        value: generalProps.memory_bw_utilization_relative_to_hw_limit,
+      });
+    }
 
     this.summaryInfoAfter.push({
       title: 'TF Op Placement',

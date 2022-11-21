@@ -62,6 +62,7 @@ export class StepTimeGraph implements AfterViewInit, OnChanges {
   height = 300;
   width = 0;
   chart: google.visualization.AreaChart|null = null;
+  showStepGraph = false;
 
   ngAfterViewInit() {
     this.loadGoogleChart();
@@ -88,7 +89,12 @@ export class StepTimeGraph implements AfterViewInit, OnChanges {
     if (!this.chart || !this.inputPipelineAnalysis || this.width === newWidth) {
       return;
     }
-    this.width = newWidth;
+
+    if (this.inputPipelineAnalysis.rows!.length === 0) {
+      return;
+    }
+
+    this.showStepGraph = true;
 
     const dataTable =
         new google.visualization.DataTable(this.inputPipelineAnalysis);
