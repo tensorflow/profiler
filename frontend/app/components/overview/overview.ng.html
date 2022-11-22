@@ -23,7 +23,7 @@
     </div>
 
     <div class="right-column">
-      <step-time-graph [inputPipelineAnalysis]="inputPipelineAnalysis"></step-time-graph>
+      <step-time-graph id="step-time-graph" [inputPipelineAnalysis]="inputPipelineAnalysis" *ngIf="inputPipelineAnalysis?.rows?.length"></step-time-graph>
       <recommendation-result-view [recommendationResult]="recommendationResult">
       </recommendation-result-view>
     </div>
