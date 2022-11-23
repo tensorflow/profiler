@@ -41,7 +41,6 @@
       <mat-checkbox [ngModel]="params.showMetadata" name="showMetadata" (ngModelChange)="onUpdateParam({showMetadata: $event})">Show Metadata</mat-checkbox>
       <mat-checkbox [ngModel]="params.mergeFusion" name="mergeFusion"
                     matTooltip="Hide the fusion subcomputations in the rendered graph"
-                    style="margin-left:10px"
                     (ngModelChange)="onUpdateParam({mergeFusion: $event})">
         Merge Fusion
       </mat-checkbox>
