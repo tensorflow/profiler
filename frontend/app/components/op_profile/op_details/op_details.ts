@@ -111,7 +111,7 @@ export class OpDetails {
     }
 
     if (utils.hasMemoryBandwidthUtilization(this.node)) {
-      const utilization = utils.memoryBandwidthUtilization(this.node);
+      const utilization = utils.memoryBandwidthUtilization(this.node, false);
       this.memoryBandwidthUtilization = utils.percent(utilization);
       this.bwColor = utils.bwColor(utilization);
     } else {

@@ -7,7 +7,8 @@ export declare interface OpProfileNode {
 declare interface Metrics {
   time?: number;
   flops?: number;
-  memoryBandwidth?: number;
+  memoryBandwidthUtil?: number;
+  hbmBandwidthUtil?: number;
   rawTime?: number;
   rawFlops?: number;
   rawBytesAccessed?: number;
