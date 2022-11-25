@@ -193,11 +193,17 @@ export function flopsRate(node: OpProfileNode): number {
 /**
  * Computes a memory bandwidth utilization.
  */
-export function memoryBandwidthUtilization(node: OpProfileNode): number {
+export function memoryBandwidthUtilization(
+    node: OpProfileNode, isHbm: boolean): number {
   // NaN indicates undefined memory bandwidth utilization (the profile was
   // collected from older versions of profiler).
-  if (!node || !node.metrics || !node.metrics.memoryBandwidth) return NaN;
-  return node.metrics.memoryBandwidth;
+  if (isHbm) {
+    if (!node || !node.metrics || !node.metrics.hbmBandwidthUtil) return NaN;
+    return node.metrics.hbmBandwidthUtil;
+  } else {
+    if (!node || !node.metrics || !node.metrics.memoryBandwidthUtil) return NaN;
+    return node.metrics.memoryBandwidthUtil;
+  }
 }
 
 /**
@@ -222,7 +228,7 @@ export function hasFlopsUtilization(node: OpProfileNode): boolean {
  * Returns whether a node has memory bandwidth utilization.
  */
 export function hasMemoryBandwidthUtilization(node: OpProfileNode): boolean {
-  return !!node && !!node.metrics && !!node.metrics.memoryBandwidth;
+  return !!node && !!node.metrics && !!node.metrics.memoryBandwidthUtil;
 }
 
 /**
@@ -231,9 +237,7 @@ export function hasMemoryBandwidthUtilization(node: OpProfileNode): boolean {
 export function percent(fraction: number): string {
   if (isNaN(fraction)) return '-';
 
-  if (fraction >= 1.995) {
-    return '200%';
-  } else if (fraction < 0.00001) {
+  if (fraction < 0.00001) {
     return '0.00%';
   } else {
     return `${Math.round(fraction * 100)}%`;
@@ -247,7 +251,9 @@ export function timeWasted(node: OpProfileNode): number {
   if (!node || !node.metrics) return NaN;
   return (
       (node.metrics.time || 0) *
-      (1 - Math.max(flopsUtilization(node), memoryBandwidthUtilization(node))));
+      (1 -
+       Math.max(
+           flopsUtilization(node), memoryBandwidthUtilization(node, false))));
 }
 
 /**
