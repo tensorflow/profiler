@@ -2,56 +2,6 @@ load("@npm//@bazel/typescript:index.bzl", "ts_library")
 
 package(default_visibility = ["//frontend:internal"])
 
-genrule(
-    name = "hlo_proto_ts",
-    srcs = ["hlo.jsonpb_decls.d.ts.gz"],
-    outs = ["hlo.jsonpb_decls.d.ts"],
-    cmd = "gzip -d -c $(SRCS) > $(OUTS)",
-    visibility = [
-        "//frontend:__subpackages__", "//plugin:__subpackages__",
-    ],
-)
-
-genrule(
-    name = "op_profile_proto_ts",
-    srcs = ["op_profile.jsonpb_decls.d.ts.gz"],
-    outs = ["op_profile.jsonpb_decls.d.ts"],
-    cmd = "gzip -d -c $(SRCS) > $(OUTS)",
-    visibility = [
-        "//frontend:__subpackages__", "//plugin:__subpackages__",
-    ],
-)
-
-genrule(
-    name = "xla_data_proto_ts",
-    srcs = ["xla_data.jsonpb_decls.d.ts.gz"],
-    outs = ["xla_data.jsonpb_decls.d.ts"],
-    cmd = "gzip -d -c $(SRCS) > $(OUTS)",
-    visibility = [
-        "//frontend:__subpackages__", "//plugin:__subpackages__",
-    ],
-)
-
-genrule(
-    name = "memory_profile_proto_ts",
-    srcs = ["memory_profile.jsonpb_decls.d.ts.gz"],
-    outs = ["memory_profile.jsonpb_decls.d.ts"],
-    cmd = "gzip -d -c $(SRCS) > $(OUTS)",
-    visibility = [
-        "//frontend:__subpackages__", "//plugin:__subpackages__",
-    ],
-)
-
-genrule(
-    name = "memory_viewer_preprocess_proto_ts",
-    srcs = ["memory_viewer_preprocess.jsonpb_decls.d.ts.gz"],
-    outs = ["memory_viewer_preprocess.jsonpb_decls.d.ts"],
-    cmd = "gzip -d -c $(SRCS) > $(OUTS)",
-    visibility = [
-        "//frontend:__subpackages__", "//plugin:__subpackages__",
-    ],
-)
-
 ts_library(
     name = "op_profile_proto_defs",
     srcs = [
