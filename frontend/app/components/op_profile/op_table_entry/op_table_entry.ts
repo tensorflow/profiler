@@ -57,8 +57,8 @@ export class OpTableEntry implements OnChanges {
     }
     this.children = this.getChildren();
     this.numLeftOut = this.getLeftOut();
-    if (!!this.node && !!this.node.metrics && !!this.node.metrics.time) {
-      this.percent = utils.percent(this.node.metrics.time);
+    if (!!this.node && !!this.node.metrics && !!this.node.metrics.timeFraction) {
+      this.percent = utils.percent(this.node.metrics.timeFraction);
       this.barWidth = this.percent;
     } else {
       this.barWidth = '0';
@@ -79,20 +79,20 @@ export class OpTableEntry implements OnChanges {
   private get90ChildrenIndex() {
     if (!this.showP90 || !this.node || !this.node.children ||
         this.node.children.length === 0 || !this.node.metrics ||
-        !this.node.metrics.time) {
+        !this.node.metrics.timeFraction) {
       return this.childrenCount;
     }
 
     let tot = 0;
-    const target90 = this.node.metrics.time * 0.9;
+    const target90 = this.node.metrics.timeFraction * 0.9;
     const targetCount = Math.min(this.childrenCount, this.node.children.length);
     for (let i = 0; i < targetCount; i++) {
       if (tot >= target90) {
         return i;
       }
       const child = this.node.children[i];
-      if (child && child.metrics && child.metrics.time) {
-        tot += child.metrics.time;
+      if (child && child.metrics && child.metrics.timeFraction) {
+        tot += child.metrics.timeFraction;
       }
     }
     return this.childrenCount;

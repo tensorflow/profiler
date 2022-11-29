@@ -5,7 +5,7 @@ export declare interface OpProfileNode {
 
 /** The Metrics interface. */
 declare interface Metrics {
-  time?: number;
+  timeFraction?: number;
   flops?: number;
   memoryBandwidth?: number;
   rawTime?: number;
