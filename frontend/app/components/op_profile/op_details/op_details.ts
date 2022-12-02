@@ -1,9 +1,8 @@
-import {Component, OnDestroy} from '@angular/core';
+import {Component, Input} from '@angular/core';
 import {Store} from '@ngrx/store';
-
 import {Node} from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
-import {getActiveOpProfileNodeState} from 'org_xprof/frontend/app/store/selectors';
+import {getActiveOpProfileNodeState, getSelectedOpNodeChainState} from 'org_xprof/frontend/app/store/selectors';
 import {ReplaySubject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 
@@ -16,6 +15,9 @@ import {takeUntil} from 'rxjs/operators';
 export class OpDetails {
   /** Handles on-destroy Subject, used to unsubscribe. */
   private readonly destroyed = new ReplaySubject<void>(1);
+
+  /** the session id */
+  @Input() sessionId = '';
 
   node?: Node;
   color: string = '';
@@ -34,6 +36,7 @@ export class OpDetails {
   hasLayout: boolean = false;
   dimensions: Node.XLAInstruction.LayoutAnalysis.Dimension[] = [];
   computationPrimitiveSize: string = '';
+  selectedOpNodeChain: string[] = [];
 
   constructor(private readonly store: Store<{}>) {
     this.store.select(getActiveOpProfileNodeState)
@@ -41,6 +44,15 @@ export class OpDetails {
         .subscribe((node: Node|null) => {
           this.update(node);
         });
+    this.store.select(getSelectedOpNodeChainState)
+        .pipe(takeUntil(this.destroyed))
+        .subscribe((nodeChain: string[]) => {
+          this.selectedOpNodeChain = nodeChain;
+        });
+  }
+
+  getGraphViewerLink() {
+    return `/graph_viewer/${this.sessionId}?module_name=${this.selectedOpNodeChain[1]}&node_name=${this.name}`;
   }
 
   dimensionColor(dimension?: Node.XLAInstruction.LayoutAnalysis.Dimension):
@@ -49,7 +61,7 @@ export class OpDetails {
       return '';
     }
     const ratio = (dimension.size || 0) / dimension.alignment;
-    // COlors should grade harshly: 50% in a dimension is already very bad.
+    // Colors should grade harshly: 50% in a dimension is already very bad.
     const harshCurve = (x: number) => 1 - Math.sqrt(1 - x);
     return utils.flameColor(ratio / Math.ceil(ratio), 1, 0.25, harshCurve);
   }

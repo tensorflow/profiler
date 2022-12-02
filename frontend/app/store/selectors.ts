@@ -19,6 +19,11 @@ export const getActiveHeapObjectState: MemoizedSelectorAny = createSelector(
 export const getOpProfileState: MemoizedSelectorAny =
     createSelector(appState, (appState: AppState) => appState.opProfileState);
 
+/** Selector for SelectedOpNodeChain */
+export const getSelectedOpNodeChainState: MemoizedSelectorAny = createSelector(
+    getOpProfileState,
+    (opProfileState: OpProfileState) => opProfileState.selectedOpNodeChain);
+
 /** Selector for ActiveOpProfileNodeState */
 export const getActiveOpProfileNodeState: MemoizedSelectorAny = createSelector(
     getOpProfileState,

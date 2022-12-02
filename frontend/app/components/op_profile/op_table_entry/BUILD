@@ -16,8 +16,10 @@ xprof_ng_module(
     deps = [
         "@npm//@angular/common",
         "@npm//@angular/core",
+        "@npm//@ngrx/store",
         "@org_xprof//frontend/app/common/interfaces:op_profile_proto_defs",
         "@org_xprof//frontend/app/common/utils",
+        "@org_xprof//frontend/app/store",
     ],
 )
 

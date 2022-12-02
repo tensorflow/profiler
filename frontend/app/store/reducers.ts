@@ -20,6 +20,23 @@ export const reducer: ActionReducer<AppState, Action> = createReducer(
         },
         ),
     on(
+        actions.updateSelectedOpNodeChainAction,
+        (state: AppState, action: ActionCreatorAny) => {
+          let opNodeChain = state.opProfileState.selectedOpNodeChain;
+          if (['by_program', 'by_category'].includes(
+                  action.selectedOpNodeName)) {
+            opNodeChain = [];
+          }
+          return {
+            ...state,
+            opProfileState: {
+              ...state.opProfileState,
+              selectedOpNodeChain: [...opNodeChain, action.selectedOpNodeName],
+            }
+          };
+        },
+        ),
+    on(
         actions.setActiveOpProfileNodeAction,
         (state: AppState, action: ActionCreatorAny) => {
           return {

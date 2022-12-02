@@ -82,6 +82,20 @@
           <div class="title"> Hardware Computation Size:</div>
           <code class="expression">{{computationPrimitiveSize}}</code>
         </div>
+        <div [hidden]="selectedOpNodeChain.length < 2 || selectedOpNodeChain[0] !== 'by_program'">
+          <a [href]="getGraphViewerLink()" target="_blank" style="text-decoration:none;">
+            <button
+              mat-stroked-button
+              extended
+              type="button"
+              color="primary"
+              appearance="fill"
+              aria-label="go to graph viewer"
+              i18n-aria-label="A button to corresponding graph viewer page">
+             > Graph Viewer
+            </button>
+          </a>
+        </div>
       </div>
     </mat-card-content>
   </mat-card>

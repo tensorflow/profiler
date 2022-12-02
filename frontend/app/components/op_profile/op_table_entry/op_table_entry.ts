@@ -1,6 +1,8 @@
 import {Component, EventEmitter, Input, OnChanges, Output, SimpleChanges} from '@angular/core';
+import {Store} from '@ngrx/store';
 import {Node} from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
+import {updateSelectedOpNodeChainAction} from 'org_xprof/frontend/app/store/actions';
 
 /** An op table entry view component. */
 @Component({
@@ -45,6 +47,8 @@ export class OpTableEntry implements OnChanges {
   timeWasted: string = '';
   flopsUtilization: string = '';
   numLeftOut: number = 0;
+
+  constructor(private readonly store: Store<{}>) {}
 
   ngOnChanges(changes: SimpleChanges) {
     if (!this.node) {
@@ -118,6 +122,13 @@ export class OpTableEntry implements OnChanges {
     if (!this.level || !this.node || !this.node.numChildren) return 0;
     return this.node.numChildren -
         Math.min(this.childrenCount, this.children.length);
+  }
+
+  onSelect($event: Node) {
+    this.selected.emit($event);
+    this.store.dispatch(updateSelectedOpNodeChainAction({
+      selectedOpNodeName: this.node?.name,
+    }));
   }
 
   toggleExpanded() {

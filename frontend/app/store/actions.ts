@@ -19,6 +19,12 @@ export const setActiveOpProfileNodeAction: ActionCreatorAny = createAction(
     props<{activeOpProfileNode: Node | null}>(),
 );
 
+/** Action to update selected op node names chain */
+export const updateSelectedOpNodeChainAction: ActionCreatorAny = createAction(
+    '[Op Node Chain] update selected op node chain',
+    props<{selectedOpNodeName: string}>(),
+);
+
 /** Action to set active info of the pod viewer */
 export const setActivePodViewerInfoAction: ActionCreatorAny = createAction(
     '[Pod Viewer Info] Set active pod viewer info',
