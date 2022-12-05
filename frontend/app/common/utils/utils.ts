@@ -209,12 +209,14 @@ export function memoryBandwidthUtilization(
 /**
  * Computes the memory bandwidth for operations.
  */
-export function memoryBandwidth(node: OpProfileNode): number {
+export function memoryBandwidth(node: OpProfileNode, isHbm: boolean): number {
   // NaN indicates undefined memory utilization (the profile was collected
   // from older versions of profiler).
   if (!node || !node.metrics || !node.metrics.rawTime) return NaN;
   // The unit of rawTime is picoseconds.
-  return (node.metrics.rawBytesAccessed || 0) * 1E12 / node.metrics.rawTime;
+  const bytes =
+      isHbm ? node.metrics.rawHbmBytesAccessed : node.metrics.rawBytesAccessed;
+  return (bytes || 0) * 1E12 / node.metrics.rawTime;
 }
 
 /**
@@ -229,6 +231,13 @@ export function hasFlopsUtilization(node: OpProfileNode): boolean {
  */
 export function hasMemoryBandwidthUtilization(node: OpProfileNode): boolean {
   return !!node && !!node.metrics && !!node.metrics.memoryBandwidthUtil;
+}
+
+/**
+ * Returns whether a node has HBM bandwidth utilization.
+ */
+export function hasHbmBandwidthUtilization(node: OpProfileNode): boolean {
+  return !!node && !!node.metrics && !!node.metrics.hbmBandwidthUtil;
 }
 
 /**

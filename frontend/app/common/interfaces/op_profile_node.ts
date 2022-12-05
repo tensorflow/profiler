@@ -12,4 +12,5 @@ declare interface Metrics {
   rawTime?: number;
   rawFlops?: number;
   rawBytesAccessed?: number;
+  rawHbmBytesAccessed?: number;
 }

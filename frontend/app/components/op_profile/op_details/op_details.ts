@@ -29,6 +29,9 @@ export class OpDetails {
   memoryBandwidth: string = '';
   memoryBandwidthUtilization: string = '';
   bwColor: string = '';
+  hbmBandwidth: string = '';
+  hbmBandwidthUtilization: string = '';
+  hbmBwColor: string = '';
   expression: string = '';
   provenance: string = '';
   fused: boolean = false;
@@ -130,13 +133,30 @@ export class OpDetails {
       this.memoryBandwidthUtilization = '';
     }
 
-    const memoryBW = utils.memoryBandwidth(this.node);
+    if (utils.hasHbmBandwidthUtilization(this.node)) {
+      const utilization = utils.memoryBandwidthUtilization(this.node, true);
+      this.hbmBandwidthUtilization = utils.percent(utilization);
+      this.hbmBwColor = utils.bwColor(utilization);
+    } else {
+      this.hbmBandwidthUtilization = '';
+    }
+
+    const memoryBW = utils.memoryBandwidth(this.node, false);
     // Memory bandwidth shouldn't be higher than 10TiB/s.
     if (isNaN(memoryBW) || memoryBW > 1E13) {
       this.memoryBandwidth = '';
     } else {
       this.memoryBandwidth =
           utils.humanReadableText(memoryBW, {si: true, dp: 2, suffix: 'B/s'});
+    }
+
+    const hbmBW = utils.memoryBandwidth(this.node, true);
+    // Memory bandwidth shouldn't be higher than 10TiB/s.
+    if (isNaN(hbmBW) || hbmBW > 1E13) {
+      this.hbmBandwidth = '';
+    } else {
+      this.hbmBandwidth =
+          utils.humanReadableText(hbmBW, {si: true, dp: 2, suffix: 'B/s'});
     }
 
     if (this.node.xla && this.node.xla.expression) {

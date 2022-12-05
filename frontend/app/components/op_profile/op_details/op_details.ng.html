@@ -33,6 +33,17 @@
             </div>
           </div>
         </div>
+        <div class="info" [hidden]="!hbmBandwidthUtilization">
+          <div class="title">HBM bandwidth utilization:</div>
+          <div class="bar-container">
+            <div
+              class="bar"
+              [style.width]="hbmBandwidthUtilization"
+              [style.background-color]="hbmBwColor">
+              &nbsp;{{hbmBandwidthUtilization}}
+            </div>
+          </div>
+        </div>
         <div class="info" [hidden]="!flopsRate">
           <div class="title">FLOP rate (per core):</div>
           <code class="expression">{{flopsRate}}</code>
@@ -40,6 +51,10 @@
         <div class="info" [hidden]="!memoryBandwidth">
           <div class="title">Memory bandwidth (per core):</div>
           <code class="expression">{{memoryBandwidth}}</code>
+        </div>
+        <div class="info" [hidden]="!hbmBandwidth">
+          <div class="title">HBM bandwidth (per core):</div>
+          <code class="expression">{{hbmBandwidth}}</code>
         </div>
         <div class="info" [hidden]="!expression">
           <div class="title">XLA expression:</div>
