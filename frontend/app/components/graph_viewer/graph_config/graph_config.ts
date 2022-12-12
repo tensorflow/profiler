@@ -21,7 +21,8 @@ export class GraphConfig implements OnDestroy, OnChanges {
   @Input() initialInputs: GraphConfigInput|undefined = undefined;
   @Input() moduleList: string[] = [];
   // Temparary indicator to hide the module name selection for 1vm graph viewer
-  @Input() isHloOssTool: boolean = false;
+  @Input() isHloOssTool = false;
+  @Input() useProgramId = false;
 
   inputsInited = false;
   params: GraphConfigInput = {

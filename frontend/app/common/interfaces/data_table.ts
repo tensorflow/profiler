@@ -18,17 +18,12 @@ declare interface Cell<T> {
 /** All cell type. */
 export type DataTableCell = Cell<boolean|number|string>;
 
-/** The base interface for a colume role. */
-declare interface ColumeRole {
-  role?: string;
-}
-
 /** The base interface for a column. */
 export declare interface DataTableColumn {
   id?: string;
   label?: string;
   type?: string;
-  p?: ColumeRole;
+  p?: {[propertyKey: string]: string|boolean};
 }
 
 /** The base interface for a row value. */

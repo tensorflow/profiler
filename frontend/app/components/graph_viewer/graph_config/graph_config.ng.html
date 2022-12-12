@@ -1,52 +1,86 @@
 <div class="item-container">
   <form (ngSubmit)="onSubmit()">
     <div class="row" *ngIf="!isHloOssTool">
-      <div [ngClass]="{'mat-subheading-2': true}">
-        XLA Modules ({{moduleList.length}})
+      <div [ngClass]="{ 'mat-subheading-2': true }">
+        XLA Modules ({{ moduleList.length }})
       </div>
     </div>
     <mat-form-field class="full-width" *ngIf="!isHloOssTool">
-      <mat-select panelClass="panel-override" [ngModel]="params.selectedModule" (ngModelChange)="onUpdateParam({selectedModule: $event})" name="selectedModule">
+      <mat-select
+        name="selectedModule"
+        panelClass="panel-override"
+        [ngModel]="params.selectedModule"
+        [disabled]="useProgramId"
+        (ngModelChange)="onUpdateParam({ selectedModule: $event })"
+      >
         <mat-option *ngFor="let module of moduleList" [value]="module">
-          {{module}}
+          {{ module }}
         </mat-option>
       </mat-select>
     </mat-form-field>
+    <mat-form-field class="full-width" *ngIf="useProgramId">
+      <input
+        matInput
+        placeholder="Program id"
+        aria-label="program-id"
+        autocomplete="off"
+        name="programId"
+        [disabled]="true"
+        [value]="params.programId"
+      />
+    </mat-form-field>
     <mat-form-field class="full-width">
       <input
-              matInput
-              placeholder="Enter op name"
-              aria-label="op-name"
-              required
-              autocomplete="off"
-              [ngModel]="params.opName"
-              (ngModelChange)="onUpdateParam({opName: $event.trim()})"
-              name="opName"/>
+        matInput
+        placeholder="Enter op name"
+        aria-label="op-name"
+        required
+        autocomplete="off"
+        [ngModel]="params.opName"
+        (ngModelChange)="onUpdateParam({ opName: $event.trim() })"
+        name="opName"
+      />
     </mat-form-field>
     <div>
       <mat-form-field class="full-width">
         <input
-                matInput
-                placeholder="Graph width (1-10)"
-                aria-label="graph-width"
-                type="number"
-                min="1"
-                max="10"
-                step="1"
-                [ngModel]="params.graphWidth"
-                (ngModelChange)="onUpdateParam({graphWidth: $event})"
-                name="graphWidth"/>
+          matInput
+          placeholder="Graph width (1-10)"
+          aria-label="graph-width"
+          type="number"
+          min="1"
+          max="10"
+          step="1"
+          [ngModel]="params.graphWidth"
+          (ngModelChange)="onUpdateParam({ graphWidth: $event })"
+          name="graphWidth"
+        />
       </mat-form-field>
 
-      <mat-checkbox [ngModel]="params.showMetadata" name="showMetadata" (ngModelChange)="onUpdateParam({showMetadata: $event})">Show Metadata</mat-checkbox>
-      <mat-checkbox [ngModel]="params.mergeFusion" name="mergeFusion"
-                    matTooltip="Hide the fusion subcomputations in the rendered graph"
-                    (ngModelChange)="onUpdateParam({mergeFusion: $event})">
+      <mat-checkbox
+        [ngModel]="params.showMetadata"
+        name="showMetadata"
+        (ngModelChange)="onUpdateParam({ showMetadata: $event })"
+        >Show Metadata</mat-checkbox
+      >
+      <mat-checkbox
+        [ngModel]="params.mergeFusion"
+        name="mergeFusion"
+        matTooltip="Hide the fusion subcomputations in the rendered graph"
+        (ngModelChange)="onUpdateParam({ mergeFusion: $event })"
+      >
         Merge Fusion
       </mat-checkbox>
     </div>
     <div class="search-button">
-      <button mat-flat-button extended type="submit" color="primary" appearance="fill" [disabled]="!validToSubmit()">
+      <button
+        mat-flat-button
+        extended
+        type="submit"
+        color="primary"
+        appearance="fill"
+        [disabled]="!validToSubmit()"
+      >
         <mat-icon>search</mat-icon> Search Graph
       </button>
     </div>

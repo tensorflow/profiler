@@ -5,6 +5,7 @@ export declare interface GraphConfigInput {
   graphWidth: number;
   showMetadata: boolean;
   mergeFusion: boolean;
+  programId?: number;
 }
 
 /** The query parameter object for route navigation and xhr */
@@ -14,4 +15,5 @@ export declare interface GraphViewerQueryParams {
   graph_width: number;
   show_metadata: boolean;
   merge_fusion: boolean;
+  program_id?: number;
 }
