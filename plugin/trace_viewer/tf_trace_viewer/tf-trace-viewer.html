@@ -231,6 +231,7 @@ dashboard would integrate trace viewer app using iframe.
       _dataRegenerated: {type: Boolean, value: false},
       _isInitialLoad: {type: Boolean, value: true},
       _hosts: {type: Array, value: []},
+      _maxEventsCount: {type: Number, value: 1000000},
     },
 
     ready: function() {
@@ -500,6 +501,8 @@ dashboard would integrate trace viewer app using iframe.
         this._createFilters();
         this._traceViewer.updateProcessList_ = this._updateProcessList.bind(this);
         this._createPerfettoButton();
+      } else {
+        this._createEventsConfig();
       }
       this._loadTrace(null, /* replaceModel= */ true);
     },
@@ -895,6 +898,9 @@ dashboard would integrate trace viewer app using iframe.
         const checkbox = checkboxDivs[i].getElementsByTagName('input')[0];
         requestURL.searchParams.set(checkbox.name, checkbox.checked);
       }
+      console.log('max_events_count: ', document.getElementById("max_events_count"));
+      const maxEventsCount = document.getElementById("max_events_count").value;
+      requestURL.searchParams.set('max_events', maxEventsCount);
 
       // Populate query parameter "selected_device_ids".
       const dropdown = Polymer.dom(document.getElementById("process_filter_dropdown"));
@@ -950,6 +956,36 @@ dashboard would integrate trace viewer app using iframe.
       overlay.textContent = content;
       overlay.title = title;
       overlay.visible = true;
+    },
+
+    _createEventsConfig: function() {
+      const eventsConfig = document.createElement('tr-ui-b-dropdown');
+      eventsConfig.setAttribute('id', 'events_limit_input');
+      eventsConfig.setAttribute('label', 'Events Config');
+      eventsConfig.style.display = 'flex';
+      const flowEventFilterDropdown = document.getElementById('flow_event_filter_dropdown');
+      Polymer.dom(this._traceViewer.rightControls).insertBefore(eventsConfig, flowEventFilterDropdown);
+
+      const filterDialog = eventsConfig.getElementsByTagName('dialog')[0];
+      filterDialog.innerHTML = `
+        <div id="events-config">
+          <div id="max-events-config">
+            <label for="max-events-counts">Max Events Displayed</label>
+            <input type="text" id="max-events-counts" name="max-events-counts" value="${this._maxEventsCounts || 1000000}" style="width:60px;">
+          </div>
+          <br>
+          <button name="load-trace-with-events-config">Load Trace</button>
+        </div>
+      `;
+
+      document.querySelector('input[name="max-events-counts"]').addEventListener('change', (event) => {
+        console.log('update max events count: ', event.target.value);
+        this._maxEventsCounts = Number(event.target.value);
+      })
+      document.querySelector('button[name="load-trace-with-events-config"]').addEventListener('click',
+        (event) => {
+          this._loadTrace(true, /* replaceModel= */ true);  // reload data.
+      });
     },
   });
 </script>

@@ -586,11 +586,13 @@ class ProfilePlugin(base_plugin.TBPlugin):
     host = request.args.get('host')
     tqx = request.args.get('tqx')
     graph_viewer_options = self._get_graph_viewer_options(request)
+    trace_viewer_options = self._get_trace_viewer_options(request)
     # Host param is used by HLO tools to identify the module.
     # 
     # neded.
     params = {
         'graph_viewer_options': graph_viewer_options,
+        'trace_viewer_options': trace_viewer_options,
         'tqx': tqx,
         'host': host
     }
@@ -627,6 +629,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
       if request.args.get('end_time_ms') is not None:
         grpc_request.parameters['end_time_ms'] = request.args.get('end_time_ms')
       grpc_response = self.stub.GetSessionToolData(grpc_request)
+      print('grpc response output, trace_viewer@')
       return grpc_response.output, content_type, None
 
     asset_path = os.path.join(run_dir, make_filename(host, tool))
@@ -644,6 +647,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
         asset_paths = [asset_path]
 
       try:
+        print('xplace to tool data')
         data, content_type = convert.xspace_to_tool_data(
             asset_paths, tool, params)
       except AttributeError:
@@ -662,6 +666,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
     if raw_data is None:
       return None, content_type, None
 
+    print('get data content encoding with params')
     return get_data_content_encoding(raw_data, tool, params)
 
   @wrappers.Request.application
@@ -766,6 +771,12 @@ class ProfilePlugin(base_plugin.TBPlugin):
         'merge_fusion': merge_fusion,
         'format': request.args.get('format'),
         'type': request.args.get('type')
+    }
+
+  def _get_trace_viewer_options(self, request):
+    max_events = request.args.get('max_events')
+    return {
+        'max_events': max_events,
     }
 
   def start_grpc_stub_if_necessary(self):
