@@ -9,7 +9,7 @@ export class OpProfileBase {
   rootNode?: Node;
   data = new OpProfileData();
   hasTwoProfiles: boolean = false;
-  isByCategory: boolean = false;
+  isByCategory: boolean = true;
   excludeIdle: boolean = true;
   byWasted: boolean = false;
   showP90: boolean = false;
@@ -50,7 +50,7 @@ export class OpProfileBase {
   parseData(data: ProfileOrNull) {
     this.profile = data;
     this.hasTwoProfiles = this.hasMultipleProfiles();
-    this.isByCategory = false;
+    this.isByCategory = true;
     this.childrenCount = 10;
     this.updateRoot();
     this.data.update(this.rootNode);
