@@ -9,9 +9,9 @@ declare interface SortEvent {
   ascending: boolean;
 }
 
-const DATA_TABLE_EXECUTOR_INDEX = 2;
-const DATA_TABLE_TYPE_INDEX = 3;
-const DATA_TABLE_OPERATION_INDEX = 4;
+const TABLE_COLUMN_LABEL_EXECUTOR = 'Host/device';
+const TABLE_COLUMN_LABEL_TYPE = 'Type';
+const TABLE_COLUMN_LABEL_OPERATION = 'Operation';
 
 /** A stats table view component. */
 @Component({
@@ -57,26 +57,40 @@ export class StatsTable implements OnChanges, OnInit {
     };
   }
 
+  // Use label to choose the index due to lack of id
+  getTableColumnIndex(columnLabel: string) {
+    switch (columnLabel) {
+      case TABLE_COLUMN_LABEL_EXECUTOR:
+        return this.hasDiff && this.diffData ? 0 : 2;
+      case TABLE_COLUMN_LABEL_TYPE:
+        return this.hasDiff && this.diffData ? 1 : 3;
+      case TABLE_COLUMN_LABEL_OPERATION:
+        return this.hasDiff && this.diffData ? 2 : 4;
+      default:
+        return -1;
+    }
+  }
+
   updateFilters() {
     const filters: google.visualization.DataTableCellFilter[] = [];
     if (this.filterExecutor.trim()) {
       const filter = this.filterExecutor.trim().toLowerCase();
       filters.push({
-        'column': DATA_TABLE_EXECUTOR_INDEX,
+        'column': this.getTableColumnIndex(TABLE_COLUMN_LABEL_EXECUTOR),
         'test': (value: string) => value.toLowerCase().indexOf(filter) >= 0,
       });
     }
     if (this.filterType.trim()) {
       const filter = this.filterType.trim().toLowerCase();
       filters.push({
-        'column': DATA_TABLE_TYPE_INDEX,
+        'column': this.getTableColumnIndex(TABLE_COLUMN_LABEL_TYPE),
         'test': (value: string) => value.toLowerCase().indexOf(filter) >= 0,
       });
     }
     if (this.filterOperation.trim()) {
       const filter = this.filterOperation.trim().toLowerCase();
       filters.push({
-        'column': DATA_TABLE_OPERATION_INDEX,
+        'column': this.getTableColumnIndex(TABLE_COLUMN_LABEL_OPERATION),
         'test': (value: string) => value.toLowerCase().indexOf(filter) >= 0,
       });
     }

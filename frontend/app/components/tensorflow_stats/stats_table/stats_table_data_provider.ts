@@ -141,6 +141,8 @@ export class StatsTableDataProvider extends DefaultDataProvider {
       }
     }
 
+    // Insert column made the table filter column index drift by one
+    // from 1,2,3 to 2,3,4
     this.dataTable.insertColumn(1, 'number', 'Rank');
   }
 
@@ -148,6 +150,8 @@ export class StatsTableDataProvider extends DefaultDataProvider {
       dataTable: google.visualization.DataTable,
       diffTable: google.visualization.DataTable) {
     const sortColumn = [{column: 1, desc: false}];
+    // The column hiding made the filter column index drift
+    // from 1,2,3 to 0,1,2
     const hiddenColumn = [0, 4, 5, 6, 7, 10, 12];
     const formatDiffInfo = [
       {
