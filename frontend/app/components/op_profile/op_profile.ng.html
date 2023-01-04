@@ -6,7 +6,7 @@
     </div>
     <div>
       Memory bandwidth utilization is
-      <span [style.color]="data.bwColor">{{data.memoryBandwidthUtilizationPercent}}</span>
+      <span [style.color]="data.bwColors[data.memBwType.MEM_BW_TYPE_ALL]">{{data.bandwidthUtilizationPercents[data.memBwType.MEM_BW_TYPE_ALL]}}</span>
     </div>
   </div>
   <div class="description">
