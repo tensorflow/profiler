@@ -48,6 +48,7 @@ export class MemoryUsage {
 
   diagnostics: {errors: string[], warnings: string[], info: string[]};
   moduleName: string;
+  timelineUrl: string;
 
   // Only one of hloProto or preprocess is valid to construct MemoryUsage.
   constructor(
@@ -81,6 +82,7 @@ export class MemoryUsage {
     this.smallBufferSize = 16 * 1024;
     this.diagnostics = {errors: [], warnings: [], info: []};
     this.moduleName = '';
+    this.timelineUrl = '';
 
     // Both input sources (HLOProto and preprocessed data) are invalid.
     if (!hloProto && !preprocess) {
@@ -110,6 +112,7 @@ export class MemoryUsage {
       preprocess: preprocessedProto.PreprocessResult) {
     // Copy the fields from preprocessed result.
     this.moduleName = preprocess.moduleName || '';
+    this.timelineUrl = preprocess.allocationTimeline || '';
     this.peakHeapSizeBytes = (preprocess.peakHeapMib || 0) * 1024 * 1024;
     this.unpaddedPeakHeapSizeBytes =
         (preprocess.peakUnpaddedHeapMib || 0) * 1024 * 1024;

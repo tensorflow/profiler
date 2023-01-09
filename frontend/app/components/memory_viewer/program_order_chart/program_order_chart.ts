@@ -21,6 +21,9 @@ export class ProgramOrderChart implements OnChanges, OnInit {
   /** The active buffer allocation information. */
   @Input() activeInfo?: BufferAllocationInfo;
 
+  /** Optional timeline URL. */
+  @Input() timelineUrl: string = '';
+
   @ViewChild('activeChart', {static: false}) activeChartRef!: ElementRef;
   @ViewChild('chart', {static: false}) chartRef!: ElementRef;
   @ViewChild('peakChart', {static: false}) peakChartRef!: ElementRef;

@@ -35,6 +35,7 @@ export class MemoryViewerMain implements OnDestroy, OnChanges {
   activeInfo?: BufferAllocationInfo;
   peakHeapSizeMiB: string = '';
   unpaddedPeakHeapSizeMiB: string = '';
+  timelineUrl: string = '';
   usage?: MemoryUsage;
   heapSizes: number[] = [];
   maxHeap: HeapObject[] = [];
@@ -145,6 +146,7 @@ export class MemoryViewerMain implements OnDestroy, OnChanges {
     }
 
     this.moduleName = this.usage.moduleName;
+    this.timelineUrl = this.usage.timelineUrl;
 
     this.peakHeapSizeMiB =
         utils.bytesToMiB(this.usage.peakHeapSizeBytes).toFixed(2);
