@@ -1,6 +1,7 @@
 import {DataTableCell, DataTableColumn, DataTableRow, Filter, GeneralDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 class DataTableForTesting {
+  // Note the constructor takes a js object (not a literal string)
   constructor(
       public data: GeneralDataTable|null = {cols: [], rows: [], p: {}}) {}
   addColumn(type: string, label?: string, id?: string) {
@@ -72,8 +73,14 @@ class DataTableForTesting {
     }
     return this.data.rows.length;
   }
-  getValue() {
-    return 0;
+  getValue(rowIdx: number, columnIdx: number) {
+    const numOfRows = this.getNumberOfRows();
+    const numofCols = this.getNumberOfColumns();
+    if (numOfRows < 0 || numofCols < 0 || rowIdx >= numOfRows ||
+        columnIdx >= numofCols) {
+      return null;
+    }
+    return this.data!.rows![rowIdx].c![columnIdx].v;
   }
   getTableProperty(propName: string): string {
     if (!this.data || !this.data.p) {
@@ -107,9 +114,11 @@ class DataTableForTesting {
   insertColumn() {}
   setColumn() {}
   setValue() {}
+  setCell() {}
   addRow(row: DataTableCell[]) {
     this.data?.rows?.push({c: row});
   }
+  addRows() {}
   sort() {}
 
   /**
@@ -146,6 +155,10 @@ class DataViewForTesting {
     this.visRows = rowsIdxArray;
   }
   setColumns() {}
+  hideColumns() {}
+  getSortedRows(sortColumnIdxes: number[] = []) {
+    return [];
+  }
   toDataTable() {
     return new DataTableForTesting({
       cols: this.table?.data?.cols?.filter(

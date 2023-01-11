@@ -99,7 +99,7 @@ export class OperationsTableDataProvider extends DefaultDataProvider {
           /* comparisonCol= */ 3,
           /* addColumnType= */ 'number',
           /* addColumnLabel= */ 'Diff total self time',
-          /* sortColumn= */[],
+          /* sortColumns= */[],
           /* hiddenColumns= */[],
           /* formatDiffInfo= */ formatDiffInfo,
           /* formatValueInfo= */ formatValueInfo);

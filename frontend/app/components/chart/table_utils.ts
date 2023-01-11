@@ -82,7 +82,7 @@ export function computeCategoryDiffTable(
 
 /**
  * Compute the stats difference between two tables. oldTable and newTable
- * need to be DataTable class, and function also returns DataTable class.
+ * need to be DataTable class, and function returns DataView class.
  * Assume the type and label of columns in both tables match, while their
  * row counts can be different.
  * This function works for both main table and opType aggregation table.
@@ -90,15 +90,15 @@ export function computeCategoryDiffTable(
  *        the difference from the new data table.
  * @param newTable Data table for current values.The increase or decrease is
  *        displayed based on this value.
- * @param referenceCol Column number as a reference for comparing two data
- *        tables.
- * @param comparisonCol Column number that has the actual value comparing two
- *        data tables.
+ * @param referenceCol Index of the column used for diff rows matching between
+ *     the old and new table
+ * @param comparisonCol Index of the column whose diff value will be appended as
+ *     a new column in the merged table and used for sorting by default
  * @param addColumnType The type of an additional column at the end for sorting
  *        purpose.
  * @param addColumnLabel The label of an additional column at the end for
  *        sorting purpose.
- * @param sortColumn Columns used for sorting the created data table.
+ * @param sortColumns Columns used for sorting the created data table.
  * @param hiddenColumns Number of hidden columns in the created data table.
  * @param formatDiffInfo Define hasColor and isLargeBetter for the range of the
  *        column. If all values are true in 8 and false in all other ranges, it
@@ -148,7 +148,7 @@ export function computeDiffTable(
     oldTable: google.visualization.DataTable,
     newTable: google.visualization.DataTable, referenceCol: number,
     comparisonCol: number, addColumnType: string, addColumnLabel: string,
-    sortColumn: google.visualization.SortByColumn[], hiddenColumns: number[],
+    sortColumns: google.visualization.SortByColumn[], hiddenColumns: number[],
     formatDiffInfo: FormatDiffInfo[],
     formatValueInfo: FormatValueInfo[]): google.visualization.DataView {
   const colsCount = oldTable.getNumberOfColumns();
@@ -182,8 +182,8 @@ export function computeDiffTable(
   const diffView = new google.visualization.DataView(diffTable);
   if (numDiffRows > 0) {
     diffView.setRows(0, numDiffRows - 1);
-    sortColumn.push({column: colsCount, desc: true});
-    diffView.setRows(diffView.getSortedRows(sortColumn));
+    sortColumns.push({column: colsCount, desc: true});
+    diffView.setRows(diffView.getSortedRows(sortColumns));
   }
 
   hiddenColumns.push(colsCount);
@@ -230,12 +230,12 @@ function mergeSortTables(
       for (let colIndex = 0; colIndex < colsCount; colIndex++) {
         if (colIndex !== 0 && oldTable.getColumnType(colIndex) === 'number') {
           const baseVal = oldTable.getValue(oldRow, colIndex);
-          const diffVal = newTable.getValue(newRow, colIndex) -
-              oldTable.getValue(oldRow, colIndex);
+          const diffVal = newTable.getValue(newRow, colIndex) - baseVal;
           diffTable.setCell(
               rowIndex, colIndex,
-              formatValue(baseVal, colIndex, formatValueInfo) +
-                  formatDiff(diffVal, baseVal, colIndex, formatDiffInfo));
+              functions.formatValue(baseVal, colIndex, formatValueInfo) +
+                  functions.formatDiff(
+                      diffVal, baseVal, colIndex, formatDiffInfo));
         } else {  // Use oldTable's string values, or rank.
           diffTable.setCell(
               rowIndex, colIndex, oldTable.getValue(oldRow, colIndex));
@@ -250,11 +250,12 @@ function mergeSortTables(
       for (let colIndex = 0; colIndex < colsCount; colIndex++) {
         if (colIndex !== 0 && oldTable.getColumnType(colIndex) === 'number') {
           const baseVal = oldTable.getValue(oldRow, colIndex);
-          const diffVal = -oldTable.getValue(oldRow, colIndex);
+          const diffVal = -baseVal;
           diffTable.setCell(
               rowIndex, colIndex,
-              formatValue(baseVal, colIndex, formatValueInfo) +
-                  formatDiff(diffVal, baseVal, colIndex, formatDiffInfo));
+              functions.formatValue(baseVal, colIndex, formatValueInfo) +
+                  functions.formatDiff(
+                      diffVal, baseVal, colIndex, formatDiffInfo));
         } else {  // Use oldTable's string values, or rank.
           diffTable.setCell(
               rowIndex, colIndex, oldTable.getValue(oldRow, colIndex));
@@ -271,8 +272,9 @@ function mergeSortTables(
           const diffVal = newTable.getValue(newRow, colIndex);
           diffTable.setCell(
               rowIndex, colIndex,
-              formatValue(baseVal, colIndex, formatValueInfo) +
-                  formatDiff(diffVal, baseVal, colIndex, formatDiffInfo));
+              functions.formatValue(baseVal, colIndex, formatValueInfo) +
+                  functions.formatDiff(
+                      diffVal, baseVal, colIndex, formatDiffInfo));
         } else {  // Use newTable's string values, or rank.
           diffTable.setCell(
               rowIndex, colIndex, newTable.getValue(newRow, colIndex));
@@ -434,3 +436,13 @@ export function computeGroupView(
   numberFormatter.format(dataGroup, 1);
   return new google.visualization.DataView(dataGroup);
 }
+
+/**
+ * Export object used for testing dependency injection
+ * So formatValue and formatDiff can be spyed
+ */
+export const functions = {
+  formatValue,
+  formatDiff,
+  mergeSortTables,
+};
