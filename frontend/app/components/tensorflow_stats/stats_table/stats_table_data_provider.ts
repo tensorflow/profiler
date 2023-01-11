@@ -201,7 +201,7 @@ export class StatsTableDataProvider extends DefaultDataProvider {
         /* comparisonCol= */ 8,
         /* addColumnType= */ 'number',
         /* addColumnLabel= */ 'Diff total self time',
-        /* sortColumn= */ sortColumn,
+        /* sortColumns= */ sortColumn,
         /* hiddenColumns= */ hiddenColumn,
         /* formatDiffInfo= */ formatDiffInfo,
         /* formatValueInfo= */ formatValueInfo);
