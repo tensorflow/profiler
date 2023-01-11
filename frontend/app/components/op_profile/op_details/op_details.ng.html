@@ -22,25 +22,25 @@
             </div>
           </div>
         </div>
-        <div class="info" [hidden]="!memoryBandwidthUtilization">
+        <div class="info" [hidden]="!bandwidthUtilizations[memBwType.MEM_BW_TYPE_ALL]">
           <div class="title">Memory bandwidth utilization:</div>
           <div class="bar-container">
             <div
               class="bar"
-              [style.width]="memoryBandwidthUtilization"
-              [style.background-color]="bwColor">
-              &nbsp;{{memoryBandwidthUtilization}}
+              [style.width]="bandwidthUtilizations[memBwType.MEM_BW_TYPE_ALL]"
+              [style.background-color]="bwColors[memBwType.MEM_BW_TYPE_ALL]">
+              &nbsp;{{bandwidthUtilizations[memBwType.MEM_BW_TYPE_ALL]}}
             </div>
           </div>
         </div>
-        <div class="info" [hidden]="!hbmBandwidthUtilization">
+        <div class="info" [hidden]="!bandwidthUtilizations[memBwType.MEM_BW_TYPE_HBM_RW]">
           <div class="title">HBM bandwidth utilization:</div>
           <div class="bar-container">
             <div
               class="bar"
-              [style.width]="hbmBandwidthUtilization"
-              [style.background-color]="hbmBwColor">
-              &nbsp;{{hbmBandwidthUtilization}}
+              [style.width]="bandwidthUtilizations[memBwType.MEM_BW_TYPE_HBM_RW]"
+              [style.background-color]="bwColors[memBwType.MEM_BW_TYPE_HBM_RW]">
+              &nbsp;{{bandwidthUtilizations[memBwType.MEM_BW_TYPE_HBM_RW]}}
             </div>
           </div>
         </div>
@@ -48,13 +48,13 @@
           <div class="title">FLOP rate (per core):</div>
           <code class="expression">{{flopsRate}}</code>
         </div>
-        <div class="info" [hidden]="!memoryBandwidth">
+        <div class="info" [hidden]="!bandwidths[memBwType.MEM_BW_TYPE_ALL]">
           <div class="title">Memory bandwidth (per core):</div>
-          <code class="expression">{{memoryBandwidth}}</code>
+          <code class="expression">{{bandwidths[memBwType.MEM_BW_TYPE_ALL]}}</code>
         </div>
-        <div class="info" [hidden]="!hbmBandwidth">
+        <div class="info" [hidden]="!bandwidths[memBwType.MEM_BW_TYPE_HBM_RW]">
           <div class="title">HBM bandwidth (per core):</div>
-          <code class="expression">{{hbmBandwidth}}</code>
+          <code class="expression">{{bandwidths[memBwType.MEM_BW_TYPE_HBM_RW]}}</code>
         </div>
         <div class="info" [hidden]="!expression">
           <div class="title">XLA expression:</div>
