@@ -42,6 +42,7 @@ ts_library(
     ],
     deps = [
         "@org_xprof//frontend/app/common/interfaces",
+        "@org_xprof//frontend/app/common/interfaces:op_metrics_jspb_proto",
         "@org_xprof//frontend/app/common/interfaces:op_profile_proto_defs",
         "@org_xprof//frontend/app/common/utils",
     ],

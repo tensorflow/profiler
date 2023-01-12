@@ -1,7 +1,8 @@
+import {Store} from '@ngrx/store';
+import {MemBwType} from 'org_xprof/frontend/app/common/interfaces/op_metrics.proto';
 import {PodStatsRecord, SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 import {OpProfileNode} from 'org_xprof/frontend/app/common/interfaces/op_profile_node';
-import {Store} from '@ngrx/store';
 import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
 
 const PRIMITIVE_TYPE_BYTE_SIZE: {[key: string]: number} = {
@@ -194,16 +195,13 @@ export function flopsRate(node: OpProfileNode): number {
  * Computes a memory bandwidth utilization.
  */
 export function memoryBandwidthUtilization(
-    node: OpProfileNode, isHbm: boolean): number {
+    node: OpProfileNode, memIndex: MemBwType): number {
   // NaN indicates undefined memory bandwidth utilization (the profile was
   // collected from older versions of profiler).
-  if (isHbm) {
-    if (!node || !node.metrics || !node.metrics.hbmBandwidthUtil) return NaN;
-    return node.metrics.hbmBandwidthUtil;
-  } else {
-    if (!node || !node.metrics || !node.metrics.memoryBandwidthUtil) return NaN;
-    return node.metrics.memoryBandwidthUtil;
+  if (!node?.metrics?.bandwidthUtils?.[memIndex]) {
+    return NaN;
   }
+  return node.metrics.bandwidthUtils[memIndex];
 }
 
 /**
@@ -229,15 +227,9 @@ export function hasFlopsUtilization(node: OpProfileNode): boolean {
 /**
  * Returns whether a node has memory bandwidth utilization.
  */
-export function hasMemoryBandwidthUtilization(node: OpProfileNode): boolean {
-  return !!node && !!node.metrics && !!node.metrics.memoryBandwidthUtil;
-}
-
-/**
- * Returns whether a node has HBM bandwidth utilization.
- */
-export function hasHbmBandwidthUtilization(node: OpProfileNode): boolean {
-  return !!node && !!node.metrics && !!node.metrics.hbmBandwidthUtil;
+export function hasBandwidthUtilization(
+    node: OpProfileNode, memIndex: MemBwType): boolean {
+  return !!node?.metrics?.bandwidthUtils?.[memIndex];
 }
 
 /**
@@ -262,7 +254,8 @@ export function timeWasted(node: OpProfileNode): number {
       (node.metrics.time || 0) *
       (1 -
        Math.max(
-           flopsUtilization(node), memoryBandwidthUtilization(node, false))));
+           flopsUtilization(node),
+           memoryBandwidthUtilization(node, MemBwType.MEM_BW_TYPE_ALL))));
 }
 
 /**
