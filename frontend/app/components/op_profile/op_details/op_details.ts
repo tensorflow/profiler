@@ -26,12 +26,15 @@ export class OpDetails {
   flopsRate: string = '';
   flopsUtilization: string = '';
   flopsColor: string = '';
-  memoryBandwidth: string = '';
-  memoryBandwidthUtilization: string = '';
-  bwColor: string = '';
-  hbmBandwidth: string = '';
-  hbmBandwidthUtilization: string = '';
-  hbmBwColor: string = '';
+  bandwidths: string[] =
+      Array.from<string>({length: utils.MemBwType.MEM_BW_TYPE_MAX + 1})
+          .fill('');
+  bandwidthUtilizations: string[] =
+      Array.from<string>({length: utils.MemBwType.MEM_BW_TYPE_MAX + 1})
+          .fill('');
+  bwColors: string[] =
+      Array.from<string>({length: utils.MemBwType.MEM_BW_TYPE_MAX + 1})
+          .fill('');
   expression: string = '';
   provenance: string = '';
   fused: boolean = false;
@@ -40,6 +43,7 @@ export class OpDetails {
   dimensions: Node.XLAInstruction.LayoutAnalysis.Dimension[] = [];
   computationPrimitiveSize: string = '';
   selectedOpNodeChain: string[] = [];
+  memBwType = utils.MemBwType;
 
   constructor(private readonly store: Store<{}>) {
     this.store.select(getActiveOpProfileNodeState)
@@ -125,37 +129,32 @@ export class OpDetails {
           flopsRate, {si: true, dp: 2, suffix: 'FLOP/s'});
     }
 
-    if (utils.hasMemoryBandwidthUtilization(this.node)) {
-      const utilization = utils.memoryBandwidthUtilization(this.node, false);
-      this.memoryBandwidthUtilization = utils.percent(utilization);
-      this.bwColor = utils.bwColor(utilization);
-    } else {
-      this.memoryBandwidthUtilization = '';
-    }
-
-    if (utils.hasHbmBandwidthUtilization(this.node)) {
-      const utilization = utils.memoryBandwidthUtilization(this.node, true);
-      this.hbmBandwidthUtilization = utils.percent(utilization);
-      this.hbmBwColor = utils.bwColor(utilization);
-    } else {
-      this.hbmBandwidthUtilization = '';
+    for (let i = utils.MemBwType.MEM_BW_TYPE_FIRST;
+         i <= utils.MemBwType.MEM_BW_TYPE_MAX; i++) {
+      if (utils.hasBandwidthUtilization(this.node, i)) {
+        const utilization = utils.memoryBandwidthUtilization(this.node, i);
+        this.bandwidthUtilizations[i] = utils.percent(utilization);
+        this.bwColors[i] = utils.bwColor(utilization);
+      } else {
+        this.bandwidthUtilizations[i] = '';
+      }
     }
 
     const memoryBW = utils.memoryBandwidth(this.node, false);
     // Memory bandwidth shouldn't be higher than 10TiB/s.
     if (isNaN(memoryBW) || memoryBW > 1E13) {
-      this.memoryBandwidth = '';
+      this.bandwidths[utils.MemBwType.MEM_BW_TYPE_ALL] = '';
     } else {
-      this.memoryBandwidth =
+      this.bandwidths[utils.MemBwType.MEM_BW_TYPE_ALL] =
           utils.humanReadableText(memoryBW, {si: true, dp: 2, suffix: 'B/s'});
     }
 
     const hbmBW = utils.memoryBandwidth(this.node, true);
     // Memory bandwidth shouldn't be higher than 10TiB/s.
     if (isNaN(hbmBW) || hbmBW > 1E13) {
-      this.hbmBandwidth = '';
+      this.bandwidths[utils.MemBwType.MEM_BW_TYPE_HBM_RW] = '';
     } else {
-      this.hbmBandwidth =
+      this.bandwidths[utils.MemBwType.MEM_BW_TYPE_HBM_RW] =
           utils.humanReadableText(hbmBW, {si: true, dp: 2, suffix: 'B/s'});
     }
 

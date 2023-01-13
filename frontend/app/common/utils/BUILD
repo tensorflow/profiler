@@ -20,6 +20,7 @@ ts_library(
     deps = [
         "@npm//@ngrx/store",
         "@org_xprof//frontend/app/common/interfaces",
+        "@org_xprof//frontend/app/common/interfaces:op_metrics_proto_defs",
         "@org_xprof//frontend/app/store",
     ],
 )

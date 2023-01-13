@@ -13,6 +13,16 @@ genrule(
 )
 
 genrule(
+    name = "op_metrics_proto_ts",
+    srcs = ["op_metrics.jsonpb_decls.d.ts.gz"],
+    outs = ["op_metrics.jsonpb_decls.d.ts"],
+    cmd = "gzip -d -c $(SRCS) > $(OUTS)",
+    visibility = [
+        "//frontend:__subpackages__", "//plugin:__subpackages__",
+    ],
+)
+
+genrule(
     name = "op_profile_proto_ts",
     srcs = ["op_profile.jsonpb_decls.d.ts.gz"],
     outs = ["op_profile.jsonpb_decls.d.ts"],
@@ -49,6 +59,13 @@ genrule(
     cmd = "gzip -d -c $(SRCS) > $(OUTS)",
     visibility = [
         "//frontend:__subpackages__", "//plugin:__subpackages__",
+    ],
+)
+
+ts_library(
+    name = "op_metrics_proto_defs",
+    srcs = [
+        ":op_metrics.jsonpb_decls.d.ts",
     ],
 )
 
