@@ -9,7 +9,6 @@ export class LogicalBuffer {
   id: number;
   size: number;
   color: number;
-  computationName: string;
   instructionName: string;
   shapeIndex: number[];
 
@@ -18,7 +17,6 @@ export class LogicalBuffer {
     this.id = toNumber(buffer.id || '0');
     this.size = toNumber(buffer.size || '0');
     this.color = toNumber(buffer.color || '0');
-    this.computationName = '';
     this.instructionName = '';
     this.shapeIndex = [];
     if (buffer.definedAt) {
@@ -32,7 +30,6 @@ export class LogicalBuffer {
    */
   private initBufferLocation(location?: proto.LogicalBufferProto.Location) {
     if (!location) return;
-    this.computationName = location.computationName || '';
     this.instructionName = location.instructionName || '';
     if (location.shapeIndex) {
       this.shapeIndex = location.shapeIndex.map((item: string) => Number(item));
