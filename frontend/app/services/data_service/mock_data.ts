@@ -1012,7 +1012,6 @@ export const DATA_PLUGIN_PROFILE_MEMORY_VIEWER_DATA = {
         'id': '0',
         'size': '1048576',
         'definedAt': {
-          'computationName': 'comp',
           'instructionName': 'ins-0',
         },
       },
@@ -1020,7 +1019,6 @@ export const DATA_PLUGIN_PROFILE_MEMORY_VIEWER_DATA = {
         'id': '1',
         'size': '2097512',
         'definedAt': {
-          'computationName': 'comp',
           'instructionName': 'ins-1',
         },
       },
@@ -1028,7 +1026,6 @@ export const DATA_PLUGIN_PROFILE_MEMORY_VIEWER_DATA = {
         'id': '2',
         'size': '3145728',
         'definedAt': {
-          'computationName': 'comp',
           'instructionName': 'ins-2',
         },
       },
@@ -1036,7 +1033,6 @@ export const DATA_PLUGIN_PROFILE_MEMORY_VIEWER_DATA = {
         'id': '3',
         'size': '5242880',
         'definedAt': {
-          'computationName': 'comp',
           'instructionName': 'ins-3',
         },
       },
@@ -1044,7 +1040,6 @@ export const DATA_PLUGIN_PROFILE_MEMORY_VIEWER_DATA = {
         'id': '4',
         'size': '1048576',
         'definedAt': {
-          'computationName': 'comp',
           'instructionName': 'ins-4',
         },
       },
@@ -1122,61 +1117,51 @@ export const DATA_PLUGIN_PROFILE_MEMORY_VIEWER_DATA = {
           {
             'kind': 'ALLOC' as any,
             'bufferId': '0',
-            'computationName': 'comp',
             'instructionName': 'ins-0',
           },
           {
             'kind': 'ALLOC' as any,
             'bufferId': '1',
-            'computationName': 'comp',
             'instructionName': 'ins-1',
           },
           {
             'kind': 'ALLOC',
             'bufferId': '2',
-            'computationName': 'comp',
             'instructionName': 'ins-2',
           },
           {
             'kind': 'ALLOC',
             'bufferId': '3',
-            'computationName': 'comp',
             'instructionName': 'ins-3',
           },
           {
             'kind': 'FREE',
             'bufferId': '3',
-            'computationName': 'comp',
             'instructionName': 'ins-3',
           },
           {
             'kind': 'FREE',
             'bufferId': '2',
-            'computationName': 'comp',
             'instructionName': 'ins-2',
           },
           {
             'kind': 'FREE',
             'bufferId': '1',
-            'computationName': 'comp',
             'instructionName': 'ins-1',
           },
           {
             'kind': 'ALLOC',
             'bufferId': '4',
-            'computationName': 'comp',
             'instructionName': 'ins-4',
           },
           {
             'kind': 'FREE',
             'bufferId': '4',
-            'computationName': 'comp',
             'instructionName': 'ins-4',
           },
           {
             'kind': 'FREE',
             'bufferId': '0',
-            'computationName': 'comp',
             'instructionName': 'ins-0',
           },
         ],

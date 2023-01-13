@@ -78,7 +78,6 @@
             "id":"0",
             "size":"1048576",
             "definedAt":{
-               "computationName":"comp",
                "instructionName":"foo",
                "shapeIndex":[
 
@@ -89,7 +88,6 @@
             "id":"1",
             "size":"2097152",
             "definedAt":{
-               "computationName":"comp",
                "instructionName":"bar",
                "shapeIndex":[
 
@@ -135,25 +133,21 @@
                {
                   "kind":"ALLOC",
                   "bufferId":"0",
-                  "computationName":"comp",
                   "instructionName":"foo"
                },
                {
                   "kind":"ALLOC",
                   "bufferId":"1",
-                  "computationName":"comp",
                   "instructionName":"bar"
                },
                {
                   "kind":"FREE",
                   "bufferId":"1",
-                  "computationName":"comp",
                   "instructionName":"bar"
                },
                {
                   "kind":"FREE",
                   "bufferId":"0",
-                  "computationName":"comp",
                   "instructionName":"foo"
                }
             ]
