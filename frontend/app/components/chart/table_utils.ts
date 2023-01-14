@@ -162,7 +162,7 @@ export function computeDiffTable(
   // have the same column types.
   for (let colIndex = 1; colIndex < colsCount; ++colIndex) {
     diffTable.addColumn({
-      'type': 'string',
+      'type': oldTable.getColumnType(colIndex),
       'label': oldTable.getColumnLabel(colIndex),
     });
   }
@@ -232,7 +232,7 @@ function mergeSortTables(
           const baseVal = oldTable.getValue(oldRow, colIndex);
           const diffVal = newTable.getValue(newRow, colIndex) - baseVal;
           diffTable.setCell(
-              rowIndex, colIndex,
+              rowIndex, colIndex, baseVal,
               functions.formatValue(baseVal, colIndex, formatValueInfo) +
                   functions.formatDiff(
                       diffVal, baseVal, colIndex, formatDiffInfo));
@@ -252,7 +252,7 @@ function mergeSortTables(
           const baseVal = oldTable.getValue(oldRow, colIndex);
           const diffVal = -baseVal;
           diffTable.setCell(
-              rowIndex, colIndex,
+              rowIndex, colIndex, baseVal,
               functions.formatValue(baseVal, colIndex, formatValueInfo) +
                   functions.formatDiff(
                       diffVal, baseVal, colIndex, formatDiffInfo));
@@ -271,7 +271,7 @@ function mergeSortTables(
           const baseVal = 0;
           const diffVal = newTable.getValue(newRow, colIndex);
           diffTable.setCell(
-              rowIndex, colIndex,
+              rowIndex, colIndex, baseVal,
               functions.formatValue(baseVal, colIndex, formatValueInfo) +
                   functions.formatDiff(
                       diffVal, baseVal, colIndex, formatDiffInfo));
