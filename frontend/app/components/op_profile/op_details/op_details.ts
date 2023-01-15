@@ -138,24 +138,14 @@ export class OpDetails {
       } else {
         this.bandwidthUtilizations[i] = '';
       }
-    }
-
-    const memoryBW = utils.memoryBandwidth(this.node, false);
-    // Memory bandwidth shouldn't be higher than 10TiB/s.
-    if (isNaN(memoryBW) || memoryBW > 1E13) {
-      this.bandwidths[utils.MemBwType.MEM_BW_TYPE_ALL] = '';
-    } else {
-      this.bandwidths[utils.MemBwType.MEM_BW_TYPE_ALL] =
-          utils.humanReadableText(memoryBW, {si: true, dp: 2, suffix: 'B/s'});
-    }
-
-    const hbmBW = utils.memoryBandwidth(this.node, true);
-    // Memory bandwidth shouldn't be higher than 10TiB/s.
-    if (isNaN(hbmBW) || hbmBW > 1E13) {
-      this.bandwidths[utils.MemBwType.MEM_BW_TYPE_HBM_RW] = '';
-    } else {
-      this.bandwidths[utils.MemBwType.MEM_BW_TYPE_HBM_RW] =
-          utils.humanReadableText(hbmBW, {si: true, dp: 2, suffix: 'B/s'});
+      const memoryBW = utils.memoryBandwidth(this.node, i);
+      // Memory bandwidth shouldn't be higher than 10TiB/s.
+      if (isNaN(memoryBW) || memoryBW > 1E13) {
+        this.bandwidths[i] = '';
+      } else {
+        this.bandwidths[i] =
+            utils.humanReadableText(memoryBW, {si: true, dp: 2, suffix: 'B/s'});
+      }
     }
 
     if (this.node.xla && this.node.xla.expression) {

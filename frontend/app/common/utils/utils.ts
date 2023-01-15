@@ -72,7 +72,6 @@ const KNOWN_TOOLS = [
  */
 export enum MemBwType {
   MEM_BW_TYPE_FIRST = NumericMemBwType.MEM_BW_TYPE_FIRST,
-  MEM_BW_TYPE_ALL = NumericMemBwType.MEM_BW_TYPE_ALL,
   MEM_BW_TYPE_HBM_RW = NumericMemBwType.MEM_BW_TYPE_HBM_RW,
   MEM_BW_TYPE_SRAM_RD = NumericMemBwType.MEM_BW_TYPE_SRAM_RD,
   MEM_BW_TYPE_SRAM_WR = NumericMemBwType.MEM_BW_TYPE_SRAM_WR,
@@ -219,13 +218,15 @@ export function memoryBandwidthUtilization(
 /**
  * Computes the memory bandwidth for operations.
  */
-export function memoryBandwidth(node: OpProfileNode, isHbm: boolean): number {
+export function memoryBandwidth(
+    node: OpProfileNode, memIndex: MemBwType): number {
   // NaN indicates undefined memory utilization (the profile was collected
   // from older versions of profiler).
-  if (!node || !node.metrics || !node.metrics.rawTime) return NaN;
+  if (!node?.metrics?.rawTime || !node?.metrics?.rawBytesAccessedArray) {
+    return NaN;
+  }
   // The unit of rawTime is picoseconds.
-  const bytes =
-      isHbm ? node.metrics.rawHbmBytesAccessed : node.metrics.rawBytesAccessed;
+  const bytes = node.metrics.rawBytesAccessedArray[memIndex];
   return (bytes || 0) * 1E12 / node.metrics.rawTime;
 }
 
@@ -267,7 +268,7 @@ export function timeWasted(node: OpProfileNode): number {
       (1 -
        Math.max(
            flopsUtilization(node),
-           memoryBandwidthUtilization(node, MemBwType.MEM_BW_TYPE_ALL))));
+           memoryBandwidthUtilization(node, MemBwType.MEM_BW_TYPE_HBM_RW))));
 }
 
 /**
