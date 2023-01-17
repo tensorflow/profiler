@@ -3,6 +3,7 @@ import * as preprocessedProto from 'org_xprof/frontend/app/common/interfaces/mem
 import {HloProtoOrNull, MemoryViewerPreprocessResultOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {HeapObject} from 'org_xprof/frontend/app/common/interfaces/heap_object';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
+import {toNumber} from 'org_xprof/frontend/app/common/utils/utils';
 import {BufferAllocation} from 'org_xprof/frontend/app/components/memory_viewer/xla/buffer_allocation';
 import {HloInstruction} from 'org_xprof/frontend/app/components/memory_viewer/xla/hlo_instruction';
 import {LogicalBuffer} from 'org_xprof/frontend/app/components/memory_viewer/xla/logical_buffer';
@@ -22,6 +23,7 @@ export class MemoryUsage {
   private readonly idToBuffer: {[key: number]: LogicalBuffer};
   private readonly idToBufferAllocation: {[key: number]: BufferAllocation};
   private readonly nameToHlo: {[key: string]: HloInstruction};
+  private readonly idToHlo: {[key: number]: HloInstruction};
   private readonly unSeenLogicalBuffers: Set<number>;
   private readonly seenBufferAllocations: Set<number>;
   private nColor: number;
@@ -58,6 +60,7 @@ export class MemoryUsage {
     this.idToBuffer = {};
     this.idToBufferAllocation = {};
     this.nameToHlo = {};
+    this.idToHlo = {};
     this.unSeenLogicalBuffers = new Set();
     this.seenBufferAllocations = new Set();
     this.nColor = 0;
@@ -102,6 +105,14 @@ export class MemoryUsage {
     } else if (preprocess) {
       // Initialize memory viewer from preprocessed data.
       this.initMemoryUsageFromPrecomputed(preprocess);
+    }
+  }
+
+  private getHlo(buffer: LogicalBuffer): HloInstruction|null {
+    if (buffer.instructionName && buffer.instructionName !== '') {
+      return this.nameToHlo[buffer.instructionName];
+    } else {
+      return this.idToHlo[buffer.id];
     }
   }
 
@@ -182,7 +193,7 @@ export class MemoryUsage {
     let shape = new Shape();
     let inst = new HloInstruction();
     if (buffer.instructionName) {
-      inst = this.nameToHlo[buffer.instructionName];
+      inst = this.getHlo(buffer) || inst;
       if (inst && inst.shape) {
         shape = inst.shape.resolveShapeIndex(buffer.shapeIndex);
       }
@@ -221,11 +232,9 @@ export class MemoryUsage {
         alloc.assigned.forEach(assigned => {
           const buffer = this.idToBuffer[assigned.logicalBufferId];
           let shape = null;
-          if (buffer.instructionName) {
-            const hlo = this.nameToHlo[buffer.instructionName];
-            if (hlo && hlo.shape) {
-              shape = hlo.shape.resolveShapeIndex(buffer.shapeIndex);
-            }
+          const hlo = this.getHlo(buffer);
+          if (hlo && hlo.shape) {
+            shape = hlo.shape.resolveShapeIndex(buffer.shapeIndex);
           }
           this.addHeapObject(buffer, alloc.groupName);
           unpadded += shape ? shape.unpaddedHeapSizeBytes() : buffer.size;
@@ -267,12 +276,11 @@ export class MemoryUsage {
           this.seenBufferAllocations.add(alloc.index);
         }
         let shape: Shape|null = null;
-        if (buffer.instructionName && buffer.instructionName !== '') {
-          const hlo = this.nameToHlo[buffer.instructionName];
-          if (hlo && hlo.shape) {
-            shape = hlo.shape.resolveShapeIndex(buffer.shapeIndex);
-          }
+        const hlo = this.getHlo(buffer);
+        if (hlo && hlo.shape) {
+          shape = hlo.shape.resolveShapeIndex(buffer.shapeIndex);
         }
+
         switch (event.kind) {
           // Default to 'ALLOC' when event.kind is undefined. This is because
           // by default proto3 primitive fields with default values will be
@@ -453,8 +461,12 @@ export class MemoryUsage {
     this.moduleName = hloModule.name || '';
     for (const comp of hloModule.computations || []) {
       for (const inst of comp.instructions || []) {
-        if (!inst.name) continue;
-        this.nameToHlo[inst.name] = new HloInstruction(inst);
+        if (inst.name) {
+          this.nameToHlo[inst.name] = new HloInstruction(inst);
+        }
+        if (inst.id) {
+          this.idToHlo[toNumber(inst.id)] = new HloInstruction(inst);
+        }
       }
     }
   }
