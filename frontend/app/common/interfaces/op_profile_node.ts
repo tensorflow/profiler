@@ -10,6 +10,5 @@ declare interface Metrics {
   bandwidthUtils?: number[];
   rawTime?: number;
   rawFlops?: number;
-  rawBytesAccessed?: number;
-  rawHbmBytesAccessed?: number;
+  rawBytesAccessedArray?: number[];
 }

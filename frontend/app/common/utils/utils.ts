@@ -219,13 +219,15 @@ export function memoryBandwidthUtilization(
 /**
  * Computes the memory bandwidth for operations.
  */
-export function memoryBandwidth(node: OpProfileNode, isHbm: boolean): number {
+export function memoryBandwidth(
+    node: OpProfileNode, memIndex: MemBwType): number {
   // NaN indicates undefined memory utilization (the profile was collected
   // from older versions of profiler).
-  if (!node || !node.metrics || !node.metrics.rawTime) return NaN;
+  if (!node?.metrics?.rawTime || !node?.metrics?.rawBytesAccessedArray) {
+    return NaN;
+  }
   // The unit of rawTime is picoseconds.
-  const bytes =
-      isHbm ? node.metrics.rawHbmBytesAccessed : node.metrics.rawBytesAccessed;
+  const bytes = node.metrics.rawBytesAccessedArray[memIndex];
   return (bytes || 0) * 1E12 / node.metrics.rawTime;
 }
 
