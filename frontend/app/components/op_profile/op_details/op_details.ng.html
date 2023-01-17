@@ -22,17 +22,6 @@
             </div>
           </div>
         </div>
-        <div class="info" [hidden]="!bandwidthUtilizations[memBwType.MEM_BW_TYPE_ALL]">
-          <div class="title">Memory bandwidth utilization:</div>
-          <div class="bar-container">
-            <div
-              class="bar"
-              [style.width]="bandwidthUtilizations[memBwType.MEM_BW_TYPE_ALL]"
-              [style.background-color]="bwColors[memBwType.MEM_BW_TYPE_ALL]">
-              &nbsp;{{bandwidthUtilizations[memBwType.MEM_BW_TYPE_ALL]}}
-            </div>
-          </div>
-        </div>
         <div class="info" [hidden]="!bandwidthUtilizations[memBwType.MEM_BW_TYPE_HBM_RW]">
           <div class="title">HBM bandwidth utilization:</div>
           <div class="bar-container">
@@ -69,10 +58,6 @@
         <div class="info" [hidden]="!flopsRate">
           <div class="title">FLOP rate (per core):</div>
           <code class="expression">{{flopsRate}}</code>
-        </div>
-        <div class="info" [hidden]="!bandwidths[memBwType.MEM_BW_TYPE_ALL]">
-          <div class="title">Memory bandwidth (per core):</div>
-          <code class="expression">{{bandwidths[memBwType.MEM_BW_TYPE_ALL]}}</code>
         </div>
         <div class="info" [hidden]="!bandwidths[memBwType.MEM_BW_TYPE_HBM_RW]">
           <div class="title">HBM bandwidth (per core):</div>

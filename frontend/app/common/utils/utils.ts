@@ -72,7 +72,6 @@ const KNOWN_TOOLS = [
  */
 export enum MemBwType {
   MEM_BW_TYPE_FIRST = NumericMemBwType.MEM_BW_TYPE_FIRST,
-  MEM_BW_TYPE_ALL = NumericMemBwType.MEM_BW_TYPE_ALL,
   MEM_BW_TYPE_HBM_RW = NumericMemBwType.MEM_BW_TYPE_HBM_RW,
   MEM_BW_TYPE_SRAM_RD = NumericMemBwType.MEM_BW_TYPE_SRAM_RD,
   MEM_BW_TYPE_SRAM_WR = NumericMemBwType.MEM_BW_TYPE_SRAM_WR,
@@ -269,7 +268,7 @@ export function timeWasted(node: OpProfileNode): number {
       (1 -
        Math.max(
            flopsUtilization(node),
-           memoryBandwidthUtilization(node, MemBwType.MEM_BW_TYPE_ALL))));
+           memoryBandwidthUtilization(node, MemBwType.MEM_BW_TYPE_HBM_RW))));
 }
 
 /**
