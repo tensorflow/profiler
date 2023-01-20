@@ -45,6 +45,7 @@ export class OpTableEntry implements OnChanges {
   percent: string = '';
   provenance: string = '';
   timeWasted: string = '';
+  hbmFraction: string = '';
   flopsUtilization: string = '';
   numLeftOut: number = 0;
 
@@ -77,6 +78,11 @@ export class OpTableEntry implements OnChanges {
         this.node.xla.provenance.replace(/^.*(:|\/)/, '') :
         '';
     this.timeWasted = utils.percent(utils.timeWasted(this.node));
+    const hbmFraction =
+        (this.node && this.node.metrics && this.node.metrics.memFractions) ?
+        this.node.metrics.memFractions[utils.MemBwType.MEM_BW_TYPE_HBM_RW] :
+        NaN;
+    this.hbmFraction = utils.percent(hbmFraction);
     this.flopsUtilization = utils.percent(utils.flopsUtilization(this.node));
   }
 

@@ -11,4 +11,5 @@ declare interface Metrics {
   rawTime?: number;
   rawFlops?: number;
   rawBytesAccessedArray?: number[];
+  memFractions?: number[];
 }
