@@ -21,6 +21,7 @@ ts_library(
         "@npm//@ngrx/store",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/interfaces:op_metrics_proto_defs",
+        "@org_xprof//frontend/app/common/interfaces:op_profile_proto_defs",
         "@org_xprof//frontend/app/store",
     ],
 )

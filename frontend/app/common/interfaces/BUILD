@@ -23,16 +23,6 @@ genrule(
 )
 
 genrule(
-    name = "op_profile_proto_ts",
-    srcs = ["op_profile.jsonpb_decls.d.ts.gz"],
-    outs = ["op_profile.jsonpb_decls.d.ts"],
-    cmd = "gzip -d -c $(SRCS) > $(OUTS)",
-    visibility = [
-        "//frontend:__subpackages__", "//plugin:__subpackages__",
-    ],
-)
-
-genrule(
     name = "xla_data_proto_ts",
     srcs = ["xla_data.jsonpb_decls.d.ts.gz"],
     outs = ["xla_data.jsonpb_decls.d.ts"],
@@ -105,13 +95,12 @@ ts_library(
         "capture_profile.ts",
         "data_table.ts",
         "diagnostics.ts",
+        "graph_viewer.ts",
         "heap_object.ts",
         "navigation_event.ts",
-        "op_profile_node.ts",
         "summary_info.ts",
         "tool.ts",
         "window.ts",
-        "graph_viewer.ts",
     ],
     deps = [
         ":memory_profile_proto_defs",

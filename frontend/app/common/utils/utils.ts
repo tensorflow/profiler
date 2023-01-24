@@ -1,8 +1,8 @@
 import {Store} from '@ngrx/store';
 import {NumericMemBwType} from 'org_xprof/frontend/app/common/interfaces/op_metrics.jsonpb_decls';
+import {Node as OpProfileNode} from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
 import {PodStatsRecord, SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
-import {OpProfileNode} from 'org_xprof/frontend/app/common/interfaces/op_profile_node';
 import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
 
 const PRIMITIVE_TYPE_BYTE_SIZE: {[key: string]: number} = {
