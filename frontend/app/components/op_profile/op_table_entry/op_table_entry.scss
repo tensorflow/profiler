@@ -59,6 +59,12 @@
   width: 60px;
 }
 
+.hbmUtilization {
+  line-height: 20px;
+  font-size: smaller;
+  width: 60px;
+}
+
 .time {
   padding-left: 20px !important;
   width: 80px;
@@ -84,6 +90,18 @@
 }
 
 .flame-color-circle {
+  margin: 10px 20px 10px 10px;
+  width: 16px;
+  height: 16px;
+  border-radius: 8px;
+}
+
+.hbmUtilization {
+  align-self: stretch;
+  text-align: right;
+}
+
+.hbm-flame-color-circle {
   margin: 10px 20px 10px 10px;
   width: 16px;
   height: 16px;

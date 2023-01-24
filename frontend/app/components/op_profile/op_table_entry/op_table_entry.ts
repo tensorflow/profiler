@@ -46,6 +46,8 @@ export class OpTableEntry implements OnChanges {
   provenance: string = '';
   timeWasted: string = '';
   flopsUtilization: string = '';
+  hbmUtilization: string = '';
+  hbmFlameColor: string = '';
   numLeftOut: number = 0;
 
   constructor(private readonly store: Store<{}>) {}
@@ -78,6 +80,10 @@ export class OpTableEntry implements OnChanges {
         '';
     this.timeWasted = utils.percent(utils.timeWasted(this.node));
     this.flopsUtilization = utils.percent(utils.flopsUtilization(this.node));
+    const hbmUtilization = utils.memoryBandwidthUtilization(
+        this.node, utils.MemBwType.MEM_BW_TYPE_HBM_RW);
+    this.hbmUtilization = utils.percent(hbmUtilization);
+    this.hbmFlameColor = utils.bwColor(hbmUtilization);
   }
 
   private get90ChildrenIndex() {
