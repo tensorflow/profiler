@@ -29,15 +29,15 @@ const COLORS_FOR_TPU = [
   'blue',
 ];
 const COLORS_FOR_GPU = [
-  '#9CCC65',
-  '#FFEB3B',
-  'pink',
-  '#64B5F6',
-  '#FF9800',
-  '#B71C1C',
-  'black',
-  '#00695C',
-  '#5E35B1',
+  '#4b7b4b',
+  '#8d6708',
+  '#d252b2',
+  '#2a7ab0',
+  '#e65722',
+  '#8b0000',
+  '#000000',
+  '#005555',
+  '#483d8b',
 ];
 
 /** A step-time graph view component. */
