@@ -252,9 +252,10 @@ export function percent(fraction: number): string {
   if (isNaN(fraction)) return '-';
 
   if (fraction < 0.00001) {
-    return '0.00%';
+    return '0.0%';
   } else {
-    return `${Math.round(fraction * 100)}%`;
+    // Round to 1 decimal place.
+    return `${(fraction * 100).toFixed(1)}%`;
   }
 }
 
