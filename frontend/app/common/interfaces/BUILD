@@ -13,16 +13,6 @@ genrule(
 )
 
 genrule(
-    name = "op_metrics_proto_ts",
-    srcs = ["op_metrics.jsonpb_decls.d.ts.gz"],
-    outs = ["op_metrics.jsonpb_decls.d.ts"],
-    cmd = "gzip -d -c $(SRCS) > $(OUTS)",
-    visibility = [
-        "//frontend:__subpackages__", "//plugin:__subpackages__",
-    ],
-)
-
-genrule(
     name = "xla_data_proto_ts",
     srcs = ["xla_data.jsonpb_decls.d.ts.gz"],
     outs = ["xla_data.jsonpb_decls.d.ts"],
