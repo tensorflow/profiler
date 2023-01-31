@@ -15,7 +15,7 @@ export class OpProfileData {
 
   update(node?: Node) {
     if (node) {
-      const flopUtilization = utils.flopsUtilization(node);
+      const flopUtilization = utils.flopsUtilization(node, node);
       this.flopsColor = utils.flopsColor(flopUtilization);
       this.flopsUtilizationPercent = utils.percent(flopUtilization);
 

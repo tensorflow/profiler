@@ -44,6 +44,7 @@
     *ngFor="let childNode of children"
     [level]="level + 1"
     [node]="childNode"
+    [rootNode]="rootNode"
     [selectedNode]="selectedNode"
     [byWasted]="byWasted"
     [showP90]="showP90"

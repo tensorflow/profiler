@@ -18,6 +18,7 @@ export class OpDetails {
 
   /** the session id */
   @Input() sessionId = '';
+  @Input() rootNode?: Node;
 
   node?: Node;
   color: string = '';
@@ -104,16 +105,16 @@ export class OpDetails {
 
   update(node: Node|null) {
     this.node = node || undefined;
-    if (!this.node) {
+    if (!this.node || !this.rootNode) {
       return;
     }
-    this.color =
-        utils.flameColor(utils.flopsUtilization(this.node), 0.7, 1, Math.sqrt);
+    this.color = utils.flameColor(
+        utils.flopsUtilization(this.node, this.rootNode), 0.7, 1, Math.sqrt);
     this.name = this.node.name || '';
     this.subheader = this.getSubheader();
 
     if (utils.hasFlopsUtilization(this.node)) {
-      const flopsUtilization = utils.flopsUtilization(this.node);
+      const flopsUtilization = utils.flopsUtilization(this.node, this.rootNode);
       this.flopsUtilization = utils.percent(flopsUtilization);
       this.flopsColor = utils.flopsColor(flopsUtilization);
     } else {
