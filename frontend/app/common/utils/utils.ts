@@ -180,14 +180,28 @@ export function bwColor(fraction: number): string {
 }
 
 /**
+ * Computes the fraction of time spent on this node relative to root node.
+ */
+export function timeFraction(
+    node: OpProfileNode, rootNode: OpProfileNode): number {
+  if (!node || !node.metrics || !node.metrics.rawTime || !rootNode ||
+      !rootNode.metrics || !rootNode.metrics.rawTime) {
+    return 0;
+  }
+  return node.metrics.rawTime / rootNode.metrics.rawTime;
+}
+
+/**
  * Computes the utilization for operations.
  */
-export function flopsUtilization(node: OpProfileNode): number {
+export function flopsUtilization(
+    node: OpProfileNode, rootNode: OpProfileNode): number {
   // NaN indicates undefined utilization for fused operations (we can't
   // measure performance inside a fusion). It could also indicate operations
   // with zero time, but they currently don't appear in the profile.
-  if (!node || !node.metrics || !node.metrics.time) return NaN;
-  return (node.metrics.flops || 0) / node.metrics.time;
+  const timeFractionLocal = timeFraction(node, rootNode);
+  if (!node || !node.metrics || !timeFractionLocal) return NaN;
+  return (node.metrics.flops || 0) / timeFractionLocal;
 }
 
 /**
@@ -234,7 +248,7 @@ export function memoryBandwidth(
  * Returns whether a node has flops utilization.
  */
 export function hasFlopsUtilization(node: OpProfileNode): boolean {
-  return !!node && !!node.metrics && !!node.metrics.time;
+  return !!node && !!node.metrics && !!node.metrics.flops;
 }
 
 /**
@@ -262,13 +276,14 @@ export function percent(fraction: number): string {
 /**
  * Computes wasted time.
  */
-export function timeWasted(node: OpProfileNode): number {
+export function timeWasted(
+    node: OpProfileNode, rootNode: OpProfileNode): number {
   if (!node || !node.metrics) return NaN;
   return (
-      (node.metrics.time || 0) *
+      (timeFraction(node, rootNode) || 0) *
       (1 -
        Math.max(
-           flopsUtilization(node),
+           flopsUtilization(node, rootNode),
            memoryBandwidthUtilization(node, MemBwType.MEM_BW_TYPE_HBM_RW))));
 }
 
