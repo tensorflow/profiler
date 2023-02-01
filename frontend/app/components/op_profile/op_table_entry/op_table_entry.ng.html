@@ -8,6 +8,7 @@
     <div class="row-focus" [hidden]="node !== selectedNode"></div>
     <span class="time">{{percent}}</span>
     <span class="wasted">{{timeWasted}}</span>
+    <span class="hbmFraction">{{hbmFraction}}</span>
     <span class="name" [style.padding-left]="offset">
       <span class="disclosure">
         <span [hidden]="!children.length">

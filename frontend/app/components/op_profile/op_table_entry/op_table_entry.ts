@@ -48,6 +48,7 @@ export class OpTableEntry implements OnChanges {
   percent: string = '';
   provenance: string = '';
   timeWasted: string = '';
+  hbmFraction = '';
   flopsUtilization: string = '';
   hbmUtilization: string = '';
   hbmFlameColor: string = '';
@@ -85,6 +86,15 @@ export class OpTableEntry implements OnChanges {
     this.timeWasted = utils.percent(utils.timeWasted(this.node, this.rootNode));
     this.flopsUtilization =
         utils.percent(utils.flopsUtilization(this.node, this.rootNode));
+
+    if (this.node?.metrics?.rawBytesAccessedArray &&
+        this.rootNode?.metrics?.rawBytesAccessedArray) {
+      const hbmType = utils.MemBwType.MEM_BW_TYPE_HBM_RW;
+      const hbmFraction = this.node.metrics.rawBytesAccessedArray[hbmType] /
+          this.rootNode.metrics.rawBytesAccessedArray[hbmType];
+      this.hbmFraction = utils.percent(hbmFraction);
+    }
+
     const hbmUtilization = utils.memoryBandwidthUtilization(
         this.node, utils.MemBwType.MEM_BW_TYPE_HBM_RW);
     this.hbmUtilization = utils.percent(hbmUtilization);
