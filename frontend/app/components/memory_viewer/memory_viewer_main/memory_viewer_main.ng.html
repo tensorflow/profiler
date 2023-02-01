@@ -13,20 +13,6 @@
         help reduce the memory footprint.
       </div>
     </div>
-    <div class="control">
-      <mat-checkbox [(ngModel)]="includeNotSimulated" (ngModelChange)="update()">
-        Include not simulated
-        <mat-icon
-          class="tooltip-icon"
-          matTooltip="Include all logical buffers that haven't appeared in HeapSimulatorTraces.
-                      We simply sum up all those buffer allocations, and report the additional
-                      unpadded heap sizes as the sum of those unsimulated buffer allocations *
-                      (total unpadded logical buffer sizes / total padded logical buffer sizes)."
-          matTooltipPosition="above">
-            info
-        </mat-icon>
-      </mat-checkbox>
-    </div>
   </div>
 </div>
 
