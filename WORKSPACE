@@ -14,6 +14,15 @@ http_archive(
 )
 
 http_archive(
+    name = "com_google_absl_py",
+    sha256 = "5b476479811ed0b8c57bc0b3f517bc379c31e2fd13e12743ba0984de0e3f254a",
+    strip_prefix = "abseil-py-127c98870edf5f03395ce9cf886266fa5f24455e",
+    urls = [
+        "https://github.com/abseil/abseil-py/archive/127c98870edf5f03395ce9cf886266fa5f24455e.tar.gz",
+    ],
+)
+
+http_archive(
     name = "rules_rust",
     sha256 = "acd759b6fe99a3ae518ea6380e8e95653d27bb9e4a6a2a443abf48cb51fecaa7",
     strip_prefix = "rules_rust-d468cfa4820a156f850dab957b895d36ee0f4beb",
