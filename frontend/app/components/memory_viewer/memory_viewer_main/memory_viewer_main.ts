@@ -45,7 +45,6 @@ export class MemoryViewerMain implements OnDestroy, OnChanges {
   selectedIndexBySize: number = -1;
   selectedIndexByPaddingSize: number = -1;
   unpaddedHeapSizes: number[] = [];
-  includeNotSimulated = true;
   hasTrace = false;
   diagnostics: Diagnostics = {info: [], warnings: [], errors: []};
 
@@ -139,8 +138,8 @@ export class MemoryViewerMain implements OnDestroy, OnChanges {
 
   update() {
     this.usage = new MemoryUsage(
-        this.hloProto, this.memoryViewerPreprocessResult, this.memorySpaceColor,
-        this.includeNotSimulated);
+        this.hloProto, this.memoryViewerPreprocessResult,
+        this.memorySpaceColor);
     if (this.usage.diagnostics.errors.length > 0) {
       return;
     }

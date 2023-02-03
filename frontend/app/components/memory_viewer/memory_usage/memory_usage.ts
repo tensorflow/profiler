@@ -55,7 +55,7 @@ export class MemoryUsage {
   // Only one of hloProto or preprocess is valid to construct MemoryUsage.
   constructor(
       hloProto: HloProtoOrNull, preprocess: MemoryViewerPreprocessResultOrNull,
-      memorySpaceColor: number, private readonly includeNotSimulated: boolean) {
+      memorySpaceColor: number) {
     this.buffers = [];
     this.idToBuffer = {};
     this.idToBufferAllocation = {};
@@ -205,51 +205,6 @@ export class MemoryUsage {
   }
 
   /**
-   * Calculate the indefinite memory usage from the unseen logical buffers.
-   * Assume they have indefinite lifetime if they are not in thread-local buffer
-   * allocations.
-   * @private
-   */
-  private findIndefiniteMemoryUsage(buffers: Set<number>, color: number):
-      MemoryUsageBytes {
-    const usageBytes: MemoryUsageBytes = {padded: 0, unpadded: 0};
-    for (const id of buffers) {
-      const alloc = this.idToBufferAllocation[id];
-      if (!alloc || alloc.isThreadLocal) {
-        continue;
-      }
-      if (!this.idToBuffer[id] || this.idToBuffer[id].color !== color) continue;
-
-      if (!this.seenBufferAllocations.has(alloc.index)) {
-        usageBytes.padded += alloc.size;
-        this.seenBufferAllocations.add(alloc.index);
-
-        // Add all logical buffers assigned to the allocation to HeapObjects.
-        // Since we don't know the heap simulator traces of those buffers,
-        // simply estimate the total padding size with average padding.
-        let padded = 0;
-        let unpadded = 0;
-        alloc.assigned.forEach(assigned => {
-          const buffer = this.idToBuffer[assigned.logicalBufferId];
-          let shape = null;
-          const hlo = this.getHlo(buffer);
-          if (hlo && hlo.shape) {
-            shape = hlo.shape.resolveShapeIndex(buffer.shapeIndex);
-          }
-          this.addHeapObject(buffer, alloc.groupName);
-          unpadded += shape ? shape.unpaddedHeapSizeBytes() : buffer.size;
-          padded += buffer.size;
-        });
-        if (padded) {
-          usageBytes.unpadded += Math.floor(alloc.size * unpadded / padded);
-        }
-      }
-    }
-    this.indefiniteMemoryUsageBytes = usageBytes;
-    return usageBytes;
-  }
-
-  /**
    * Finds the peak memory usage from the `HeapSimulatorTrace`.
    */
   private findPeakMemoryUsage(
@@ -333,25 +288,10 @@ export class MemoryUsage {
     this.peakLogicalBuffers = peakLogicalBuffers;
     this.peakHeapSizePosition = peakHeapSizePosition;
 
-    if (this.includeNotSimulated) {
-      const indefiniteMemoryUsageBytes =
-          this.findIndefiniteMemoryUsage(this.unSeenLogicalBuffers, color);
-      this.peakHeapSizeBytes =
-          peakHeapSizeBytes + indefiniteMemoryUsageBytes.padded;
-      this.unpaddedPeakHeapSizeBytes =
-          unpaddedPeakHeapSizeBytes + indefiniteMemoryUsageBytes.unpadded;
-      const addendPadded = utils.bytesToMiB(indefiniteMemoryUsageBytes.padded);
-      this.heapSizes = heapSizes.map(item => item + addendPadded);
-      const addendUnpadded =
-          utils.bytesToMiB(indefiniteMemoryUsageBytes.unpadded);
-      this.unpaddedHeapSizes =
-          unpaddedHeapSizes.map(item => item + addendUnpadded);
-    } else {
-      this.peakHeapSizeBytes = peakHeapSizeBytes;
-      this.unpaddedPeakHeapSizeBytes = unpaddedPeakHeapSizeBytes;
-      this.heapSizes = heapSizes;
-      this.unpaddedHeapSizes = unpaddedHeapSizes;
-    }
+    this.peakHeapSizeBytes = peakHeapSizeBytes;
+    this.unpaddedPeakHeapSizeBytes = unpaddedPeakHeapSizeBytes;
+    this.heapSizes = heapSizes;
+    this.unpaddedHeapSizes = unpaddedHeapSizes;
   }
 
   private getHeapTraceByColorAndBufferAllocationIndex(
