@@ -45,11 +45,11 @@
       <mat-form-field class="full-width">
         <input
           matInput
-          placeholder="Graph width (1-10)"
+          placeholder="Graph width"
+          matTooltip="Suggest width < 10"
           aria-label="graph-width"
           type="number"
           min="1"
-          max="10"
           step="1"
           [ngModel]="params.graphWidth"
           (ngModelChange)="onUpdateParam({ graphWidth: $event })"
