@@ -14,7 +14,6 @@ xprof_ng_module(
         ":device_side_analysis_detail_css",
         "device_side_analysis_detail.ng.html",
     ],
-    
     deps = [
         ":device_side_analysis_detail_data_provider",
         "@npm//@angular/core",
@@ -35,14 +34,10 @@ ts_library(
     ],
 )
 
-
-
 sass_binary(
     name = "device_side_analysis_detail_css",
     src = "device_side_analysis_detail.scss",
-
     sourcemap = False,
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

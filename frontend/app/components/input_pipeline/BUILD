@@ -17,9 +17,9 @@ xprof_ng_module(
     deps = [
         "@npm//@angular/core",
         "@npm//@angular/router",
-        "@org_xprof//frontend/app/common/angular:angular_material_divider",
         "@npm//@ngrx/store",
         "@npm//rxjs",
+        "@org_xprof//frontend/app/common/angular:angular_material_divider",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/utils",
         "@org_xprof//frontend/app/components/diagnostics_view",
@@ -30,14 +30,10 @@ xprof_ng_module(
     ],
 )
 
-
-
 sass_binary(
     name = "input_pipeline_css",
     src = "input_pipeline.scss",
-
     sourcemap = False,
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],
@@ -46,7 +42,6 @@ sass_binary(
 sass_library(
     name = "common_css",
     srcs = ["input_pipeline.scss"],
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

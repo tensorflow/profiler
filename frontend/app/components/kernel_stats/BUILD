@@ -32,8 +32,8 @@ xprof_ng_module(
     ],
     deps = [
         "@npm//@angular/core",
-        "@org_xprof//frontend/app/common/angular:angular_material_divider",
         "@npm//@ngrx/store",
+        "@org_xprof//frontend/app/common/angular:angular_material_divider",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/components/controls/export_as_csv",
         "@org_xprof//frontend/app/components/kernel_stats/kernel_stats_table",
@@ -41,14 +41,10 @@ xprof_ng_module(
     ],
 )
 
-
-
 sass_binary(
     name = "kernel_stats_css",
     src = "kernel_stats.scss",
-
     sourcemap = False,
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

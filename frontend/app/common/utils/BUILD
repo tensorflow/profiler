@@ -25,5 +25,3 @@ ts_library(
         "@org_xprof//frontend/app/store",
     ],
 )
-
-

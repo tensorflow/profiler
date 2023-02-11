@@ -17,6 +17,7 @@ xprof_ng_module(
         "@npm//@angular/common",
         "@npm//@angular/core",
         "@npm//@angular/forms",
+        "@npm//rxjs",
         "@org_xprof//frontend/app/common/angular:angular_material_button",
         "@org_xprof//frontend/app/common/angular:angular_material_checkbox",
         "@org_xprof//frontend/app/common/angular:angular_material_core",
@@ -26,7 +27,6 @@ xprof_ng_module(
         "@org_xprof//frontend/app/common/angular:angular_material_select",
         "@org_xprof//frontend/app/common/angular:angular_material_sidenav",
         "@org_xprof//frontend/app/common/angular:angular_material_tooltip",
-        "@npm//rxjs",
         "@org_xprof//frontend/app/common/interfaces",
     ],
 )
@@ -34,9 +34,7 @@ xprof_ng_module(
 sass_binary(
     name = "graph_config_css",
     src = "graph_config.scss",
-
     sourcemap = False,
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

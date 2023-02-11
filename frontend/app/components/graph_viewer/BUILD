@@ -17,11 +17,11 @@ xprof_ng_module(
         "@npm//@angular/common",
         "@npm//@angular/core",
         "@npm//@angular/router",
+        "@npm//@ngrx/store",
+        "@npm//rxjs",
         "@org_xprof//frontend/app/common/angular:angular_material_core",
         "@org_xprof//frontend/app/common/angular:angular_material_progress_bar",
         "@org_xprof//frontend/app/common/angular:angular_material_sidenav",
-        "@npm//@ngrx/store",
-        "@npm//rxjs",
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/components/diagnostics_view",
@@ -32,14 +32,10 @@ xprof_ng_module(
     ],
 )
 
-
-
 sass_binary(
     name = "graph_viewer_css",
     src = "graph_viewer.scss",
-
     sourcemap = False,
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

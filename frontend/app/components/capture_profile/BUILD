@@ -17,12 +17,12 @@ xprof_ng_module(
         "@npm//@angular/common",
         "@npm//@angular/core",
         "@npm//@angular/forms",
+        "@npm//@ngrx/store",
+        "@npm//rxjs",
         "@org_xprof//frontend/app/common/angular:angular_material_button",
         "@org_xprof//frontend/app/common/angular:angular_material_dialog",
         "@org_xprof//frontend/app/common/angular:angular_material_progress_spinner",
         "@org_xprof//frontend/app/common/angular:angular_material_snack_bar",
-        "@npm//@ngrx/store",
-        "@npm//rxjs",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/components/capture_profile/capture_profile_dialog",
         "@org_xprof//frontend/app/services/data_service",
@@ -30,14 +30,10 @@ xprof_ng_module(
     ],
 )
 
-
-
 sass_binary(
     name = "capture_profile_css",
     src = "capture_profile.scss",
-
     sourcemap = False,
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

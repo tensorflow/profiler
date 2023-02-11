@@ -16,8 +16,8 @@ xprof_ng_module(
     deps = [
         "@npm//@angular/common",
         "@npm//@angular/core",
-        "@org_xprof//frontend/app/common/angular:angular_material_icon",
         "@npm//@ngrx/store",
+        "@org_xprof//frontend/app/common/angular:angular_material_icon",
         "@org_xprof//frontend/app/store",
     ],
 )
@@ -25,9 +25,7 @@ xprof_ng_module(
 sass_binary(
     name = "export_as_csv_css",
     src = "export_as_csv.scss",
-
     sourcemap = False,
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

@@ -30,14 +30,10 @@ xprof_ng_module(
     ],
 )
 
-
-
 sass_binary(
     name = "capture_profile_dialog_css",
     src = "capture_profile_dialog.scss",
-
     sourcemap = False,
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

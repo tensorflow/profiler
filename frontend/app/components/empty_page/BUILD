@@ -20,14 +20,10 @@ xprof_ng_module(
     ],
 )
 
-
-
 sass_binary(
     name = "empty_page_css",
     src = "empty_page.scss",
-
     sourcemap = False,
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

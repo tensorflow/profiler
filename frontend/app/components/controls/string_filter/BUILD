@@ -13,23 +13,20 @@ xprof_ng_module(
         "string_filter.ng.html",
         "string_filter_css",
     ],
-    
     deps = [
         "@npm//@angular/common",
         "@npm//@angular/core",
+        "@npm//@types/google.visualization",
         "@org_xprof//frontend/app/common/angular:angular_material_form_field",
         "@org_xprof//frontend/app/common/angular:angular_material_icon",
         "@org_xprof//frontend/app/common/angular:angular_material_input",
-        "@npm//@types/google.visualization",
     ],
 )
 
 sass_binary(
     name = "string_filter_css",
     src = "string_filter.scss",
-
     sourcemap = False,
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

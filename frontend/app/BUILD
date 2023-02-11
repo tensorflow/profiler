@@ -14,13 +14,13 @@ xprof_ng_module(
         "app.ng.html",
     ],
     deps = [
-        "@org_xprof//frontend/app/common/angular:angular_common_http",
         "@npm//@angular/core",
         "@npm//@angular/platform-browser",
-        "@org_xprof//frontend/app/common/angular:angular_platform-browser_animation",
-        "@org_xprof//frontend/app/common/angular:angular_material_progress_bar",
         "@npm//@ngrx/store",
         "@npm//rxjs",
+        "@org_xprof//frontend/app/common/angular:angular_common_http",
+        "@org_xprof//frontend/app/common/angular:angular_material_progress_bar",
+        "@org_xprof//frontend/app/common/angular:angular_platform-browser_animation",
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/components/empty_page",
@@ -32,12 +32,8 @@ xprof_ng_module(
     ],
 )
 
-
-
 sass_binary(
     name = "app_css",
     src = "app.scss",
-
     sourcemap = False,
-
 )
