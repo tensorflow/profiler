@@ -13,7 +13,6 @@ xprof_ng_module(
         ":flop_rate_chart_css",
         "flop_rate_chart.ng.html",
     ],
-    
     deps = [
         "@npm//@angular/core",
         "@org_xprof//frontend/app/common/angular:angular_material_card",
@@ -26,12 +25,8 @@ xprof_ng_module(
     ],
 )
 
-
-
 sass_binary(
     name = "flop_rate_chart_css",
     src = "flop_rate_chart.scss",
-
     sourcemap = False,
-
 )

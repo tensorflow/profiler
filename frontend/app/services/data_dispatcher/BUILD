@@ -47,5 +47,3 @@ xprof_ng_module(
         "@org_xprof//frontend/app/store",
     ],
 )
-
-

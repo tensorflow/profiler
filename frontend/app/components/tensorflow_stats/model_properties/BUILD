@@ -19,12 +19,8 @@ xprof_ng_module(
     ],
 )
 
-
-
 sass_binary(
     name = "model_properties_css",
     src = "model_properties.scss",
-
     sourcemap = False,
-
 )

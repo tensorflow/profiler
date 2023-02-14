@@ -34,5 +34,3 @@ ts_library(
         "@npm//@ngrx/store",
     ],
 )
-
-

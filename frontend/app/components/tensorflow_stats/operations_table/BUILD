@@ -14,7 +14,6 @@ xprof_ng_module(
         ":operations_table_css",
         "operations_table.ng.html",
     ],
-    
     deps = [
         ":operations_table_data_provider",
         "@npm//@angular/core",
@@ -40,14 +39,10 @@ ts_library(
     ],
 )
 
-
-
 sass_binary(
     name = "operations_table_css",
     src = "operations_table.scss",
-
     sourcemap = False,
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

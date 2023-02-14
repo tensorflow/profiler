@@ -16,9 +16,9 @@ xprof_ng_module(
     deps = [
         "@npm//@angular/common",
         "@npm//@angular/core",
-        "@org_xprof//frontend/app/common/angular:angular_material_card",
         "@npm//@ngrx/store",
         "@npm//rxjs",
+        "@org_xprof//frontend/app/common/angular:angular_material_card",
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/utils",
@@ -26,14 +26,10 @@ xprof_ng_module(
     ],
 )
 
-
-
 sass_binary(
     name = "pod_viewer_details_css",
     src = "pod_viewer_details.scss",
-
     sourcemap = False,
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

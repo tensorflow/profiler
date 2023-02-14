@@ -16,9 +16,9 @@ xprof_ng_module(
     deps = [
         "@npm//@angular/core",
         "@npm//@angular/router",
-        "@org_xprof//frontend/app/common/angular:angular_material_divider",
         "@npm//@ngrx/store",
         "@npm//rxjs",
+        "@org_xprof//frontend/app/common/angular:angular_material_divider",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/components/chart/dashboard",
         "@org_xprof//frontend/app/components/chart/org_chart",
@@ -33,5 +33,4 @@ sass_binary(
     name = "tf_data_bottleneck_analysis_css",
     src = "tf_data_bottleneck_analysis.scss",
     sourcemap = False,
-
 )

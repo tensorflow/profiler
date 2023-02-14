@@ -31,15 +31,14 @@ xprof_ng_module(
         ":tensorflow_stats_css",
         "tensorflow_stats.ng.html",
     ],
-    
     deps = [
         "@npm//@angular/core",
+        "@npm//@ngrx/store",
+        "@npm//@types/google.visualization",
         "@org_xprof//frontend/app/common/angular:angular_material_button",
         "@org_xprof//frontend/app/common/angular:angular_material_divider",
         "@org_xprof//frontend/app/common/angular:angular_material_icon",
         "@org_xprof//frontend/app/common/angular:angular_material_menu",
-        "@npm//@types/google.visualization",
-        "@npm//@ngrx/store",
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/interfaces:chart",
@@ -56,14 +55,10 @@ xprof_ng_module(
     ],
 )
 
-
-
 sass_binary(
     name = "tensorflow_stats_css",
     src = "tensorflow_stats.scss",
-
     sourcemap = False,
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

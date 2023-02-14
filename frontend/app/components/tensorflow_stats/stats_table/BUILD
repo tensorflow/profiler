@@ -13,7 +13,6 @@ xprof_ng_module(
         ":stats_table_css",
         "stats_table.ng.html",
     ],
-    
     deps = [
         ":stats_table_data_provider",
         "@npm//@angular/core",
@@ -40,14 +39,10 @@ xprof_ng_module(
     ],
 )
 
-
-
 sass_binary(
     name = "stats_table_css",
     src = "stats_table.scss",
-
     sourcemap = False,
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

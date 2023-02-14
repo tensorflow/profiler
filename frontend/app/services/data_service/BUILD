@@ -10,12 +10,10 @@ xprof_ng_module(
     ],
     deps = [
         "@npm//@angular/common",
-        "@org_xprof//frontend/app/common/angular:angular_common_http",
         "@npm//@angular/core",
         "@npm//rxjs",
+        "@org_xprof//frontend/app/common/angular:angular_common_http",
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",
     ],
 )
-
-

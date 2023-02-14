@@ -13,21 +13,16 @@ xprof_ng_module(
         ":range_slider_css",
         "range_slider.ng.html",
     ],
-    
     deps = [
         "@npm//@angular/core",
         "@org_xprof//frontend/app/common/angular:angular_material_slider",
     ],
 )
 
-
-
 sass_binary(
     name = "range_slider_css",
     src = "range_slider.scss",
-
     sourcemap = False,
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],
