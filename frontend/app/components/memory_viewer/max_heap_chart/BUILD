@@ -9,6 +9,7 @@ xprof_ng_module(
         "max_heap_chart.ts",
         "max_heap_chart_module.ts",
     ],
+    allow_warnings = True,
     assets = [
         ":max_heap_chart_css",
         "max_heap_chart.ng.html",

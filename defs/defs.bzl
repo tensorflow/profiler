@@ -50,7 +50,7 @@ convert_paths_to_absolute = rule(
     },
 )
 
-def xprof_ng_module(name, srcs, assets = [], **kwargs):
+def xprof_ng_module(name, srcs, assets = [], allow_warnings = None, **kwargs):
     """Wrapper for Angular modules for the external BUILD rules"""
 
     # A hack for ngcc (Angular Ivy) compiler with rules_nodejs's
