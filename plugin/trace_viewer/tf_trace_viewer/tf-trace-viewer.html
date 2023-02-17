@@ -225,6 +225,7 @@ dashboard would integrate trace viewer app using iframe.
       _fullBounds: Object,
       _isLoading: {type: Boolean, value: false},
       _dirty: {type: Boolean, value: false},
+      _tasks: Object,
       _model: Object,
       _resolution: {type: Number, value: 1000},
       _filteredByVisibility: {type: Boolean, value: false},
@@ -320,6 +321,25 @@ dashboard would integrate trace viewer app using iframe.
     _devices: null,
     _selectedHostIndex: 0,
 
+    _convertTimeToCycles: function(e) {
+      if (this._tasks === undefined || this._tasks.length === 0) return;
+      freq = this._tasks[0].sparse_core_freq_hz;
+      if (freq === 0) return;
+      var subpane = document.getElementById("content");
+      var table = subpane.getElementsByTagName("table")[0];
+      var rows = table.rows;
+      for (var i = 0; i < rows.length; i++) {
+        var firstColumn = rows[i].cells[0];
+        if (firstColumn.textContent === "Wall Duration") {
+          if (rows[i].cells[1].textContent.includes("/")) break;  // don't append twice.
+          var cycles = e.duration * freq / 1000.0;  // duration is in milliseconds.
+          rows[i].cells[1].appendChild(
+            document.createTextNode(" / " + cycles.toFixed(2) + " cycles"));
+          break;
+        }
+      }
+    },
+
     onSelectionChange: function(e) {
       if (!this._sessionId) return;
       this._eventDetails.innerHTML = '<div id="event-details" ' +
@@ -329,13 +349,13 @@ dashboard would integrate trace viewer app using iframe.
       if (events.length != 1) return;
 
       for (const event of events) {  // only loop once.
+        var currentThread = event.parentContainer;
+        var currentProcess = currentThread.parent;
         if (event.parentContainer.name === 'XLA Ops') {
           var hloOp = event.title;
           var hloModule = 'default';
-          var current_thread = event.parentContainer;
-          var current_process = current_thread.parent;
-          for (t in current_process.threads) {
-            var thread = current_process.threads[t];
+          for (t in currentProcess.threads) {
+            var thread = currentProcess.threads[t];
             if (thread.name != 'XLA Modules') continue;
             // Perform a linear search for containing module, because we are not expecting too
             // many modules per session. But binary search is possible here because the modules
@@ -358,6 +378,9 @@ dashboard would integrate trace viewer app using iframe.
                 '" target="_blank"> see hlo graph for ' +
                 hloOp + '@' + hloModule + '</a>';
           this._eventDetails.appendChild(graphViewLinkElement);
+        }
+        if (currentProcess.name.includes("SparseCore")) {
+            this._convertTimeToCycles(event);
         }
         if ('connected_group_ids' in event.args) {
           const traceViewerConnectedEventsLink =
@@ -704,6 +727,7 @@ dashboard would integrate trace viewer app using iframe.
         this._filteredByVisibility = data['filteredByVisibility'];
         const fullTimespan = data['fullTimespan'];
         this._fullBounds = {min: fullTimespan[0], max: fullTimespan[1]};
+        this._tasks = data['tasks'];
       } else {
         // Delete fields to prevent traceviewer from accumulating them.
         delete data['metadata'];
