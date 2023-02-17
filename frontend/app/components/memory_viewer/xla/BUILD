@@ -17,5 +17,3 @@ ts_library(
         "@org_xprof//frontend/app/common/utils",
     ],
 )
-
-

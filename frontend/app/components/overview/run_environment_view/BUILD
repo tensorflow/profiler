@@ -20,14 +20,10 @@ xprof_ng_module(
     ],
 )
 
-
-
 sass_binary(
     name = "run_environment_view_css",
     src = "run_environment_view.scss",
-
     sourcemap = False,
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

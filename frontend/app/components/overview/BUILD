@@ -14,15 +14,14 @@ xprof_ng_module(
         ":overview_css",
         "overview.ng.html",
     ],
-    
     deps = [
         "@npm//@angular/common",
         "@npm//@angular/core",
         "@npm//@angular/router",
-        "@org_xprof//frontend/app/common/angular:angular_material_card",
-        "@npm//@types/google.visualization",
         "@npm//@ngrx/store",
+        "@npm//@types/google.visualization",
         "@npm//rxjs",
+        "@org_xprof//frontend/app/common/angular:angular_material_card",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/utils",
         "@org_xprof//frontend/app/components/diagnostics_view",
@@ -37,14 +36,10 @@ xprof_ng_module(
     ],
 )
 
-
-
 sass_binary(
     name = "overview_css",
     src = "overview.scss",
-
     sourcemap = False,
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

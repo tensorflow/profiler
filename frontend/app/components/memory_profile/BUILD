@@ -18,12 +18,12 @@ xprof_ng_module(
         ":memory_profile_base",
         "@npm//@angular/core",
         "@npm//@angular/router",
+        "@npm//@ngrx/store",
+        "@npm//rxjs",
         "@org_xprof//frontend/app/common/angular:angular_material_core",
         "@org_xprof//frontend/app/common/angular:angular_material_divider",
         "@org_xprof//frontend/app/common/angular:angular_material_icon",
         "@org_xprof//frontend/app/common/angular:angular_material_select",
-        "@npm//@ngrx/store",
-        "@npm//rxjs",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/components/memory_profile/memory_breakdown_table",
         "@org_xprof//frontend/app/components/memory_profile/memory_profile_summary",
@@ -43,14 +43,10 @@ ts_library(
     ],
 )
 
-
-
 sass_binary(
     name = "memory_profile_css",
     src = "memory_profile.scss",
-
     sourcemap = False,
-
     deps = [
         ":memory_profile_common",
     ],
@@ -59,7 +55,6 @@ sass_binary(
 sass_library(
     name = "memory_profile_common",
     srcs = ["memory_profile_common.scss"],
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

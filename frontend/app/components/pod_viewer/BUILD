@@ -14,14 +14,13 @@ xprof_ng_module(
         ":pod_viewer_css",
         "pod_viewer.ng.html",
     ],
-    
     deps = [
         "@npm//@angular/core",
         "@npm//@angular/router",
-        "@org_xprof//frontend/app/common/angular:angular_material_divider",
-        "@org_xprof//frontend/app/common/angular:angular_material_slider",
         "@npm//@ngrx/store",
         "@npm//rxjs",
+        "@org_xprof//frontend/app/common/angular:angular_material_divider",
+        "@org_xprof//frontend/app/common/angular:angular_material_slider",
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/utils",
@@ -33,14 +32,10 @@ xprof_ng_module(
     ],
 )
 
-
-
 sass_binary(
     name = "pod_viewer_css",
     src = "pod_viewer.scss",
-
     sourcemap = False,
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

@@ -16,11 +16,11 @@ xprof_ng_module(
     deps = [
         "@npm//@angular/common",
         "@npm//@angular/core",
+        "@npm//@ngrx/store",
+        "@npm//rxjs",
         "@org_xprof//frontend/app/common/angular:angular_material_button",
         "@org_xprof//frontend/app/common/angular:angular_material_card",
         "@org_xprof//frontend/app/common/angular:angular_material_icon",
-        "@npm//@ngrx/store",
-        "@npm//rxjs",
         "@org_xprof//frontend/app/common/interfaces:op_metrics_proto_defs",
         "@org_xprof//frontend/app/common/interfaces:op_profile_proto_defs",
         "@org_xprof//frontend/app/common/utils",
@@ -28,14 +28,10 @@ xprof_ng_module(
     ],
 )
 
-
-
 sass_binary(
     name = "op_details_css",
     src = "op_details.scss",
-
     sourcemap = False,
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

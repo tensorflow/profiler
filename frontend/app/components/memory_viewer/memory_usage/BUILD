@@ -15,5 +15,3 @@ ts_library(
         "@org_xprof//frontend/app/components/memory_viewer/xla",
     ],
 )
-
-

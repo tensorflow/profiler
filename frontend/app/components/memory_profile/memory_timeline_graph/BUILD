@@ -15,20 +15,16 @@ xprof_ng_module(
     ],
     deps = [
         "@npm//@angular/core",
-        "@org_xprof//frontend/app/common/angular:angular_material_card",
         "@npm//@types/google.visualization",
+        "@org_xprof//frontend/app/common/angular:angular_material_card",
         "@org_xprof//frontend/app/common/interfaces",
     ],
 )
 
-
-
 sass_binary(
     name = "memory_timeline_graph_css",
     src = "memory_timeline_graph.scss",
-
     sourcemap = False,
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

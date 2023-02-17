@@ -23,14 +23,10 @@ xprof_ng_module(
     ],
 )
 
-
-
 sass_binary(
     name = "op_table_entry_css",
     src = "op_table_entry.scss",
-
     sourcemap = False,
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

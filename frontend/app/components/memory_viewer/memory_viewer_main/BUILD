@@ -17,11 +17,11 @@ xprof_ng_module(
         "@npm//@angular/core",
         "@npm//@angular/forms",
         "@npm//@angular/router",
+        "@npm//@ngrx/store",
         "@org_xprof//frontend/app/common/angular:angular_material_checkbox",
         "@org_xprof//frontend/app/common/angular:angular_material_divider",
         "@org_xprof//frontend/app/common/angular:angular_material_icon",
         "@org_xprof//frontend/app/common/angular:angular_material_tooltip",
-        "@npm//@ngrx/store",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/utils",
         "@org_xprof//frontend/app/components/diagnostics_view",
@@ -33,14 +33,10 @@ xprof_ng_module(
     ],
 )
 
-
-
 sass_binary(
     name = "memory_viewer_main_css",
     src = "memory_viewer_main.scss",
-
     sourcemap = False,
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

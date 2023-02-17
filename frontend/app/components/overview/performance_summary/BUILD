@@ -23,14 +23,10 @@ xprof_ng_module(
     ],
 )
 
-
-
 sass_binary(
     name = "performance_summary_css",
     src = "performance_summary.scss",
-
     sourcemap = False,
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

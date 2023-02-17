@@ -14,19 +14,18 @@ xprof_ng_module(
         ":op_profile_css",
         "op_profile.ng.html",
     ],
-    
     deps = [
         ":op_profile_base",
         "@npm//@angular/core",
         "@npm//@angular/router",
+        "@npm//@ngrx/store",
+        "@npm//rxjs",
         "@org_xprof//frontend/app/common/angular:angular_material_form_field",
         "@org_xprof//frontend/app/common/angular:angular_material_icon",
         "@org_xprof//frontend/app/common/angular:angular_material_input",
         "@org_xprof//frontend/app/common/angular:angular_material_slide_toggle",
         "@org_xprof//frontend/app/common/angular:angular_material_slider",
         "@org_xprof//frontend/app/common/angular:angular_material_tooltip",
-        "@npm//@ngrx/store",
-        "@npm//rxjs",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/components/op_profile/op_table",
         "@org_xprof//frontend/app/services/data_service",
@@ -48,14 +47,10 @@ ts_library(
     ],
 )
 
-
-
 sass_binary(
     name = "op_profile_css",
     src = "op_profile.scss",
-
     sourcemap = False,
-
     deps = [
         ":op_profile_common",
     ],
@@ -64,7 +59,6 @@ sass_binary(
 sass_library(
     name = "op_profile_common",
     srcs = ["op_profile_common.scss"],
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

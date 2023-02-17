@@ -22,14 +22,10 @@ xprof_ng_module(
     ],
 )
 
-
-
 sass_binary(
     name = "max_heap_chart_css",
     src = "max_heap_chart.scss",
-
     sourcemap = False,
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

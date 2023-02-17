@@ -16,10 +16,10 @@ xprof_ng_module(
     deps = [
         "@npm//@angular/core",
         "@npm//@angular/router",
-        "@org_xprof//frontend/app/common/angular:angular_material_progress_bar",
-        "@org_xprof//frontend/app/common/angular:angular_material_sidenav",
         "@npm//@ngrx/store",
         "@npm//rxjs",
+        "@org_xprof//frontend/app/common/angular:angular_material_progress_bar",
+        "@org_xprof//frontend/app/common/angular:angular_material_sidenav",
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/components/empty_page",
@@ -39,14 +39,10 @@ xprof_ng_module(
     ],
 )
 
-
-
 sass_binary(
     name = "main_page_css",
     src = "main_page.scss",
-
     sourcemap = False,
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

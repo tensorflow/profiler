@@ -22,14 +22,10 @@ xprof_ng_module(
     ],
 )
 
-
-
 sass_binary(
     name = "memory_profile_summary_css",
     src = "memory_profile_summary.scss",
-
     sourcemap = False,
-
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],
