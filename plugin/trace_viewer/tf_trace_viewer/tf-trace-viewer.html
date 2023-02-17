@@ -535,6 +535,7 @@ dashboard would integrate trace viewer app using iframe.
           'event_label': 'trace_viewer_reloading',
         });
       }
+      this._insertRenderCompleteSignal();
     },
 
     _loadNonStreamingTrace: async function() {
@@ -597,15 +598,23 @@ dashboard would integrate trace viewer app using iframe.
 
     _loadStreamingTrace: async function(requestedRange, replaceModel) {
       var success = true;
+      let startUpdateModel;
+      let startUpdateView;
 
       await this._loadJSON(requestedRange)
         .then((data) => {
+          this._addInitialResponseDataLatency(performance.now());
+          this._addDataResponseSize(data.length);
+          startUpdateModel = performance.now();
           this._updateModel(data, replaceModel);
+          this._addUpdateModelLatency(performance.now() - startUpdateModel);
         })
         .then(async () => {
           // Wait for the Promise in requestAnimationFrame callback
           // to be resolved so we can make the load trace flow synchronized
+          startUpdateView = performance.now();
           await this._updateView(requestedRange);
+          this._addUpdateViewLatency(performance.now() - startUpdateView);
         })
         .catch((err) => {
           this._displayOverlay('Trace Viewer', err);
@@ -857,6 +866,38 @@ dashboard would integrate trace viewer app using iframe.
           resolve();
         }.bind(this)
       ));
+    },
+
+    // Dummy node inserted to enable webdriver detect render complete signal
+    // in the selenium test (trace viewer web perf test)
+    _insertRenderCompleteSignal: function() {
+      const node = parent.document.getElementById('page-start-to-render-completed-latency');
+      node.value = performance.now();
+      const div = parent.document.createElement('div');
+      div.setAttribute('id', 'render-completed');
+      div.setAttribute('style', 'display: none;');
+      const tv = parent.document.getElementsByTagName('trace-viewer')[0];
+      tv.appendChild(div);
+    },
+
+    _addDataResponseSize: function(size) {
+      const node = parent.document.getElementById('initial-data-response-size');
+      node.value = size;
+    },
+
+    _addInitialResponseDataLatency: function(latency) {
+      const node = parent.document.getElementById('page-start-to-data-load-latency');
+      node.value = latency;
+    },
+
+    _addUpdateModelLatency: function(latency) {
+      const node = parent.document.getElementById('update-model-latency');
+      node.value = latency;
+    },
+
+    _addUpdateViewLatency: function(latency) {
+      const node = parent.document.getElementById('update-view-latency');
+      node.value = latency;
     },
 
     // Access the {min, max} range of a trackView.
