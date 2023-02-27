@@ -224,10 +224,8 @@ def _get_tools(filenames, profile_run_dir):
           tools.add(item)
   else:
     try:
-      tool_names = convert.xspace_to_tool_names(xplane_filenames)
-      for tool_name in tool_names:
-        if tool_name[:-1] not in found:
-          tools.add(tool_name)
+      if xplane_filenames:
+        return set(convert.xspace_to_tool_names(xplane_filenames))
     except AttributeError:
       logger.warning('XPlane converters are available after Tensorflow 2.4')
   return tools
