@@ -110,7 +110,7 @@ class TpuKerasTest(absltest.TestCase):
         'graph_viewer^',
     ]
     expected.sort()
-    self.assertListEqual(result, expected)
+    self.assertListEqual(expected, result)
 
   def test_overview_page(self):
     xspace_filenames = self._get_session_snapshot()
@@ -120,6 +120,28 @@ class TpuKerasTest(absltest.TestCase):
     run_environment = result[2]
     self.assertEqual(run_environment['p']['host_count'], '1')
     self.assertRegex(run_environment['p']['device_type'], 'TPU.*')
+
+  def test_device_trace_contains_threads(self):
+    xspace_filenames = self._get_session_snapshot()
+    result, _ = raw_to_tool_data.xspace_to_tool_data(
+        xspace_filenames, 'trace_viewer^', {}
+    )
+    result = json.loads(result)
+    thread_names = []
+    for event in result['traceEvents']:
+      if 'name' in event and event['name'] == 'thread_name':
+        thread_names.append((event['args']['name']))
+    self.assertContainsSubset(
+        [
+            'TensorFlow Name Scope',
+            'TensorFlow Ops',
+            'XLA Modules',
+            'XLA Ops',
+            'XLA TraceMe',
+            'Steps',
+        ],
+        thread_names,
+    )
 
 
 if __name__ == '__main__':
