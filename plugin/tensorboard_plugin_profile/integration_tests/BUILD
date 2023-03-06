@@ -17,7 +17,6 @@ pytype_strict_library(
 
 pytype_strict_library(
     name = "tf_profiler_session",
-    testonly = True,
     srcs = ["tf_profiler_session.py"],
     srcs_version = "PY2AND3",
     visibility = visibility,
