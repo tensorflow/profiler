@@ -97,6 +97,15 @@ export const reducer: ActionReducer<AppState, Action> = createReducer(
         },
         ),
     on(
+        actions.setHostsStateAction,
+        (state: AppState, action: ActionCreatorAny) => {
+          return {
+            ...state,
+            hostsState: action.hostsState,
+          };
+        },
+        ),
+    on(
         actions.setDataRequestStateAction,
         (state: AppState, action: ActionCreatorAny) => {
           return {
