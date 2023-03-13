@@ -79,6 +79,12 @@ export const setToolsInfoStateAction: ActionCreatorAny = createAction(
     props<{toolsInfo: ToolsInfoState}>(),
 );
 
+/** Action to set hosts list state */
+export const setHostsStateAction: ActionCreatorAny = createAction(
+    '[App State] Set hosts state',
+    props<{hosts: string[]}>(),
+);
+
 /** Action to set current run */
 export const setCurrentRunAction: ActionCreatorAny = createAction(
     '[App State] Set current run state',
