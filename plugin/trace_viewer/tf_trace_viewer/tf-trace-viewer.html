@@ -987,6 +987,8 @@ dashboard would integrate trace viewer app using iframe.
           this._dataRegenerated = true;
         }
       }
+
+      requestURL.searchParams.set('initial_load', this._isInitialLoad);
       return requestURL;
     },
 
