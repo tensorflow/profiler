@@ -27,6 +27,7 @@ REQUIRED_PACKAGES = [
     'setuptools >= 41.0.0',
     'six >= 1.10.0',
     'werkzeug >= 0.11.15',
+    'cpio >= 2.13',
 ]
 
 
