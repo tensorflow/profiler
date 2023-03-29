@@ -235,6 +235,7 @@ dashboard would integrate trace viewer app using iframe.
       _filteredByVisibility: {type: Boolean, value: false},
       _dataRegenerated: {type: Boolean, value: false},
       _isInitialLoad: {type: Boolean, value: true},
+      _replaceModel: {type: Boolean, value: true},
       _hosts: {type: Array, value: []},
     },
 
@@ -532,6 +533,7 @@ dashboard would integrate trace viewer app using iframe.
     },
 
     _loadTrace: async function(requestedRange, replaceModel) {
+      this._replaceModel = replaceModel;
       const startTime = performance.now();
       this._throbber.className = 'active';
       this._isLoading = true;
@@ -993,7 +995,7 @@ dashboard would integrate trace viewer app using iframe.
         }
       }
 
-      requestURL.searchParams.set('initial_load', this._isInitialLoad);
+      requestURL.searchParams.set('replace_model', this._replaceModel);
       return requestURL;
     },
 
