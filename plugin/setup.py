@@ -43,13 +43,20 @@ setuptools.setup(
     author='Google Inc.',
     author_email='packages@tensorflow.org',
     url='https://github.com/tensorflow/profiler',
-    packages=setuptools.find_packages(),
+    packages=setuptools.find_packages()
+    + setuptools.find_namespace_packages(
+        include=['tensorboard_plugin_profile.*'],
+        exclude=['tensorboard_plugin_profile.static'],
+    ),
     package_data={
         'tensorboard_plugin_profile': ['static/**'],
     },
     entry_points={
         'tensorboard_plugins': [
-            'profile = tensorboard_plugin_profile.profile_plugin_loader:ProfilePluginLoader',
+            (
+                'profile ='
+                ' tensorboard_plugin_profile.profile_plugin_loader:ProfilePluginLoader'
+            ),
         ],
     },
     python_requires='>= 2.7, != 3.0.*, != 3.1.*',
