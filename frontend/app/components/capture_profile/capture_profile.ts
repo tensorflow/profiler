@@ -1,6 +1,6 @@
 import {Component, OnDestroy} from '@angular/core';
-import {MatLegacyDialog} from '@angular/material/dialog';
-import {MatLegacySnackBar} from '@angular/material/snack-bar';
+import {MatDialog} from '@angular/material/dialog';
+import {MatSnackBar} from '@angular/material/snack-bar';
 import {Store} from '@ngrx/store';
 import {CaptureProfileOptions, CaptureProfileResponse} from 'org_xprof/frontend/app/common/interfaces/capture_profile';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
@@ -28,8 +28,8 @@ export class CaptureProfile implements OnDestroy {
   capturingProfile: Observable<boolean>;
 
   constructor(
-      private readonly dialog: MatLegacyDialog,
-      private readonly snackBar: MatLegacySnackBar,
+      private readonly dialog: MatDialog,
+      private readonly snackBar: MatSnackBar,
       private readonly dataService: DataService,
       private readonly store: Store<{}>) {
     this.capturingProfile = this.store.select(getCapturingProfileState);

@@ -1,13 +1,13 @@
 import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
 import {FormsModule} from '@angular/forms';
-import {MatLegacyButtonModule} from '@angular/material/button';
-import {MatLegacyDialogModule} from '@angular/material/dialog';
+import {MatButtonModule} from '@angular/material/button';
+import {MatDialogModule} from '@angular/material/dialog';
 import {MatExpansionModule} from '@angular/material/expansion';
-import {MatLegacyFormFieldModule} from '@angular/material/form-field';
-import {MatLegacyInputModule} from '@angular/material/input';
-import {MatLegacyRadioModule} from '@angular/material/radio';
-import {MatLegacySelectModule} from '@angular/material/select';
+import {MatFormFieldModule} from '@angular/material/form-field';
+import {MatInputModule} from '@angular/material/input';
+import {MatRadioModule} from '@angular/material/radio';
+import {MatSelectModule} from '@angular/material/select';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {BrowserModule} from '@angular/platform-browser';
 
@@ -20,13 +20,13 @@ import {CaptureProfileDialog} from './capture_profile_dialog';
     BrowserModule,
     CommonModule,
     FormsModule,
-    MatLegacyButtonModule,
-    MatLegacyDialogModule,
+    MatButtonModule,
+    MatDialogModule,
     MatExpansionModule,
-    MatLegacyFormFieldModule,
-    MatLegacyInputModule,
-    MatLegacyRadioModule,
-    MatLegacySelectModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatRadioModule,
+    MatSelectModule,
     MatTooltipModule,
   ],
   exports: [CaptureProfileDialog]

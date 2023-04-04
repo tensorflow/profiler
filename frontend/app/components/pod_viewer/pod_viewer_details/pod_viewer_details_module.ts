@@ -1,6 +1,6 @@
 import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
-import {MatLegacyCardModule} from '@angular/material/card';
+import {MatCardModule} from '@angular/material/card';
 
 import {PodViewerDetails} from './pod_viewer_details';
 
@@ -9,7 +9,7 @@ import {PodViewerDetails} from './pod_viewer_details';
   declarations: [PodViewerDetails],
   imports: [
     CommonModule,
-    MatLegacyCardModule,
+    MatCardModule,
   ],
   exports: [PodViewerDetails]
 })

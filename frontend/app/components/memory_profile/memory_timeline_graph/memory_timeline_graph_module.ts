@@ -1,11 +1,11 @@
 import {NgModule} from '@angular/core';
-import {MatLegacyCardModule} from '@angular/material/card';
+import {MatCardModule} from '@angular/material/card';
 
 import {MemoryTimelineGraph} from './memory_timeline_graph';
 
 @NgModule({
   declarations: [MemoryTimelineGraph],
-  imports: [MatLegacyCardModule],
+  imports: [MatCardModule],
   exports: [MemoryTimelineGraph]
 })
 export class MemoryTimelineGraphModule {

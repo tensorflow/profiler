@@ -1,12 +1,12 @@
 import {NgModule} from '@angular/core';
-import {MatLegacyCardModule} from '@angular/material/card';
+import {MatCardModule} from '@angular/material/card';
 
 import {BufferDetails} from './buffer_details';
 
 /** A buffer details view module. */
 @NgModule({
   declarations: [BufferDetails],
-  imports: [MatLegacyCardModule],
+  imports: [MatCardModule],
   exports: [BufferDetails]
 })
 export class BufferDetailsModule {

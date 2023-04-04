@@ -1,5 +1,5 @@
 import {NgModule} from '@angular/core';
-import {MatLegacyCardModule} from '@angular/material/card';
+import {MatCardModule} from '@angular/material/card';
 
 import {StepTimeGraph} from './step_time_graph';
 
@@ -8,7 +8,7 @@ import {StepTimeGraph} from './step_time_graph';
     StepTimeGraph
   ],
   imports: [
-    MatLegacyCardModule
+    MatCardModule
   ],
   exports: [StepTimeGraph]
 })

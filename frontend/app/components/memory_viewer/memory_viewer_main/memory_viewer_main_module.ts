@@ -1,6 +1,6 @@
 import {NgModule} from '@angular/core';
 import {FormsModule} from '@angular/forms';
-import {MatLegacyCheckboxModule} from '@angular/material/checkbox';
+import {MatCheckboxModule} from '@angular/material/checkbox';
 import {MatDividerModule} from '@angular/material/divider';
 import {MatIconModule} from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
@@ -18,7 +18,7 @@ import {MemoryViewerMain} from './memory_viewer_main';
     FormsModule,
     MatDividerModule,
     MaxHeapChartModule,
-    MatLegacyCheckboxModule,
+    MatCheckboxModule,
     MatIconModule,
     MatTooltipModule,
     ProgramOrderChartModule,
