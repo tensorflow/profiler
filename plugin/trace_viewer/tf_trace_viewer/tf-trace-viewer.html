@@ -319,6 +319,13 @@ dashboard would integrate trace viewer app using iframe.
         verticalDivider.horizontal = false;
         verticalDivider.target = this._eventDetails;
       }.bind(this));
+      // Hide chromium codesearch link reduce the confusion
+      window.addEventListener('click', function(e) {
+        element = document.getElementById('codesearchLink');
+        if (element) {
+          element.setAttribute('style', 'display: none');
+        }
+      }.bind(this));
     },
 
     _sessionId: string = '',
