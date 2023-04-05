@@ -58,8 +58,16 @@ class DataTableForTesting {
     });
     return [min, max];
   }
-  getDistinctValues() {
-    return [];
+  getDistinctValues(columnIdx: number) {
+    if (!this.data?.rows) {
+      return [];
+    }
+    const valueSet = new Set();
+    this.data.rows.forEach(row => {
+      const val = row.c![columnIdx].v;
+      valueSet.add(val);
+    });
+    return [...valueSet];
   }
   getNumberOfColumns() {
     if (!this.data || !this.data.cols) {
