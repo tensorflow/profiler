@@ -705,24 +705,38 @@ dashboard would integrate trace viewer app using iframe.
       });
     },
 
+    _getEventHashKey: function(event) {
+      /* uniqueness of an event between tr.model refresh/reset are determinted by
+      1. uniqueness of host_id, backend encode host id as part of "pid".
+      2. uniqueness of event id within a host. event timestamp provide the main differerentiator,
+         however itself can not guarantee the uniqueness, backend will add an optional field "z"
+         to tie-break the situation.
+      3. Note: metadata events (describing process/threads) don't have a timestamp field. They are
+         hashed to a single key value, this is okay, because we don't need to refresh them after
+         initial load.
+      */
+      let key = event["pid"].toString();
+      key += "$";
+      key += event["ts"] || 0;
+      if ("z" in event) key += "$" + event["z"];
+      return key;
+    },
+
     // Decodes the JSON trace events, removes all events that were loaded before
     // and serializes to JSON again.
     _filterKnownTraceEvents: function(traceEvents) {
       if (this._loadedTraceEvents.size == 0) {
-        for (let event of traceEvents) {
-          const key = JSON.stringify(event);
-          this._loadedTraceEvents.add(key);
-        }
+        traceEvents.forEach(event => this._loadedTraceEvents.add(this._getEventHashKey(event)));
         return traceEvents;
       } else {
         let filteredTraceEvents = [];
-        for (let event of traceEvents) {
-          const key = JSON.stringify(event);
+        traceEvents.forEach(function (event) {
+          const key = this._getEventHashKey(event);
           if (!this._loadedTraceEvents.has(key)) {
             this._loadedTraceEvents.add(key);
             filteredTraceEvents.push(event);
           }
-        }
+        }, this);
         return filteredTraceEvents;
       }
     },
