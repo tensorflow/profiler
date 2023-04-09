@@ -1,6 +1,6 @@
 import {Component, OnDestroy} from '@angular/core';
-import {MatDialog} from '@angular/material/dialog';
-import {MatSnackBar} from '@angular/material/snack-bar';
+import {MatDialog} from '@angular/material/mdc-dialog';
+import {MatSnackBar} from '@angular/material/mdc-snack-bar';
 import {Store} from '@ngrx/store';
 import {CaptureProfileOptions, CaptureProfileResponse} from 'org_xprof/frontend/app/common/interfaces/capture_profile';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';

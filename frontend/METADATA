@@ -1,0 +1,5 @@
+presubmit {
+  include_presubmit: "//depot/google3/javascript/angular2/components/presubmit_checks/mdc/only_mdc_dialog.METADATA"
+  include_presubmit: "//depot/google3/javascript/angular2/components/presubmit_checks/mdc/only_mdc_snack_bar.METADATA"
+  include_presubmit: "//depot/google3/javascript/angular2/components/presubmit_checks/mdc/only_mdc_tooltip.METADATA"
+}

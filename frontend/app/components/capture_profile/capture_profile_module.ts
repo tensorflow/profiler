@@ -1,9 +1,9 @@
 import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
 import {MatButtonModule} from '@angular/material/button';
-import {MatDialogModule} from '@angular/material/dialog';
+import {MatDialogModule} from '@angular/material/mdc-dialog';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
-import {MatSnackBarModule} from '@angular/material/snack-bar';
+import {MatSnackBarModule} from '@angular/material/mdc-snack-bar';
 
 import {CaptureProfile} from './capture_profile';
 import {CaptureProfileDialog} from './capture_profile_dialog/capture_profile_dialog';

@@ -4,7 +4,7 @@ import {MatIconModule} from '@angular/material/icon';
 import {MatInputModule} from '@angular/material/input';
 import {MatSlideToggleModule} from '@angular/material/slide-toggle';
 import {MatSliderModule} from '@angular/material/slider';
-import {MatTooltipModule} from '@angular/material/tooltip';
+import {MatTooltipModule} from '@angular/material/mdc-tooltip';
 
 import {OpProfile} from './op_profile';
 import {OpTableModule} from './op_table/op_table_module';
