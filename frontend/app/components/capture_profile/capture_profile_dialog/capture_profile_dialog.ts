@@ -24,7 +24,8 @@ export class CaptureProfileDialog {
   pythonTracerLevel = '0';
   delay = 0;
 
-  constructor(private readonly dialogRef: MatDialogRef<CaptureProfileDialog>) {}
+  constructor(private readonly dialogRef:
+                  MatDialogRef<CaptureProfileDialog>) {}
 
   addressTypeChanged(value: string) {
     this.isTpuName = value === 'tpu';

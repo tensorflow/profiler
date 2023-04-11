@@ -9,7 +9,8 @@ import {OpDetails} from './op_details';
 /** An op details view module. */
 @NgModule({
   declarations: [OpDetails],
-  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule],
+  imports:
+      [CommonModule, MatCardModule, MatIconModule, MatButtonModule],
   exports: [OpDetails]
 })
 export class OpDetailsModule {

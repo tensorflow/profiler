@@ -6,8 +6,7 @@ import {CaptureProfileOptions, CaptureProfileResponse} from 'org_xprof/frontend/
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
 import {setCapturingProfileAction} from 'org_xprof/frontend/app/store/actions';
 import {getCapturingProfileState} from 'org_xprof/frontend/app/store/selectors';
-import {Observable} from 'rxjs';
-import {ReplaySubject} from 'rxjs';
+import {Observable, ReplaySubject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 
 import {CaptureProfileDialog} from './capture_profile_dialog/capture_profile_dialog';
