@@ -1,0 +1,5 @@
+presubmit {
+  include_presubmit: "//depot/google3/javascript/angular2/components/presubmit_checks/mdc/only_mdc_checkbox.METADATA"
+  include_presubmit: "//depot/google3/javascript/angular2/components/presubmit_checks/mdc/only_mdc_radio.METADATA"
+  include_presubmit: "//depot/google3/javascript/angular2/components/presubmit_checks/mdc/only_mdc_slide_toggle.METADATA"
+}
