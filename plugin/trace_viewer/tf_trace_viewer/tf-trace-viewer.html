@@ -452,8 +452,8 @@ dashboard would integrate trace viewer app using iframe.
       } else {
         // By default select host 1, which is the first host except from all hosts.
         this._selectedHostIndex = 1;
-        const hostsDataLink = new URL(this.hostsDataUrl, window.location.origin);
-        const urlHostIndex = Number(hostsDataLink.searchParams.get('host_index'));
+        const traceDataLink = new URL(this.traceDataUrl, window.location.origin);
+        const urlHostIndex = Number(traceDataLink.searchParams.get('host_index'));
         if (urlHostIndex && urlHostIndex < hostSelector.children.length - 1) {
           // Select host based on host query parameter.
           this._selectedHostIndex = urlHostIndex + 1;
