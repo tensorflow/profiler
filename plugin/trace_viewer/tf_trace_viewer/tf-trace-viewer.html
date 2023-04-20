@@ -233,6 +233,7 @@ dashboard would integrate trace viewer app using iframe.
       _model: Object,
       _resolution: {type: Number, value: 1000},
       _filteredByVisibility: {type: Boolean, value: false},
+      _traceEventsCapped: {type: Boolean, value: false},
       _dataRegenerated: {type: Boolean, value: false},
       _isInitialLoad: {type: Boolean, value: true},
       _replaceModel: {type: Boolean, value: true},
@@ -539,6 +540,15 @@ dashboard would integrate trace viewer app using iframe.
       this._loadTrace(null, /* replaceModel= */ true);
     },
 
+    _popRenderAlerts: function () {
+      if (this._traceEventsCapped) {
+        this._displayOverlay(
+          "Trace Viewer",
+          "Please be aware that the events has been truncated to avoid crash. If you want to have a complete view, please try approaches (eg. Zoom in, filter..etc) to scope down the trace to explore."
+        );
+      }
+    },
+
     _loadTrace: async function(requestedRange, replaceModel) {
       this._replaceModel = replaceModel;
       const startTime = performance.now();
@@ -571,6 +581,7 @@ dashboard would integrate trace viewer app using iframe.
           'event_label': 'trace_viewer_reloading',
         });
       }
+      this._popRenderAlerts();
       this._insertRenderCompleteSignal();
     },
 
@@ -752,6 +763,7 @@ dashboard would integrate trace viewer app using iframe.
         this._model = new tr.Model();
         this._loadedTraceEvents = new Set();
         this._filteredByVisibility = data['filteredByVisibility'];
+        this._traceEventsCapped = data['traceEventsCapped'];
         const fullTimespan = data['fullTimespan'];
         this._fullBounds = {min: fullTimespan[0], max: fullTimespan[1]};
         this._tasks = data['tasks'];
