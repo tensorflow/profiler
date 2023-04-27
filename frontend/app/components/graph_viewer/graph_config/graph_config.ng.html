@@ -1,11 +1,11 @@
 <div class="item-container">
   <form (ngSubmit)="onSubmit()">
-    <div class="row" *ngIf="!isHloOssTool">
+    <div class="row" *ngIf="!isHloOssTool" id="xla-module-list-header">
       <div [ngClass]="{ 'mat-subheading-2': true }">
         XLA Modules ({{ moduleList.length }})
       </div>
     </div>
-    <mat-form-field class="full-width" *ngIf="!isHloOssTool">
+    <mat-form-field class="full-width" *ngIf="!isHloOssTool" id="xla-module-list-selector">
       <mat-select
         name="selectedModule"
         panelClass="panel-override"
@@ -76,6 +76,7 @@
       <button
         mat-flat-button
         extended
+        name="submit"
         type="submit"
         color="primary"
         appearance="fill"

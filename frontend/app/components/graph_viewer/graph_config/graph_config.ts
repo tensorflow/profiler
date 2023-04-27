@@ -49,10 +49,6 @@ export class GraphConfig implements OnDestroy, OnChanges {
     }
   }
 
-  updateOpName(value: string) {
-    this.params.opName = value.trim();
-  }
-
   validToSubmit() {
     return this.params.opName && this.params.selectedModule;
   }

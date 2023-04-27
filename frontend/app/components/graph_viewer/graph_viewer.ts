@@ -117,11 +117,6 @@ export class GraphViewer implements OnDestroy {
         searchParams.toString()}`;
   }
 
-  setLoadingStatus(loading: boolean, diagnostics?: Diagnostics) {
-    this.loading = loading;
-    this.diagnostics = diagnostics || {...DIAGNOSTICS_DEFAULT};
-  }
-
   ngOnDestroy() {
     // Unsubscribes all pending subscriptions.
     this.destroyed.next();
