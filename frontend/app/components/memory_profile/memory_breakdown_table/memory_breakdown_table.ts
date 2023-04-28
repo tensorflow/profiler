@@ -1,6 +1,6 @@
 import {Component, ElementRef, Input, OnChanges, OnInit, SimpleChanges, ViewChild} from '@angular/core';
-
 import {MemoryProfileProtoOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {bytesToGiBs} from 'org_xprof/frontend/app/common/utils/utils';
 
 const DATA_TABLE_OPERATION_INDEX = 0;
 
@@ -78,8 +78,8 @@ export class MemoryBreakdownTable implements OnChanges, OnInit {
       }
       this.dataTable.addRow([
         metadata.tfOpName,
-        this.bytesToGiBs(metadata.allocationBytes),
-        this.bytesToGiBs(metadata.requestedBytes),
+        bytesToGiBs(metadata.allocationBytes),
+        bytesToGiBs(metadata.requestedBytes),
         Number(activeAllocations[i].numOccurrences),
         metadata.regionType,
         metadata.dataType,
@@ -156,11 +156,6 @@ export class MemoryBreakdownTable implements OnChanges, OnInit {
     }
 
     return this.dataTable;
-  }
-
-  bytesToGiBs(stat: string|number|undefined) {
-    if (!stat) return 0;
-    return Number(stat) / Math.pow(2, 30);
   }
 
   loadGoogleChart() {

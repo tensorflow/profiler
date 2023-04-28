@@ -8,6 +8,7 @@ import * as opProfileProto from 'org_xprof/frontend/app/common/interfaces/op_pro
 export declare interface Filter {
   column: number;
   value: string|number;
+  test?: (value: string) => boolean;
 }
 
 /** The base interface for a cell.  */
@@ -16,7 +17,10 @@ declare interface Cell<T> {
 }
 
 /** All cell type. */
-export type DataTableCell = Cell<boolean|number|string>;
+export type DataTableCell = Cell<DataTableCellValue>;
+
+/** All cell value type */
+export type DataTableCellValue = string|number|boolean;
 
 /** The base interface for a column. */
 export declare interface DataTableColumn {

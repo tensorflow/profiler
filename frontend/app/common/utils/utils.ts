@@ -363,3 +363,19 @@ export function setLoadingState(
     }
   }));
 }
+
+/**
+ * Convert bytes to Gibs
+ */
+export function bytesToGiBs(stat: string|number|undefined) {
+  if (!Number(stat)) return 0;
+  return Number(stat) / Math.pow(2, 30);
+}
+
+/**
+ * Convert pico to milli (seconds)
+ */
+export function picoToMilli(timePs: string|undefined) {
+  if (!Number(timePs)) return 0;
+  return Number(timePs) / Math.pow(10, 9);
+}

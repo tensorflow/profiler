@@ -18,6 +18,7 @@ xprof_ng_module(
         "@npm//@types/google.visualization",
         "@org_xprof//frontend/app/common/angular:angular_material_card",
         "@org_xprof//frontend/app/common/interfaces",
+        "@org_xprof//frontend/app/common/utils",
     ],
 )
 

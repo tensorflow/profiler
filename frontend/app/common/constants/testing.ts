@@ -1,9 +1,8 @@
-import {DataTableCell, DataTableColumn, DataTableRow, Filter, GeneralDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {DataTableCell, DataTableCellValue, DataTableColumn, DataTableRow, Filter, GeneralDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 class DataTableForTesting {
   // Note the constructor takes a js object (not a literal string)
-  constructor(
-      public data: GeneralDataTable|null = {cols: [], rows: [], p: {}}) {}
+  constructor(public data: GeneralDataTable = {cols: [], rows: [], p: {}}) {}
   addColumn(type: string, label?: string, id?: string) {
     this.data?.cols?.push({type, label, id});
   }
@@ -32,6 +31,12 @@ class DataTableForTesting {
       return '';
     }
     return this.data.cols[columnIndex].label as string;
+  }
+  setColumnLabel(columnIndex: number, label: string) {
+    if (!this.data || !this.data.cols || this.data.cols.length <= columnIndex) {
+      return;
+    }
+    this.data.cols[columnIndex].label = label;
   }
   getColumnType(columnIdx: number) {
     if (!this.data || !this.data.cols || this.data.cols.length <= columnIdx) {
@@ -111,7 +116,11 @@ class DataTableForTesting {
         if (!this.data!.cols || this.data!.cols.length <= filter.column) {
           return include;
         }
-        return include && row.c![filter.column] === filter.value;
+        const rowValue = row.c![filter.column].v;
+        if (filter.test !== undefined && typeof rowValue === 'string') {
+          return include && filter.test(rowValue);
+        }
+        return include && rowValue === filter.value;
       }, true);
       if (includeRow) {
         rowsIdxArray.push(index);
@@ -123,8 +132,17 @@ class DataTableForTesting {
   setColumn() {}
   setValue() {}
   setCell() {}
-  addRow(row: DataTableCell[]) {
-    this.data?.rows?.push({c: row});
+  addRow(row: DataTableCell[]|DataTableCellValue[]) {
+    this.data?.rows?.push({c: []});
+    if (!row) return;
+    row.forEach(colVal => {
+      if (['number', 'string', 'boolean'].includes(typeof colVal)) {
+        this.data?.rows?.slice(-1)[0].c?.push(
+            {v: colVal as DataTableCellValue});
+      } else {
+        this.data?.rows?.slice(-1)[0].c?.push(colVal as DataTableCell);
+      }
+    });
   }
   addRows() {}
   sort() {}
@@ -167,6 +185,9 @@ class DataViewForTesting {
   getSortedRows(sortColumnIdxes: number[] = []) {
     return [];
   }
+  getFilteredRows(filters: Filter[]): number[] {
+    return [];
+  }
   toDataTable() {
     return new DataTableForTesting({
       cols: this.table?.data?.cols?.filter(
@@ -189,20 +210,32 @@ export const GVIZ_FOR_TESTING = {
     setOnLoadCallback: () => {},
   },
   visualization: {
-    AreaChart: () => {},
+    AreaChart: () => {
+      return {
+        draw: () => {},
+      };
+    },
     arrayToDataTable: () => {
       return new DataTableForTesting();
     },
     NumberFormat: () => {
       return {format: () => {}};
     },
-    DataTable: (data: GeneralDataTable|null = null) => {
+    DataTable: (data: GeneralDataTable = {
+      cols: [],
+      rows: [],
+      p: {}
+    }) => {
       return new DataTableForTesting(data);
     },
     DataView: (table: DataTableForTesting) => {
       return new DataViewForTesting(table);
     },
-    Table: () => {},
+    Table: () => {
+      return {
+        draw: () => {},
+      };
+    },
     data: {
       group(dt: DataTableForTesting) {
         return dt;

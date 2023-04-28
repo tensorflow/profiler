@@ -1,7 +1,6 @@
 import {AfterViewInit, Component, ElementRef, HostListener, Input, OnChanges, SimpleChanges, ViewChild} from '@angular/core';
-
-import {MemoryProfileProtoOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
-import {MemoryProfileSnapshot} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {MemoryProfileProtoOrNull, MemoryProfileSnapshot} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {bytesToGiBs, picoToMilli} from 'org_xprof/frontend/app/common/utils/utils';
 
 const MAX_CHART_WIDTH = 1500;
 
@@ -92,13 +91,13 @@ export class MemoryTimelineGraph implements AfterViewInit, OnChanges {
         continue;
       }
       const row = [
-        this.picoToMilli(snapshots[i].timeOffsetPs),
-        this.bytesToGiBs(stats.stackReservedBytes),
-        this.bytesToGiBs(stats.heapAllocatedBytes),
+        picoToMilli(snapshots[i].timeOffsetPs),
+        bytesToGiBs(stats.stackReservedBytes),
+        bytesToGiBs(stats.heapAllocatedBytes),
         this.getMetadataTooltip(snapshots[i])
       ];
       if (hasFreeMemoryData) {
-        row.push(this.bytesToGiBs(stats.freeMemoryBytes));
+        row.push(bytesToGiBs(stats.freeMemoryBytes));
       }
       row.push((stats.fragmentation || 0) * 100);
       dataTable.addRow(row);
@@ -162,37 +161,28 @@ export class MemoryTimelineGraph implements AfterViewInit, OnChanges {
     };
     this.chart.draw(
         dataTable, options as google.visualization.AreaChartOptions);
-  }
-
-  bytesToGiBs(stat: string|number|undefined) {
-    if (!stat) return 0;
-    return Number(stat) / Math.pow(2, 30);
-  }
-
-  picoToMilli(timePs: string|undefined) {
-    if (!timePs) return 0;
-    return Number(timePs) / Math.pow(10, 9);
+    return dataTable;
   }
 
   getMetadataTooltip(snapshot: MemoryProfileSnapshot|undefined) {
     if (!snapshot) return '';
-    const timestampMs = this.picoToMilli(snapshot.timeOffsetPs);
+    const timestampMs = picoToMilli(snapshot.timeOffsetPs);
     const stats = snapshot.aggregationStats;
     const metadata = snapshot.activityMetadata;
     if (!stats || !metadata || !metadata.requestedBytes ||
         !metadata.allocationBytes || !metadata.memoryActivity) {
       return '';
     }
-    let requestedSizeGib = this.bytesToGiBs(metadata.requestedBytes);
-    let allocationSizeGib = this.bytesToGiBs(metadata.allocationBytes);
+    let requestedSizeGib = bytesToGiBs(metadata.requestedBytes);
+    let allocationSizeGib = bytesToGiBs(metadata.allocationBytes);
     if (metadata.memoryActivity === 'DEALLOCATION') {
       requestedSizeGib = -requestedSizeGib;
       allocationSizeGib = -allocationSizeGib;
     }
-    const memInUseGib = this.bytesToGiBs(
-                                Number(stats.stackReservedBytes) +
-                                Number(stats.heapAllocatedBytes))
-                            .toFixed(4);
+    const memInUseGib =
+        bytesToGiBs(
+            Number(stats.stackReservedBytes) + Number(stats.heapAllocatedBytes))
+            .toFixed(4);
     let metadataTooltip = 'timestamp(ms): ' + timestampMs.toFixed(1);
     metadataTooltip += '\nevent: ' + metadata.memoryActivity.toLowerCase();
     if (Number(metadata.requestedBytes) > 0) {
