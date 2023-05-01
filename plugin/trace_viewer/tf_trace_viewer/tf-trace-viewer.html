@@ -555,7 +555,7 @@ dashboard would integrate trace viewer app using iframe.
       const duration = endTime - startTime;
       if(this._isInitialLoad) {
         // measure the timing since browser start loading
-        window.parent.gtag('event', 'timing_complete', {
+        window.parent.gtag && window.parent.gtag('event', 'timing_complete', {
           'name': 'load',
           'value': performance.now(),
           'event_category': 'JS Dependency',
@@ -564,7 +564,7 @@ dashboard would integrate trace viewer app using iframe.
         this._isInitialLoad = false;
       } else {
          // measure time consuming for page reloading when streaming
-         window.parent.gtag('event', 'timing_complete', {
+         window.parent.gtag && window.parent.gtag('event', 'timing_complete', {
           'name': 'load',
           'value': duration,
           'event_category': 'data',
