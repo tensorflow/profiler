@@ -14,6 +14,7 @@ export declare interface Filter {
 /** The base interface for a cell.  */
 declare interface Cell<T> {
   v?: T;
+  p?: {[key: string]: T};
 }
 
 /** All cell type. */

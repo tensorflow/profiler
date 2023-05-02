@@ -118,9 +118,11 @@ class DataTableForTesting {
         }
         const rowValue = row.c![filter.column].v;
         if (filter.test !== undefined && typeof rowValue === 'string') {
-          return include && filter.test(rowValue);
+          include = include && filter.test(rowValue);
+        } else {
+          include = include && (rowValue === filter.value);
         }
-        return include && rowValue === filter.value;
+        return include;
       }, true);
       if (includeRow) {
         rowsIdxArray.push(index);
@@ -146,6 +148,56 @@ class DataTableForTesting {
   }
   addRows() {}
   sort() {}
+  getSortedRows(sortColumns: {column: number; desc: boolean}|number|number[]) {
+    const sortedRowsIndex: number[] = [];
+    // take care of Object case only for now
+    if (typeof sortColumns === 'object') {
+      const sortContent = this.data?.rows?.reduce((acc, row, index) => {
+        acc.push({
+          value: row.c![(sortColumns as {
+                          column: number;
+                          desc: boolean
+                        }).column]
+                     .v ||
+              '',
+          rowIndex: index
+        });
+        return acc;
+      }, [] as Array<{value: DataTableCellValue, rowIndex: number}>);
+      if (!(sortColumns as {
+             column: number;
+             desc: boolean
+           }).desc) {
+        sortContent!.sort((a, b) => a.value < b.value ? 1 : -1);
+      } else {
+        sortContent!.sort((a, b) => a.value < b.value ? -1 : 1);
+      }
+      sortContent!.forEach(row => {
+        sortedRowsIndex.push(row.rowIndex);
+      });
+    }
+    return sortedRowsIndex;
+  }
+  setProperty(
+      rowIndex: number, columnIndex: number, name: string,
+      value: DataTableCellValue) {
+    if (!this.data || this.getNumberOfRows() <= rowIndex ||
+        this.getNumberOfColumns() <= columnIndex) {
+      return;
+    }
+    this.data.rows![rowIndex].c![columnIndex].p = {
+      [name]: value,
+      ...(this.data.rows![rowIndex].c![columnIndex].p || {}),
+    };
+  }
+  getProperty(rowIndex: number, columnIndex: number, name: string) {
+    if (!this.data || this.getNumberOfRows() <= rowIndex ||
+        this.getNumberOfColumns() <= columnIndex ||
+        this.data.rows![rowIndex].c![columnIndex].p === undefined) {
+      return null;
+    }
+    return this.data.rows![rowIndex].c![columnIndex].p![name];
+  }
 
   /**
    * Returns a JSON representation of this DataTableForTesting.

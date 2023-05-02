@@ -24,9 +24,10 @@ declare interface SortEvent {
   ascending: boolean;
 }
 
+// TODO(xprof) Consider chagne fixed column index to column id for robustness
 const DATA_TABLE_RANK_INDEX = 0;
 const DATA_TABLE_KERNEL_NAME_INDEX = 1;
-const DATA_TABLE_OP_NAME_INDEX = 8;
+const OP_NAME_COLUMN_ID = 'op_name';
 
 /** A kernel stats table view component. */
 @Component({
@@ -224,7 +225,7 @@ export class KernelStatsTable implements OnChanges, OnInit {
     if (this.filterOpName.trim()) {
       const filter = this.filterOpName.trim().toLowerCase();
       filters.push({
-        'column': DATA_TABLE_OP_NAME_INDEX,
+        'column': this.dataTable.getColumnIndex(OP_NAME_COLUMN_ID),
         'test': (value: string) => value.toLowerCase().indexOf(filter) >= 0,
         // tslint:disable-next-line:no-any
       } as any);
