@@ -384,7 +384,6 @@ class ProfilePlugin(base_plugin.TBPlugin):
     """
     self.logdir = context.logdir
     self.data_provider = context.data_provider
-    self.stub = None
     self.master_tpu_unsecure_channel = context.flags.master_tpu_unsecure_channel
 
     # Whether the plugin is active. This is an expensive computation, so we
@@ -594,38 +593,16 @@ class ProfilePlugin(base_plugin.TBPlugin):
     }
     run_dir = self._run_dir(run)
     content_type = 'application/json'
-    # Profile plugin "run" is the last component of run dir.
-    profile_run = os.path.basename(run_dir)
 
     if tool not in TOOLS and not use_xplane(tool):
       return None, content_type, None
 
-    self.start_grpc_stub_if_necessary()
-    if tool == 'trace_viewer@' and self.stub is not None:
-      # Streaming trace viewer needs profiler_analysis service, which is only
-      # supported in Cloud TPU. This code is unused when data was produced by
-      # open-source TensorFlow. Only import the library when needed.
-      # pylint: disable=g-import-not-at-top
-      # pylint: disable=g-direct-tensorflow-import
-      from tensorflow.core.profiler import profiler_analysis_pb2
-      # pylint: enable=g-import-not-at-top
-      # pylint: enable=g-direct-tensorflow-import
-      grpc_request = profiler_analysis_pb2.ProfileSessionDataRequest()
-      grpc_request.repository_root = os.path.dirname(run_dir)
-      grpc_request.session_id = profile_run
-      grpc_request.tool_name = 'trace_viewer'
-      # Remove the trailing dot if present
-      grpc_request.host_name = host.rstrip('.')
-
-      grpc_request.parameters['resolution'] = request.args.get(
-          'resolution', 8000)
+    if tool == 'trace_viewer@':
+      params['resolution'] = request.args.get('resolution', 8000)
       if request.args.get('start_time_ms') is not None:
-        grpc_request.parameters['start_time_ms'] = request.args.get(
-            'start_time_ms')
+        params['start_time_ms'] = request.args.get('start_time_ms')
       if request.args.get('end_time_ms') is not None:
-        grpc_request.parameters['end_time_ms'] = request.args.get('end_time_ms')
-      grpc_response = self.stub.GetSessionToolData(grpc_request)
-      return grpc_response.output, content_type, None
+        params['end_time_ms'] = request.args.get('end_time_ms')
 
     asset_path = os.path.join(run_dir, make_filename(host, tool))
 
@@ -766,29 +743,6 @@ class ProfilePlugin(base_plugin.TBPlugin):
         'type': request.args.get('type')
     }
 
-  def start_grpc_stub_if_necessary(self):
-    # We will enable streaming trace viewer on two conditions:
-    # 1. user specify the flags master_tpu_unsecure_channel to the ip address of
-    #    as "master" TPU. grpc will be used to fetch streaming trace data.
-    # 2. the logdir is on google cloud storage.
-    if self.master_tpu_unsecure_channel and self.logdir.startswith('gs://'):
-      if self.stub is None:
-        # gRPC and profiler_analysis are only needed to support streaming trace
-        # viewer in Cloud TPU. This code is unused when data was produced by
-        # open-source TensorFlow. Only import the libraries when needed.
-        # pylint: disable=g-import-not-at-top
-        import grpc
-        from tensorflow.python.tpu.profiler import profiler_analysis_pb2_grpc
-        # pylint: enable=g-import-not-at-top
-        # Workaround the grpc's 4MB message limitation.
-        gigabyte = 1024 * 1024 * 1024
-        options = [('grpc.max_message_length', gigabyte),
-                   ('grpc.max_send_message_length', gigabyte),
-                   ('grpc.max_receive_message_length', gigabyte)]
-        tpu_profiler_port = self.master_tpu_unsecure_channel + ':8466'
-        channel = grpc.insecure_channel(tpu_profiler_port, options)
-        self.stub = profiler_analysis_pb2_grpc.ProfileAnalysisStub(channel)
-
   def _run_dir(self, run):
     """Helper that maps a frontend run name to a profile "run" directory.
 
@@ -865,7 +819,6 @@ class ProfilePlugin(base_plugin.TBPlugin):
     For the above example, this would be:
         "run1", "train/run1", "train/run2", "validation/run1"
     """
-    self.start_grpc_stub_if_necessary()
 
     # Create a background context; we may not be in a request.
     ctx = RequestContext()
@@ -930,11 +883,8 @@ class ProfilePlugin(base_plugin.TBPlugin):
       # streaming trace viewer always override normal trace viewer.
       # the trailing '@' is to inform tf-profile-dashboard.html and
       # tf-trace-viewer.html that stream trace viewer should be used.
-      if self.stub is None:
-        tools.discard('trace_viewer@')
-      else:
-        tools.discard('trace_viewer#')
-        tools.discard('trace_viewer')
+      tools.discard('trace_viewer#')
+      tools.discard('trace_viewer')
     if 'trace_viewer#' in tools:
       # use compressed trace
       tools.discard('trace_viewer')
