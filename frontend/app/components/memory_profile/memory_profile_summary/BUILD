@@ -14,7 +14,7 @@ xprof_ng_module(
         "memory_profile_summary.ng.html",
     ],
     deps = [
-        "@npm//@angular/core",
+        "//:node_modules/@angular/core",
         "@org_xprof//frontend/app/common/angular:angular_material_card",
         "@org_xprof//frontend/app/common/angular:angular_material_tooltip",
         "@org_xprof//frontend/app/common/interfaces",

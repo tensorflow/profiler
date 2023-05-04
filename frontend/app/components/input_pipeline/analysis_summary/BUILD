@@ -14,7 +14,7 @@ xprof_ng_module(
         "analysis_summary.ng.html",
     ],
     deps = [
-        "@npm//@angular/core",
+        "//:node_modules/@angular/core",
         "@org_xprof//frontend/app/common/interfaces",
     ],
 )

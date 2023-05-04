@@ -5,6 +5,9 @@
     "strict": false,
     "inlineSourceMap": true,
     "experimentalDecorators": true,
-    "baseUrl": "./"
+    "baseUrl": "./",
+    "paths": {
+      "@org_xprof/*": ["./*"]
+    }
   }
 }

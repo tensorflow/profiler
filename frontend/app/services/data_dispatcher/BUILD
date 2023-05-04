@@ -1,5 +1,5 @@
 load("//defs:defs.bzl", "xprof_ng_module")
-load("@npm//@bazel/typescript:index.bzl", "ts_library")
+load("@npm//@bazel/concatjs:index.bzl", "ts_library")
 
 package(default_visibility = ["//frontend:internal"])
 
@@ -10,8 +10,8 @@ ts_library(
     ],
     deps = [
         ":data_request_queue",
-        "@npm//@ngrx/store",
-        "@npm//rxjs",
+        "//:node_modules/@ngrx/store",
+        "//:node_modules/rxjs",
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/store",
         "@org_xprof//frontend/app/store:types",
@@ -39,9 +39,9 @@ xprof_ng_module(
     deps = [
         ":data_dispatcher_base",
         ":data_request_queue",
-        "@npm//@angular/core",
-        "@npm//@ngrx/store",
-        "@npm//rxjs",
+        "//:node_modules/@angular/core",
+        "//:node_modules/@ngrx/store",
+        "//:node_modules/rxjs",
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/services/data_service",
         "@org_xprof//frontend/app/store",

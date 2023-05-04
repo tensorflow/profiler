@@ -14,8 +14,8 @@ xprof_ng_module(
         "stack_bar_chart.ng.html",
     ],
     deps = [
-        "@npm//@angular/core",
-        "@npm//@types/google.visualization",
+        "//:node_modules/@angular/core",
+        "//:node_modules/@types/google.visualization",
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",
     ],

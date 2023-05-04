@@ -14,8 +14,8 @@ xprof_ng_module(
         "performance_summary.ng.html",
     ],
     deps = [
-        "@npm//@angular/common",
-        "@npm//@angular/core",
+        "//:node_modules/@angular/common",
+        "//:node_modules/@angular/core",
         "@org_xprof//frontend/app/common/angular:angular_material_card",
         "@org_xprof//frontend/app/common/angular:angular_material_icon",
         "@org_xprof//frontend/app/common/angular:angular_material_tooltip",

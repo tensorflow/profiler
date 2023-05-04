@@ -14,8 +14,8 @@ xprof_ng_module(
         "top_ops_table.ng.html",
     ],
     deps = [
-        "@npm//@angular/core",
-        "@npm//@types/google.visualization",
+        "//:node_modules/@angular/core",
+        "//:node_modules/@types/google.visualization",
         "@org_xprof//frontend/app/common/angular:angular_material_expansion",
         "@org_xprof//frontend/app/common/interfaces",
     ],

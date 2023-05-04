@@ -14,9 +14,9 @@ xprof_ng_module(
         ":category_filter_css",
     ],
     deps = [
-        "@npm//@angular/common",
-        "@npm//@angular/core",
-        "@npm//@types/google.visualization",
+        "//:node_modules/@angular/common",
+        "//:node_modules/@angular/core",
+        "//:node_modules/@types/google.visualization",
         "@org_xprof//frontend/app/common/angular:angular_material_core",
         "@org_xprof//frontend/app/common/angular:angular_material_form_field",
         "@org_xprof//frontend/app/common/angular:angular_material_select",

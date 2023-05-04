@@ -14,9 +14,9 @@ xprof_ng_module(
         ":export_as_csv_css",
     ],
     deps = [
-        "@npm//@angular/common",
-        "@npm//@angular/core",
-        "@npm//@ngrx/store",
+        "//:node_modules/@angular/common",
+        "//:node_modules/@angular/core",
+        "//:node_modules/@ngrx/store",
         "@org_xprof//frontend/app/common/angular:angular_material_icon",
         "@org_xprof//frontend/app/store",
     ],

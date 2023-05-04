@@ -14,7 +14,7 @@ xprof_ng_module(
         "flop_rate_chart.ng.html",
     ],
     deps = [
-        "@npm//@angular/core",
+        "//:node_modules/@angular/core",
         "@org_xprof//frontend/app/common/angular:angular_material_card",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/interfaces:chart",

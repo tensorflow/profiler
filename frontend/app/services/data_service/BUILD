@@ -9,9 +9,9 @@ xprof_ng_module(
         "mock_data.ts",
     ],
     deps = [
-        "@npm//@angular/common",
-        "@npm//@angular/core",
-        "@npm//rxjs",
+        "//:node_modules/@angular/common",
+        "//:node_modules/@angular/core",
+        "//:node_modules/rxjs",
         "@org_xprof//frontend/app/common/angular:angular_common_http",
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",

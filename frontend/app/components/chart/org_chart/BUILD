@@ -14,8 +14,8 @@ xprof_ng_module(
         "org_chart.ng.html",
     ],
     deps = [
-        "@npm//@angular/core",
-        "@npm//@types/google.visualization",
+        "//:node_modules/@angular/core",
+        "//:node_modules/@types/google.visualization",
     ],
 )
 

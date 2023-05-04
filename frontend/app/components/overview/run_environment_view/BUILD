@@ -14,7 +14,7 @@ xprof_ng_module(
         "run_environment_view.ng.html",
     ],
     deps = [
-        "@npm//@angular/core",
+        "//:node_modules/@angular/core",
         "@org_xprof//frontend/app/common/angular:angular_material_card",
         "@org_xprof//frontend/app/common/interfaces",
     ],

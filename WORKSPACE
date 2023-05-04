@@ -66,10 +66,126 @@ rules_closure_dependencies(
 )
 
 http_archive(
-    name = "build_bazel_rules_nodejs",
-    sha256 = "b3521b29c7cb0c47a1a735cce7e7e811a4f80d8e3720cf3a1b624533e4bb7cb6",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/2.3.2/rules_nodejs-2.3.2.tar.gz"],
+    name = "aspect_bazel_lib",
+    sha256 = "80897b673c2b506d21f861ae316689aa8abcc3e56947580a41bf9e68ff13af58",
+    strip_prefix = "bazel-lib-1.27.1",
+    url = "https://github.com/aspect-build/bazel-lib/releases/download/v1.27.1/bazel-lib-v1.27.1.tar.gz",
 )
+load("@aspect_bazel_lib//lib:repositories.bzl", "aspect_bazel_lib_dependencies", "register_jq_toolchains")
+aspect_bazel_lib_dependencies()
+register_jq_toolchains()
+
+http_archive(
+    name = "aspect_rules_js",
+    sha256 = "124ed29fb0b3d0cba5b44f8f8e07897cf61b34e35e33b1f83d1a943dfd91b193",
+    strip_prefix = "rules_js-1.24.0",
+    url = "https://github.com/aspect-build/rules_js/releases/download/v1.24.0/rules_js-v1.24.0.tar.gz",
+)
+load("@aspect_rules_js//js:repositories.bzl", "rules_js_dependencies")
+rules_js_dependencies()
+load("@aspect_rules_js//npm:npm_import.bzl", "npm_translate_lock", "pnpm_repository")
+pnpm_repository(name = "pnpm")
+npm_translate_lock(
+    name = "npm",
+    npmrc = "//:.npmrc",
+    pnpm_lock = "//:pnpm-lock.yaml",
+    # Set this to True when the lock file needs to be updated, commit the
+    # changes, then set to False again.
+    update_pnpm_lock = False,
+    verify_node_modules_ignored = "//:.bazelignore",
+)
+
+http_archive(
+    name = "aspect_rules_ts",
+    sha256 = "8eb25d1fdafc0836f5778d33fb8eaac37c64176481d67872b54b0a05de5be5c0",
+    strip_prefix = "rules_ts-1.3.3",
+    url = "https://github.com/aspect-build/rules_ts/releases/download/v1.3.3/rules_ts-v1.3.3.tar.gz",
+)
+##################
+# rules_ts setup #
+##################
+# Fetches the rules_ts dependencies.
+# If you want to have a different version of some dependency,
+# you should fetch it *before* calling this.
+# Alternatively, you can skip calling this function, so long as you've
+# already fetched all the dependencies.
+load("@aspect_rules_ts//ts:repositories.bzl", "rules_ts_dependencies")
+rules_ts_dependencies(
+    ts_version_from = "//:package.json",
+)
+
+load("@rules_nodejs//nodejs:repositories.bzl", "DEFAULT_NODE_VERSION", "nodejs_register_toolchains")
+nodejs_register_toolchains(
+    name = "nodejs",
+    node_version = DEFAULT_NODE_VERSION,
+)
+
+load("@npm//:repositories.bzl", "npm_repositories")
+npm_repositories()
+
+http_archive(
+    name = "aspect_rules_esbuild",
+    sha256 = "2ea31bd97181a315e048be693ddc2815fddda0f3a12ca7b7cc6e91e80f31bac7",
+    strip_prefix = "rules_esbuild-0.14.4",
+    url = "https://github.com/aspect-build/rules_esbuild/releases/download/v0.14.4/rules_esbuild-v0.14.4.tar.gz",
+)
+
+# Register a toolchain containing esbuild npm package and native bindings
+load("@aspect_rules_esbuild//esbuild:repositories.bzl", "LATEST_VERSION", "esbuild_register_toolchains")
+
+esbuild_register_toolchains(
+    name = "esbuild",
+    esbuild_version = LATEST_VERSION,
+)
+
+http_archive(
+    name = "aspect_rules_rollup",
+    sha256 = "55aec79b04d84b489895ac6f57a7ed7e4a1ef94dc4680701634463dd1720802d",
+    strip_prefix = "rules_rollup-0.15.0",
+    url = "https://github.com/aspect-build/rules_rollup/releases/download/v0.15.0/rules_rollup-v0.15.0.tar.gz",
+)
+
+######################
+# rules_rollup setup #
+######################
+load("@aspect_rules_rollup//rollup:dependencies.bzl", "rules_rollup_dependencies")
+
+# Fetches the rules_rollup dependencies.
+# If you want to have a different version of some dependency,
+# you should fetch it *before* calling this.
+# Alternatively, you can skip calling this function, so long as you've
+# already fetched all the dependencies.
+rules_rollup_dependencies()
+
+################################################################################
+# rules_nodejs
+################################################################################
+http_archive(
+    name = "rules_nodejs",
+    sha256 = "764a3b3757bb8c3c6a02ba3344731a3d71e558220adcb0cf7e43c9bba2c37ba8",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/5.8.2/rules_nodejs-core-5.8.2.tar.gz"],
+)
+http_archive(
+    name = "build_bazel_rules_nodejs",
+    sha256 = "94070eff79305be05b7699207fbac5d2608054dd53e6109f7d00d923919ff45a",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/5.8.2/rules_nodejs-5.8.2.tar.gz"],
+)
+
+#http_archive(
+#    name = "build_bazel_rules_nodejs",
+#    sha256 = "c911b5bd8aee8b0498cc387cacdb5f917098ce477fb4182db07b0ef8a9e045c0",
+#    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/4.7.1/rules_nodejs-4.7.1.tar.gz"],
+#)
+
+# load("@build_bazel_rules_nodejs//:index.bzl", "yarn_install")
+
+#yarn_install(
+#    name = "npm",
+#    package_json = "//:package.json",
+#    # symlink_node_modules must be explicitly disabled in rules_nodejs 4.7.1
+#    symlink_node_modules = False,
+#    yarn_lock = "//:yarn.lock",
+#)
 
 http_archive(
     name = "io_bazel_rules_sass",
@@ -77,20 +193,6 @@ http_archive(
     strip_prefix = "rules_sass-1.26.3",
     # Make sure to check for the latest version when you install
     url = "https://github.com/bazelbuild/rules_sass/archive/1.26.3.zip",
-)
-
-load("@build_bazel_rules_nodejs//:index.bzl", "node_repositories", "yarn_install")
-node_repositories()
-
-yarn_install(
-    name = "npm",
-    package_json = "//:package.json",
-    yarn_lock = "//:yarn.lock",
-    # Opt out of symlinking local node_modules folder into bazel internal
-    # directory.  Symlinking is incompatible with our toolchain which often
-    # removes source directory without `bazel clean` which creates broken
-    # symlink into node_modules folder.
-    symlink_node_modules = False,
 )
 
 load("@io_bazel_rules_sass//sass:sass_repositories.bzl", "sass_repositories")

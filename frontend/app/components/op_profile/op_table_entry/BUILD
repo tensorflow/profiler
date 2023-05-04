@@ -14,9 +14,9 @@ xprof_ng_module(
         "op_table_entry.ng.html",
     ],
     deps = [
-        "@npm//@angular/common",
-        "@npm//@angular/core",
-        "@npm//@ngrx/store",
+        "//:node_modules/@angular/common",
+        "//:node_modules/@angular/core",
+        "//:node_modules/@ngrx/store",
         "@org_xprof//frontend/app/common/interfaces:op_profile_proto_defs",
         "@org_xprof//frontend/app/common/utils",
         "@org_xprof//frontend/app/store",

@@ -15,7 +15,7 @@ xprof_ng_module(
     ],
     deps = [
         ":stats_table_data_provider",
-        "@npm//@angular/core",
+        "//:node_modules/@angular/core",
         "@org_xprof//frontend/app/common/angular:angular_material_form_field",
         "@org_xprof//frontend/app/common/angular:angular_material_icon",
         "@org_xprof//frontend/app/common/angular:angular_material_input",
@@ -31,7 +31,7 @@ xprof_ng_module(
         "stats_table_data_provider.ts",
     ],
     deps = [
-        "@npm//@angular/core",
+        "//:node_modules/@angular/core",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/interfaces:chart",
         "@org_xprof//frontend/app/components/chart:default_data_provider",

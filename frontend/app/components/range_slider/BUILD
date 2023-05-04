@@ -14,7 +14,7 @@ xprof_ng_module(
         "range_slider.ng.html",
     ],
     deps = [
-        "@npm//@angular/core",
+        "//:node_modules/@angular/core",
         "@org_xprof//frontend/app/common/angular:angular_material_slider",
     ],
 )

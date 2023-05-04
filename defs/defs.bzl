@@ -14,7 +14,17 @@
 
 """External-only delegates for various BUILD rules."""
 
-load("@npm//@bazel/typescript:index.bzl", "ts_library")
+load("@aspect_rules_ts//ts:defs.bzl", _ts_project = "ts_project")
+
+# Common dependencies of Angular applications
+APPLICATION_DEPS = [
+    #"//:node_modules/@angular/common",
+    #"//:node_modules/@angular/core",
+    #"//:node_modules/@angular/router",
+    #"//:node_modules/@angular/platform-browser",
+    #"//:node_modules/@types/node",
+    #"//:node_modules/rxjs",
+]
 
 def _convert_paths_to_absolute_impl(ctx):
   """Implementation of convert_paths_to_absolute.
@@ -50,35 +60,54 @@ convert_paths_to_absolute = rule(
     },
 )
 
-def xprof_ng_module(name, srcs, assets = [], allow_warnings = None, **kwargs):
-    """Wrapper for Angular modules for the external BUILD rules"""
+def ts_project(name, **kwargs):
+    """ts_project() macro with default tsconfig and aligning params.
+    """
 
-    # A hack for ngcc (Angular Ivy) compiler with rules_nodejs's
-    # ts_library rule which does not resolve Modules properly
-    # if their paths are relative. So we convert all our Module
-    # import paths from relative to absolute paths.
-    # See: https://github.com/bazelbuild/rules_nodejs/issues/2296
-    converted_srcs_name = "%s_converted_srcs" % name
-    convert_paths_to_absolute(
-      name = converted_srcs_name,
-      srcs = srcs
-    )
-    srcs = [":%s" % (converted_srcs_name)]
-
-    # A hack to include @angular/common, @angular/core since the ng_module
-    # macro in google3 automatically adds this dep.
-    # See: https://source.corp.google.com/google3/javascript/angular2/ng_module.bzl
-    if "@npm//@angular/common" not in kwargs['deps']:
-      kwargs['deps'] += ["@npm//@angular/common"]
-    if "@npm//@angular/core" not in kwargs['deps']:
-      kwargs['deps'] += ["@npm//@angular/core"]
-
-    ts_library(
+    _ts_project(
         name = name,
-        compiler = "//defs:tsc_wrapped_with_angular",
-        supports_workers = True,
-        use_angular_plugin = True,
-        angular_assets = assets,
-        srcs = srcs,
+
+        # Default tsconfig and aligning attributes
+        tsconfig = kwargs.pop("tsconfig", "//:tsconfig"),
+        declaration = kwargs.pop("declaration", True),
+        declaration_map = kwargs.pop("declaration_map", True),
+        source_map = kwargs.pop("source_map", True),
         **kwargs
+    )
+
+def ng_project(name, **kwargs):
+    """ts_project() wrapper with Angular ngc compiler.
+    """
+    ts_project(
+        name = name,
+
+        # Compiler
+        tsc = "//defs:ngc",
+
+        # Any other ts_project() or generic args
+        **kwargs
+    )
+
+# Macro to wrap Angular's ngc compiler
+def xprof_ng_module(name, **kwargs):
+    #srcs = kwargs.pop('srcs')
+    #converted_srcs_name = "%s_converted_srcs" % name
+    #convert_paths_to_absolute(
+    #  name = converted_srcs_name,
+    #  srcs = srcs
+    #)
+    #srcs = [":%s" % (converted_srcs_name)]
+
+    if "//:node_modules/@angular/common" not in kwargs['deps']:
+      kwargs['deps'] += ["//:node_modules/@angular/common"]
+    if "//:node_modules/@angular/core" not in kwargs['deps']:
+      kwargs['deps'] += ["//:node_modules/@angular/core"]
+
+    # Primary app source
+    ng_project(
+      name = name,
+      srcs = kwargs.pop('srcs', []) + kwargs.pop('assets', []),
+      deps = kwargs.pop('deps', []) + APPLICATION_DEPS,
+      supports_workers = True,
+      **kwargs
     )

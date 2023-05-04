@@ -14,7 +14,7 @@ xprof_ng_module(
         "empty_page.ng.html",
     ],
     deps = [
-        "@npm//@angular/core",
+        "//:node_modules/@angular/core",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/components/capture_profile",
     ],

@@ -14,8 +14,8 @@ xprof_ng_module(
         "memory_breakdown_table.ng.html",
     ],
     deps = [
-        "@npm//@angular/core",
-        "@npm//@types/google.visualization",
+        "//:node_modules/@angular/core",
+        "//:node_modules/@types/google.visualization",
         "@org_xprof//frontend/app/common/angular:angular_material_form_field",
         "@org_xprof//frontend/app/common/angular:angular_material_icon",
         "@org_xprof//frontend/app/common/angular:angular_material_input",

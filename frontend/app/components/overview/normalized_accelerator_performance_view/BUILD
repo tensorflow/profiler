@@ -14,8 +14,8 @@ xprof_ng_module(
         "normalized_accelerator_performance_view.ng.html",
     ],
     deps = [
-        "@npm//@angular/common",
-        "@npm//@angular/core",
+        "//:node_modules/@angular/common",
+        "//:node_modules/@angular/core",
         "@org_xprof//frontend/app/common/angular:angular_material_expansion",
         "@org_xprof//frontend/app/common/interfaces",
     ],

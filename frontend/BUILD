@@ -1,4 +1,4 @@
-load("@npm//@bazel/rollup:index.bzl", "rollup_bundle")
+load("@aspect_rules_rollup//rollup:defs.bzl", "rollup")
 load("@io_bazel_rules_sass//:defs.bzl", "sass_binary", "sass_library")
 load("//defs:defs.bzl", "xprof_ng_module")
 
@@ -18,55 +18,53 @@ package_group(
 
 xprof_ng_module(
     name = "main",
-    srcs = [
-        "main.ts",
-    ],
+    srcs = ["main.ts", "package.json", "styles.scss"],
     deps = [
-        "@npm//@angular/core",
-        "@npm//@angular/localize",
-        "@npm//@angular/platform-browser-dynamic",
+        "//:node_modules/@angular/localize",
+        "//:node_modules/@angular/platform-browser-dynamic",
         "@org_xprof//frontend/app",
     ],
 )
 
-rollup_bundle(
+rollup(
     name = "zone",
-    srcs = ["@npm//:node_modules/zone.js/dist/zone.js"],
+    srcs = ["//:node_modules/zone.js/dist/zone.js"],
     config_file = "//:rollup.config.js",
-    entry_point = "@npm//:node_modules/zone.js/dist/zone.js",
+    entry_point = "//:node_modules/zone.js/dist/zone.js",
+    node_modules = "//:node_modules",
     format = "iife",
-    link_workspace_root = True,
     deps = [
-        "@npm//@rollup/plugin-commonjs",
-        "@npm//@rollup/plugin-node-resolve",
+        "//:node_modules/@rollup/plugin-commonjs",
+        "//:node_modules/@rollup/plugin-node-resolve",
     ],
 )
 
-rollup_bundle(
+rollup(
     name = "bundle",
     config_file = "//:rollup.config.js",
     entry_point = "main.ts",
+    node_modules = "//:node_modules",
+    sourcemap = "false",
     format = "iife",
-    link_workspace_root = True,
     deps = [
         ":main",
-        "@npm//@angular/animations",
-        "@npm//@angular/cdk",
-        "@npm//@angular/core",
-        "@npm//@angular/forms",
-        "@npm//@angular/material",
-        "@npm//@angular/platform-browser-dynamic",
-        "@npm//@angular/router",
-        "@npm//@ngrx/store",
-        "@npm//@rollup/plugin-commonjs",
-        "@npm//@rollup/plugin-node-resolve",
+        "//:node_modules/@angular/animations",
+        "//:node_modules/@angular/cdk",
+        "//:node_modules/@angular/core",
+        "//:node_modules/@angular/forms",
+        "//:node_modules/@angular/material",
+        "//:node_modules/@angular/platform-browser-dynamic",
+        "//:node_modules/@angular/router",
+        "//:node_modules/@ngrx/store",
+        "//:node_modules/@rollup/plugin-commonjs",
+        "//:node_modules/@rollup/plugin-node-resolve",
     ],
 )
 
 sass_library(
     name = "angular_material_theming",
     srcs = [
-        "@npm//:node_modules/@angular/material/_theming.scss",
+        "//:node_modules/@angular/material/_theming.scss",
     ],
 )
 

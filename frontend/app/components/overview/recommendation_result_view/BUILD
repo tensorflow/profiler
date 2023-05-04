@@ -17,9 +17,9 @@ xprof_ng_module(
         "recommendation_result_view.ng.html",
     ],
     deps = [
-        "@npm//@angular/common",
-        "@npm//@angular/core",
-        "@npm//@ngrx/store",
+        "//:node_modules/@angular/common",
+        "//:node_modules/@angular/core",
+        "//:node_modules/@ngrx/store",
         "@org_xprof//frontend/app/common/angular:angular_material_card",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/utils",

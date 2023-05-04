@@ -9,7 +9,7 @@ import {MatDialogRef} from '@angular/material/dialog';
 })
 export class CaptureProfileDialog {
   captureButtonLabel = 'Capture';
-  closeButtonLabel = 'Close';
+  readonly closeButtonLabel = 'Close';
   serviceAddr = '';
   isTpuName = false;
   addressType = 'ip';

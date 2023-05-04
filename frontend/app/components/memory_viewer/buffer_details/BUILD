@@ -14,9 +14,9 @@ xprof_ng_module(
         "buffer_details.ng.html",
     ],
     deps = [
-        "@npm//@angular/core",
-        "@npm//@ngrx/store",
-        "@npm//rxjs",
+        "//:node_modules/@angular/core",
+        "//:node_modules/@ngrx/store",
+        "//:node_modules/rxjs",
         "@org_xprof//frontend/app/common/angular:angular_material_card",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/utils",
