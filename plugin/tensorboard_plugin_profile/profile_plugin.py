@@ -65,7 +65,6 @@ CAPTURE_ROUTE = '/capture_profile'
 TOOLS = {
     'trace_viewer': 'trace',
     'trace_viewer#': 'trace.json.gz',
-    'trace_viewer@': 'tracetable',  # streaming trace viewer
     'op_profile': 'op_profile.json',
     'input_pipeline_analyzer': 'input_pipeline.json',
     'input_pipeline_analyzer@': 'input_pipeline.pb',
@@ -95,7 +94,8 @@ RAW_DATA_TOOLS = frozenset(
 
 # Tools that can be generated from xplane end with ^.
 XPLANE_TOOLS = [
-    'trace_viewer^',
+    'trace_viewer^',  # non-streaming before TF 2.13
+    'trace_viewer@^',  # streaming since TF 2.14
     'overview_page^',
     'input_pipeline_analyzer^',
     'tensorflow_stats^',
@@ -597,12 +597,14 @@ class ProfilePlugin(base_plugin.TBPlugin):
     if tool not in TOOLS and not use_xplane(tool):
       return None, content_type, None
 
-    if tool == 'trace_viewer@':
-      params['resolution'] = request.args.get('resolution', 8000)
+    if tool == 'trace_viewer@^':
+      options = {}
+      options['resolution'] = request.args.get('resolution', 8000)
       if request.args.get('start_time_ms') is not None:
-        params['start_time_ms'] = request.args.get('start_time_ms')
+        options['start_time_ms'] = request.args.get('start_time_ms')
       if request.args.get('end_time_ms') is not None:
-        params['end_time_ms'] = request.args.get('end_time_ms')
+        options['end_time_ms'] = request.args.get('end_time_ms')
+      params['trace_viewer_options'] = options
 
     asset_path = os.path.join(run_dir, make_filename(host, tool))
 
@@ -879,7 +881,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
       A list of strings representing the available tools
     """
     tools = _get_tools(filenames, profile_run_dir)
-    if 'trace_viewer@' in tools:
+    if 'trace_viewer@^' in tools:
       # streaming trace viewer always override normal trace viewer.
       # the trailing '@' is to inform tf-profile-dashboard.html and
       # tf-trace-viewer.html that stream trace viewer should be used.

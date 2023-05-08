@@ -52,7 +52,7 @@ export const routes: Routes = [
   {path: 'tensorflow_stats^', component: TensorflowStatsAdapter},
   {path: 'trace_viewer', component: TraceViewer},
   {path: 'trace_viewer#', component: TraceViewer},
-  {path: 'trace_viewer@', component: TraceViewer},
+  {path: 'trace_viewer@^', component: TraceViewer},
   {path: 'trace_viewer^', component: TraceViewer},
   {path: 'graph_viewer^', component: GraphViewer},
   {path: '**', component: EmptyPage},
