@@ -223,7 +223,7 @@ dashboard would integrate trace viewer app using iframe.
       _throbber: Object,
       _eventDetails: Object,
       _isStreaming: {type: Boolean, value: false},
-      _showPerfetto: {type: Boolean, value: true},
+      _isOss: {type: Boolean, value: false},
       _loadedRange: Object,
       _loadedTraceEents: Object,
       _fullBounds: Object,
@@ -290,12 +290,12 @@ dashboard would integrate trace viewer app using iframe.
           }
         } else if (key === 'is_streaming') {
           this._isStreaming = value === 'true';
+        } else if (key === 'is_oss') {
+          this._isOss = value === 'true';
         } else if (key === 'hosts_data_url') {
           this.hostsDataUrl = value;
         } else if (key === 'resolution') {
           this._resolution = Number(value);
-        } else if (key === 'show_perfetto') {
-          this._showPerfetto = value === 'true';
         }
       }.bind(this));
 
@@ -507,7 +507,7 @@ dashboard would integrate trace viewer app using iframe.
     },
 
     _createPerfettoButton: function() {
-      if (this._showPerfetto) {
+      if (!this._isOss) {
         const button = tr.ui.b.createButton('Perfetto', this._perfettoButtonOnclickCallback.bind(this));
         button.setAttribute('id', 'perfetto');
         // Control bar has a height of 22px, using icon size 20px
@@ -571,7 +571,9 @@ dashboard would integrate trace viewer app using iframe.
           'event_label': 'trace_viewer_reloading',
         });
       }
-      this._insertRenderCompleteSignal();
+      if (!this._isOss) {
+        this._insertRenderCompleteSignal();
+      }
     },
 
     _loadNonStreamingTrace: async function() {

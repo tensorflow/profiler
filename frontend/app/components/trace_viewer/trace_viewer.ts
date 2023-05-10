@@ -39,7 +39,7 @@ export class TraceViewer implements OnDestroy {
     const traceDataUrl = this.pathPrefix + DATA_API + '?' + params.toString();
     this.url = this.pathPrefix + API_PREFIX + PLUGIN_NAME +
         '/trace_viewer_index.html' +
-        '?is_streaming=' + isStreaming.toString() +
+        '?is_streaming=' + isStreaming.toString() + '&is_oss=true' +
         '&trace_data_url=' + encodeURIComponent(traceDataUrl);
   }
 
