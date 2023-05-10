@@ -105,13 +105,17 @@ def xspace_to_tool_data(
   content_type = 'application/json'
   # tqx: gViz output format
   tqx = params.get('tqx', '')
-  if tool == 'trace_viewer' or tool == 'trace_viewer@':
+  if tool == 'trace_viewer':
     # Trace viewer handles one host at a time.
     assert len(xspace_paths) == 1
-    options = params.get('trace_viewer_options', {})
-    raw_data, success = xspace_wrapper_func(xspace_paths, tool, options)
+    raw_data, success = xspace_wrapper_func(xspace_paths, tool)
     if success:
       data = process_raw_trace(raw_data)
+  elif tool == 'trace_viewer@':
+    # Streaming trace viewer handles one host at a time.
+    assert len(xspace_paths) == 1
+    options = params.get('trace_viewer_options', {})
+    data, success = xspace_wrapper_func(xspace_paths, tool, options)
   elif tool == 'overview_page':
     raw_data, success = xspace_wrapper_func(xspace_paths, tool)
     if success:
