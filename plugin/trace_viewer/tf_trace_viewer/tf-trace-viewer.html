@@ -641,18 +641,24 @@ dashboard would integrate trace viewer app using iframe.
 
       await this._loadJSON(requestedRange)
         .then((data) => {
-          this._addInitialResponseDataLatency(performance.now());
-          this._addDataResponseSize(data.length);
+          if (!this._isOss) {
+            this._addInitialResponseDataLatency(performance.now());
+            this._addDataResponseSize(data.length);
+          }
           startUpdateModel = performance.now();
           this._updateModel(data, replaceModel);
-          this._addUpdateModelLatency(performance.now() - startUpdateModel);
+          if (!this._isOss) {
+            this._addUpdateModelLatency(performance.now() - startUpdateModel);
+          }
         })
         .then(async () => {
           // Wait for the Promise in requestAnimationFrame callback
           // to be resolved so we can make the load trace flow synchronized
           startUpdateView = performance.now();
           await this._updateView(requestedRange);
-          this._addUpdateViewLatency(performance.now() - startUpdateView);
+          if (!this._isOss) {
+            this._addUpdateViewLatency(performance.now() - startUpdateView);
+          }
         })
         .catch((err) => {
           this._displayOverlay('Trace Viewer', err);
