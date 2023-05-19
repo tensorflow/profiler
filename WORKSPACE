@@ -67,20 +67,17 @@ rules_closure_dependencies(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    sha256 = "b3521b29c7cb0c47a1a735cce7e7e811a4f80d8e3720cf3a1b624533e4bb7cb6",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/2.3.2/rules_nodejs-2.3.2.tar.gz"],
-)
-
-http_archive(
-    name = "io_bazel_rules_sass",
-    sha256 = "9dcfba04e4af896626f4760d866f895ea4291bc30bf7287887cefcf4707b6a62",
-    strip_prefix = "rules_sass-1.26.3",
-    # Make sure to check for the latest version when you install
-    url = "https://github.com/bazelbuild/rules_sass/archive/1.26.3.zip",
+    sha256 = "d63ecec7192394f5cc4ad95a115f8a6c9de55c60d56c1f08da79c306355e4654",
+    urls = [
+        "http://mirror.tensorflow.org/github.com/bazelbuild/rules_nodejs/releases/download/4.6.1/rules_nodejs-4.6.1.tar.gz",
+        "https://github.com/bazelbuild/rules_nodejs/releases/download/4.6.1/rules_nodejs-4.6.1.tar.gz",
+    ],
 )
 
 load("@build_bazel_rules_nodejs//:index.bzl", "node_repositories", "yarn_install")
-node_repositories()
+node_repositories(
+  node_version = "12.21.0",
+)
 
 yarn_install(
     name = "npm",
@@ -93,7 +90,17 @@ yarn_install(
     symlink_node_modules = False,
 )
 
-load("@io_bazel_rules_sass//sass:sass_repositories.bzl", "sass_repositories")
+http_archive(
+    name = "io_bazel_rules_sass",
+    sha256 = "ee6d527550d42af182673c3718da98bb9205cabdeb08eacc0e3767fa3f2b051a",
+    strip_prefix = "rules_sass-1.49.11",
+    urls = [
+        "http://mirror.tensorflow.org/github.com/bazelbuild/rules_sass/archive/1.49.11.zip",
+        "https://github.com/bazelbuild/rules_sass/archive/1.49.11.zip",
+    ],
+)
+
+load("@io_bazel_rules_sass//:defs.bzl", "sass_repositories")
 sass_repositories()
 
 http_archive(
