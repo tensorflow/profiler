@@ -391,6 +391,19 @@ dashboard would integrate trace viewer app using iframe.
                 hloOp + '@' + hloModule + '</a>';
           this._eventDetails.appendChild(graphViewLinkElement);
         }
+        // For `TfrtModelRun` event, add a link to the associated MLIR graph.
+        if (event.title.includes("TfrtModelRun")) {
+          const graphViewLink =
+                new URL(window.location.origin + '/graph_viewer.json');
+          graphViewLink.searchParams.append("session_id", "xsymbol");
+          graphViewLink.searchParams.append("symbol_id", event.args.symbol_uid);
+          graphViewLink.searchParams.append("symbol_type", "MLIR_MODULE");
+          graphViewLink.searchParams.append("type", "pbtxt");
+          const graphViewLinkElement = document.createElement('div');
+          graphViewLinkElement.innerHTML = '<a href="' + graphViewLink.href +
+                '" target="_blank"> see the MLIR graph </a>';
+          this._eventDetails.appendChild(graphViewLinkElement);
+        }
         if (currentProcess.name.includes("SparseCore")) {
             this._convertTimeToCycles(event);
         }
