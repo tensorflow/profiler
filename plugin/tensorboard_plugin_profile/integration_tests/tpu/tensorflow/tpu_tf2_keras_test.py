@@ -98,7 +98,7 @@ class TpuKerasTest(absltest.TestCase):
     result = raw_to_tool_data.xspace_to_tool_names(xspace_filenames)
     result.sort()
     expected = [
-        'trace_viewer^',
+        'trace_viewer@^',
         'overview_page^',
         'input_pipeline_analyzer^',
         'tensorflow_stats^',
