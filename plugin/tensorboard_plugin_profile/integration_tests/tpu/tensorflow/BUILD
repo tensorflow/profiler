@@ -11,6 +11,7 @@ py_strict_test(
         "//plugin/tensorboard_plugin_profile/integration_tests:tf_mnist",
         "//plugin/tensorboard_plugin_profile/integration_tests:tf_profiler_session",
         "@com_google_absl_py//absl/flags",
+        "@com_google_absl_py//absl/logging",
         "@com_google_absl_py//absl/testing:absltest",
     ],
 )
@@ -25,6 +26,7 @@ py_strict_library(
         "//plugin/tensorboard_plugin_profile/integration_tests:tf_mnist",
         "//plugin/tensorboard_plugin_profile/integration_tests:tf_profiler_session",
         "@com_google_absl_py//absl/flags",
+        "@com_google_absl_py//absl/logging",
         "@com_google_absl_py//absl/testing:absltest",
     ],
 )
