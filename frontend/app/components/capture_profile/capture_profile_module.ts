@@ -21,7 +21,6 @@ import {CaptureProfileDialogModule} from './capture_profile_dialog/capture_profi
     MatSnackBarModule,
   ],
   exports: [CaptureProfile],
-  entryComponents: [CaptureProfileDialog],
-})
+  })
 export class CaptureProfileModule {
 }
