@@ -23,7 +23,9 @@ PROJECT_NAME = 'tensorboard_plugin_profile'
 VERSION = '2.13.0'
 REQUIRED_PACKAGES = [
     'gviz_api >= 1.9.0',
-    'protobuf >= 3.19.0',
+    # short term solution to address protobuf and protoc incompatibility
+    # TODO(xprof) upgrade protoc version as a long term solution
+    'protobuf == 3.20.3',
     'setuptools >= 41.0.0',
     'six >= 1.10.0',
     'werkzeug >= 0.11.15',
