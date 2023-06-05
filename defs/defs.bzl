@@ -14,7 +14,7 @@
 
 """External-only delegates for various BUILD rules."""
 
-load("@npm//@bazel/typescript:index.bzl", "ts_library")
+load("@npm//@bazel/concatjs:index.bzl", "ts_library")
 
 def _convert_paths_to_absolute_impl(ctx):
   """Implementation of convert_paths_to_absolute.

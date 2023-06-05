@@ -9,6 +9,8 @@ module.exports = {
     commonjs(),
   ],
   output: {
+    // Name field is required for iife|umd file format
+    name: 'tbp',
     strict: false,
     format: 'iife',
     sourcemap: false,

@@ -73,6 +73,12 @@ sass_library(
 sass_binary(
     name = "css",
     src = "styles.scss",
+    # @use was very different in angular v13.x using a relative path @use '../../../cdk/a11y'
+    # instead to the new one in v14.x @use '@angular/cdk'
+    # need to include the node_modules path to enable sass to find the theming file
+    include_paths = [
+      "node_modules",
+    ],
     output_name = "styles.css",
     sourcemap = False,
     deps = [
