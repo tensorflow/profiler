@@ -1,7 +1,7 @@
 import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
-import {MatOptionModule} from '@angular/material/core';
-import {MatProgressBarModule} from '@angular/material/progress-bar';
+import {MatLegacyOptionModule} from '@angular/material/legacy-core';
+import {MatLegacyProgressBarModule} from '@angular/material/legacy-progress-bar';
 import {MatSidenavModule} from '@angular/material/sidenav';
 import {DiagnosticsViewModule} from 'org_xprof/frontend/app/components/diagnostics_view/diagnostics_view_module';
 import {GraphConfigModule} from 'org_xprof/frontend/app/components/graph_viewer/graph_config/graph_config_module';
@@ -13,8 +13,8 @@ import {GraphViewer} from './graph_viewer';
   imports: [
     CommonModule,
     DiagnosticsViewModule,
-    MatOptionModule,
-    MatProgressBarModule,
+    MatLegacyOptionModule,
+    MatLegacyProgressBarModule,
     MatSidenavModule,
     PipesModule,
     GraphConfigModule,

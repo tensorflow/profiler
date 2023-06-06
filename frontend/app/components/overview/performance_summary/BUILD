@@ -16,9 +16,9 @@ xprof_ng_module(
     deps = [
         "@npm//@angular/common",
         "@npm//@angular/core",
-        "@org_xprof//frontend/app/common/angular:angular_material_card",
         "@org_xprof//frontend/app/common/angular:angular_material_icon",
-        "@org_xprof//frontend/app/common/angular:angular_material_tooltip",
+        "@org_xprof//frontend/app/common/angular:angular_material_legacy_card",
+        "@org_xprof//frontend/app/common/angular:angular_material_legacy_tooltip",
         "@org_xprof//frontend/app/common/interfaces",
     ],
 )

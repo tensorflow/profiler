@@ -1,6 +1,6 @@
 import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
-import {MatCardModule} from '@angular/material/card';
+import {MatLegacyCardModule} from '@angular/material/legacy-card';
 
 import {RecommendationResultView} from './recommendation_result_view';
 
@@ -8,7 +8,7 @@ import {RecommendationResultView} from './recommendation_result_view';
   declarations: [RecommendationResultView],
   imports: [
     CommonModule,
-    MatCardModule,
+    MatLegacyCardModule,
   ],
   exports: [RecommendationResultView]
 })

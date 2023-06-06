@@ -2,13 +2,13 @@ import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {MatIconModule} from '@angular/material/icon';
-import {MatButtonModule} from '@angular/material/button';
-import {MatCheckboxModule} from '@angular/material/checkbox';
-import {MatOptionModule} from '@angular/material/core';
-import {MatFormFieldModule} from '@angular/material/form-field';
-import {MatInputModule} from '@angular/material/input';
-import {MatSelectModule} from '@angular/material/select';
-import {MatTooltipModule} from '@angular/material/tooltip';
+import {MatLegacyButtonModule} from '@angular/material/legacy-button';
+import {MatLegacyCheckboxModule} from '@angular/material/legacy-checkbox';
+import {MatLegacyOptionModule} from '@angular/material/legacy-core';
+import {MatLegacyFormFieldModule} from '@angular/material/legacy-form-field';
+import {MatLegacyInputModule} from '@angular/material/legacy-input';
+import {MatLegacySelectModule} from '@angular/material/legacy-select';
+import {MatLegacyTooltipModule} from '@angular/material/legacy-tooltip';
 import {MatSidenavModule} from '@angular/material/sidenav';
 
 import {GraphConfig} from './graph_config';
@@ -17,15 +17,15 @@ import {GraphConfig} from './graph_config';
   imports: [
     CommonModule,
     FormsModule,
-    MatButtonModule,
-    MatCheckboxModule,
-    MatFormFieldModule,
+    MatLegacyButtonModule,
+    MatLegacyCheckboxModule,
+    MatLegacyFormFieldModule,
     MatIconModule,
-    MatInputModule,
-    MatOptionModule,
-    MatSelectModule,
+    MatLegacyInputModule,
+    MatLegacyOptionModule,
+    MatLegacySelectModule,
     MatSidenavModule,
-    MatTooltipModule,
+    MatLegacyTooltipModule,
   ],
   declarations: [GraphConfig],
   exports: [GraphConfig]

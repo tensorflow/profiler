@@ -1,5 +1,5 @@
 import {Component} from '@angular/core';
-import {MatDialogRef} from '@angular/material/dialog';
+import {MatLegacyDialogRef} from '@angular/material/legacy-dialog';
 
 /** A capture profile dialog component. */
 @Component({
@@ -25,7 +25,7 @@ export class CaptureProfileDialog {
   delay = 0;
 
   constructor(private readonly dialogRef:
-                  MatDialogRef<CaptureProfileDialog>) {}
+                  MatLegacyDialogRef<CaptureProfileDialog>) {}
 
   addressTypeChanged(value: string) {
     this.isTpuName = value === 'tpu';

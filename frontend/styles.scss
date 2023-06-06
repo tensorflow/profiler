@@ -4,7 +4,9 @@ $typography-config: mat.define-typography-config();
 
 @include mat.all-component-typographies($typography-config);
 @include mat.core();
+@include mat.legacy-core();
 @include mat.typography-hierarchy($typography-config);
+@include mat.legacy-typography-hierarchy($typography-config);
 
 $primary: mat.define-palette(mat.$orange-palette, 600);
 $accent: mat.define-palette(mat.$orange-palette, 600, 100, 700);
@@ -22,6 +24,7 @@ $theme: mat.define-light-theme(
 );
 
 @include mat.all-component-themes($theme);
+@include mat.all-legacy-component-themes($theme);
 
 html, body {
   height: 100%;

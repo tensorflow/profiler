@@ -76,6 +76,7 @@ sass_binary(
     # need to include the node_modules path to enable sass to find the theming file
     include_paths = [
       "node_modules",
+      # used for resolve the external @npm dependencies
       "external/npm/node_modules",
     ],
     output_name = "styles.css",

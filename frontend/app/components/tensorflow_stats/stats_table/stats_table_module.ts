@@ -1,8 +1,8 @@
 import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
-import {MatFormFieldModule} from '@angular/material/form-field';
-import {MatInputModule} from '@angular/material/input';
+import {MatLegacyFormFieldModule} from '@angular/material/legacy-form-field';
+import {MatLegacyInputModule} from '@angular/material/legacy-input';
 import {ChartModule} from 'org_xprof/frontend/app/components/chart/chart';
 
 import {StatsTable} from './stats_table';
@@ -11,9 +11,9 @@ import {StatsTable} from './stats_table';
   declarations: [StatsTable],
   imports: [
     CommonModule,
-    MatFormFieldModule,
+    MatLegacyFormFieldModule,
     MatIconModule,
-    MatInputModule,
+    MatLegacyInputModule,
     ChartModule,
   ],
   exports: [StatsTable],

@@ -1,8 +1,8 @@
 import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
-import {MatOptionModule} from '@angular/material/core';
-import {MatFormFieldModule} from '@angular/material/form-field';
-import {MatSelectModule} from '@angular/material/select';
+import {MatLegacyOptionModule} from '@angular/material/legacy-core';
+import {MatLegacyFormFieldModule} from '@angular/material/legacy-form-field';
+import {MatLegacySelectModule} from '@angular/material/legacy-select';
 
 import {CategoryFilter} from './category_filter';
 
@@ -11,9 +11,9 @@ import {CategoryFilter} from './category_filter';
   declarations: [CategoryFilter],
   imports: [
     CommonModule,
-    MatOptionModule,
-    MatFormFieldModule,
-    MatSelectModule,
+    MatLegacyOptionModule,
+    MatLegacyFormFieldModule,
+    MatLegacySelectModule,
   ],
   exports: [CategoryFilter],
 })

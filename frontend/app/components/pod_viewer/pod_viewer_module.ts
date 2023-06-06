@@ -1,7 +1,7 @@
 import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
 import {MatDividerModule} from '@angular/material/divider';
-import {MatSliderModule} from '@angular/material/slider';
+import {MatLegacySliderModule} from '@angular/material/legacy-slider';
 import {DiagnosticsViewModule} from 'org_xprof/frontend/app/components/diagnostics_view/diagnostics_view_module';
 
 import {PodViewer} from './pod_viewer';
@@ -15,7 +15,7 @@ import {TopologyGraphModule} from './topology_graph/topology_graph_module';
     CommonModule,
     DiagnosticsViewModule,
     MatDividerModule,
-    MatSliderModule,
+    MatLegacySliderModule,
     StackBarChartModule,
     TopologyGraphModule,
   ],

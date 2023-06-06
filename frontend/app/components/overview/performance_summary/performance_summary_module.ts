@@ -1,8 +1,8 @@
 import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
-import {MatCardModule} from '@angular/material/card';
-import {MatTooltipModule} from '@angular/material/tooltip';
+import {MatLegacyCardModule} from '@angular/material/legacy-card';
+import {MatLegacyTooltipModule} from '@angular/material/legacy-tooltip';
 
 import {PerformanceSummary} from './performance_summary';
 
@@ -10,9 +10,9 @@ import {PerformanceSummary} from './performance_summary';
   declarations: [PerformanceSummary],
   imports: [
     CommonModule,
-    MatCardModule,
+    MatLegacyCardModule,
     MatIconModule,
-    MatTooltipModule,
+    MatLegacyTooltipModule,
   ],
   exports: [PerformanceSummary]
 })

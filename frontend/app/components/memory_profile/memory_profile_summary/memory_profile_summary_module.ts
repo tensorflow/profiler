@@ -1,7 +1,7 @@
 import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
-import {MatCardModule} from '@angular/material/card';
-import {MatTooltipModule} from '@angular/material/tooltip';
+import {MatLegacyCardModule} from '@angular/material/legacy-card';
+import {MatLegacyTooltipModule} from '@angular/material/legacy-tooltip';
 
 import {MemoryProfileSummary} from './memory_profile_summary';
 
@@ -9,8 +9,8 @@ import {MemoryProfileSummary} from './memory_profile_summary';
   declarations: [MemoryProfileSummary],
   imports: [
     CommonModule,
-    MatCardModule,
-    MatTooltipModule,
+    MatLegacyCardModule,
+    MatLegacyTooltipModule,
   ],
   exports: [MemoryProfileSummary]
 })

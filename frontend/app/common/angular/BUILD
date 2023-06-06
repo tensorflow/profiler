@@ -27,7 +27,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_progress_bar",
+    name = "angular_material_legacy_progress_bar",
     srcs = [],
     deps = [
         "@npm//@angular/material",
@@ -35,7 +35,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_form_field",
+    name = "angular_material_legacy_form_field",
     srcs = [],
     deps = [
         "@npm//@angular/material",
@@ -51,7 +51,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_input",
+    name = "angular_material_legacy_input",
     srcs = [],
     deps = [
         "@npm//@angular/material",
@@ -59,7 +59,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_button",
+    name = "angular_material_legacy_button",
     srcs = [],
     deps = [
         "@npm//@angular/material",
@@ -75,7 +75,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_menu",
+    name = "angular_material_legacy_menu",
     srcs = [],
     deps = [
         "@npm//@angular/material",
@@ -91,7 +91,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_checkbox",
+    name = "angular_material_legacy_checkbox",
     srcs = [],
     deps = [
         "@npm//@angular/material",
@@ -99,7 +99,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_dialog",
+    name = "angular_material_legacy_dialog",
     srcs = [],
     deps = [
         "@npm//@angular/material",
@@ -107,7 +107,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_radio",
+    name = "angular_material_legacy_radio",
     srcs = [],
     deps = [
         "@npm//@angular/material",
@@ -115,7 +115,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_progress_spinner",
+    name = "angular_material_legacy_progress_spinner",
     srcs = [],
     deps = [
         "@npm//@angular/material",
@@ -123,7 +123,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_snack_bar",
+    name = "angular_material_legacy_snack_bar",
     srcs = [],
     deps = [
         "@npm//@angular/material",
@@ -131,7 +131,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_card",
+    name = "angular_material_legacy_card",
     srcs = [],
     deps = [
         "@npm//@angular/material",
@@ -139,7 +139,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_slide_toggle",
+    name = "angular_material_legacy_slide_toggle",
     srcs = [],
     deps = [
         "@npm//@angular/material",
@@ -147,7 +147,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_slider",
+    name = "angular_material_legacy_slider",
     srcs = [],
     deps = [
         "@npm//@angular/material",
@@ -155,7 +155,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_tooltip",
+    name = "angular_material_legacy_tooltip",
     srcs = [],
     deps = [
         "@npm//@angular/material",
@@ -163,7 +163,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_core",
+    name = "angular_material_legacy_core",
     srcs = [],
     deps = [
         "@npm//@angular/material",
@@ -171,7 +171,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_select",
+    name = "angular_material_legacy_select",
     srcs = [],
     deps = [
         "@npm//@angular/material",

@@ -19,7 +19,7 @@ xprof_ng_module(
         "@npm//@ngrx/store",
         "@npm//rxjs",
         "@org_xprof//frontend/app/common/angular:angular_common_http",
-        "@org_xprof//frontend/app/common/angular:angular_material_progress_bar",
+        "@org_xprof//frontend/app/common/angular:angular_material_legacy_progress_bar",
         "@org_xprof//frontend/app/common/angular:angular_platform-browser_animation",
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",

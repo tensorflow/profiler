@@ -2,8 +2,8 @@ import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
 import {MatDividerModule} from '@angular/material/divider';
 import {MatIconModule} from '@angular/material/icon';
-import {MatButtonModule} from '@angular/material/button';
-import {MatMenuModule} from '@angular/material/menu';
+import {MatLegacyButtonModule} from '@angular/material/legacy-button';
+import {MatLegacyMenuModule} from '@angular/material/legacy-menu';
 import {ChartModule} from 'org_xprof/frontend/app/components/chart/chart';
 import {ExportAsCsvModule} from 'org_xprof/frontend/app/components/controls/export_as_csv/export_as_csv_module';
 import {FlopRateChartModule} from 'org_xprof/frontend/app/components/tensorflow_stats/flop_rate_chart/flop_rate_chart_module';
@@ -18,10 +18,10 @@ import {TensorflowStats} from './tensorflow_stats';
   declarations: [TensorflowStats],
   imports: [
     CommonModule,
-    MatButtonModule,
+    MatLegacyButtonModule,
     MatDividerModule,
     MatIconModule,
-    MatMenuModule,
+    MatLegacyMenuModule,
     ChartModule,
     ExportAsCsvModule,
     FlopRateChartModule,

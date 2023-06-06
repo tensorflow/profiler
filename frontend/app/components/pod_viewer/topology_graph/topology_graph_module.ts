@@ -1,11 +1,11 @@
 import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
-import {MatButtonModule} from '@angular/material/button';
-import {MatFormFieldModule} from '@angular/material/form-field';
-import {MatInputModule} from '@angular/material/input';
-import {MatMenuModule} from '@angular/material/menu';
-import {MatSliderModule} from '@angular/material/slider';
+import {MatLegacyButtonModule} from '@angular/material/legacy-button';
+import {MatLegacyFormFieldModule} from '@angular/material/legacy-form-field';
+import {MatLegacyInputModule} from '@angular/material/legacy-input';
+import {MatLegacyMenuModule} from '@angular/material/legacy-menu';
+import {MatLegacySliderModule} from '@angular/material/legacy-slider';
 
 import {TopologyGraph} from './topology_graph';
 
@@ -14,12 +14,12 @@ import {TopologyGraph} from './topology_graph';
   declarations: [TopologyGraph],
   imports: [
     CommonModule,
-    MatButtonModule,
-    MatFormFieldModule,
+    MatLegacyButtonModule,
+    MatLegacyFormFieldModule,
     MatIconModule,
-    MatInputModule,
-    MatMenuModule,
-    MatSliderModule,
+    MatLegacyInputModule,
+    MatLegacyMenuModule,
+    MatLegacySliderModule,
   ],
   exports: [TopologyGraph]
 })
