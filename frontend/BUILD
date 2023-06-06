@@ -1,5 +1,5 @@
 load("@npm//@bazel/rollup:index.bzl", "rollup_bundle")
-load("@io_bazel_rules_sass//:defs.bzl", "sass_binary", "sass_library")
+load("@io_bazel_rules_sass//:defs.bzl", "sass_binary", "npm_sass_library")
 load("//defs:defs.bzl", "xprof_ng_module")
 
 package(default_visibility = [
@@ -63,11 +63,9 @@ rollup_bundle(
     ],
 )
 
-sass_library(
-    name = "angular_material_theming",
-    srcs = [
-        "@npm//@angular/material"
-    ],
+npm_sass_library(
+  name = "angular_material_sass_deps",
+  deps = ["@npm//@angular/material"],
 )
 
 sass_binary(
@@ -78,11 +76,12 @@ sass_binary(
     # need to include the node_modules path to enable sass to find the theming file
     include_paths = [
       "node_modules",
+      "external/npm/node_modules",
     ],
     output_name = "styles.css",
     sourcemap = False,
     deps = [
-        ":angular_material_theming",
+        ":angular_material_sass_deps",
     ],
 )
 
