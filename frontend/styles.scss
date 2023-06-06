@@ -1,16 +1,27 @@
-@import 'external/npm/node_modules/@angular/material/theming';
+@use '@angular/material' as mat;
 
-$typography-config: mat-typography-config();
+$typography-config: mat.define-typography-config();
 
-@include mat-core($typography-config);
-@include mat-base-typography($typography-config);
+@include mat.all-component-typographies($typography-config);
+@include mat.core();
+@include mat.typography-hierarchy($typography-config);
 
-$primary: mat-palette($mat-orange, 600);
-$accent: mat-palette($mat-orange, 600, 100, 700);
-$warn: mat-palette($mat-red, 600);
-$theme: mat-light-theme($primary, $accent, $warn);
+$primary: mat.define-palette(mat.$orange-palette, 600);
+$accent: mat.define-palette(mat.$orange-palette, 600, 100, 700);
+$warn: mat.define-palette(mat.$red-palette, 600);
+$theme: mat.define-light-theme(
+  (
+    color: (
+      primary: $primary,
+      accent: $accent,
+      warn: $warn,
+    ),
+    density: 0,
+    typography: null,
+  )
+);
 
-@include angular-material-theme($theme);
+@include mat.all-component-themes($theme);
 
 html, body {
   height: 100%;
@@ -56,7 +67,7 @@ body {
 overview recommendation-result-view .bottleneck-tips li a,
 overview recommendation-result-view .documentation-tips li a,
 input-pipeline host-side-analysis-detail .recommendations a {
-  color: mat-color($primary, default);
+  color: mat.get-color-from-palette($primary, default);
   cursor: pointer;
   text-decoration: underline;
 }
@@ -74,7 +85,7 @@ sidenav mat-form-field.mat-primary .mat-form-field-infix {
 }
 
 sidenav mat-form-field.mat-focused .mat-form-field-infix {
-  border: 2px solid mat-color($primary, default);
+  border: 2px solid mat.get-color-from-palette($primary, default);
   border-bottom: none;
 }
 

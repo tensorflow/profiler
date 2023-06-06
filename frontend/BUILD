@@ -66,7 +66,7 @@ rollup_bundle(
 sass_library(
     name = "angular_material_theming",
     srcs = [
-        "@npm//:node_modules/@angular/material/_theming.scss",
+        "@npm//@angular/material"
     ],
 )
 
