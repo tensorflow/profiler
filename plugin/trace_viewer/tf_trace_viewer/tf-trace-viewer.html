@@ -406,7 +406,7 @@ dashboard would integrate trace viewer app using iframe.
                   '" target="_blank"> see the TF MLIR graph </a>';
             this._eventDetails.appendChild(graphViewLinkElement);
           }
-          // Second link is for TFRT/MLRT MLIR.
+          // Second link is for TFRT MLIR.
           {
             const graphViewLink =
                   new URL(window.location.origin + '/graph_viewer.json');
@@ -416,7 +416,7 @@ dashboard would integrate trace viewer app using iframe.
             graphViewLink.searchParams.append("type", "pbtxt");
             const graphViewLinkElement = document.createElement('div');
             graphViewLinkElement.innerHTML = '<a href="' + graphViewLink.href +
-                  '" target="_blank"> see the TFRT/MLRT MLIR graph </a>';
+                  '" target="_blank"> see the TFRT MLIR graph </a>';
             this._eventDetails.appendChild(graphViewLinkElement);
           }
         }
