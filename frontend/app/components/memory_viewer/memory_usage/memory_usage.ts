@@ -124,6 +124,9 @@ export class MemoryUsage {
     // Copy the fields from preprocessed result.
     this.moduleName = preprocess.moduleName || '';
     this.timelineUrl = preprocess.allocationTimeline || '';
+    if (!this.timelineUrl.startsWith('/memory_viewer.json')) {
+      this.timelineUrl = '';
+    }
     this.peakHeapSizeBytes = (preprocess.peakHeapMib || 0) * 1024 * 1024;
     this.unpaddedPeakHeapSizeBytes =
         (preprocess.peakUnpaddedHeapMib || 0) * 1024 * 1024;
