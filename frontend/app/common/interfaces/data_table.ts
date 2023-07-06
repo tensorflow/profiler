@@ -1,8 +1,8 @@
-import * as diagnosticsProto from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 import * as hloProto from 'org_xprof/frontend/app/common/interfaces/hlo.jsonpb_decls';
 import * as memoryProfileProto from 'org_xprof/frontend/app/common/interfaces/memory_profile.jsonpb_decls';
 import * as memoryViewerPreprocess from 'org_xprof/frontend/app/common/interfaces/memory_viewer_preprocess.jsonpb_decls';
 import * as opProfileProto from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
+import * as diagnosticsProto from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 
 /** The base interface for a table filter.  */
 export declare interface Filter {
@@ -195,6 +195,7 @@ declare interface RunEnvironmentProperty {
   host_count?: string;
   device_core_count?: string;
   device_type?: string;
+  is_training?: string;
 }
 /* tslint:enable */
 
@@ -463,9 +464,9 @@ declare interface TfFunctionExplanationTableProperty {
 
 /** The explanation table in tf-function stats. */
 export declare interface TfFunctionExplanationTable {
-    cols?: DataTableColumn[];
-    rows?: DataTableRow[];
-    p?: TfFunctionExplanationTableProperty;
+  cols?: DataTableColumn[];
+  rows?: DataTableRow[];
+  p?: TfFunctionExplanationTableProperty;
 }
 
 /** The explanation table in tf-function stats or null. */
@@ -480,9 +481,9 @@ declare interface TfFunctionDataTableProperty {
 
 /** The function table in tf-function stats. */
 export declare interface TfFunctionDataTable {
-    cols: DataTableColumn[];
-    rows: DataTableRow[];
-    p: TfFunctionDataTableProperty;
+  cols: DataTableColumn[];
+  rows: DataTableRow[];
+  p: TfFunctionDataTableProperty;
 }
 
 /** The function table in tf-function stats or null. */
@@ -490,14 +491,14 @@ export type TfFunctionDataTableOrNull = TfFunctionDataTable|null;
 
 /** The data table type in tf-function stats. */
 export type TfFunctionStatsTable =
-    TfFunctionDataTable | TfFunctionExplanationTable;
+    TfFunctionDataTable|TfFunctionExplanationTable;
 
 /** The data table type in tf-function stats or null. */
 export type TfFunctionStatsTableOrNull = TfFunctionStatsTable|null;
 
 /** All input pipeline page data table type. */
-export type InputPipelineDataTable =
-    InputPipelineDeviceAnalysis|InputPipelineHostAnalysis|MetaHostOpTable|HostOpTable|SimpleDataTable;
+export type InputPipelineDataTable = InputPipelineDeviceAnalysis|
+    InputPipelineHostAnalysis|MetaHostOpTable|HostOpTable|SimpleDataTable;
 
 /** The data table type for a PodViewerDatabase or null. */
 export type PodViewerDatabaseOrNull = PodViewerDatabase|null;
