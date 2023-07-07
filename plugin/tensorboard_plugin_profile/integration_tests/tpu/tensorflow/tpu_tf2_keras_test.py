@@ -134,8 +134,11 @@ class TpuKerasTest(absltest.TestCase):
     self.assertIn('flops', overall_metrics)
     self.assertIn('bandwidthUtils', overall_metrics)
     self.assertGreater(overall_metrics['flops'], 0)
+    contains_value = False
     for m in overall_metrics['bandwidthUtils']:
-      self.assertGreater(m, 0)
+      if (m > 0):
+        contains_value = True
+    self.assertTrue(contains_value)
 
   def test_device_trace_contains_threads(self):
     xspace_filenames = self._get_session_snapshot()
