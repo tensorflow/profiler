@@ -1,5 +1,4 @@
 import {Store} from '@ngrx/store';
-import {NumericMemBwType} from 'org_xprof/frontend/app/common/interfaces/op_metrics.jsonpb_decls';
 import {Node as OpProfileNode} from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
 import {PodStatsRecord, SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
@@ -68,14 +67,16 @@ const KNOWN_TOOLS = [
 ];
 
 /**
- * Re-define enum here since NumericMemBwType is const and can't be exported.
+ * Re-define enum here since NumericMemBwType from
+ * org_xprof/frontend/app/common/interfaces/op_metrics.jsonpb_decls
+ * is not accessible anymore. See b/266687316.
  */
 export enum MemBwType {
-  MEM_BW_TYPE_FIRST = NumericMemBwType.MEM_BW_TYPE_FIRST,
-  MEM_BW_TYPE_HBM_RW = NumericMemBwType.MEM_BW_TYPE_HBM_RW,
-  MEM_BW_TYPE_SRAM_RD = NumericMemBwType.MEM_BW_TYPE_SRAM_RD,
-  MEM_BW_TYPE_SRAM_WR = NumericMemBwType.MEM_BW_TYPE_SRAM_WR,
-  MEM_BW_TYPE_MAX = NumericMemBwType.MEM_BW_TYPE_MAX,
+  MEM_BW_TYPE_FIRST = 0,
+  MEM_BW_TYPE_HBM_RW = 0,
+  MEM_BW_TYPE_SRAM_RD = 1,
+  MEM_BW_TYPE_SRAM_WR = 2,
+  MEM_BW_TYPE_MAX = 2,
 }
 
 /**
