@@ -31,7 +31,10 @@ export class MemoryUsage {
   private smallBufferCount: number;
 
   peakHeapSizeBytes: number;
-  unpaddedPeakHeapSizeBytes: number;
+  paddingOverhead: number;
+  hloTempSizeBytes: number;
+  hloTempFragmentation: number;
+  totalArgumentSizeBytes: number;
   peakLogicalBuffers: number[];
   peakHeapSizePosition: number;
   indefiniteMemoryUsageBytes: MemoryUsageBytes;
@@ -68,7 +71,10 @@ export class MemoryUsage {
     this.smallBufferCount = 0;
 
     this.peakHeapSizeBytes = 0;
-    this.unpaddedPeakHeapSizeBytes = 0;
+    this.paddingOverhead = 0;
+    this.hloTempSizeBytes = 0;
+    this.hloTempFragmentation = 0;
+    this.totalArgumentSizeBytes = 0;
     this.peakLogicalBuffers = [];
     this.peakHeapSizePosition = 0;
     this.indefiniteMemoryUsageBytes = {padded: 0, unpadded: 0};
@@ -127,9 +133,21 @@ export class MemoryUsage {
     if (!this.timelineUrl.startsWith('/memory_viewer.json')) {
       this.timelineUrl = '';
     }
-    this.peakHeapSizeBytes = (preprocess.peakHeapMib || 0) * 1024 * 1024;
-    this.unpaddedPeakHeapSizeBytes =
+    this.peakHeapSizeBytes =
+        (preprocess.totalBufferAllocationMib || 0) * 1024 * 1024;
+    this.paddingOverhead = (preprocess.peakHeapMib || 0) * 1024 * 1024 -
         (preprocess.peakUnpaddedHeapMib || 0) * 1024 * 1024;
+    this.totalArgumentSizeBytes =
+        (preprocess.entryComputationParametersMib || 0) * 1024 * 1024;
+    this.hloTempSizeBytes = this.peakHeapSizeBytes -
+        (preprocess.indefiniteBufferAllocationMib || 0) * 1024 * 1024;
+    const framenentationSizeBytes = this.peakHeapSizeBytes -
+        (preprocess.peakUnpaddedHeapMib || 0) * 1024 * 1024;
+    if (this.hloTempSizeBytes) {
+      this.hloTempFragmentation =
+          framenentationSizeBytes / this.hloTempSizeBytes;
+    }
+
     this.peakHeapSizePosition = (preprocess.peakHeapSizePosition || 0);
     this.heapSizes = preprocess.heapSizes || [];
     this.unpaddedHeapSizes = preprocess.unpaddedHeapSizes || [];
@@ -292,7 +310,7 @@ export class MemoryUsage {
     this.peakHeapSizePosition = peakHeapSizePosition;
 
     this.peakHeapSizeBytes = peakHeapSizeBytes;
-    this.unpaddedPeakHeapSizeBytes = unpaddedPeakHeapSizeBytes;
+    this.paddingOverhead = peakHeapSizeBytes - unpaddedPeakHeapSizeBytes;
     this.heapSizes = heapSizes;
     this.unpaddedHeapSizes = unpaddedHeapSizes;
   }

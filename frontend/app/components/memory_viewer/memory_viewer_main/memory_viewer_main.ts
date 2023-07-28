@@ -30,12 +30,15 @@ export class MemoryViewerMain implements OnDestroy, OnChanges {
   /** XLA memory space color */
   @Input() memorySpaceColor: number = 0;
 
-  moduleName: string = '';
+  moduleName = '';
   peakInfo?: BufferAllocationInfo;
   activeInfo?: BufferAllocationInfo;
-  peakHeapSizeMiB: string = '';
-  unpaddedPeakHeapSizeMiB: string = '';
-  timelineUrl: string = '';
+  peakHeapSizeMiB = '';
+  paddingOverhead = '';
+  totalArgumentSizeBytes = '';
+  hloTempSizeBytes = '';
+  hloTempFragmentation = '';
+  timelineUrl = '';
   usage?: MemoryUsage;
   heapSizes: number[] = [];
   maxHeap: HeapObject[] = [];
@@ -149,9 +152,14 @@ export class MemoryViewerMain implements OnDestroy, OnChanges {
 
     this.peakHeapSizeMiB =
         utils.bytesToMiB(this.usage.peakHeapSizeBytes).toFixed(2);
-    this.unpaddedPeakHeapSizeMiB =
-        utils.bytesToMiB(this.usage.unpaddedPeakHeapSizeBytes).toFixed(2);
-
+    this.paddingOverhead =
+        utils.bytesToMiB(this.usage.paddingOverhead).toFixed(2);
+    this.totalArgumentSizeBytes =
+        utils.bytesToMiB(this.usage.totalArgumentSizeBytes).toFixed(2);
+    this.hloTempSizeBytes =
+        utils.bytesToMiB(this.usage.hloTempSizeBytes).toFixed(2);
+    this.hloTempFragmentation =
+        (this.usage.hloTempFragmentation * 100.0).toFixed(2);
     this.heapSizes = this.usage.heapSizes || [];
     this.unpaddedHeapSizes = this.usage.unpaddedHeapSizes || [];
     this.peakInfo = {
