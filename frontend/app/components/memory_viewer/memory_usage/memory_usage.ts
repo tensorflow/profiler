@@ -141,8 +141,8 @@ export class MemoryUsage {
         (preprocess.entryComputationParametersMib || 0) * 1024 * 1024;
     this.hloTempSizeBytes = this.peakHeapSizeBytes -
         (preprocess.indefiniteBufferAllocationMib || 0) * 1024 * 1024;
-    const framenentationSizeBytes = this.peakHeapSizeBytes -
-        (preprocess.peakUnpaddedHeapMib || 0) * 1024 * 1024;
+    const framenentationSizeBytes =
+        this.peakHeapSizeBytes - (preprocess.peakHeapMib || 0) * 1024 * 1024;
     if (this.hloTempSizeBytes) {
       this.hloTempFragmentation =
           framenentationSizeBytes / this.hloTempSizeBytes;
