@@ -7,30 +7,10 @@ package(
     licenses = ["notice"],  # Apache 2.0
 )
 
-proto_library(
-    name = "protos_all",
-    srcs = [
-        "diagnostics.proto",
-        "input_pipeline.proto",
-        "kernel_stats.proto",
-        "overview_page.proto",
-        "tf_data_stats.proto",
-        "tf_stats.proto",
-        "trace_events.proto",
-    ],
-    deps = ["@com_google_protobuf//:any_proto"],
-)
-
 py_proto_library(
     name = "protos_all_py_pb2",
-    srcs = [
-        "diagnostics.proto",
-        "input_pipeline.proto",
-        "kernel_stats.proto",
-        "overview_page.proto",
-        "tf_data_stats.proto",
-        "tf_stats.proto",
-        "trace_events.proto",
+    deps = [
+        "@org_tensorflow/core/profiler/protobuf:protos_all_tbp_pb2"
     ],
     default_runtime = "@com_google_protobuf//:protobuf_python",
     protoc = "@com_google_protobuf//:protoc",

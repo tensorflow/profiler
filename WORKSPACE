@@ -108,11 +108,10 @@ http_archive(
     name = "org_tensorflow",
     # NOTE: when updating this, MAKE SURE to also update the protobuf_js runtime version
     # in third_party/workspace.bzl to >= the protobuf/protoc version provided by TF.
-    sha256 = "638e541a4981f52c69da4a311815f1e7989bf1d67a41d204511966e1daed14f7",
-    strip_prefix = "tensorflow-2.1.0",
+    sha256 = "e58c939079588623e6fa1d054aec2f90f95018266e0a970fd353a5244f5173dc",
+    strip_prefix = "tensorflow-2.13.0",
     urls = [
-        "http://mirror.tensorflow.org/github.com/tensorflow/tensorflow/archive/v2.1.0.tar.gz",  # 2020-01-06
-        "https://github.com/tensorflow/tensorflow/archive/v2.1.0.tar.gz",
+        "https://github.com/tensorflow/tensorflow/archive/refs/tags/v2.13.0.tar.gz",  # 2023-08-18
     ],
 )
 
