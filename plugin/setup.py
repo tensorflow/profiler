@@ -19,8 +19,11 @@ from __future__ import print_function
 
 import setuptools
 
+from tensorboard_plugin_profile import version
+
+
 PROJECT_NAME = 'tensorboard_plugin_profile'
-VERSION = '2.13.1'
+VERSION = version.__version__
 REQUIRED_PACKAGES = [
     'gviz_api >= 1.9.0',
     'protobuf >= 3.19.6,<5.0.0dev',
