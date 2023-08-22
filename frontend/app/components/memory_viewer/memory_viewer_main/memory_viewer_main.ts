@@ -1,7 +1,7 @@
 import {Component, Input, OnChanges, OnDestroy} from '@angular/core';
 import {Store} from '@ngrx/store';
 import {BufferAllocationInfo} from 'org_xprof/frontend/app/common/interfaces/buffer_allocation_info';
-import {HloProtoOrNull, MemoryViewerPreprocessResultOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {MemoryViewerPreprocessResultOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 import {HeapObject} from 'org_xprof/frontend/app/common/interfaces/heap_object';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
@@ -20,9 +20,6 @@ interface BufferSpan {
   styleUrls: ['./memory_viewer_main.scss']
 })
 export class MemoryViewerMain implements OnDestroy, OnChanges {
-  /** XLA Hlo proto */
-  @Input() hloProto: HloProtoOrNull = null;
-
   /** Preprocessed result for memory viewer */
   @Input()
   memoryViewerPreprocessResult: MemoryViewerPreprocessResultOrNull = null;
@@ -141,8 +138,7 @@ export class MemoryViewerMain implements OnDestroy, OnChanges {
 
   update() {
     this.usage = new MemoryUsage(
-        this.hloProto, this.memoryViewerPreprocessResult,
-        this.memorySpaceColor);
+        this.memoryViewerPreprocessResult, this.memorySpaceColor);
     if (this.usage.diagnostics.errors.length > 0) {
       return;
     }
