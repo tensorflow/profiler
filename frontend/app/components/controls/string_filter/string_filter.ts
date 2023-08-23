@@ -13,6 +13,7 @@ export class StringFilter implements OnChanges {
   @Input() dataTable?: google.visualization.DataTable;
   @Input() column: number|string = -1;
   @Input() value = '';
+  @Input() exactMatch = false;
 
   columnIndex = -1;
   columnLabel = '';
@@ -45,8 +46,13 @@ export class StringFilter implements OnChanges {
     const filter:
         google.visualization.DataTableCellFilter = {column: this.columnIndex};
     if (this.value) {
-      filter.test = (value: string) =>
-          value.toLowerCase().indexOf(this.value) !== -1;
+      if (this.exactMatch) {
+        filter.test = (value: string) =>
+            value.toLowerCase().trim() === this.value.toLowerCase().trim();
+      } else {
+        filter.test = (value: string) =>
+            value.toLowerCase().indexOf(this.value.toLowerCase()) !== -1;
+      }
     }
 
     this.changed.emit(filter);
