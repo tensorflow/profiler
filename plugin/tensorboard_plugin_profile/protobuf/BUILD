@@ -10,6 +10,7 @@ package(
 proto_library(
     name = "protos_all",
     srcs = [
+        "dcn_slack_analysis.proto",
         "diagnostics.proto",
         "input_pipeline.proto",
         "kernel_stats.proto",
@@ -24,6 +25,7 @@ proto_library(
 py_proto_library(
     name = "protos_all_py_pb2",
     srcs = [
+        "dcn_slack_analysis.proto",
         "diagnostics.proto",
         "input_pipeline.proto",
         "kernel_stats.proto",

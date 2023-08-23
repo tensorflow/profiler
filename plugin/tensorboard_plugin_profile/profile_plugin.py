@@ -114,6 +114,7 @@ XPLANE_TOOLS_ALL_HOSTS_SUPPORTED = frozenset([
     'overview_page^',
     'pod_viewer^',
     'tf_data_bottleneck_analysis^',
+    'dcn_collective_stats^',
 ])
 
 # XPlane generated tools that only support all host mode.

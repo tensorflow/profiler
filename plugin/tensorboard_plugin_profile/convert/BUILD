@@ -13,6 +13,7 @@ package(
 py_library(
     name = "all_libs",
     deps = [
+        ":dcn_collective_stats_proto_to_gviz",
         ":diagnostics",
         ":input_pipeline_proto_to_gviz",
         ":kernel_stats_proto_to_gviz",
@@ -194,11 +195,34 @@ py_test(
 )
 
 py_library(
+    name = "dcn_collective_stats_proto_to_gviz",
+    srcs = ["dcn_collective_stats_proto_to_gviz.py"],
+    srcs_version = "PY2AND3",
+    deps = [requirement("gviz_api")],
+)
+
+py_test(
+    name = "dcn_collective_stats_proto_to_gviz_test",
+    size = "small",
+    srcs = ["dcn_collective_stats_proto_to_gviz_test.py"],
+    main = "dcn_collective_stats_proto_to_gviz_test.py",
+    python_version = "PY3",
+    srcs_version = "PY2AND3",
+    deps = [
+        ":dcn_collective_stats_proto_to_gviz",
+        requirement("gviz_api"),
+        "//:expect_tensorflow_installed",
+        "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
+    ],
+)
+
+py_library(
     name = "raw_to_tool_data",
     srcs = ["raw_to_tool_data.py"],
     srcs_version = "PY2AND3",
     visibility = visibility,
     deps = [
+        ":dcn_collective_stats_proto_to_gviz",
         ":input_pipeline_proto_to_gviz",
         ":kernel_stats_proto_to_gviz",
         ":overview_page_proto_to_gviz",
