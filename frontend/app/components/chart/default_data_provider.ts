@@ -98,7 +98,7 @@ export class ReplicaGroupDataProvider extends DefaultDataProvider {
   communicationOps = new Set();
   // Column indexes
   opCategoryIndex?: number;  // 'category' column
-  hloOpNameIndex?: number;   // 'operation' column
+  hloOpNameIndex?: number;   // 'hlo_op_expression' column
   selfTimeIndex?: number;    // 'total_self_time' column
 
    parseData(data: SimpleDataTable) {
@@ -108,8 +108,10 @@ export class ReplicaGroupDataProvider extends DefaultDataProvider {
 
     // Set the column index member variables.
     for (let i = 0; i < data.cols.length; i++) {
+      // TODO(xprof) ids defined in hlo_stats.cc is also hard coded here and in
+      // hlo_stats.ts, try to decouple or add "if change then" lint
       if (data.cols[i].id === 'category') this.opCategoryIndex = i;
-      if (data.cols[i].id === 'operation') this.hloOpNameIndex = i;
+      if (data.cols[i].id === 'hlo_op_expression') this.hloOpNameIndex = i;
       if (data.cols[i].id === 'total_self_time') this.selfTimeIndex = i;
     }
 

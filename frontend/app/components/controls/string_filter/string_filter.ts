@@ -12,10 +12,10 @@ import {Component, EventEmitter, Input, OnChanges, Output, SimpleChanges} from '
 export class StringFilter implements OnChanges {
   @Input() dataTable?: google.visualization.DataTable;
   @Input() column: number|string = -1;
+  @Input() value = '';
 
   columnIndex = -1;
   columnLabel = '';
-  value = '';
 
   @Output()
   changed = new EventEmitter<google.visualization.DataTableCellFilter>();
