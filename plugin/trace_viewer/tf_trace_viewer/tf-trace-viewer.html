@@ -390,6 +390,23 @@ dashboard would integrate trace viewer app using iframe.
                 '" target="_blank"> see hlo graph for ' +
                 hloOp + '@' + hloModule + '</a>';
           this._eventDetails.appendChild(graphViewLinkElement);
+
+          const hloOpStatsLink = new URL(`${window.location.origin}/hlo_stats/${this._sessionId}`);
+          hloOpStatsLink.searchParams.append("hlo_op_name", hloOp);
+          hloOpStatsLink.searchParams.append("program_id", hloModule);
+          const hloOpStatsLinkElement = document.createElement('div');
+          hloOpStatsLinkElement.innerHTML = '<a href="' + hloOpStatsLink.href +
+                '" target="_blank"> see hlo stats for ' +
+                hloOp + '@' + hloModule + '</a>';
+          hloOpStatsLinkElement.addEventListener('click', () => {
+            window.gtag && window.gtag('event', 'tv-hlo-click', {
+              'screen_name': 'trace viewer',
+              'event_category': 'click',
+              'event_label': 'hlo_stats_link',
+              'event_variable': hloOpStatsLink.href,
+            });
+          });
+          this._eventDetails.appendChild(hloOpStatsLinkElement);
         }
         // For `TfrtModelRun` event, add links to the associated MLIR graphs.
         if (event.title.includes("TfrtModelRun")) {
