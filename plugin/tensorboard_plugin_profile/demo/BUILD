@@ -2,6 +2,9 @@ load("@python_deps//:requirements.bzl", "requirement")
 
 # Description:
 #  Demos for profiler plugin.
+
+load("@rules_python//python:defs.bzl", "py_binary")
+
 package(
     licenses = ["notice"],  # Apache 2.0
 )

@@ -3,6 +3,8 @@ load("@python_deps//:requirements.bzl", "requirement")
 # Description:
 #   Converter from protobuf to gviz/json formats.
 
+load("@rules_python//python:defs.bzl", "py_library", "py_test")
+
 visibility = ["//plugin:internal"]
 
 package(
