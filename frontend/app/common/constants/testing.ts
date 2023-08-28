@@ -93,7 +93,7 @@ class DataTableForTesting {
         columnIdx >= numofCols) {
       return null;
     }
-    return this.data!.rows![rowIdx].c![columnIdx].v;
+    return this.data.rows![rowIdx].c![columnIdx]?.v;
   }
   getTableProperty(propName: string): string {
     if (!this.data || !this.data.p) {
