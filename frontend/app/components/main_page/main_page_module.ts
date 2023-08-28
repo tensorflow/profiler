@@ -2,6 +2,8 @@ import {NgModule} from '@angular/core';
 import {MatLegacyProgressBarModule} from '@angular/material/legacy-progress-bar';
 import {MatSidenavModule} from '@angular/material/sidenav';
 import {RouterModule, Routes} from '@angular/router';
+import {DcnCollectiveStats} from 'org_xprof/frontend/app/components/dcn_collective_stats/dcn_collective_stats';
+import {DcnCollectiveStatsModule} from 'org_xprof/frontend/app/components/dcn_collective_stats/dcn_collective_stats_module';
 import {EmptyPage} from 'org_xprof/frontend/app/components/empty_page/empty_page';
 import {EmptyPageModule} from 'org_xprof/frontend/app/components/empty_page/empty_page_module';
 import {GraphViewer} from 'org_xprof/frontend/app/components/graph_viewer/graph_viewer';
@@ -55,6 +57,7 @@ export const routes: Routes = [
   {path: 'trace_viewer@^', component: TraceViewer},
   {path: 'trace_viewer^', component: TraceViewer},
   {path: 'graph_viewer^', component: GraphViewer},
+  {path: 'dcn_collective_stats^', component: DcnCollectiveStats},
   {path: '**', component: EmptyPage},
 ];
 
@@ -77,6 +80,7 @@ export const routes: Routes = [
     GraphViewerModule,
     TfDataBottleneckAnalysisModule,
     TensorflowStatsAdapterModule,
+    DcnCollectiveStatsModule,
     RouterModule.forRoot(routes),
   ],
   exports: [MainPage]

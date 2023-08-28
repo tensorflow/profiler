@@ -38,7 +38,7 @@ def get_dcn_collective_stats_table_args(dcn_slack_analysis):
   """
 
   table_description = [
-      ("dcnCollectiveName", "string", "Dcn Collective Name"),
+      ("dcnCollectiveName", "string", "DCN Collective Name"),
       ("recvOpName", "string", "Recv Op Name"),
       ("sendOpName", "string", "Send Op Name"),
       ("slackTime", "number", "Slack Time (ms)"),
