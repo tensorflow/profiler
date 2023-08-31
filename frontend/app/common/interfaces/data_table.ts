@@ -78,6 +78,7 @@ declare interface GeneralAnalysisProperty {
   device_compute_32bit_percent?: string;
   remark_color?: string;
   remark_text?: string;
+  power_metrics?: string;
 }
 /* tslint:enable */
 

@@ -57,7 +57,7 @@ const GENERIC_SUMMARY_INFO = [
   styleUrls: ['./performance_summary.scss']
 })
 export class PerformanceSummary implements OnChanges {
-  /** The general anaysis data. */
+  /** The general analysis data. */
   @Input() generalAnalysis?: GeneralAnalysis;
 
   /** The input pipeline analyis data. */
@@ -222,6 +222,16 @@ export class PerformanceSummary implements OnChanges {
         `Device: ${generalProps.device_op_time_eager_percent || ''}`,
       ],
     });
+
+    if (generalProps.power_metrics) {
+      const components = generalProps.power_metrics.split('##');
+      this.summaryInfoAfter.push({
+        title: 'Power Metrics',
+        descriptions: ['Power consumption of different compoenents'],
+        tooltip: this.opTimeInEagerModeTooltipMessage,
+        propertyValues: components,
+      });
+    }
   }
 
   parseGenericData() {
