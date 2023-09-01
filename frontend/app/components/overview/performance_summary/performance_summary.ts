@@ -90,6 +90,8 @@ export class PerformanceSummary implements OnChanges {
     'Percentage of the peak device memory bandwidth that is used.';
   deviceDutyCycleTooltipMessage =
     'Percentage of the device time that is busy.';
+  powerMetricsTooltipMessage =
+      'Avg/Max power consumption of different components/rails, including max of moving average of window size of 100us/1ms/10ms.';
 
   ngOnChanges(changes: SimpleChanges) {
     if (!this.generalAnalysis || !this.inputPipelineAnalysis) {
@@ -228,7 +230,7 @@ export class PerformanceSummary implements OnChanges {
       this.summaryInfoAfter.push({
         title: 'Power Metrics',
         descriptions: ['Power consumption of different compoenents'],
-        tooltip: this.opTimeInEagerModeTooltipMessage,
+        tooltip: this.powerMetricsTooltipMessage,
         propertyValues: components,
       });
     }
