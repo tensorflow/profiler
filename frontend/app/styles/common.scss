@@ -54,6 +54,10 @@ mat-card {
   padding: 16px;
 }
 
+mat-form-field {
+  margin-top: 16px;
+}
+
 @mixin overview-card {
   box-shadow: none !important;
   margin: 8px;
