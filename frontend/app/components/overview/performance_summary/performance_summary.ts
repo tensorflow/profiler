@@ -229,7 +229,7 @@ export class PerformanceSummary implements OnChanges {
       const components = generalProps.power_metrics.split('##');
       this.summaryInfoAfter.push({
         title: 'Power Metrics',
-        descriptions: ['Power consumption of different compoenents'],
+        descriptions: ['Power consumption of different components'],
         tooltip: this.powerMetricsTooltipMessage,
         propertyValues: components,
       });
