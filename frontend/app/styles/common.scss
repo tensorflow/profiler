@@ -48,6 +48,12 @@ $dark-theme-card-title-color: #fff;
   padding: 20px 20px 0;
 }
 
+mat-card {
+  // MDC mat-card does not have padding by default
+  // Add padding to keep style persistent during migration
+  padding: 16px;
+}
+
 @mixin overview-card {
   box-shadow: none !important;
   margin: 8px;
