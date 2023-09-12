@@ -575,14 +575,44 @@ dashboard would integrate trace viewer app using iframe.
       }
     },
 
+    _createLoadFlowEventsButton: function() {
+      const dropdown = document.getElementById("flow_event_filter_dropdown");
+      if (!this._model.flowEvents.length) {
+        const button = tr.ui.b.createButton('Load Flow Events', () => {
+          const newUrl = new URL(window.parent.location.href);
+          newUrl.searchParams.set('use_saved_result', 'false');
+          newUrl.searchParams.set('traceme_flow', 1);
+          window.parent.location.assign(newUrl);
+        });
+        button.setAttribute('id', 'flow-events');
+        // Dropdown button style
+        button.setAttribute('style', 'background-color:rgb(248, 248, 248);border: 1px solid rgba(0, 0, 0, 0.5);box-sizing: content-box;color: rgba(0, 0, 0, 0.8);font-family: sans-serif;font-size: 12px;padding: 2px 5px;');
+        const processFilterDropdown = document.getElementById("process_filter_dropdown");
+        Polymer.dom(this._traceViewer.rightControls).insertBefore(button, processFilterDropdown);
+      } else {
+        dropdown.setAttribute('style', 'display: flex;');
+      }
+    },
+
+    // setup UI override of chrome tracing
+    _setupUi: function() {
+      // Don't show the flow events filter
+      // until loaded data verified to contain flow events data
+      const dropdown = document.getElementById("flow_event_filter_dropdown");
+      dropdown.setAttribute('style', 'display: none');
+    },
+
     _init: async function() {
+      this._setupUi();
       if (this._isStreaming) {
         await this._loadHosts();
         this._createFilters();
         this._traceViewer.updateProcessList_ = this._updateProcessList.bind(this);
         this._createPerfettoButton();
       }
-      this._loadTrace(null, /* replaceModel= */ true);
+      await this._loadTrace(null, /* replaceModel= */ true);
+      // The load button depends on the model data thus have to await
+      this._createLoadFlowEventsButton();
     },
 
     _loadTrace: async function(requestedRange, replaceModel) {
