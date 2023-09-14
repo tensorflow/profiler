@@ -2,7 +2,7 @@ import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {MatIconModule} from '@angular/material/icon';
-import {MatLegacyButtonModule} from '@angular/material/legacy-button';
+import {MatButtonModule} from '@angular/material/button';
 import {MatLegacyCheckboxModule} from '@angular/material/legacy-checkbox';
 import {MatLegacyOptionModule} from '@angular/material/legacy-core';
 import {MatLegacyFormFieldModule} from '@angular/material/legacy-form-field';
@@ -17,7 +17,7 @@ import {GraphConfig} from './graph_config';
   imports: [
     CommonModule,
     FormsModule,
-    MatLegacyButtonModule,
+    MatButtonModule,
     MatLegacyCheckboxModule,
     MatLegacyFormFieldModule,
     MatIconModule,

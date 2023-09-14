@@ -2,7 +2,7 @@ import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {MatExpansionModule} from '@angular/material/expansion';
-import {MatLegacyButtonModule} from '@angular/material/legacy-button';
+import {MatButtonModule} from '@angular/material/button';
 import {MatLegacyDialogModule} from '@angular/material/legacy-dialog';
 import {MatLegacyFormFieldModule} from '@angular/material/legacy-form-field';
 import {MatLegacyInputModule} from '@angular/material/legacy-input';
@@ -20,7 +20,7 @@ import {CaptureProfileDialog} from './capture_profile_dialog';
     BrowserModule,
     CommonModule,
     FormsModule,
-    MatLegacyButtonModule,
+    MatButtonModule,
     MatLegacyDialogModule,
     MatExpansionModule,
     MatLegacyFormFieldModule,

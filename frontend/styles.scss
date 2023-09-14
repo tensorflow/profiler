@@ -19,12 +19,15 @@ $theme: mat.define-light-theme(
       warn: $warn,
     ),
     density: 0,
-    typography: null,
+    typography: mat.define-typography-config(),
   )
 );
 
 @include mat.all-component-themes($theme);
 @include mat.all-legacy-component-themes($theme);
+@include mat.fab-theme($theme);
+@include mat.button-theme($theme);
+@include mat.icon-button-theme($theme);
 
 html, body {
   height: 100%;

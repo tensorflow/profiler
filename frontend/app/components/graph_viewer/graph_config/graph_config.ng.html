@@ -41,45 +41,45 @@
         name="opName"
       />
     </mat-form-field>
-    <div>
-      <mat-form-field class="full-width">
-        <input
-          matInput
-          placeholder="Graph width"
-          matTooltip="Suggest width < 10"
-          aria-label="graph-width"
-          type="number"
-          min="1"
-          step="1"
-          [ngModel]="params.graphWidth"
-          (ngModelChange)="onUpdateParam({ graphWidth: $event })"
-          name="graphWidth"
-        />
-      </mat-form-field>
+    <mat-form-field class="full-width">
+      <input
+        matInput
+        placeholder="Graph width"
+        matTooltip="Suggest width < 10"
+        aria-label="graph-width"
+        type="number"
+        min="1"
+        step="1"
+        [ngModel]="params.graphWidth"
+        (ngModelChange)="onUpdateParam({ graphWidth: $event })"
+        name="graphWidth"
+      />
+    </mat-form-field>
 
-      <mat-checkbox
-        [ngModel]="params.showMetadata"
-        name="showMetadata"
-        (ngModelChange)="onUpdateParam({ showMetadata: $event })"
-        >Show Metadata</mat-checkbox
-      >
-      <mat-checkbox
-        [ngModel]="params.mergeFusion"
-        name="mergeFusion"
-        matTooltip="Hide the fusion subcomputations in the rendered graph"
-        (ngModelChange)="onUpdateParam({ mergeFusion: $event })"
-      >
-        Merge Fusion
-      </mat-checkbox>
-    </div>
-    <div class="search-button">
+    <mat-checkbox
+      [ngModel]="params.showMetadata"
+      name="showMetadata"
+      (ngModelChange)="onUpdateParam({ showMetadata: $event })"
+      class="full-width"
+      >Show Metadata</mat-checkbox
+    >
+    <mat-checkbox
+      [ngModel]="params.mergeFusion"
+      name="mergeFusion"
+      matTooltip="Hide the fusion subcomputations in the rendered graph"
+      (ngModelChange)="onUpdateParam({ mergeFusion: $event })"
+      class="full-width"
+    >
+      Merge Fusion
+    </mat-checkbox>
+    <div class="actions">
       <button
         mat-flat-button
         extended
         name="submit"
         type="submit"
         color="primary"
-        appearance="fill"
+        class="search-button"
         [disabled]="!validToSubmit()"
       >
         <mat-icon>search</mat-icon> Search Graph

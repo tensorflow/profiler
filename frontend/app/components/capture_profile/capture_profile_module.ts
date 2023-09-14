@@ -1,6 +1,6 @@
 import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
-import {MatLegacyButtonModule} from '@angular/material/legacy-button';
+import {MatButtonModule} from '@angular/material/button';
 import {MatLegacyDialogModule} from '@angular/material/legacy-dialog';
 import {MatLegacyProgressSpinnerModule} from '@angular/material/legacy-progress-spinner';
 import {MatLegacySnackBarModule} from '@angular/material/legacy-snack-bar';
@@ -14,7 +14,7 @@ import {CaptureProfileDialogModule} from './capture_profile_dialog/capture_profi
   declarations: [CaptureProfile],
   imports: [
     CommonModule,
-    MatLegacyButtonModule,
+    MatButtonModule,
     MatLegacyDialogModule,
     MatLegacyProgressSpinnerModule,
     CaptureProfileDialogModule,

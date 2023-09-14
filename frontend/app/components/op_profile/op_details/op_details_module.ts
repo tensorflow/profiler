@@ -1,7 +1,7 @@
 import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
-import {MatLegacyButtonModule} from '@angular/material/legacy-button';
+import {MatButtonModule} from '@angular/material/button';
 import {MatLegacyCardModule} from '@angular/material/legacy-card';
 
 import {OpDetails} from './op_details';
@@ -10,7 +10,7 @@ import {OpDetails} from './op_details';
 @NgModule({
   declarations: [OpDetails],
   imports:
-      [CommonModule, MatLegacyCardModule, MatIconModule, MatLegacyButtonModule],
+      [CommonModule, MatLegacyCardModule, MatIconModule, MatButtonModule],
   exports: [OpDetails]
 })
 export class OpDetailsModule {

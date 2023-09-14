@@ -59,7 +59,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_legacy_button",
+    name = "angular_material_button",
     srcs = [],
     deps = [
         "@npm//@angular/material",

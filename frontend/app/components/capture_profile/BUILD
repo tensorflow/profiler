@@ -19,7 +19,7 @@ xprof_ng_module(
         "@npm//@angular/forms",
         "@npm//@ngrx/store",
         "@npm//rxjs",
-        "@org_xprof//frontend/app/common/angular:angular_material_legacy_button",
+        "@org_xprof//frontend/app/common/angular:angular_material_button",
         "@org_xprof//frontend/app/common/angular:angular_material_legacy_dialog",
         "@org_xprof//frontend/app/common/angular:angular_material_legacy_progress_spinner",
         "@org_xprof//frontend/app/common/angular:angular_material_legacy_snack_bar",

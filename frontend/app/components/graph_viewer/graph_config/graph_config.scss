@@ -18,6 +18,13 @@ mat-checkbox {
   display: flex;
 }
 
+.actions {
+  padding: 20px 0;
+}
+
 .search-button {
-  padding: 20px 0 0;
+  // Override the MDC button style (not using palette contrast color somehow)
+  // Seems fixed in higher angular versions
+  // TODO(yinzz) remove this override once it's fixed
+  color: white;
 }
