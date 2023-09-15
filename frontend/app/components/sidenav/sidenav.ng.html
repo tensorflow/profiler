@@ -7,7 +7,7 @@
     Runs ({{runs.length}})
   </div>
 
-  <mat-form-field class="full-width">
+  <mat-form-field class="full-width" appearance="outline">
     <mat-select panelClass="panel-override" [(value)]="selectedRun" [disabled]="!runs.length" (selectionChange)="afterUpdateRun()">
       <mat-option *ngFor="let run of runs" [value]="run">
         {{run}}
@@ -21,7 +21,7 @@
     Tools ({{tags.length}})
   </div>
 
-  <mat-form-field class="full-width">
+  <mat-form-field class="full-width" appearance="outline">
     <mat-select panelClass="panel-override" [(value)]="selectedTag" [disabled]="!tags.length" (selectionChange)="afterUpdateTag()">
       <mat-option *ngFor="let tag of tags" [value]="tag">
         {{getDisplayTagName(tag)}}
@@ -35,7 +35,7 @@
     {{hostSelectorDisplayName}}
   </div>
 
-  <mat-form-field class="full-width">
+  <mat-form-field class="full-width" appearance="outline">
     <mat-select panelClass="panel-override" [(value)]="selectedHost" [disabled]="!hosts.length" (selectionChange)="afterUpdateHost()">
       <mat-option *ngFor="let host of hosts" [value]="host">
         {{host}}

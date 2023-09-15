@@ -1,16 +1,16 @@
 import {NgModule} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
-import {MatLegacyFormFieldModule} from '@angular/material/legacy-form-field';
-import {MatLegacyInputModule} from '@angular/material/legacy-input';
+import {MatFormFieldModule} from '@angular/material/form-field';
+import {MatInputModule} from '@angular/material/input';
 
 import {MemoryBreakdownTable} from './memory_breakdown_table';
 
 @NgModule({
   declarations: [MemoryBreakdownTable],
   imports: [
-    MatLegacyFormFieldModule,
+    MatFormFieldModule,
     MatIconModule,
-    MatLegacyInputModule,
+    MatInputModule,
   ],
   exports: [MemoryBreakdownTable]
 })

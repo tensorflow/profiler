@@ -29,7 +29,8 @@
         [value]="selectedChannelIndex"
         (change)="updateChannelIndex($event.value)">
       </mat-slider>
-      <mat-form-field class="channel-input">
+      <mat-form-field class="channel-input" appearance="outline">
+        <mat-label>Channel id</mat-label>
         <input
           matInput
           type="number"

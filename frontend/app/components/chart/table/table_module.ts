@@ -1,8 +1,8 @@
 import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
-import {MatLegacyOptionModule} from '@angular/material/legacy-core';
-import {MatLegacyFormFieldModule} from '@angular/material/legacy-form-field';
-import {MatLegacySelectModule} from '@angular/material/legacy-select';
+import {MatOptionModule} from '@angular/material/core';
+import {MatFormFieldModule} from '@angular/material/form-field';
+import {MatSelectModule} from '@angular/material/select';
 
 import {Table} from './table';
 
@@ -11,9 +11,9 @@ import {Table} from './table';
   declarations: [Table],
   imports: [
     CommonModule,
-    MatLegacyOptionModule,
-    MatLegacySelectModule,
-    MatLegacyFormFieldModule,
+    MatOptionModule,
+    MatSelectModule,
+    MatFormFieldModule,
   ],
   exports: [Table],
 })

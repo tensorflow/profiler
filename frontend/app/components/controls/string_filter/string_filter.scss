@@ -1,8 +1,15 @@
-/** CSS for a stats table component. */
+/** CSS for string filter component. */
 
 @import 'frontend/app/styles/common';
 
 mat-icon {
   color: $button-focus-color;
   vertical-align: bottom;
+}
+
+// This control class never works for unknown reason
+// added inline style instead
+.control {
+  width: 240px;
+  margin-right: 8px;
 }

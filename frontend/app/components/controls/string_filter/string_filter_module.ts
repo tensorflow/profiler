@@ -1,8 +1,8 @@
 import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
-import {MatLegacyFormFieldModule} from '@angular/material/legacy-form-field';
-import {MatLegacyInputModule} from '@angular/material/legacy-input';
+import {MatFormFieldModule} from '@angular/material/form-field';
+import {MatInputModule} from '@angular/material/input';
 
 import {StringFilter} from './string_filter';
 
@@ -11,9 +11,9 @@ import {StringFilter} from './string_filter';
   declarations: [StringFilter],
   imports: [
     CommonModule,
-    MatLegacyFormFieldModule,
+    MatFormFieldModule,
     MatIconModule,
-    MatLegacyInputModule,
+    MatInputModule,
   ],
   exports: [StringFilter],
 })

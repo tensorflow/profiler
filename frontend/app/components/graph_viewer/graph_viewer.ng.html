@@ -1,6 +1,6 @@
 <mat-sidenav-container>
   <mat-sidenav mode="side" opened>
-    <div class="row">
+    <div class="item-container">
       <graph-config [initialInputs]="initialParams" [moduleList]="moduleList" [isHloOssTool]="true" (plot)="onPlot()" (update)="onUpdateParam($event)"></graph-config>
     </div>
   </mat-sidenav>

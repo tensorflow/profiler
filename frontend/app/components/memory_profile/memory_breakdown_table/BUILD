@@ -16,9 +16,9 @@ xprof_ng_module(
     deps = [
         "@npm//@angular/core",
         "@npm//@types/google.visualization",
+        "@org_xprof//frontend/app/common/angular:angular_material_form_field",
         "@org_xprof//frontend/app/common/angular:angular_material_icon",
-        "@org_xprof//frontend/app/common/angular:angular_material_legacy_form_field",
-        "@org_xprof//frontend/app/common/angular:angular_material_legacy_input",
+        "@org_xprof//frontend/app/common/angular:angular_material_input",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/interfaces:memory_profile_proto_defs",
         "@org_xprof//frontend/app/common/utils",

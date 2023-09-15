@@ -29,6 +29,11 @@ $theme: mat.define-light-theme(
 @include mat.button-theme($theme);
 @include mat.icon-button-theme($theme);
 @include mat.card-theme($theme);
+@include mat.autocomplete-theme($theme);
+@include mat.core-theme($theme);
+@include mat.input-theme($theme);
+@include mat.form-field-theme($theme);
+@include mat.select-theme($theme);
 
 html, body {
   height: 100%;
@@ -104,7 +109,7 @@ sidenav mat-form-field .mat-select-value {
   color: #777;
 }
 
-op-profile .ops-control .mat-form-field {
+op-profile .ops-control .mat-mdc-form-field {
   text-align: center !important;
 }
 

@@ -48,6 +48,11 @@ $dark-theme-card-title-color: #fff;
   padding: 20px 20px 0;
 }
 
+.row {
+  display: flex;
+  align-items: center;
+}
+
 mat-card {
   // MDC mat-card does not have padding by default
   // Add padding to keep style persistent during migration

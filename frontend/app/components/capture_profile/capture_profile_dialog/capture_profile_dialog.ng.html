@@ -39,7 +39,7 @@
   </div>
 
   <div>
-    <mat-form-field>
+    <mat-form-field appearance="outline">
       <mat-label>Host Trace (TraceMe) Level</mat-label>
       <mat-select
         matTooltip="{{ hostTracerTooltip }}"
@@ -55,7 +55,7 @@
   </div>
 
   <div>
-    <mat-form-field>
+    <mat-form-field appearance="outline">
       <mat-label>Device Trace Level</mat-label>
       <mat-select [(ngModel)]="deviceTracerLevel">
         <mat-option value="0">disable</mat-option>
@@ -65,7 +65,7 @@
   </div>
 
   <div>
-    <mat-form-field>
+    <mat-form-field appearance="outline">
       <mat-label>Python Trace Level</mat-label>
       <mat-select [(ngModel)]="pythonTracerLevel">
         <mat-option value="0">disable</mat-option>

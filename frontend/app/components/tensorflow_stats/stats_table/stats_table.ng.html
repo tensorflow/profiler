@@ -1,27 +1,27 @@
 <div>
   <div class="mat-headline">TensorFlow operations</div>
   <mat-form-field>
+    <mat-label>Host/device</mat-label>
     <input
            matInput
-           placeholder="Host/device"
            [value]="filterExecutor"
-           (input)="filterExecutor = $event.target.value; updateFilters();">
+           (change)="filterExecutor = $event.target.value; updateFilters();">
     <mat-icon matSuffix>search</mat-icon>
   </mat-form-field>
   <mat-form-field>
+    <mat-label>Type</mat-label>
     <input
            matInput
-           placeholder="Type"
            [value]="filterType"
-           (input)="filterType = $event.target.value; updateFilters();">
+           (change)="filterType = $event.target.value; updateFilters();">
     <mat-icon matSuffix>search</mat-icon>
   </mat-form-field>
   <mat-form-field>
+    <mat-label>Operation</mat-label>
     <input
            matInput
-           placeholder="Operation"
            [value]="filterOperation"
-           (input)="filterOperation = $event.target.value; updateFilters();">
+           (change)="filterOperation = $event.target.value; updateFilters();">
     <mat-icon matSuffix>search</mat-icon>
   </mat-form-field>
 </div>

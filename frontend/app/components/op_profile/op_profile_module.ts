@@ -1,7 +1,7 @@
 import {NgModule} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
-import {MatLegacyFormFieldModule} from '@angular/material/legacy-form-field';
-import {MatLegacyInputModule} from '@angular/material/legacy-input';
+import {MatFormFieldModule} from '@angular/material/form-field';
+import {MatInputModule} from '@angular/material/input';
 import {MatLegacySlideToggleModule} from '@angular/material/legacy-slide-toggle';
 import {MatLegacySliderModule} from '@angular/material/legacy-slider';
 import {MatLegacyTooltipModule} from '@angular/material/legacy-tooltip';
@@ -13,8 +13,8 @@ import {OpTableModule} from './op_table/op_table_module';
 @NgModule({
   declarations: [OpProfile],
   imports: [
-    MatLegacyFormFieldModule,
-    MatLegacyInputModule,
+    MatFormFieldModule,
+    MatInputModule,
     MatLegacySliderModule,
     MatLegacySlideToggleModule,
     OpTableModule,

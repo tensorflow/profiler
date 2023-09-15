@@ -32,26 +32,19 @@
     <div class="ops-control">
       <div class="ops-control-title">
         Show top&nbsp;
-        <mat-form-field class="children-count-input">
+        <mat-form-field class="children-count-input" appearance="outline">
+          <mat-label>#</mat-label>
           <input
                  matInput
                  type="number"
+                 matTooltip="10 ~ 100 with increment of 10, numbers will be rounded"
                  [min]="10"
                  [max]="100"
                  [step]="10"
                  [value]="childrenCount"
-                 (input)="updateChildrenCount($event.target.value)" />
+                 (change)="updateChildrenCount($event.target.value)" />
         </mat-form-field>
         &nbsp;ops
-      </div>
-      <div>
-        <mat-slider
-                    [min]="10"
-                    [max]="100"
-                    [step]="10"
-                    [value]="childrenCount"
-                    (change)="updateChildrenCount($event.value)">
-        </mat-slider>
       </div>
     </div>
     <div class="control">

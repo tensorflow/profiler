@@ -35,7 +35,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_legacy_form_field",
+    name = "angular_material_form_field",
     srcs = [],
     deps = [
         "@npm//@angular/material",
@@ -51,7 +51,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_legacy_input",
+    name = "angular_material_input",
     srcs = [],
     deps = [
         "@npm//@angular/material",
@@ -163,7 +163,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_legacy_core",
+    name = "angular_material_core",
     srcs = [],
     deps = [
         "@npm//@angular/material",
@@ -171,7 +171,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_legacy_select",
+    name = "angular_material_select",
     srcs = [],
     deps = [
         "@npm//@angular/material",
