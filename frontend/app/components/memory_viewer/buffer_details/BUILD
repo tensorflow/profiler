@@ -17,7 +17,7 @@ xprof_ng_module(
         "@npm//@angular/core",
         "@npm//@ngrx/store",
         "@npm//rxjs",
-        "@org_xprof//frontend/app/common/angular:angular_material_legacy_card",
+        "@org_xprof//frontend/app/common/angular:angular_material_card",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/utils",
         "@org_xprof//frontend/app/store",

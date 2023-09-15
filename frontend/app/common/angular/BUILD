@@ -131,7 +131,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_legacy_card",
+    name = "angular_material_card",
     srcs = [],
     deps = [
         "@npm//@angular/material",

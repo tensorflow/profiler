@@ -1,11 +1,11 @@
 import {NgModule} from '@angular/core';
-import {MatLegacyCardModule} from '@angular/material/legacy-card';
+import {MatCardModule} from '@angular/material/card';
 
 import {StepTimeGraph} from './step_time_graph';
 
 @NgModule({
   declarations: [StepTimeGraph],
-  imports: [MatLegacyCardModule],
+  imports: [MatCardModule],
   exports: [StepTimeGraph]
 })
 export class StepTimeGraphModule {

@@ -1,11 +1,11 @@
 import {NgModule} from '@angular/core';
-import {MatLegacyCardModule} from '@angular/material/legacy-card';
+import {MatCardModule} from '@angular/material/card';
 
 import {RunEnvironmentView} from './run_environment_view';
 
 @NgModule({
   declarations: [RunEnvironmentView],
-  imports: [MatLegacyCardModule],
+  imports: [MatCardModule],
   exports: [RunEnvironmentView]
 })
 export class RunEnvironmentViewModule {
