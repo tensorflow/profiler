@@ -35,6 +35,7 @@ $theme: mat.define-light-theme(
 @include mat.form-field-theme($theme);
 @include mat.checkbox-theme($theme);
 @include mat.select-theme($theme);
+@include mat.dialog-theme($theme);
 
 html, body {
   height: 100%;

@@ -99,7 +99,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_legacy_dialog",
+    name = "angular_material_dialog",
     srcs = [],
     deps = [
         "@npm//@angular/material",
