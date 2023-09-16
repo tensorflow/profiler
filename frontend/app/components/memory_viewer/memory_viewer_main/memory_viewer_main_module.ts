@@ -2,7 +2,7 @@ import {NgModule} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {MatDividerModule} from '@angular/material/divider';
 import {MatIconModule} from '@angular/material/icon';
-import {MatLegacyCheckboxModule} from '@angular/material/legacy-checkbox';
+import {MatCheckboxModule} from '@angular/material/checkbox';
 import {MatLegacyTooltipModule} from '@angular/material/legacy-tooltip';
 import {DiagnosticsViewModule} from 'org_xprof/frontend/app/components/diagnostics_view/diagnostics_view_module';
 import {MaxHeapChartModule} from 'org_xprof/frontend/app/components/memory_viewer/max_heap_chart/max_heap_chart_module';
@@ -18,7 +18,7 @@ import {MemoryViewerMain} from './memory_viewer_main';
     FormsModule,
     MatDividerModule,
     MaxHeapChartModule,
-    MatLegacyCheckboxModule,
+    MatCheckboxModule,
     MatIconModule,
     MatLegacyTooltipModule,
     ProgramOrderChartModule,

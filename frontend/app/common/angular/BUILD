@@ -91,7 +91,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_legacy_checkbox",
+    name = "angular_material_checkbox",
     srcs = [],
     deps = [
         "@npm//@angular/material",
