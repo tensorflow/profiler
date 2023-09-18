@@ -37,6 +37,7 @@ $theme: mat.define-light-theme(
 @include mat.select-theme($theme);
 @include mat.menu-theme($theme);
 @include mat.dialog-theme($theme);
+@include mat.progress-bar-theme($theme);
 
 html, body {
   height: 100%;

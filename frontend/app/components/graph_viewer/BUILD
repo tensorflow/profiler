@@ -20,7 +20,7 @@ xprof_ng_module(
         "@npm//@ngrx/store",
         "@npm//rxjs",
         "@org_xprof//frontend/app/common/angular:angular_material_core",
-        "@org_xprof//frontend/app/common/angular:angular_material_legacy_progress_bar",
+        "@org_xprof//frontend/app/common/angular:angular_material_progress_bar",
         "@org_xprof//frontend/app/common/angular:angular_material_sidenav",
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",

@@ -3,7 +3,7 @@
     <sidenav></sidenav>
   </mat-sidenav>
   <mat-sidenav-content>
-    <div class="progress-container" [hidden]="!loading">
+    <div class="progress-container" *ngIf="loading">
       <div class="loading-message">{{loadingMessage}}</div>
       <mat-progress-bar color="primary" mode="indeterminate"></mat-progress-bar>
     </div>

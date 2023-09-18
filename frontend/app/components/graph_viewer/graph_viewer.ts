@@ -86,8 +86,18 @@ export class GraphViewer implements OnDestroy {
     return this.opName && this.selectedModule;
   }
 
+  setLoadingStatus(loading: boolean, diagnostics?: Diagnostics) {
+    this.loading = loading;
+    this.diagnostics = diagnostics || {...DIAGNOSTICS_DEFAULT};
+  }
+
+  onIframeLoaded() {
+    this.setLoadingStatus(false);
+  }
+
   onPlot() {
     if (!this.validToPlot()) return;
+    this.setLoadingStatus(true);
 
     // Update the query parameters in url after form updates
     const queryParams: GraphViewerQueryParams = {

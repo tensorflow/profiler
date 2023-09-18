@@ -27,7 +27,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_legacy_progress_bar",
+    name = "angular_material_progress_bar",
     srcs = [],
     deps = [
         "@npm//@angular/material",

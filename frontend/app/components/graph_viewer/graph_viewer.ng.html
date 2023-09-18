@@ -6,10 +6,10 @@
   </mat-sidenav>
   <mat-sidenav-content>
     <diagnostics-view [diagnostics]="diagnostics"></diagnostics-view>
-    <div class="progress-container" [hidden]="!loading">
+    <div class="progress-container" *ngIf="loading">
       <div class="loading-message">Loading graph viewer data</div>
       <mat-progress-bar color="primary" mode="indeterminate"></mat-progress-bar>
     </div>
-    <iframe #iframe id="graph-html" [src]="graphvizUri | safe"></iframe>
+    <iframe #iframe id="graph-html" [src]="graphvizUri | safe" (load)="onIframeLoaded()"></iframe>
   </mat-sidenav-content>
 </mat-sidenav-container>
