@@ -147,7 +147,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_legacy_slider",
+    name = "angular_material_slider",
     srcs = [],
     deps = [
         "@npm//@angular/material",

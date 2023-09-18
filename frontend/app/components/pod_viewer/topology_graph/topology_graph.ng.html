@@ -25,9 +25,7 @@
       <mat-slider
         [min]="0"
         [max]="channelCount"
-        [step]="1"
-        [value]="selectedChannelIndex"
-        (change)="updateChannelIndex($event.value)">
+        [step]="1" #ngSlider><input matSliderThumb [value]="selectedChannelIndex" (change)="updateChannelIndex({source: ngSliderThumb, parent: ngSlider, value: ngSliderThumb.value}.value)" #ngSliderThumb="matSliderThumb" />
       </mat-slider>
       <mat-form-field class="channel-input" appearance="outline">
         <mat-label>Channel id</mat-label>

@@ -20,7 +20,7 @@ xprof_ng_module(
         "@npm//@ngrx/store",
         "@npm//rxjs",
         "@org_xprof//frontend/app/common/angular:angular_material_divider",
-        "@org_xprof//frontend/app/common/angular:angular_material_legacy_slider",
+        "@org_xprof//frontend/app/common/angular:angular_material_slider",
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/utils",

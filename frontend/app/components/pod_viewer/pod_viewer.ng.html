@@ -6,8 +6,7 @@
     <mat-slider
                 [min]="minStep"
                 [max]="maxStep"
-                [step]="1"
-                (change)="updateSelectedStep($event.value)">
+                [step]="1" #ngSlider><input matSliderThumb (change)="updateSelectedStep({source: ngSliderThumb, parent: ngSlider, value: ngSliderThumb.value}.value)" #ngSliderThumb="matSliderThumb" />
     </mat-slider>
   </div>
   <div *ngIf="topology">
