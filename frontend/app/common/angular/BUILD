@@ -75,7 +75,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_legacy_menu",
+    name = "angular_material_menu",
     srcs = [],
     deps = [
         "@npm//@angular/material",

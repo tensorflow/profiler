@@ -4,7 +4,7 @@ import {MatIconModule} from '@angular/material/icon';
 import {MatButtonModule} from '@angular/material/button';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import {MatInputModule} from '@angular/material/input';
-import {MatLegacyMenuModule} from '@angular/material/legacy-menu';
+import {MatMenuModule} from '@angular/material/menu';
 import {MatLegacySliderModule} from '@angular/material/legacy-slider';
 
 import {TopologyGraph} from './topology_graph';
@@ -18,7 +18,7 @@ import {TopologyGraph} from './topology_graph';
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
-    MatLegacyMenuModule,
+    MatMenuModule,
     MatLegacySliderModule,
   ],
   exports: [TopologyGraph]
