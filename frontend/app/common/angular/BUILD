@@ -123,7 +123,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_legacy_snack_bar",
+    name = "angular_material_snack_bar",
     srcs = [],
     deps = [
         "@npm//@angular/material",
