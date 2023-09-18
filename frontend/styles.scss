@@ -39,6 +39,7 @@ $theme: mat.define-light-theme(
 @include mat.dialog-theme($theme);
 @include mat.progress-spinner-theme($theme);
 @include mat.progress-bar-theme($theme);
+@include mat.radio-theme($theme);
 
 html, body {
   height: 100%;

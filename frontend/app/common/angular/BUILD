@@ -107,7 +107,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_legacy_radio",
+    name = "angular_material_radio",
     srcs = [],
     deps = [
         "@npm//@angular/material",
