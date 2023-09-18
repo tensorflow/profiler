@@ -115,7 +115,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_legacy_progress_spinner",
+    name = "angular_material_progress_spinner",
     srcs = [],
     deps = [
         "@npm//@angular/material",
