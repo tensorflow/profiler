@@ -139,7 +139,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_legacy_slide_toggle",
+    name = "angular_material_slide_toggle",
     srcs = [],
     deps = [
         "@npm//@angular/material",
