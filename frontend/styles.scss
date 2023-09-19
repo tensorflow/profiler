@@ -43,6 +43,7 @@ $theme: mat.define-light-theme(
 @include mat.radio-theme($theme);
 @include mat.snack-bar-theme($theme);
 @include mat.slider-theme($theme);
+@include mat.tooltip-theme($theme);
 
 html, body {
   height: 100%;
@@ -57,7 +58,7 @@ body {
   z-index: 10;
 }
 
-.mat-tooltip {
+.mat-mdc-tooltip {
   font-size: 12px;
 }
 

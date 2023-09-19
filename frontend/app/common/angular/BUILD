@@ -155,7 +155,7 @@ ts_library(
 )
 
 ts_library(
-    name = "angular_material_legacy_tooltip",
+    name = "angular_material_tooltip",
     srcs = [],
     deps = [
         "@npm//@angular/material",

@@ -8,7 +8,7 @@ import {MatFormFieldModule} from '@angular/material/form-field';
 import {MatInputModule} from '@angular/material/input';
 import {MatRadioModule} from '@angular/material/radio';
 import {MatSelectModule} from '@angular/material/select';
-import {MatLegacyTooltipModule} from '@angular/material/legacy-tooltip';
+import {MatTooltipModule} from '@angular/material/tooltip';
 import {BrowserModule} from '@angular/platform-browser';
 
 import {CaptureProfileDialog} from './capture_profile_dialog';
@@ -27,7 +27,7 @@ import {CaptureProfileDialog} from './capture_profile_dialog';
     MatInputModule,
     MatRadioModule,
     MatSelectModule,
-    MatLegacyTooltipModule,
+    MatTooltipModule,
   ],
   exports: [CaptureProfileDialog]
 })

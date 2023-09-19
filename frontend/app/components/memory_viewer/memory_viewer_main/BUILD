@@ -21,7 +21,6 @@ xprof_ng_module(
         "@org_xprof//frontend/app/common/angular:angular_material_checkbox",
         "@org_xprof//frontend/app/common/angular:angular_material_divider",
         "@org_xprof//frontend/app/common/angular:angular_material_icon",
-        "@org_xprof//frontend/app/common/angular:angular_material_legacy_tooltip",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/utils",
         "@org_xprof//frontend/app/components/diagnostics_view",
