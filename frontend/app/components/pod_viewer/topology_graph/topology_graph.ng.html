@@ -41,9 +41,11 @@
     </div>
   </div>
   <div
+    *ngFor="let z_nodes of nodes; let z_axis=index;"
     class="container"
     [style.width]="containerWidth + 'px'"
     [style.height]="containerHeight + 'px'">
+    <p>Z = {{z_axis}}</p>
     <div
       *ngFor="let label of labels"
       class="label"
@@ -60,13 +62,13 @@
       [style.left]="host.x + 'px'">
     </div>
     <div
-      *ngFor="let node of nodes"
+      *ngFor="let node of z_nodes.nodes"
       class="node"
       [id]="node.id"
       [attr.rid]="node.rid"
       [style.top]="node.y + 'px'"
       [style.left]="node.x + 'px'"
-      (mouseenter)="showTooltip(node.id)"
+      (mouseenter)="showTooltip(node.id, $event)"
       (mouseleave)="hideTooltip()">
     </div>
     <div
@@ -83,13 +85,13 @@
         </g>
       </svg>
     </div>
-    <div
-      class="node-tooltip mat-elevation-z2"
-      [style.left]="tooltipX + 'px'"
-      [style.top]="tooltipY + 'px'"
-      [hidden]="!tooltipText">
+  </div>
+  <div
+    class="node-tooltip mat-elevation-z2"
+    [style.left]="tooltipX + 'px'"
+    [style.top]="tooltipY + 'px'"
+    [hidden]="!tooltipText">
       <pre>{{tooltipText}}</pre>
-    </div>
   </div>
 
   <div class="color-table">

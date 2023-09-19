@@ -19,6 +19,10 @@ interface ElementInfo {
   y: number;
 }
 
+interface Nodes {
+  nodes: ElementInfo[];
+}
+
 interface ArrowElementInfo extends ElementInfo {
   rotate?: number;
   scale?: number;
@@ -34,8 +38,6 @@ const LABEL_PADDING = 5;
 const LABEL_WIDTH = 20;
 const NODE_HEIGHT = 30;
 const NODE_WIDTH = 15;
-const TOOLTIP_OFFSET_X = 20;
-const TOOLTIP_OFFSET_Y = 35;
 const NODE_COLORS = [
   '#ffffd9', '#edf8b1', '#c7e9b4', '#7fcdbb', '#41b6c4', '#1d91c0', '#225ea8',
   '#253494', '#081d58'
@@ -75,7 +77,9 @@ export class TopologyGraph implements OnChanges, OnDestroy {
 
   hosts: ElementInfo[] = [];
   labels: ElementInfo[] = [];
-  nodes: ElementInfo[] = [];
+  // Since we currently do not support 3d visualizations, We will unwrap the z
+  // axis and create a 2d plane for each z axis.
+  nodes: Nodes[] = [];
   colorInfos: ColorInfo[] = [];
   channels: number[] = [];
   arrows: ArrowElementInfo[] = [];
@@ -126,6 +130,37 @@ export class TopologyGraph implements OnChanges, OnDestroy {
     let colorIndex = Math.floor((value || 0) * NODE_COLORS.length);
     colorIndex = Math.min(colorIndex, NODE_COLORS.length - 1);
     return NODE_COLORS[colorIndex];
+  }
+
+  /**
+   * Get the node coordinates to relatively position the node within the
+   * container. We create a new container for each z axis.
+   */
+  private getNodePositionFromCoordinates(
+      xCoordinate: number, yCoordinate: number, nodeId: number): ElementInfo {
+    const hostWidthWithPadding = HOST_PADDING + BORDER_WIDTH + this.hostWidth +
+        BORDER_WIDTH + HOST_PADDING;
+    const hostHeightWithPadding = HOST_PADDING + BORDER_WIDTH +
+        this.hostHeight + BORDER_WIDTH + HOST_PADDING;
+    const chipWidthWithPadding = CHIP_PADDING +
+        (BORDER_WIDTH + NODE_WIDTH) * this.nodesPerChip + BORDER_WIDTH +
+        CHIP_PADDING;
+    const chipHeightWithPadding =
+        CHIP_PADDING + BORDER_WIDTH + NODE_HEIGHT + BORDER_WIDTH + CHIP_PADDING;
+    let x = CONTAINER_MARGIN + LABEL_PADDING + LABEL_WIDTH + LABEL_PADDING;
+    let y = CONTAINER_MARGIN + LABEL_PADDING + LABEL_HEIGHT + LABEL_PADDING;
+
+    x += hostWidthWithPadding * Math.floor(xCoordinate / this.hostXStride);
+    x += HOST_PADDING + BORDER_WIDTH + HOST_MARGIN;
+    x += chipWidthWithPadding * (xCoordinate % this.hostXStride);
+    x += CHIP_PADDING + (BORDER_WIDTH + NODE_WIDTH) * nodeId;
+
+    y += hostHeightWithPadding * Math.floor(yCoordinate / this.hostYStride);
+    y += HOST_PADDING + BORDER_WIDTH + HOST_MARGIN;
+    y += chipHeightWithPadding * (yCoordinate % this.hostYStride);
+    y += CHIP_PADDING;
+
+    return {x, y};
   }
 
   private getNodePosition(chipId: number, nodeId: number): ElementInfo {
@@ -296,6 +331,18 @@ export class TopologyGraph implements OnChanges, OnDestroy {
     }
   }
 
+  private createElementId(chipId: number, node: number): string {
+    return 'node-' + chipId.toString() + '-' + node.toString();
+  }
+
+  private getChipId(id: string): number {
+    return Number(id.split('-')[1]);
+  }
+
+  private getNodeId(id: string): number {
+    return Number(id.split('-')[2]);
+  }
+
   private updateNodes() {
     this.nodes = [];
 
@@ -303,18 +350,41 @@ export class TopologyGraph implements OnChanges, OnDestroy {
       return;
     }
 
-    Object.keys(this.podStatsPerCore).forEach(coreId => {
-      const podStatsRecord = this.podStatsPerCore![coreId];
-      const chipId = podStatsRecord.chipId || 0;
-      const nodeId = podStatsRecord.nodeId || 0;
-      const nodeInfo = this.getNodePosition(chipId, nodeId);
-      nodeInfo.id = 'node-' + chipId.toString() + '-' + nodeId.toString();
-      if (this.coreIdToReplicaIdMap &&
-          this.coreIdToReplicaIdMap[coreId] !== undefined) {
-        nodeInfo.rid = this.coreIdToReplicaIdMap[coreId];
-      }
-      this.nodes.push(nodeInfo);
-    });
+    if (this.topology.cores && this.topology.cores.length > 0) {
+      const numCoresPerChip = this.topology.numCoresPerChip || 1;
+      this.topology.cores.forEach(chip => {
+        for (let i = 0; i < numCoresPerChip; i++) {
+          const chipId = chip.globalId || 0;
+          const chipx = chip.x || 0;
+          const chipy = chip.y || 0;
+          const chipz = chip.z || 0;
+          const nodeInfo = this.getNodePositionFromCoordinates(chipx, chipy, i);
+          nodeInfo.id = this.createElementId(chipId, i);
+          if (this.coreIdToReplicaIdMap &&
+              this.coreIdToReplicaIdMap[chipId] !== undefined) {
+            nodeInfo.rid = this.coreIdToReplicaIdMap[chipId];
+          }
+          if (this.nodes[chipz] === undefined) {
+            this.nodes[chipz] = {nodes: []};
+          }
+          this.nodes[chipz].nodes.push(nodeInfo);
+        }
+      });
+    } else {
+      this.nodes[0] = {nodes: []};
+      Object.keys(this.podStatsPerCore).forEach(coreId => {
+        const podStatsRecord = this.podStatsPerCore![coreId];
+        const chipId = podStatsRecord.chipId || 0;
+        const nodeId = podStatsRecord.nodeId || 0;
+        const nodeInfo = this.getNodePosition(chipId, nodeId);
+        nodeInfo.id = this.createElementId(chipId, nodeId);
+        if (this.coreIdToReplicaIdMap &&
+            this.coreIdToReplicaIdMap[coreId] !== undefined) {
+          nodeInfo.rid = this.coreIdToReplicaIdMap[coreId];
+        }
+        this.nodes[0].nodes.push(nodeInfo);
+      });
+    }
   }
 
   private updateSystemInfo() {
@@ -386,7 +456,7 @@ export class TopologyGraph implements OnChanges, OnDestroy {
     Object.values(this.podStatsPerCore).forEach(podStatsRecord => {
       const chipId = podStatsRecord.chipId || 0;
       const nodeId = podStatsRecord.nodeId || 0;
-      const id = 'node-' + chipId.toString() + '-' + nodeId.toString();
+      const id = this.createElementId(chipId, nodeId);
       const nodeEl = this.elRef.nativeElement.querySelector('#' + id);
       if (nodeEl) {
         let value = utils.getPodStatsRecordBreakdownProperty(
@@ -399,16 +469,45 @@ export class TopologyGraph implements OnChanges, OnDestroy {
     });
   }
 
-  showTooltip(id: string) {
+  showTooltip(id: string, event: MouseEvent) {
     this.tooltipText = '';
+    this.tooltipX = event.x;
+    this.tooltipY = event.y;
     let podStatsRecord: PodStatsRecord|null = null;
     let coreId = '';
+
+    const globalId = this.getChipId(id);
+
+    const foundCore =
+        this.topology?.cores?.find(chip => globalId === chip.globalId);
+
+    if (foundCore) {
+      const nodeId = this.getNodeId(id);
+      this.tooltipText += 'pos: (';
+      this.tooltipText += foundCore.x;
+      this.tooltipText += ',';
+      this.tooltipText += foundCore.y;
+      this.tooltipText += ',';
+      this.tooltipText += foundCore.z;
+      this.tooltipText += ')\n';
+      this.tooltipText += 'chip id: ';
+      this.tooltipText += foundCore.globalId;
+      this.tooltipText += '\n';
+      this.tooltipText += 'node id: ' + nodeId.toString() + '\n';
+      this.tooltipText += 'host: (';
+      this.tooltipText += foundCore.hostX;
+      this.tooltipText += ',';
+      this.tooltipText += foundCore.hostY;
+      this.tooltipText += ',';
+      this.tooltipText += foundCore.hostZ;
+      this.tooltipText += ')\n';
+    }
 
     const found =
         Object.entries(this.podStatsPerCore || {}).find(([, value]) => {
           const chipId = value.chipId || 0;
           const nodeId = value.nodeId || 0;
-          return id === 'node-' + chipId.toString() + '-' + nodeId.toString();
+          return id === this.createElementId(chipId, nodeId);
         });
 
     if (!found || found.length !== 2) {
@@ -421,18 +520,22 @@ export class TopologyGraph implements OnChanges, OnDestroy {
       return;
     }
 
+
     const chipId = podStatsRecord.chipId || 0;
     const nodeId = podStatsRecord.nodeId || 0;
-    this.tooltipText += 'pos: (';
-    this.tooltipText +=
-        (chipId % (this.hostColumns * this.hostXStride)).toString();
-    this.tooltipText += ',';
-    this.tooltipText +=
-        Math.floor(chipId / (this.hostColumns * this.hostXStride)).toString();
-    this.tooltipText += ')\n';
+    if (!foundCore) {
+      this.tooltipText += 'pos: (';
+      this.tooltipText +=
+          (chipId % (this.hostColumns * this.hostXStride)).toString();
+      this.tooltipText += ',';
+      this.tooltipText +=
+          Math.floor(chipId / (this.hostColumns * this.hostXStride)).toString();
+      this.tooltipText += ')\n';
+      this.tooltipText += 'chip id: ' + chipId.toString() + '\n';
+      this.tooltipText += 'node id: ' + nodeId.toString() + '\n';
+    }
     this.tooltipText += 'host: ' + (podStatsRecord.hostName || '') + '\n';
-    this.tooltipText += 'chip id: ' + chipId.toString() + '\n';
-    this.tooltipText += 'node id: ' + nodeId.toString() + '\n';
+
     if (this.coreIdToReplicaIdMap &&
         this.coreIdToReplicaIdMap[coreId] !== undefined) {
       this.tooltipText +=
@@ -451,10 +554,6 @@ export class TopologyGraph implements OnChanges, OnDestroy {
           '0.00';
       this.tooltipText += '% of a step.';
     }
-
-    const nodeInfo = this.getNodePosition(chipId, nodeId);
-    this.tooltipX = nodeInfo.x + TOOLTIP_OFFSET_X;
-    this.tooltipY = nodeInfo.y + TOOLTIP_OFFSET_Y;
   }
 
   updateChannelId(id: number) {

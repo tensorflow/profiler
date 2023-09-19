@@ -378,6 +378,18 @@ declare interface PodStatsSequence {
   podStatsMap?: PodStatsMap[];
 }
 
+/** Chip details. */
+export declare interface Chip {
+  globalId?: number;
+  hostX?: number;
+  hostY?: number;
+  hostZ?: number;
+  indexOnHost?: number;
+  x?: number;
+  y?: number;
+  z?: number;
+}
+
 /** The base interface for information to draw topology graph. */
 export declare interface PodViewerTopology {
   xDimension?: number;
@@ -387,6 +399,7 @@ export declare interface PodViewerTopology {
   hostYStride?: number;
   hostZStride?: number;
   numCoresPerChip?: number;
+  cores?: Chip[];
 }
 
 /** The base interface for a pod viewer summary. */
