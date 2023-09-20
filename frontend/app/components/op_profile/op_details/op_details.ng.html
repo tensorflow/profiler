@@ -112,7 +112,7 @@
           <div class="title"> Hardware Computation Size:</div>
           <code class="expression">{{computationPrimitiveSize}}</code>
         </div>
-        <div [hidden]="selectedOpNodeChain.length < 2 || selectedOpNodeChain[0] !== 'by_program'">
+        <div [hidden]="selectedOpNodeChain.length < 2 || selectedOpNodeChain[0] !== 'by_program' || !provenance">
           <a [href]="getGraphViewerLink()" target="_blank" style="text-decoration:none;">
             <button
               mat-stroked-button
