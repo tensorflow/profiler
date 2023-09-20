@@ -60,7 +60,10 @@ export class OpDetails {
   }
 
   getGraphViewerLink() {
-    return `/graph_viewer/${this.sessionId}?module_name=${this.selectedOpNodeChain[1]}&node_name=${this.name}`;
+    // expression format assumption: '%<op_name> = ...'
+    const opName = this.expression.split('=')[0].trim().slice(1);
+    return `/graph_viewer/${this.sessionId}?module_name=${
+        this.selectedOpNodeChain[1]}&node_name=${opName}`;
   }
 
   dimensionColor(dimension?: Node.XLAInstruction.LayoutAnalysis.Dimension):
