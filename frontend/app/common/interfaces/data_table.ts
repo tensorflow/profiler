@@ -79,6 +79,7 @@ declare interface GeneralAnalysisProperty {
   remark_color?: string;
   remark_text?: string;
   power_metrics?: string;
+  program_goodput_percent?: string;
 }
 /* tslint:enable */
 

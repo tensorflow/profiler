@@ -92,6 +92,8 @@ export class PerformanceSummary implements OnChanges {
     'Percentage of the device time that is busy.';
   powerMetricsTooltipMessage =
       'Avg/Max power consumption of different components/rails, including max of moving average of window size of 100us/1ms/10ms.';
+  programGoodputEfficiencyTooltipMessage =
+      'Efficiency based on the go/effective-flops-usage. (Predicted Execution Time / On-duty Execution Time).';
 
   ngOnChanges(changes: SimpleChanges) {
     if (!this.generalAnalysis || !this.inputPipelineAnalysis) {
@@ -234,6 +236,12 @@ export class PerformanceSummary implements OnChanges {
         propertyValues: components,
       });
     }
+    this.summaryInfoAfter.push({
+      title: 'Program Goodput Efficiency',
+      descriptions: ['higher is better'],
+      tooltip: this.programGoodputEfficiencyTooltipMessage,
+      value: generalProps.program_goodput_percent,
+    });
   }
 
   parseGenericData() {
