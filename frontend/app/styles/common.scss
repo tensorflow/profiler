@@ -63,6 +63,11 @@ mat-form-field {
   margin-top: 16px;
 }
 
+mat-option {
+  // Break word for long text to see full content
+  overflow-wrap: break-word;
+}
+
 @mixin overview-card {
   box-shadow: none !important;
   margin: 8px;
