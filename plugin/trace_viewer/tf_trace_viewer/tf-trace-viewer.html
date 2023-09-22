@@ -304,6 +304,7 @@ dashboard would integrate trace viewer app using iframe.
         return null;
       }
       this._init();
+      this._adjustUI();
 
       window.addEventListener('load', function(e) {
         element = document.getElementById('analysis');
@@ -573,6 +574,15 @@ dashboard would integrate trace viewer app using iframe.
       } else {
         this._displayOverlay(response.status, 'Failed to fetch hosts data');
       }
+    },
+
+    // Overwrite and fine tune the inherited catapult/tracing UI
+    _adjustUI: function() {
+      // Make search hit number always visible
+      const searchInput = document.getElementById('filter');
+      searchInput.setAttribute('style', 'padding-right:64px;width:250px;')
+      const hitCount = document.getElementById('hitCount');
+      hitCount.setAttribute('style', 'width:245px;')
     },
 
     _init: async function() {
