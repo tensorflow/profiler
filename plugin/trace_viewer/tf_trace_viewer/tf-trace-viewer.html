@@ -68,6 +68,32 @@ Trace Viewer.
     float: left;
   }
 
+  tr-ui-find-control {
+    /* keep consistent with menubar total height 20px */
+    height: 20px;
+  }
+
+  /* Align height of different buttons on the menubar
+   * tr-ui-b-toolbar-button, button.tr-ui-b-dropdown
+   */
+  tr-ui-b-toolbar-button {
+    padding: 2px 0;
+    /* total height = 14px + 2*2padding + 1*2 border = 20px */
+    height: 14px;
+    cursor: pointer;
+  }
+
+  /* Align style with Detail button */
+  #perfetto {
+    background: url("https://perfetto.dev/assets/favicon.png") no-repeat left;
+    background-color: rgb(248, 248, 248);
+    background-size: 14px;
+    padding-left:20px;
+    border: 1px solid rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+    font-size: 12px;
+  }
+
   #analysis {
     flex-flow: row nowrap;
   }
@@ -557,8 +583,6 @@ dashboard would integrate trace viewer app using iframe.
       if (!this._isOss) {
         const button = tr.ui.b.createButton('Perfetto', this._perfettoButtonOnclickCallback.bind(this));
         button.setAttribute('id', 'perfetto');
-        // Control bar has a height of 22px, using icon size 20px
-        button.setAttribute('style', 'background:url("https://perfetto.dev/assets/favicon.png") no-repeat left;background-size:20px;padding-left:25px;')
         const hostSelector = document.getElementById("host_selector");
         Polymer.dom(this._traceViewer.leftControls).insertBefore(button, hostSelector);
       }
