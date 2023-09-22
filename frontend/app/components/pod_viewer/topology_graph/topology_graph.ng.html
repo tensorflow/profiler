@@ -40,6 +40,10 @@
       </mat-form-field>
     </div>
   </div>
+  <div>
+    <pre>The global chip_id is displayed for each chip.</pre>
+    <pre>The chips are displayed along the x,y axis. A new row is created for each z axis</pre>
+  </div>
   <div
     *ngFor="let z_nodes of nodes; let z_axis=index;"
     class="container"
@@ -68,8 +72,10 @@
       [attr.rid]="node.rid"
       [style.top]="node.y + 'px'"
       [style.left]="node.x + 'px'"
+      [style.z-index] = "node.label? 0 : -1"
       (mouseenter)="showTooltip(node.id, $event)"
       (mouseleave)="hideTooltip()">
+      <pre>{{node.label}}</pre>
     </div>
     <div
       *ngFor="let arrow of arrows"

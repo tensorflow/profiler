@@ -48,6 +48,7 @@
   border-radius: 8px;
   border: 1px solid #333;
   background-color: #eee;
+  z-index:-2;
 }
 
 .node {
@@ -56,8 +57,14 @@
   border: 1px solid #333;
   width: 15px;
   height: 30px;
-  background-color: #1d91c0;
+  background-color: #4b4b4b;
   transition: background-color 1s;
+}
+
+.node pre {
+  margin: 8px 0px 0px 2px;
+  font-size:13px;
+  color: white;
 }
 
 .color-table {

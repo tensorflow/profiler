@@ -15,6 +15,7 @@ interface ColorInfo {
 interface ElementInfo {
   id?: string;
   rid?: number;
+  label?: string;
   x: number;
   y: number;
 }
@@ -360,6 +361,9 @@ export class TopologyGraph implements OnChanges, OnDestroy {
           const chipz = chip.z || 0;
           const nodeInfo = this.getNodePositionFromCoordinates(chipx, chipy, i);
           nodeInfo.id = this.createElementId(chipId, i);
+          if (i === 0) {
+            nodeInfo.label = chipId.toString();
+          }
           if (this.coreIdToReplicaIdMap &&
               this.coreIdToReplicaIdMap[chipId] !== undefined) {
             nodeInfo.rid = this.coreIdToReplicaIdMap[chipId];
