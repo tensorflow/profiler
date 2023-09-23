@@ -10,7 +10,7 @@ export class OpProfileBase {
   data = new OpProfileData();
   hasTwoProfiles: boolean = false;
   isByCategory: boolean = false;
-  excludeIdle: boolean = true;
+  excludeIdle: boolean = false;
   byWasted: boolean = false;
   showP90: boolean = false;
   childrenCount: number = 10;
