@@ -79,6 +79,9 @@ declare interface GeneralAnalysisProperty {
   remark_color?: string;
   remark_text?: string;
   power_metrics?: string;
+  // copybara: strip_begin(goodput is not exposed to third party)
+  program_goodput_percent?: string;
+  // copybara: strip_end
 }
 /* tslint:enable */
 
