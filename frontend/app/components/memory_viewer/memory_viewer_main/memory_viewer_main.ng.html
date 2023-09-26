@@ -3,8 +3,8 @@
 <div class="section-container">
   <div class="row">
     <div>
-      <div class="mat-headline">Module name: {{moduleName}}</div>
-      <div class="sub-title">Peak memory allocation is {{peakHeapSizeMiB}} MiB</div>
+      <div class="mat-headline">Module Name: {{moduleName}}</div>
+      <div class="sub-title">Peak memory allocation: {{peakHeapSizeMiB}} MiB</div>
       <div class="description" [hidden]="!paddingOverhead">
         {{paddingOverhead}} MiB total padding overhead
       </div>
@@ -35,33 +35,26 @@
 
 <div [hidden]="!heapSizes.length">
   <mat-divider ></mat-divider>
+  <div class="heap-chart-header"><h2>HLO Ops at Peak Memory Allocation Time</h2></div>
 </div>
 
 <max-heap-chart
    [maxHeap]="maxHeap"
-   [title]="'By Program Order'"
+   [title]="'by Program Order'"
    [selectedIndex]="selectedIndex"
    (selected)="setSelectedHeapObject($event)">
 </max-heap-chart>
 
-<div [hidden]="!maxHeap.length">
-  <mat-divider ></mat-divider>
-</div>
-
 <max-heap-chart
   [maxHeap]="maxHeapBySize"
-  [title]="'By Size'"
+  [title]="'by Buffer Size'"
   [selectedIndex]="selectedIndexBySize"
   (selected)="setSelectedHeapObjectBySize($event)">
 </max-heap-chart>
 
-<div [hidden]="!maxHeapByPaddingSize.length">
-  <mat-divider ></mat-divider>
-</div>
-
 <max-heap-chart
   [maxHeap]="maxHeapByPaddingSize"
-  [title]="'By Padding Size'"
+  [title]="'by Padding Size'"
   [selectedIndex] = "selectedIndexByPaddingSize"
   (selected)="setSelectedHeapObjectByPaddingSize($event)">
 </max-heap-chart>

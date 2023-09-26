@@ -1,6 +1,8 @@
 import {Component, ElementRef, Input, OnChanges, OnInit, SimpleChanges, ViewChild} from '@angular/core';
-
 import {BufferAllocationInfo} from 'org_xprof/frontend/app/common/interfaces/buffer_allocation_info';
+import {ChartDataInfo, ChartType} from 'org_xprof/frontend/app/common/interfaces/chart';
+import {SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {DefaultDataProvider} from 'org_xprof/frontend/app/components/chart/default_data_provider';
 
 /** A program order chart view component. */
 @Component({
@@ -22,20 +24,31 @@ export class ProgramOrderChart implements OnChanges, OnInit {
   @Input() activeInfo?: BufferAllocationInfo;
 
   /** Optional timeline URL. */
-  @Input() timelineUrl: string = '';
+  @Input() timelineUrl = '';
 
   @ViewChild('activeChart', {static: false}) activeChartRef!: ElementRef;
-  @ViewChild('chart', {static: false}) chartRef!: ElementRef;
-  @ViewChild('peakChart', {static: false}) peakChartRef!: ElementRef;
-
   activeChart: google.visualization.AreaChart|null = null;
-  chart: google.visualization.LineChart|null = null;
-  peakChart: google.visualization.AreaChart|null = null;
-  maxSize: number = 0;
-  maxOrder: number = 0;
+
+  maxSize = 0;
+  maxOrder = 0;
+  activeChartDataInfo: ChartDataInfo = {
+    data: null,
+    dataProvider: new DefaultDataProvider(),
+  };
+  peakChartDataInfo: ChartDataInfo = {
+    data: null,
+    dataProvider: new DefaultDataProvider(),
+  };
+  heapChartDataInfo: ChartDataInfo = {
+    data: null,
+    dataProvider: new DefaultDataProvider(),
+  };
+
+  readonly AREA_CHART = ChartType.AREA_CHART;
+  readonly LINE_CHART = ChartType.LINE_CHART;
 
   ngOnInit() {
-    this.loadGoogleChart();
+    this.updateCharts();
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -51,32 +64,26 @@ export class ProgramOrderChart implements OnChanges, OnInit {
   }
 
   drawActiveChart() {
-    if (!this.activeChart) {
-      return;
-    }
-
     if (!this.activeInfo) {
-      this.activeChart.clearChart();
+      if (this.activeChart) {
+        this.activeChart.clearChart();
+      }
       return;
     }
 
     const dataTable = google.visualization.arrayToDataTable([
-      ['X', 'Size'],
+      ['Schedule', 'Size'],
       [this.activeInfo.alloc, this.activeInfo.size],
       [this.activeInfo.free, this.activeInfo.size],
     ]);
 
-    const options = {
+    const options: google.visualization.AreaChartOptions = {
       areaOpacity: 0.7,
       backgroundColor: 'transparent',
       chartArea: {
-        left: 50,
-        right: 50,
-        width: '90%',
-        height: '90%',
+        height: '80%',
       },
       colors: [this.activeInfo.color || ''],
-      focusTarget: 'none',
       hAxis: {
         baselineColor: 'transparent',
         gridlines: {color: 'transparent'},
@@ -99,13 +106,15 @@ export class ProgramOrderChart implements OnChanges, OnInit {
       lineWidth: 2,
     };
 
-    this.activeChart.draw(
-        dataTable, options as google.visualization.AreaChartOptions);
+    this.activeChartDataInfo = {
+      ...this.activeChartDataInfo,
+      data: dataTable.toJSON() as SimpleDataTableOrNull,
+      options,
+    };
   }
 
   drawChart() {
-    if (!this.chart || !this.heapSizes.length ||
-        !this.unpaddedHeapSizes.length) {
+    if (!this.heapSizes.length || !this.unpaddedHeapSizes.length) {
       return;
     }
 
@@ -120,21 +129,18 @@ export class ProgramOrderChart implements OnChanges, OnInit {
     this.maxSize = Math.round(this.maxSize * 1.1);
 
     const dataTable = new google.visualization.DataTable();
-    dataTable.addColumn('number', 'X');
-    dataTable.addColumn('number', 'Size');
-    dataTable.addColumn('number', 'Unpadded Size');
+    dataTable.addColumn('number', 'Schedule');
+    dataTable.addColumn('number', 'Heap Size');
+    dataTable.addColumn('number', 'Heap Size');
     dataTable.addRows(data);
 
-    const options = {
+    const options: google.visualization.LineChartOptions = {
       backgroundColor: 'transparent',
       chartArea: {
-        left: 50,
-        right: 50,
-        width: '90%',
-        height: '90%',
+        height: '80%',
       },
-      focusTarget: 'none',
       hAxis: {
+        title: 'Program Order',
         baselineColor: 'transparent',
         viewWindow: {
           min: 0,
@@ -142,6 +148,7 @@ export class ProgramOrderChart implements OnChanges, OnInit {
         },
       },
       vAxis: {
+        title: 'Allocated Heap Size',
         baselineColor: 'transparent',
         viewWindow: {
           min: 0,
@@ -151,12 +158,15 @@ export class ProgramOrderChart implements OnChanges, OnInit {
       legend: {position: 'top'},
     };
 
-    this.chart.draw(
-        dataTable, options as google.visualization.LineChartOptions);
+    this.heapChartDataInfo = {
+      ...this.heapChartDataInfo,
+      data: dataTable.toJSON() as SimpleDataTableOrNull,
+      options,
+    };
   }
 
   drawPeakChart() {
-    if (!this.peakChart || !this.peakInfo) {
+    if (!this.peakInfo) {
       return;
     }
 
@@ -164,22 +174,27 @@ export class ProgramOrderChart implements OnChanges, OnInit {
     const peakAlloc =
         Math.max(Math.round(this.peakInfo.alloc - peakWidth / 2), 0);
     const peakFree = Math.min(peakAlloc + peakWidth, this.maxOrder);
-    const dataTable = google.visualization.arrayToDataTable([
-      ['X', 'Size'],
-      [peakAlloc, this.peakInfo.size],
-      [peakFree, this.peakInfo.size],
+    const dataTable = new google.visualization.DataTable();
+    dataTable.addColumn('number', 'Schedule');
+    dataTable.addColumn('number', 'Allocated Size');
+    dataTable.addColumn({type: 'string', role: 'tooltip'});
+    dataTable.addRows([
+      [
+        peakAlloc, this.peakInfo.size,
+        `peak memory allocation: ${this.peakInfo.size}`
+      ],
+      [
+        peakFree, this.peakInfo.size,
+        `peak memory allocation: ${this.peakInfo.size}`
+      ],
     ]);
 
-    const options = {
+    const options: google.visualization.AreaChartOptions = {
       backgroundColor: 'transparent',
       chartArea: {
-        left: 50,
-        right: 50,
-        width: '90%',
-        height: '90%',
+        height: '80%',
       },
       colors: ['#00ff00'],
-      focusTarget: 'none',
       hAxis: {
         baselineColor: 'transparent',
         gridlines: {color: 'transparent'},
@@ -202,28 +217,16 @@ export class ProgramOrderChart implements OnChanges, OnInit {
       lineWidth: 0,
     };
 
-    this.peakChart.draw(
-        dataTable, options as google.visualization.AreaChartOptions);
+    this.peakChartDataInfo = {
+      ...this.peakChartDataInfo,
+      data: dataTable.toJSON() as SimpleDataTableOrNull,
+      options,
+    };
   }
 
-  loadGoogleChart() {
-    if (!google || !google.charts) {
-      setTimeout(() => {
-        this.loadGoogleChart();
-      }, 100);
-    }
-
-    google.charts.safeLoad({'packages': ['corechart']});
-    google.charts.setOnLoadCallback(() => {
-      this.activeChart =
-          new google.visualization.AreaChart(this.activeChartRef.nativeElement);
-      this.chart =
-          new google.visualization.LineChart(this.chartRef.nativeElement);
-      this.peakChart =
-          new google.visualization.AreaChart(this.peakChartRef.nativeElement);
-      this.drawChart();
-      this.drawPeakChart();
-      this.drawActiveChart();
-    });
+  updateCharts() {
+    this.drawActiveChart();
+    this.drawPeakChart();
+    this.drawChart();
   }
 }

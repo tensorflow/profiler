@@ -13,6 +13,16 @@
   height: 380px;
 }
 
+.chart-title-container {
+  display: flex;
+  align-items: center;
+}
+
+.timeline-link {
+  padding: 10px;
+  cursor: pointer;
+}
+
 .chart {
   position: absolute;
   top: 0;

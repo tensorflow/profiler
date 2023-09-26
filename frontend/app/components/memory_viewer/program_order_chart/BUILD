@@ -17,6 +17,9 @@ xprof_ng_module(
         "@npm//@angular/core",
         "@npm//@types/google.visualization",
         "@org_xprof//frontend/app/common/interfaces",
+        "@org_xprof//frontend/app/common/interfaces:chart",
+        "@org_xprof//frontend/app/components/chart",
+        "@org_xprof//frontend/app/components/chart:default_data_provider",
     ],
 )
 
