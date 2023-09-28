@@ -22,6 +22,7 @@ from __future__ import print_function
 import csv
 import enum
 import io
+import sys
 
 import gviz_api
 import tensorflow as tf
@@ -30,8 +31,12 @@ from tensorboard_plugin_profile.convert import tf_data_stats_proto_to_gviz
 from tensorboard_plugin_profile.protobuf import tf_data_stats_pb2
 
 
-class StrEnum(str, enum.Enum):
-  pass
+if sys.version_info[:2] >= (3, 11):
+  StrEnum = enum.StrEnum
+else:
+
+  class StrEnum(str, enum.Enum):
+    pass
 
 
 class MockValues(StrEnum):
