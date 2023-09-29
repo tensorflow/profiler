@@ -109,10 +109,10 @@ export class OpTableEntry implements OnChanges {
     }
 
     let tot = 0;
-    const target90 = utils.timeFraction(this.node, this.rootNode) * 0.9;
+    const targetP90NodeRawTimePs = this.node.metrics.rawTime * 0.9;
     const targetCount = Math.min(this.childrenCount, this.node.children.length);
     for (let i = 0; i < targetCount; i++) {
-      if (tot >= target90) {
+      if (tot >= targetP90NodeRawTimePs) {
         return i;
       }
       const child = this.node.children[i];
