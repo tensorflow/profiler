@@ -19,9 +19,9 @@
       </mat-select>
     </mat-form-field>
     <mat-form-field class="full-width" *ngIf="useProgramId">
+      <mat-label>XLA Program Id</mat-label>
       <input
         matInput
-        placeholder="Program id"
         aria-label="program-id"
         autocomplete="off"
         name="programId"
@@ -30,9 +30,10 @@
       />
     </mat-form-field>
     <mat-form-field class="full-width">
+      <mat-label>Op Name</mat-label>
       <input
         matInput
-        placeholder="Enter op name"
+        matTooltip="Op name for the center node."
         aria-label="op-name"
         required
         autocomplete="off"
@@ -42,10 +43,10 @@
       />
     </mat-form-field>
     <mat-form-field class="full-width">
+      <mat-label>Graph Width</mat-label>
       <input
         matInput
-        placeholder="Graph width"
-        matTooltip="Suggest width < 10"
+        matTooltip="Graph width from the center node. Suggest < 10."
         aria-label="graph-width"
         type="number"
         min="1"
