@@ -607,6 +607,15 @@ dashboard would integrate trace viewer app using iframe.
       searchInput.setAttribute('style', 'padding-right:64px;width:250px;')
       const hitCount = document.getElementById('hitCount');
       hitCount.setAttribute('style', 'width:245px;')
+
+      // Move help button to the front of the toolbar
+      const helpButton = document.getElementById('view_help_button');
+      helpButton.setAttribute('style', 'padding-left:5px;padding-right:5px;');
+      if (helpButton.children && helpButton.children.length && helpButton.children[0].textContent) {
+        helpButton.children[0].textContent = 'Help';
+      }
+      const perfettoSelector = document.getElementById("perfetto");
+      Polymer.dom(this._traceViewer.leftControls).insertBefore(helpButton, perfettoSelector);
     },
 
     _init: async function() {
