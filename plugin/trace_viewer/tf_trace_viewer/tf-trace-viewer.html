@@ -56,6 +56,7 @@ Trace Viewer.
   }
 
   tr-ui-b-tab-view {
+    height: fit-content;
     float: left;
     flex: 1;
   }
@@ -96,6 +97,8 @@ Trace Viewer.
 
   #analysis {
     flex-flow: row nowrap;
+    /* make vertical drag handle and the tabs covering the whole content height */
+    height: fit-content;
   }
 
   #eventSummaryTable table.tr-ui-b-table {
@@ -126,6 +129,11 @@ Trace Viewer.
   #eventSummaryTable tr-ui-a-analysis-link {
     /* Override Catapult CSS which sets this as no-wrap preventing resizing the HTML element. */
     white-space: normal;
+  }
+
+  tr-ui-a-generic-object-view {
+    /* Help break the long op name */
+    overflow-wrap: anywhere;
   }
 
 </style>
@@ -413,7 +421,7 @@ dashboard would integrate trace viewer app using iframe.
             graphViewLink.searchParams.append("module_name", hloModule);
           }
           const graphViewLinkElement = document.createElement('div');
-          graphViewLinkElement.innerHTML = '<a href="' + graphViewLink.href +
+          graphViewLinkElement.innerHTML = 'Graph Viewer:<a href="' + graphViewLink.href +
                 '" target="_blank"> see hlo graph for ' +
                 hloOp + '@' + hloModule + '</a>';
           this._eventDetails.appendChild(graphViewLinkElement);
@@ -422,7 +430,7 @@ dashboard would integrate trace viewer app using iframe.
           hloOpStatsLink.searchParams.append("hlo_op_name", hloOp);
           hloOpStatsLink.searchParams.append("program_id", hloModule);
           const hloOpStatsLinkElement = document.createElement('div');
-          hloOpStatsLinkElement.innerHTML = '<a href="' + hloOpStatsLink.href +
+          hloOpStatsLinkElement.innerHTML = 'Hlo Stats:<a href="' + hloOpStatsLink.href +
                 '" target="_blank"> see hlo stats for ' +
                 hloOp + '@' + hloModule + '</a>';
           hloOpStatsLinkElement.addEventListener('click', () => {
@@ -446,7 +454,7 @@ dashboard would integrate trace viewer app using iframe.
             graphViewLink.searchParams.append("symbol_type", "MLIR_MODULE");
             graphViewLink.searchParams.append("type", "pbtxt");
             const graphViewLinkElement = document.createElement('div');
-            graphViewLinkElement.innerHTML = '<a href="' + graphViewLink.href +
+            graphViewLinkElement.innerHTML = 'Graph Viewer:<a href="' + graphViewLink.href +
                   '" target="_blank"> see the TF MLIR graph </a>';
             this._eventDetails.appendChild(graphViewLinkElement);
           }
@@ -459,7 +467,7 @@ dashboard would integrate trace viewer app using iframe.
             graphViewLink.searchParams.append("symbol_type", "MLIR_MODULE");
             graphViewLink.searchParams.append("type", "pbtxt");
             const graphViewLinkElement = document.createElement('div');
-            graphViewLinkElement.innerHTML = '<a href="' + graphViewLink.href +
+            graphViewLinkElement.innerHTML = 'Graph Viewer:<a href="' + graphViewLink.href +
                   '" target="_blank"> see the TFRT MLIR graph </a>';
             this._eventDetails.appendChild(graphViewLinkElement);
           }
@@ -474,7 +482,7 @@ dashboard would integrate trace viewer app using iframe.
                 "selected_group_ids", event.args['connected_group_ids']);
           this._addSelectedHostIndexToURL(traceViewerConnectedEventsLink);
           const traceViewerConnectedEventsLinkElement = document.createElement('div');
-          traceViewerConnectedEventsLinkElement.innerHTML = '<a href="' +
+          traceViewerConnectedEventsLinkElement.innerHTML = 'Trace Viewer:<a href="' +
                 traceViewerConnectedEventsLink.href +
                 '" target="_blank"> see events for step/group ' +
                 event.args['group_id'] +
@@ -486,7 +494,7 @@ dashboard would integrate trace viewer app using iframe.
           traceViewerStepLink.searchParams.append("selected_group_ids", event.args['group_id']);
           this._addSelectedHostIndexToURL(traceViewerStepLink);
           const traceViewerStepLinkElement = document.createElement('div');
-          traceViewerStepLinkElement.innerHTML = '<a href="' + traceViewerStepLink.href +
+          traceViewerStepLinkElement.innerHTML = 'Trace Viewer:<a href="' + traceViewerStepLink.href +
                 '" target="_blank"> see events ONLY for this step/group ' +
                 event.args['group_id'];
           this._eventDetails.appendChild(traceViewerStepLinkElement);
@@ -612,7 +620,7 @@ dashboard would integrate trace viewer app using iframe.
       const helpButton = document.getElementById('view_help_button');
       helpButton.setAttribute('style', 'padding-left:5px;padding-right:5px;');
       if (helpButton.children && helpButton.children.length && helpButton.children[0].textContent) {
-        helpButton.children[0].textContent = 'Help';
+        helpButton.children[0].textContent = 'Key Shortcuts';
       }
       const perfettoSelector = document.getElementById("perfetto");
       Polymer.dom(this._traceViewer.leftControls).insertBefore(helpButton, perfettoSelector);
