@@ -20,7 +20,7 @@
 }
 
 .control {
-  margin-right: 80px;
+  margin-right: 40px;
 }
 
 .ops-control {
@@ -51,4 +51,82 @@
   font-size: 25px;
   vertical-align: bottom;
   cursor: pointer;
+}
+
+.time-header,
+.wasted-header,
+.hbmFraction-header,
+.name-header,
+.provenance-header,
+.utilization-hader,
+.hbmUtilization-header,
+.utilization-header,
+.hbmUtilization-header,
+.time,
+.wasted,
+.hbmFraction,
+.name,
+.provenance,
+.utilization,
+.hbmUtilization,
+.utilization,
+.hbmUtilization {
+  line-height: 20px;
+  width: 6%;
+  min-width: 60px;
+  text-align: center;
+}
+
+.time,
+.wasted,
+.hbmFraction,
+.name,
+.provenance,
+.utilization,
+.hbmUtilization {
+  font-size: smaller;
+}
+
+.name-header,
+.name {
+  display: inline-block;
+  width: 30%;
+  padding-left: 2em;
+  // Set word-break rule to make the arrow stick with text on narrow screen
+  word-break: break-all;
+}
+
+.name {
+  text-align: left;
+}
+
+.provenance-header,
+.provenance {
+  width: 20%;
+}
+
+.utilization-header,
+.utilization,
+.hbmUtilization-header,
+.hbmUtilization {
+  width: 60px;
+}
+
+.utilization-header,
+.hbmUtilization-header {
+  width: 76px; // 60px + circle 16px
+}
+
+.flame-color-circle,
+.hbm-flame-color-circle {
+  margin: 10px 20px 10px 10px;
+  width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.disclosure {
+  display: inline-block;
+  width: 1em;
 }

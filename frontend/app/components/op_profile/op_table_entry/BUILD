@@ -28,6 +28,6 @@ sass_binary(
     src = "op_table_entry.scss",
     sourcemap = False,
     deps = [
-        "@org_xprof//frontend/app/styles:common",
+        "@org_xprof//frontend/app/components/op_profile:op_profile_common",
     ],
 )

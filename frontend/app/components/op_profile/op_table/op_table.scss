@@ -1,5 +1,7 @@
 /** CSS for an op talbe view component. */
 
+@import 'frontend/app/components/op_profile/op_profile_common';
+
 .header {
   display: flex;
   align-items: center;
@@ -16,32 +18,4 @@
   overflow: hidden;
   flex-shrink: 0;
   box-sizing: border-box;
-}
-
-.time {
-  padding-left: 20px !important;
-  width: 80px;
-}
-
-.wasted, .utilization {
-  width: 60px;
-}
-
-.name {
-  display: inline-block;
-  min-width: 40%;
-  padding-left: 2em !important;
-}
-
-.provenance {
-  flex: 1 1 0 !important;
-}
-
-.utilization {
-  text-align: right;
-}
-
-.flame-color-circle {
-  margin: 0 20px 0 10px;
-  width: 16px;
 }

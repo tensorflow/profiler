@@ -8,18 +8,13 @@ export class OpProfileBase {
   profile: ProfileOrNull = null;
   rootNode?: Node;
   data = new OpProfileData();
-  hasTwoProfiles: boolean = false;
-  isByCategory: boolean = false;
-  excludeIdle: boolean = true;
-  byWasted: boolean = false;
-  showP90: boolean = false;
-  childrenCount: number = 10;
-  deviceType: string = 'TPU';
-
-  private hasMultipleProfiles(): boolean {
-    return !!this.profile && !!this.profile.byCategory &&
-        !!this.profile.byProgram;
-  }
+  hasMultiModules = false;
+  isByCategory = false;
+  excludeIdle = true;
+  byWasted = false;
+  showP90 = false;
+  childrenCount = 10;
+  deviceType = 'TPU';
 
   private updateRoot() {
     if (!this.profile) {
@@ -28,7 +23,7 @@ export class OpProfileBase {
     }
 
     if (this.excludeIdle) {
-      if (!this.hasTwoProfiles) {
+      if (!this.hasMultiModules) {
         this.rootNode = this.profile.byCategoryExcludeIdle ||
             this.profile.byProgramExcludeIdle;
       } else {
@@ -36,7 +31,7 @@ export class OpProfileBase {
                                             this.profile.byProgramExcludeIdle;
       }
     } else {
-      if (!this.hasTwoProfiles) {
+      if (!this.hasMultiModules) {
         this.rootNode = this.profile.byCategory || this.profile.byProgram;
       } else {
         this.rootNode = this.isByCategory ? this.profile.byCategory :
@@ -49,7 +44,8 @@ export class OpProfileBase {
 
   parseData(data: ProfileOrNull) {
     this.profile = data;
-    this.hasTwoProfiles = this.hasMultipleProfiles();
+    this.hasMultiModules =
+        !!this.profile && !!this.profile.byCategory && !!this.profile.byProgram;
     this.isByCategory = false;
     this.childrenCount = 10;
     this.updateRoot();

@@ -17,6 +17,7 @@ xprof_ng_module(
         "@npm//@angular/common",
         "@npm//@angular/core",
         "@npm//@ngrx/store",
+        "@org_xprof//frontend/app/common/angular:angular_material_tooltip",
         "@org_xprof//frontend/app/common/interfaces:op_profile_proto_defs",
         "@org_xprof//frontend/app/components/op_profile/op_table_entry",
         "@org_xprof//frontend/app/store",
@@ -27,4 +28,7 @@ sass_binary(
     name = "op_table_css",
     src = "op_table.scss",
     sourcemap = False,
+    deps = [
+        "@org_xprof//frontend/app/components/op_profile:op_profile_common",
+    ],
 )

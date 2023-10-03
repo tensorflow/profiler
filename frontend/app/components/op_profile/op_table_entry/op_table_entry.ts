@@ -12,7 +12,7 @@ import {updateSelectedOpNodeChainAction} from 'org_xprof/frontend/app/store/acti
 })
 export class OpTableEntry implements OnChanges {
   /** The depth of node. */
-  @Input() level: number = 0;
+  @Input() level = 0;
 
   /** The main node. */
   @Input() node?: Node;
@@ -24,35 +24,37 @@ export class OpTableEntry implements OnChanges {
   @Input() selectedNode?: Node;
 
   /** The property to sort by waste time. */
-  @Input() byWasted: boolean = false;
+  @Input() byWasted = false;
 
   /** The property to show top 90%. */
-  @Input() showP90: boolean = false;
+  @Input() showP90 = false;
 
   /** The number of children nodes to be shown. */
-  @Input() childrenCount: number = 10;
+  @Input() childrenCount = 10;
 
   /** The event when the mouse enter or leave. */
-  @Output() hover = new EventEmitter<Node|null>();
+  @Output() readonly hover = new EventEmitter<Node|null>();
 
   /** The event when the selection is changed. */
-  @Output() selected = new EventEmitter<Node>();
+  @Output() readonly selected = new EventEmitter<Node>();
 
+  // TODO(xprof): rename the variable to be more self-explanatory or add
+  // docstring
   children: Node[] = [];
-  expanded: boolean = false;
-  barWidth: string = '';
-  flameColor: string = '';
-  hideFlopsUtilization: boolean = false;
-  name: string = '';
-  offset: string = '';
-  percent: string = '';
-  provenance: string = '';
-  timeWasted: string = '';
+  expanded = false;
+  barWidth = '';
+  flameColor = '';
+  hideFlopsUtilization = false;
+  name = '';
+  offset = '';
+  percent = '';
+  provenance = '-';
+  timeWasted = '';
   hbmFraction = '';
-  flopsUtilization: string = '';
-  hbmUtilization: string = '';
-  hbmFlameColor: string = '';
-  numLeftOut: number = 0;
+  flopsUtilization = '';
+  hbmUtilization = '';
+  hbmFlameColor = '';
+  numLeftOut = 0;
 
   constructor(private readonly store: Store<{}>) {}
 
@@ -82,7 +84,7 @@ export class OpTableEntry implements OnChanges {
     this.offset = this.level.toString() + 'em';
     this.provenance = (this.node && this.node.xla && this.node.xla.provenance) ?
         this.node.xla.provenance.replace(/^.*(:|\/)/, '') :
-        '';
+        '-';
     this.timeWasted = utils.percent(utils.timeWasted(this.node, this.rootNode));
     this.flopsUtilization =
         utils.percent(utils.flopsUtilization(this.node, this.rootNode));
