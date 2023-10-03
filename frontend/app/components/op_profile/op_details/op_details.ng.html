@@ -79,6 +79,10 @@
           <div class="title">Long Op Name:</div>
           <code class="expression">{{provenance}}</code>
         </div>
+        <div class="info" [hidden]="!rawTimeMs">
+          <div class="title">Raw Time:</div>
+          <code class="expression">{{rawTimeMs}}</code>
+        </div>
         <div class="info" [hidden]="!fused">
           <div class="unavailable">
             Performance information for individual fused operations is not available.

@@ -38,6 +38,7 @@ export class OpDetails {
           .fill('');
   expression: string = '';
   provenance: string = '';
+  rawTimeMs = '';
   fused: boolean = false;
   hasCategory: boolean = false;
   hasLayout: boolean = false;
@@ -162,6 +163,13 @@ export class OpDetails {
       this.provenance = this.node.xla.provenance;
     } else {
       this.provenance = '';
+    }
+
+    if (this.node.metrics && this.node.metrics.rawTime) {
+      this.rawTimeMs = utils.humanReadableText(
+          this.node.metrics.rawTime / 1e9, {si: true, dp: 2, suffix: ' ms'});
+    } else {
+      this.rawTimeMs = '';
     }
 
     this.fused = !!this.node.xla && !this.node.metrics;
