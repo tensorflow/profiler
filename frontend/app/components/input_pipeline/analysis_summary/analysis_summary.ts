@@ -14,9 +14,9 @@ export class AnalysisSummary {
   set deviceAnalysis(analysis: InputPipelineDeviceAnalysis|null) {
     analysis = analysis || {};
     analysis.p = analysis.p || {};
-    this.inputConclusion = analysis.p.input_conclusion || '';
+    this.inputConclusion = analysis.p['input_conclusion'] || '';
     this.summaryNextstep =
-      this.replaceSectionName(analysis.p.summary_nextstep || '');
+        this.replaceSectionName(analysis.p['summary_nextstep'] || '');
     this.summaryColor = 'green';
     if (this.inputConclusion.includes('HIGHLY')) {
       this.summaryColor = 'red';

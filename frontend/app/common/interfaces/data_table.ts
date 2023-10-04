@@ -41,7 +41,7 @@ declare interface EmptyProperty {}
 
 /** The base interface for a genreal property object. */
 declare interface GeneralProperty {
-  [name: string]: string;
+  [key: string]: string;
 }
 
 /** The base interface for data table without perperty. */
@@ -60,27 +60,6 @@ export declare interface GeneralDataTable {
 
 /** The data table type for data table without perperty or null. */
 export type SimpleDataTableOrNull = SimpleDataTable|null;
-
-/* tslint:disable enforce-name-casing */
-/** The base interface for a property of general analysis. */
-declare interface GeneralAnalysisProperty {
-  device_idle_time_percent?: string;
-  device_duty_cycle_percent?: string;
-  flop_rate_utilization_relative_to_roofline?: string;
-  host_idle_time_percent?: string;
-  memory_bw_utilization_relative_to_hw_limit?: string;
-  mxu_utilization_percent?: string;
-  host_tf_op_percent?: string;
-  device_tf_op_percent?: string;
-  host_op_time_eager_percent?: string;
-  device_op_time_eager_percent?: string;
-  device_compute_16bit_percent?: string;
-  device_compute_32bit_percent?: string;
-  remark_color?: string;
-  remark_text?: string;
-  power_metrics?: string;
-}
-/* tslint:enable */
 
 /* tslint:disable enforce-name-casing */
 /** The base interface for properties of meta host-op table. */
@@ -123,56 +102,25 @@ export type HostOpTableOrNull = HostOpTable|null;
 export declare interface GeneralAnalysis {
   cols?: DataTableColumn[];
   rows?: DataTableRow[];
-  p?: GeneralAnalysisProperty;
+  // Make the property k-v pair more general, note:
+  // (1) value is always string
+  // (2) Frontend should be responsible of correct key reference
+  // and always have a default value fallback
+  p?: GeneralProperty;
 }
 
 /** The data table type for a general analysis or null. */
 export type GeneralAnalysisOrNull = GeneralAnalysis|null;
 
-/* tslint:disable enforce-name-casing */
-/** The base interface for a property of input pipeline analysis. */
-export declare interface InputPipelineAnalysisProperty {
-  hardware_type?: string;
-  steptime_ms_average?: string;
-  steptime_ms_standard_deviation?: string;
-  steptime_ms_minimum?: string;
-  steptime_ms_maximum?: string;
-  infeed_percent_average?: string;
-  infeed_percent_standard_deviation?: string;
-  infeed_percent_minimum?: string;
-  infeed_percent_maximum?: string;
-  idle_ms_average?: string;
-  input_ms_average?: string;
-  compute_ms_average?: string;
-  input_conclusion?: string;
-  output_conclusion?: string;
-  summary_nextstep?: string;
-  other_time_ms_avg?: string;
-  other_time_ms_sdv?: string;
-  compile_time_ms_avg?: string;
-  compile_time_ms_sdv?: string;
-  outfeed_time_ms_avg?: string;
-  outfeed_time_ms_sdv?: string;
-  infeed_time_ms_avg?: string;
-  infeed_time_ms_sdv?: string;
-  kernel_launch_time_ms_avg?: string;
-  kernel_launch_time_ms_sdv?: string;
-  host_compute_time_ms_avg?: string;
-  host_compute_time_ms_sdv?: string;
-  device_collectives_time_ms_avg?: string;
-  device_collectives_time_ms_sdv?: string;
-  device_to_device_time_ms_avg?: string;
-  device_to_device_time_ms_sdv?: string;
-  device_compute_time_ms_avg?: string;
-  device_compute_time_ms_sdv?: string;
-}
-/* tslint:enable */
-
 /** The base interface for an input pipeline analysis. */
 export declare interface InputPipelineAnalysis {
   cols?: DataTableColumn[];
   rows?: DataTableRow[];
-  p?: InputPipelineAnalysisProperty;
+  // Make the property k-v pair more general, note:
+  // (1) value is always string
+  // (2) Frontend should be responsible of correct key reference
+  // and always have a default value fallback
+  p?: GeneralProperty;
 }
 
 /** The data table type for an input pipeline analysis or null. */
@@ -197,6 +145,7 @@ declare interface RunEnvironmentProperty {
   device_core_count?: string;
   device_type?: string;
   is_training?: string;
+  tpu_core_count?: string;
 }
 /* tslint:enable */
 

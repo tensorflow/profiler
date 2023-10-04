@@ -49,12 +49,18 @@ table ul {
   padding: 0;
 }
 
-.item-value {
+.item-value,
+.child-item-value {
   padding-left: 8px;
   min-width: 80px;
   width: 20%;
   font-size: 18px;
   font-weight: 500;
+}
+
+.child-item-value {
+  font-size: 16px;
+  font-weight: unset;
 }
 
 .item-description {

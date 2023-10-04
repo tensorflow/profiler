@@ -71,7 +71,7 @@ export class DataService {
     return this.httpClient.get(this.pathPrefix + RUN_TOOLS_API, {params});
   }
 
-  getData(run: string, tag: string, host: string): Observable<DataTable> {
+  getData(run: string, tag: string, host: string): Observable<DataTable|null> {
     if (this.isLocalDevelopment) {
       if (tag.startsWith('overview_page')) {
         return of(mockData.DATA_PLUGIN_PROFILE_OVERVIEW_PAGE_DATA)

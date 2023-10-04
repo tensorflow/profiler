@@ -70,18 +70,19 @@ export class DeviceSideAnalysisDetail implements OnChanges {
     if (!analysis.rows || analysis.rows.length === 0) {
       return;
     }
-    this.isTpu = (analysis.p.hardware_type || 'TPU') === 'TPU';
-    this.steptimeMsMetrics.average = analysis.p.steptime_ms_average || '';
-    this.steptimeMsMetrics.max = analysis.p.steptime_ms_maximum || '';
-    this.steptimeMsMetrics.min = analysis.p.steptime_ms_minimum || '';
+    this.isTpu = (analysis.p['hardware_type'] || 'TPU') === 'TPU';
+    this.steptimeMsMetrics.average = analysis.p['steptime_ms_average'] || '';
+    this.steptimeMsMetrics.max = analysis.p['steptime_ms_maximum'] || '';
+    this.steptimeMsMetrics.min = analysis.p['steptime_ms_minimum'] || '';
     this.steptimeMsMetrics.stddev =
-        analysis.p.steptime_ms_standard_deviation || '';
+        analysis.p['steptime_ms_standard_deviation'] || '';
 
-    this.infeedPercentMetrics.average = analysis.p.infeed_percent_average || '';
-    this.infeedPercentMetrics.max = analysis.p.infeed_percent_maximum || '';
-    this.infeedPercentMetrics.min = analysis.p.infeed_percent_minimum || '';
+    this.infeedPercentMetrics.average =
+        analysis.p['infeed_percent_average'] || '';
+    this.infeedPercentMetrics.max = analysis.p['infeed_percent_maximum'] || '';
+    this.infeedPercentMetrics.min = analysis.p['infeed_percent_minimum'] || '';
     this.infeedPercentMetrics.stddev =
-        analysis.p.infeed_percent_standard_deviation || '';
+        analysis.p['infeed_percent_standard_deviation'] || '';
   }
 
   /** The default column ids. */

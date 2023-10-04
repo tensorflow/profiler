@@ -48,7 +48,7 @@ export class TopOpsTable implements AfterViewInit, OnChanges {
     this.inputPipelineAnalysis.p = this.inputPipelineAnalysis.p || {};
     this.title = 'Top ' + String(dataTable.getNumberOfRows()) +
         ' TensorFlow operations on ' +
-        (this.inputPipelineAnalysis.p.hardware_type || 'TPU');
+        (this.inputPipelineAnalysis.p['hardware_type'] || 'TPU');
 
     const columns: TopOpsColumn = {
       selfTimePercent: 0,
@@ -114,7 +114,7 @@ export class TopOpsTable implements AfterViewInit, OnChanges {
       width: '100%',
     };
 
-    if ((this.inputPipelineAnalysis.p.hardware_type || 'TPU') !== 'TPU') {
+    if ((this.inputPipelineAnalysis.p['hardware_type'] || 'TPU') !== 'TPU') {
       dataTable.removeColumn(FLOP_RATE_COLUMN_INDEX);
     }
 

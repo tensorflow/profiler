@@ -95,7 +95,7 @@ export class StepTimeGraph implements AfterViewInit, OnChanges {
     let colors = this.columnColors;
     this.height = 300;
     this.inputPipelineAnalysis.p = this.inputPipelineAnalysis.p || {};
-    if ((this.inputPipelineAnalysis.p.hardware_type || 'TPU') !== 'TPU') {
+    if ((this.inputPipelineAnalysis.p['hardware_type'] || 'TPU') !== 'TPU') {
       columnsIds = COLUMN_IDS_FOR_GPU;
       colors = COLORS_FOR_GPU;
       this.height = 400;

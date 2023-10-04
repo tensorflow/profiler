@@ -1,53 +1,173 @@
-import {Component, Input, OnChanges, SimpleChanges} from '@angular/core';
-import {GeneralAnalysis, InputPipelineAnalysis, InputPipelineAnalysisProperty} from 'org_xprof/frontend/app/common/interfaces/data_table';
-import {SummaryInfo} from 'org_xprof/frontend/app/common/interfaces/summary_info';
+import {Component, Input, OnChanges, OnInit, SimpleChanges} from '@angular/core';
+import {DataTableCell, GeneralAnalysis, InputPipelineAnalysis} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {GeneralProps, SummaryInfo, SummaryInfoConfig} from 'org_xprof/frontend/app/common/interfaces/summary_info';
 
-const GENERIC_SUMMARY_INFO = [
+/**
+ * Configuration Assumptions:
+ * 1. by default, values/sdv values/nested children values all reads from
+ * a k-v pair property with field key specified in the config object.
+ * 2. It's required that each record in the same config object (eg.
+ * NON_TPU_SUMMARY_INFO) should consume the same property (eg.
+ * inputPipelineAnalysisProperty).
+ * 3. The summary info data is in nested structure, currently consumes 2 levels
+ * of metrics (Top layer level 1 + its children layer)
+ */
+
+/**
+ * Configuration Instructions
+ * 1. In this file we chain multiple config objects to display metrics in order:
+ * GENERIC_SUMMARY_INFO_BEFORE + TPU_SUMMARY_INFO/NON_TPU_SUMMARY_INFO +
+ * GENERIC_SUMMARY_INFO_AFTER
+ * 2. Values read from the k-v pair property could be undefined for oss
+ * (dependent on backend version). Be sure to add a fallback logic (eg. || '')
+ * when reading it in the parseDataFromConfig function call.
+ * 3. Values are by default read from k-v pairs, we can also use a custom
+ * callback function (eg. getChildValues) to read data into the propertyValues
+ * as a string list.
+ */
+
+/** Generic summary info, display on top of the list */
+const GENERIC_SUMMARY_INFO_BEFORE: SummaryInfoConfig[] = [{
+  title: 'Average Step Time',
+  goodMetric: false,
+  valueKey: 'steptime_ms_average',
+  sdvKey: 'steptime_ms_standard_deviation',
+  unit: 'ms',
+  valueColor: 'red',
+  trainingOnly: true,
+  childrenInfoConfig: [
+    {title: 'Idle', valueKey: 'idle_ms_average', unit: 'ms'},
+    {title: 'Input', valueKey: 'input_ms_average', unit: 'ms'},
+    {title: 'Compute', valueKey: 'compute_ms_average', unit: 'ms'},
+  ],
+}];
+
+/** Generic summary info, display on bottom of the list */
+const GENERIC_SUMMARY_INFO_AFTER: SummaryInfoConfig[] = [
+  {
+    title: 'TF Op Placement',
+    tooltip: 'Ratio of TF Ops executed on the host and device.',
+    description: 'generally desired to have more ops on device',
+    childrenInfoConfig: [
+      {title: 'Host', valueKey: 'host_tf_op_percent'},
+      {title: 'Device', valueKey: 'device_tf_op_percent'},
+    ]
+  },
+  {
+    title: 'Op Time Spent on Eager Execution',
+    tooltip:
+        'Out of the total op execution time on host (device), excluding idle time, the percentage of which used eager execution.',
+    goodMetric: false,
+    childrenInfoConfig: [
+      {title: 'Host', valueKey: 'host_op_time_eager_percent'},
+      {title: 'Device', valueKey: 'device_op_time_eager_percent'},
+    ],
+  },
+  {
+    title: 'Device Compute Precisions',
+    description: 'out of Total Device Time',
+    childrenInfoConfig: [
+      {title: '16-bit', valueKey: 'device_compute_16bit_percent'},
+      {title: '32-bit', valueKey: 'device_compute_32bit_percent'},
+    ],
+  },
+];
+
+const NON_TPU_SUMMARY_INFO: SummaryInfoConfig[] = [
   {
     title: 'All Others Time',
-    avg: 'other_time_ms_avg',
-    sdv: 'other_time_ms_sdv',
+    unit: 'ms',
+    valueKey: 'other_time_ms_avg',
+    sdvKey: 'other_time_ms_sdv',
   },
   {
     title: 'Compilation Time',
-    avg: 'compile_time_ms_avg',
-    sdv: 'compile_time_ms_sdv',
+    unit: 'ms',
+    valueKey: 'compile_time_ms_avg',
+    sdvKey: 'compile_time_ms_sdv',
   },
   {
     title: 'Output Time',
-    avg: 'outfeed_time_ms_avg',
-    sdv: 'outfeed_time_ms_sdv',
+    unit: 'ms',
+    valueKey: 'outfeed_time_ms_avg',
+    sdvKey: 'outfeed_time_ms_sdv',
   },
   {
     title: 'Input Time',
-    avg: 'infeed_time_ms_avg',
-    sdv: 'infeed_time_ms_sdv',
+    unit: 'ms',
+    valueKey: 'infeed_time_ms_avg',
+    sdvKey: 'infeed_time_ms_sdv',
   },
   {
     title: 'Kernel Launch Time',
-    avg: 'kernel_launch_time_ms_avg',
-    sdv: 'kernel_launch_time_ms_sdv',
+    unit: 'ms',
+    valueKey: 'kernel_launch_time_ms_avg',
+    sdvKey: 'kernel_launch_time_ms_sdv',
   },
   {
     title: 'Host Compute Time',
-    avg: 'host_compute_time_ms_avg',
-    sdv: 'host_compute_time_ms_sdv',
+    unit: 'ms',
+    valueKey: 'host_compute_time_ms_avg',
+    sdvKey: 'host_compute_time_ms_sdv',
   },
   {
     title: 'Device Collective Communication Time',
-    avg: 'device_collectives_time_ms_avg',
-    sdv: 'device_collectives_time_ms_sdv',
+    unit: 'ms',
+    valueKey: 'device_collectives_time_ms_avg',
+    sdvKey: 'device_collectives_time_ms_sdv',
   },
   {
     title: 'Device to Device Time',
-    avg: 'device_to_device_time_ms_avg',
-    sdv: 'device_to_device_time_ms_sdv',
+    unit: 'ms',
+    valueKey: 'device_to_device_time_ms_avg',
+    sdvKey: 'device_to_device_time_ms_sdv',
   },
   {
     title: 'Device Compute Time',
-    avg: 'device_compute_time_ms_avg',
-    sdv: 'device_compute_time_ms_sdv',
+    unit: 'ms',
+    valueKey: 'device_compute_time_ms_avg',
+    sdvKey: 'device_compute_time_ms_sdv',
   },
+];
+
+const TPU_SUMMARY_INFO: SummaryInfoConfig[] = [
+  {
+    title: 'FLOPS Utilization',
+    goodMetric: true,
+    tooltip:
+        'Why two numbers: The first number shows the hardware utilization based on the hardware performance counter. The second one shows the performance compared to the program\'s optimal performance considering the instruction mix (i.e., the ratio of floating-point operations and memory operations).',
+    childrenInfoConfig: [
+      {
+        title: 'Utilization of TPU Matrix Units',
+        valueKey: 'mxu_utilization_percent',
+      },
+      {
+        title: 'Compared to Program\'s Optimal FLOPS',
+        valueKey: 'flop_rate_utilization_relative_to_roofline',
+        description: `see <a href="/roofline_model/${
+            window.location.pathname.split('/')[2]}">roofline_model</a>`,
+      },
+    ]
+  },
+  {
+    title: 'TPU Duty Cycle',
+    tooltip: 'Percentage of the device time that is busy.',
+    goodMetric: true,
+    valueKey: 'device_duty_cycle_percent',
+  },
+  {
+    title: 'Memory Bandwidth Utilization',
+    tooltip: 'Percentage of the peak device memory bandwidth that is used.',
+    goodMetric: true,
+    valueKey: 'memory_bw_utilization_relative_to_hw_limit',
+  },
+  {
+    title: 'Power Metrics',
+    tooltip:
+        'Avg/Max power consumption of different components/rails, including max of moving average of window size of 100us/1ms/10ms.',
+    getChildValues: (props) =>
+        (((props as GeneralProps)['power_metrics']))?.split('##') || [],
+  }
 ];
 
 /** A performance summary view component. */
@@ -56,231 +176,136 @@ const GENERIC_SUMMARY_INFO = [
   templateUrl: './performance_summary.ng.html',
   styleUrls: ['./performance_summary.scss']
 })
-export class PerformanceSummary implements OnChanges {
+export class PerformanceSummary implements OnChanges, OnInit {
+  /** Identify if this is an inference or training session */
+  @Input() isInference?: boolean;
+
   /** The general analysis data. */
   @Input() generalAnalysis?: GeneralAnalysis;
 
   /** The input pipeline analyis data. */
   @Input() inputPipelineAnalysis?: InputPipelineAnalysis;
 
-  /** The summary info to be displayed first. */
-  @Input() firstSummaryInfo: SummaryInfo[] = [];
-
-  /** The addition property values from parent component. */
-  @Input() propertyValues?: string[];
-
-  /** The color of average step time value from parent component. */
-  @Input() averageStepTimeValueColor = '';
+  /** Inference latency analysis data */
+  @Input() inferenceLatencyData?: GeneralAnalysis;
 
   title = 'Performance Summary';
   isTpu = true;
-  summaryInfoAfter: SummaryInfo[] = [];
-  summaryInfoBefore: SummaryInfo[] = [];
-  mxuUtilizationPercent = '';
-  flopRateUtilizationRelativeToRoofline = '';
+  generalProps: GeneralProps = {};
+  inputPipelineProps: GeneralProps = {};
+  inferenceLatencyProps: GeneralProps = {};
+  summaryInfoCombined: SummaryInfo[] = [];
   remarkText = '';
   remarkColor = '';
-  flopsUtilizationTooltipMessage =
-    'The first number shows the hardware utilization based on the hardware performance counter. The second one shows the performance compared to the program\'s optimal performance considering the instruction mix (i.e., the ratio of floating-point operations and memory operations).';
-  tfOpPlacementTooltipMessage =
-    'It is based on the number of TF ops executed on the host and device.';
-  opTimeInEagerModeTooltipMessage =
-    'Out of the total op execution time on host (device), excluding idle time, the percentage of which used eager execution.';
-  memoryBandwidthTooltipMessage =
-    'Percentage of the peak device memory bandwidth that is used.';
-  deviceDutyCycleTooltipMessage =
-    'Percentage of the device time that is busy.';
-  powerMetricsTooltipMessage =
-      'Avg/Max power consumption of different components/rails, including max of moving average of window size of 100us/1ms/10ms.';
+
+  ngOnInit() {
+    this.inputPipelineProps =
+        (this.inputPipelineAnalysis || {}).p as GeneralProps || {};
+    this.isTpu = this.inputPipelineProps['hardware_type'] === 'TPU';
+    this.generalProps = (this.generalAnalysis || {}).p as GeneralProps || {};
+    this.inferenceLatencyProps = (this.inferenceLatencyData || {}).p || {};
+    this.remarkText = this.generalProps['remark_text'] || '';
+    this.remarkColor = this.generalProps['remark_color'] || '';
+    this.parseSummaryData();
+  }
 
   ngOnChanges(changes: SimpleChanges) {
-    if (!this.generalAnalysis || !this.inputPipelineAnalysis) {
-      return;
+    if (changes['inputPipelineAnalysis'] && this.inputPipelineAnalysis) {
+      this.inputPipelineProps =
+          (this.inputPipelineAnalysis || {}).p as GeneralProps || {};
+      this.isTpu = this.inputPipelineProps['hardware_type'] === 'TPU';
     }
+    if (changes['generalAnalysis'] && this.generalAnalysis) {
+      this.generalProps = (this.generalAnalysis || {}).p as GeneralProps || {};
+      this.remarkText = this.generalProps['remark_text'] || '';
+      this.remarkColor = this.generalProps['remark_color'] || '';
+    }
+    if (changes['inferenceLatencyData'] && this.inferenceLatencyData) {
+      this.inferenceLatencyProps =
+          (this.inferenceLatencyData || {}).p as GeneralProps || {};
+    }
+    this.parseSummaryData();
+  }
 
-    this.isTpu = this.getInputPipelineProp('hardware_type', 'TPU') === 'TPU';
-
+  parseSummaryData() {
+    this.parseDataFromConfig(
+        GENERIC_SUMMARY_INFO_BEFORE, this.inputPipelineProps,
+        this.summaryInfoCombined, 1);
     if (this.isTpu) {
-      this.parseTpuData();
+      this.parseDataFromConfig(
+          TPU_SUMMARY_INFO, this.generalProps, this.summaryInfoCombined, 1);
     } else {
-      this.parseGenericData();
+      this.parseDataFromConfig(
+          NON_TPU_SUMMARY_INFO, this.inputPipelineProps,
+          this.summaryInfoCombined, 1);
     }
+    this.parseDataFromConfig(
+        GENERIC_SUMMARY_INFO_AFTER, this.generalProps, this.summaryInfoCombined,
+        1);
   }
 
-  getInputPipelineProp(id: string, defaultValue: string = ''): string {
-    const props = (this.inputPipelineAnalysis || {}).p || {};
+  readSummaryInfoFromConfig(
+      config: SummaryInfoConfig, props: GeneralProps,
+      customInput?: DataTableCell[]): SummaryInfo|null {
+    if (config.trainingOnly && this.isInference) return null;
+    if (config.inferenceOnly && !this.isInference) return null;
 
-    switch (id) {
-      case 'hardware_type':
-        return props.hardware_type || defaultValue;
-      case 'other_time_ms_avg':
-        return props.other_time_ms_avg || defaultValue;
-      case 'other_time_ms_sdv':
-        return props.other_time_ms_sdv || defaultValue;
-      case 'compile_time_ms_avg':
-        return props.compile_time_ms_avg || defaultValue;
-      case 'compile_time_ms_sdv':
-        return props.compile_time_ms_sdv || defaultValue;
-      case 'outfeed_time_ms_avg':
-        return props.outfeed_time_ms_avg || defaultValue;
-      case 'outfeed_time_ms_sdv':
-        return props.outfeed_time_ms_sdv || defaultValue;
-      case 'infeed_time_ms_avg':
-        return props.infeed_time_ms_avg || defaultValue;
-      case 'infeed_time_ms_sdv':
-        return props.infeed_time_ms_sdv || defaultValue;
-      case 'kernel_launch_time_ms_avg':
-        return props.kernel_launch_time_ms_avg || defaultValue;
-      case 'kernel_launch_time_ms_sdv':
-        return props.kernel_launch_time_ms_sdv || defaultValue;
-      case 'host_compute_time_ms_avg':
-        return props.host_compute_time_ms_avg || defaultValue;
-      case 'host_compute_time_ms_sdv':
-        return props.host_compute_time_ms_sdv || defaultValue;
-      case 'device_collectives_time_ms_avg':
-        return props.device_collectives_time_ms_avg || defaultValue;
-      case 'device_collectives_time_ms_sdv':
-        return props.device_collectives_time_ms_sdv || defaultValue;
-      case 'device_to_device_time_ms_avg':
-        return props.device_to_device_time_ms_avg || defaultValue;
-      case 'device_to_device_time_ms_sdv':
-        return props.device_to_device_time_ms_sdv || defaultValue;
-      case 'device_compute_time_ms_avg':
-        return props.device_compute_time_ms_avg || defaultValue;
-      case 'device_compute_time_ms_sdv':
-        return props.device_compute_time_ms_sdv || defaultValue;
-      default:
-        break;
+    const descriptions = [];
+    // We've seen 'nan' in the sdv value
+    if (config.sdvKey &&
+        (props[config.sdvKey] && props[config.sdvKey] !== 'nan')) {
+      descriptions.push(
+          `(σ = ${props[config.sdvKey] || ''} ${config.unit || ''})`);
     }
-
-    return defaultValue;
+    if (config.goodMetric !== undefined) {
+      descriptions.push(`${config.goodMetric ? 'higher' : 'lower'} is better.`);
+    }
+    if (config.description) {
+      descriptions.push(config.description);
+    }
+    let value = '';
+    let valueStr = '';
+    // valueKey and getValue are mutual exclusive
+    if (config.valueKey) {
+      value = props[config.valueKey];
+      valueStr = `${value} ${config.unit || ''}`;
+    } else if (config.getValue && customInput) {
+      value = config.getValue(customInput);
+      valueStr = `${value} ${config.unit || ''}`;
+    }
+    const propertyValues =
+        config.getChildValues ? config.getChildValues(props) : [];
+    const childrenInfoCombined: SummaryInfo[] = [];
+    if (config.childrenInfoConfig) {
+      this.parseDataFromConfig(
+          config.childrenInfoConfig, props, childrenInfoCombined);
+    }
+    if (value || childrenInfoCombined.length > 0) {
+      return {
+        title: config.title,
+        tooltip: config.tooltip || '',
+        value: valueStr,
+        propertyValues,
+        descriptions,
+        valueColor: config.valueColor || '',
+        childrenInfo: childrenInfoCombined,
+      };
+    }
+    return null;
   }
 
-  initializeSummary(inputPipelineProps: InputPipelineAnalysisProperty) {
-    this.summaryInfoBefore = [...this.firstSummaryInfo];
-    this.summaryInfoAfter = [];
-
-    if (this.propertyValues && this.propertyValues.length &&
-        inputPipelineProps.steptime_ms_average !== '0.0') {
-      this.summaryInfoBefore.push({
-        title: 'Average Step Time',
-        descriptions: [
-          'lower is better',
-          `(σ = ${inputPipelineProps.steptime_ms_standard_deviation || ''} ms)`,
-        ],
-        value: `${inputPipelineProps.steptime_ms_average} ms`,
-        valueColor: this.averageStepTimeValueColor,
-        propertyValues: [...(this.propertyValues || [])],
-      });
-    }
-  }
-
-  parseTpuData() {
-    const generalProps = (this.generalAnalysis || {}).p || {};
-    const inputPipelineProps = (this.inputPipelineAnalysis || {}).p || {};
-
-    this.mxuUtilizationPercent = generalProps.mxu_utilization_percent || '';
-    this.flopRateUtilizationRelativeToRoofline =
-        generalProps.flop_rate_utilization_relative_to_roofline || '';
-    this.remarkText = generalProps.remark_text || '';
-    this.remarkColor = generalProps.remark_color || '';
-
-    this.initializeSummary(inputPipelineProps);
-
-    if (generalProps.device_duty_cycle_percent) {
-      this.summaryInfoBefore.push({
-        title: 'TPU Duty Cycle',
-        tooltip: this.deviceDutyCycleTooltipMessage,
-        descriptions: ['higher is better'],
-        value: generalProps.device_duty_cycle_percent,
-      });
-    }
-
-    if (generalProps.memory_bw_utilization_relative_to_hw_limit) {
-      this.summaryInfoAfter.push({
-        title: 'Memory Bandwidth Utilization',
-        tooltip: this.memoryBandwidthTooltipMessage,
-        descriptions: ['higher is better'],
-        value: generalProps.memory_bw_utilization_relative_to_hw_limit,
-      });
-    }
-
-    this.summaryInfoAfter.push({
-      title: 'TF Op Placement',
-      descriptions: ['generally desired to have more ops on device'],
-      tooltip: this.tfOpPlacementTooltipMessage,
-      propertyValues: [
-        `Host: ${generalProps.host_tf_op_percent || ''}`,
-        `Device: ${generalProps.device_tf_op_percent || ''}`,
-      ],
-    });
-
-    this.summaryInfoAfter.push({
-      title: 'Op Time Spent on Eager Execution',
-      descriptions: ['lower is better'],
-      tooltip: this.opTimeInEagerModeTooltipMessage,
-      propertyValues: [
-        `Host: ${generalProps.host_op_time_eager_percent || ''}`,
-        `Device: ${generalProps.device_op_time_eager_percent || ''}`,
-      ],
-    });
-
-    if (generalProps.power_metrics) {
-      const components = generalProps.power_metrics.split('##');
-      this.summaryInfoAfter.push({
-        title: 'Power Metrics',
-        descriptions: ['Power consumption of different components'],
-        tooltip: this.powerMetricsTooltipMessage,
-        propertyValues: components,
-      });
-    }
-  }
-
-  parseGenericData() {
-    const generalProps = (this.generalAnalysis || {}).p || {};
-    const inputPipelineProps = (this.inputPipelineAnalysis || {}).p || {};
-
-    this.remarkText = generalProps.remark_text || '';
-    this.remarkColor = generalProps.remark_color || '';
-
-    this.initializeSummary(inputPipelineProps);
-
-    GENERIC_SUMMARY_INFO.forEach(info => {
-      this.summaryInfoBefore.push({
-        type: 'list',
-        title: info.title,
-        descriptions: [`(σ =  ${this.getInputPipelineProp(info.sdv)} ms)`],
-        value: `${this.getInputPipelineProp(info.avg)} ms`,
-      });
-    });
-
-    this.summaryInfoBefore.push({
-      title: 'TF Op Placement',
-      descriptions: ['generally desired to have more ops on device'],
-      tooltip: this.tfOpPlacementTooltipMessage,
-      propertyValues: [
-        `Host: ${generalProps.host_tf_op_percent || ''}`,
-        `Device: ${generalProps.device_tf_op_percent || ''}`,
-      ],
-    });
-
-    this.summaryInfoBefore.push({
-      title: 'Op Time Spent on Eager Execution',
-      descriptions: ['lower is better'],
-      tooltip: this.opTimeInEagerModeTooltipMessage,
-      propertyValues: [
-        `Host: ${generalProps.host_op_time_eager_percent || ''}`,
-        `Device: ${generalProps.device_op_time_eager_percent || ''}`,
-      ],
-    });
-
-    this.summaryInfoBefore.push({
-      title: 'Device Compute Precisions',
-      descriptions: ['out of Total Device Time'],
-      propertyValues: [
-        `16-bit: ${generalProps.device_compute_16bit_percent || ''}`,
-        `32-bit: ${generalProps.device_compute_32bit_percent || ''}`,
-      ],
+  // TODO: Remove customInput argument, read all metrics from property
+  parseDataFromConfig(
+      summaryConfigs: SummaryInfoConfig[]|undefined, props: GeneralProps,
+      summaryInfoCombined: SummaryInfo[], level = 0,
+      customInput?: DataTableCell[]) {
+    if (!summaryConfigs) return;
+    summaryConfigs.forEach((config: SummaryInfoConfig) => {
+      const summaryInfo =
+          this.readSummaryInfoFromConfig(config, props, customInput);
+      if (summaryInfo) {
+        summaryInfoCombined.push({...summaryInfo, level});
+      }
     });
   }
 }
