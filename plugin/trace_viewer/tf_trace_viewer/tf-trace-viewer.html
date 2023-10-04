@@ -51,7 +51,9 @@ Trace Viewer.
   #event-details {
     float: right;
     display: flex;
-    min-width: 30%;
+    /* only display detail panel if content exists, up to 30% width */
+    width: fit-content;
+    max-width: 30%;
     background-color: #ececec;
   }
 
@@ -99,6 +101,8 @@ Trace Viewer.
     flex-flow: row nowrap;
     /* make vertical drag handle and the tabs covering the whole content height */
     height: fit-content;
+    /* won't cover the whole window with super long content */
+    max-height: 40%;
   }
 
   #eventSummaryTable table.tr-ui-b-table {
