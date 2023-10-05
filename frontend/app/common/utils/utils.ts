@@ -110,10 +110,13 @@ export function humanReadableText(
   const base = si ? 1000 : 1024;
   const units = si ? ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'] :
                      ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi'];
-  const i = num === 0 ? 0 : Math.floor(Math.log(num) / Math.log(base));
-  return (Number(num / Math.pow(base, i)).toFixed(dp) + ' ' + units[i] +
-          suffix) ||
-      '';
+  const i =
+      num === 0 ? 0 : Math.max(0, Math.floor(Math.log(num) / Math.log(base)));
+  // Handle the case if num < 1 (e.g. 0.000123)
+  // we should return 1.23e-4 for better readability.
+  const n = 0 < num && num < 1 ? num.toExponential(dp) :
+                                 Number(num / Math.pow(base, i)).toFixed(dp);
+  return (n + ' ' + units[i] + suffix) || '';
 }
 
 /**
