@@ -167,7 +167,7 @@ const TPU_SUMMARY_INFO: SummaryInfoConfig[] = [
         'Avg/Max power consumption of different components/rails, including max of moving average of window size of 100us/1ms/10ms.',
     getChildValues: (props) =>
         (((props as GeneralProps)['power_metrics']))?.split('##') || [],
-  }
+  },
 ];
 
 /** A performance summary view component. */
@@ -280,7 +280,7 @@ export class PerformanceSummary implements OnChanges, OnInit {
       this.parseDataFromConfig(
           config.childrenInfoConfig, props, childrenInfoCombined);
     }
-    if (value || childrenInfoCombined.length > 0) {
+    if (value || childrenInfoCombined.length > 0 || propertyValues.length > 0) {
       return {
         title: config.title,
         tooltip: config.tooltip || '',
