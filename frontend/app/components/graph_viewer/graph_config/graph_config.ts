@@ -38,12 +38,13 @@ export class GraphConfig implements OnDestroy, OnChanges {
     if (!this.inputsInited && changes.hasOwnProperty('initialInputs') &&
         Object.entries(changes['initialInputs'].currentValue || {}).length) {
       this.params = {...this.initialInputs as GraphConfigInput};
-      this.params.selectedModule = this.params.selectedModule;
       this.inputsInited = true;
     }
 
     // Update default module name once moduleList is updated
-    if (changes.hasOwnProperty('moduleList')) {
+    if (changes.hasOwnProperty('moduleList') &&
+        changes['moduleList'].currentValue.length > 0 &&
+        !this.params.selectedModule) {
       this.params.selectedModule =
           this.params.selectedModule || changes['moduleList'].currentValue[0];
     }
@@ -51,6 +52,16 @@ export class GraphConfig implements OnDestroy, OnChanges {
 
   validToSubmit() {
     return this.params.opName && this.params.selectedModule;
+  }
+
+  getModuleList() {
+    if (this.moduleList.length > 0) {
+      return this.moduleList;
+    } else if (this.params.selectedModule) {
+      return [this.params.selectedModule];
+    } else {
+      return [];
+    }
   }
 
   onUpdateParam(update: Partial<GraphConfigInput>) {

@@ -13,7 +13,7 @@
         [disabled]="useProgramId"
         (ngModelChange)="onUpdateParam({ selectedModule: $event })"
       >
-        <mat-option *ngFor="let module of moduleList" [value]="module">
+        <mat-option *ngFor="let module of getModuleList()" [value]="module">
           {{ module }}
         </mat-option>
       </mat-select>
