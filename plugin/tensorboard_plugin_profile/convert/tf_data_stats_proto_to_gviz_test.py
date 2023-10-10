@@ -20,7 +20,6 @@ from __future__ import division
 from __future__ import print_function
 
 import csv
-import enum
 import io
 import sys
 
@@ -31,15 +30,7 @@ from tensorboard_plugin_profile.convert import tf_data_stats_proto_to_gviz
 from tensorboard_plugin_profile.protobuf import tf_data_stats_pb2
 
 
-if sys.version_info[:2] >= (3, 11):
-  StrEnum = enum.StrEnum
-else:
-
-  class StrEnum(str, enum.Enum):
-    pass
-
-
-class MockValues(StrEnum):
+class MockValues:
   IS_INPUT_BOUND = True
   SUMMARY = "Summary"
   BOTTLENECK_HOST_NAME = "bottleneck_host"
@@ -50,13 +41,13 @@ class MockValues(StrEnum):
   BOTTLENECK_ITERATOR_LATENCY_PS = 80_000_000
   SUGGESTION = "Suggestion"
   HOST_NAME = "host1"
-  FIRST_ITERATOR_ID = 123
+  FIRST_ITERATOR_ID = "123"
   FIRST_ITERATOR_NAME = "Iterator::Prefetch"
   FIRST_ITERATOR_LONG_NAME = "Iterator::Prefetch"
-  SECOND_ITERATOR_ID = 456
+  SECOND_ITERATOR_ID = "456"
   SECOND_ITERATOR_NAME = "Iterator::Map"
   SECOND_ITERATOR_LONG_NAME = "Iterator::Prefetch::Map"
-  INPUT_PIPELINE_ID = 123
+  INPUT_PIPELINE_ID = "123"
   INPUT_PIPELINE_NAME = "Host:0"
   AVG_LATENCY_PS = 100_000_000
   MIN_LATENCY_PS = 100_000_000
@@ -79,7 +70,7 @@ class ProtoToGvizTest(tf.test.TestCase):
 
   def create_mock_combined_tf_data_stats(self):
     combined_tf_data_stats = tf_data_stats_pb2.CombinedTfDataStats()
-    combined_tf_data_stats.is_input_bound = "True" == MockValues.IS_INPUT_BOUND
+    combined_tf_data_stats.is_input_bound = MockValues.IS_INPUT_BOUND
     combined_tf_data_stats.summary = MockValues.SUMMARY
 
     bottleneck_analysis = tf_data_stats_pb2.TfDataBottleneckAnalysis()
@@ -127,7 +118,7 @@ class ProtoToGvizTest(tf.test.TestCase):
     iterator_stat.start_time_ps = int(MockValues.FIRST_START_TIME_PS)
     iterator_stat.duration_ps = int(MockValues.FIRST_DURATION_PS)
     iterator_stat.self_time_ps = int(MockValues.FIRST_SELF_TIME_PS)
-    iterator_stat.is_blocking = "True" == MockValues.IS_BLOCKING
+    iterator_stat.is_blocking = MockValues.IS_BLOCKING
     iterator_stat.num_calls = int(MockValues.NUM_CALLS)
     iterator_stat = input_pipeline_stat.iterator_stats[int(
         MockValues.SECOND_ITERATOR_ID)]
@@ -135,7 +126,7 @@ class ProtoToGvizTest(tf.test.TestCase):
     iterator_stat.start_time_ps = int(MockValues.SECOND_START_TIME_PS)
     iterator_stat.duration_ps = int(MockValues.SECOND_DURATION_PS)
     iterator_stat.self_time_ps = int(MockValues.SECOND_SELF_TIME_PS)
-    iterator_stat.is_blocking = "True" == MockValues.IS_BLOCKING
+    iterator_stat.is_blocking = MockValues.IS_BLOCKING
     iterator_stat.num_calls = int(MockValues.NUM_CALLS)
 
     return combined_tf_data_stats
