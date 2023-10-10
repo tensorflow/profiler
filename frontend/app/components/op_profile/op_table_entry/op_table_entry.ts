@@ -44,7 +44,6 @@ export class OpTableEntry implements OnChanges {
   expanded = false;
   barWidth = '';
   flameColor = '';
-  hideFlopsUtilization = false;
   name = '';
   offset = '';
   percent = '';
@@ -79,12 +78,10 @@ export class OpTableEntry implements OnChanges {
     }
     this.flameColor = utils.flameColor(
         utils.flopsUtilization(this.node, this.rootNode), 0.7, 1, Math.sqrt);
-    this.hideFlopsUtilization = !utils.hasFlopsUtilization(this.node);
     this.name = (this.node && this.node.name) ? this.node.name : '';
     this.offset = this.level.toString() + 'em';
-    this.provenance = (this.node && this.node.xla && this.node.xla.provenance) ?
-        this.node.xla.provenance.replace(/^.*(:|\/)/, '') :
-        '-';
+    this.provenance =
+        this.node?.xla?.provenance?.replace(/^.*(:|\/)/, '') || '-';
     this.timeWasted = utils.percent(utils.timeWasted(this.node, this.rootNode));
     this.flopsUtilization =
         utils.percent(utils.flopsUtilization(this.node, this.rootNode));
