@@ -275,6 +275,7 @@ dashboard would integrate trace viewer app using iframe.
       _isInitialLoad: {type: Boolean, value: true},
       _replaceModel: {type: Boolean, value: true},
       _hosts: {type: Array, value: []},
+      _showFilterForm: {type: Boolean, value: false},
     },
 
     ready: function() {
@@ -325,6 +326,7 @@ dashboard would integrate trace viewer app using iframe.
             } catch(err) {  // not fatal.
               console.log('cannot find session id');
             }
+            this._showFilterForm = (traceViewerLink.searchParams.get('show_filter_form') === 'true');
           }
         } else if (key === 'is_streaming') {
           this._isStreaming = value === 'true';
@@ -514,7 +516,7 @@ dashboard would integrate trace viewer app using iframe.
       window.parent.history.pushState({}, '', url);
     },
 
-    _createFilters: function() {
+    _createHostFilter: function() {
       hosts = this._hosts || [];
       const hostSelector = document.createElement('select');
       hostSelector.setAttribute('name', 'host');
@@ -556,11 +558,22 @@ dashboard would integrate trace viewer app using iframe.
       });
 
       Polymer.dom(this._traceViewer.leftControls).appendChild(hostSelector);
+    },
 
+    _createProcessesFilter: function() {
+      this._traceViewer.updateProcessList_ = this._updateProcessList.bind(this);
+    },
+
+    _createDetailFilter: function() {
       const detailsSelector = document.createElement('tr-ui-b-dropdown');
       detailsSelector.setAttribute('id', 'details_selector');
       detailsSelector.style.display = 'none';
       Polymer.dom(this._traceViewer.leftControls).appendChild(detailsSelector);
+    },
+
+    _hideProcessList: function() {
+      const processDropdown = document.getElementById("process_filter_dropdown");
+      processDropdown.setAttribute('style', 'display:none;');
     },
 
     _addSelectedHostIndexToURL: function(url) {
@@ -632,9 +645,15 @@ dashboard would integrate trace viewer app using iframe.
 
     _init: async function() {
       if (this._isStreaming) {
-        await this._loadHosts();
-        this._createFilters();
-        this._traceViewer.updateProcessList_ = this._updateProcessList.bind(this);
+        // TODO(yinzz) cleanup hosts and process filter code later when the new filtering rolls out
+        if (!this._showFilterForm) {
+          await this._loadHosts();
+          this._createHostFilter();
+          this._createProcessesFilter();
+        } else {
+          this._hideProcessList();
+        }
+        this._createDetailFilter();
         this._createPerfettoButton();
       }
       this._loadTrace(null, /* replaceModel= */ true);
@@ -1089,7 +1108,7 @@ dashboard would integrate trace viewer app using iframe.
       requestURL.searchParams.delete('host_index');
       const hostSelector = document.getElementById("host_selector");
       // Don't set "host" parameter for "all hosts".
-      if (hostSelector.value) requestURL.searchParams.set(hostSelector.name, hostSelector.value);
+      if (hostSelector?.value) requestURL.searchParams.set(hostSelector.name, hostSelector.value);
       const detailsSelector = document.getElementById("details_selector");
       const detailsDialog = detailsSelector.getElementsByTagName('dialog')[0];
       const checkboxDivs = detailsDialog.getElementsByTagName('div');
