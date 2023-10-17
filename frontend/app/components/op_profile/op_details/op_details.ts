@@ -119,7 +119,7 @@ export class OpDetails {
 
     if (utils.hasFlopsUtilization(this.node)) {
       const flopsUtilization = utils.flopsUtilization(this.node, this.rootNode);
-      this.flopsUtilization = utils.percent(flopsUtilization);
+      this.flopsUtilization = utils.percent(flopsUtilization, '');
       this.flopsColor = utils.flopsColor(flopsUtilization);
     } else {
       this.flopsUtilization = '';
@@ -138,7 +138,7 @@ export class OpDetails {
          i <= utils.MemBwType.MEM_BW_TYPE_MAX; i++) {
       if (utils.hasBandwidthUtilization(this.node, i)) {
         const utilization = utils.memoryBandwidthUtilization(this.node, i);
-        this.bandwidthUtilizations[i] = utils.percent(utilization);
+        this.bandwidthUtilizations[i] = utils.percent(utilization, '');
         this.bwColors[i] = utils.bwColor(utilization);
       } else {
         this.bandwidthUtilizations[i] = '';

@@ -266,8 +266,8 @@ export function hasBandwidthUtilization(
 /**
  * Computes a percent.
  */
-export function percent(fraction: number): string {
-  if (isNaN(fraction)) return '-';
+export function percent(fraction: number, defaultValueIfNull = '-'): string {
+  if (isNaN(fraction)) return defaultValueIfNull;
 
   if (fraction < 0.00001) {
     return '0.0%';
