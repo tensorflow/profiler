@@ -314,6 +314,7 @@ dashboard would integrate trace viewer app using iframe.
       Polymer.dom(this.root).appendChild(this._throbber);
 
       this._resolution = this._resolutionFromViewerWidth(this._traceViewer.clientWidth);
+      this._selectedHostIndexes = this._getInitialSelectedHostIndexes();
       // Retrieve the URL of trace data.
       var query = new URL(window.location.href);
       query.searchParams.forEach(function(value, key, searchParams) {
@@ -372,7 +373,46 @@ dashboard would integrate trace viewer app using iframe.
     _sessionId: string = '',
     _selectedDeviceIds: null,
     _devices: null,
-    _selectedHostIndex: 0,
+    _selectedHostIndexes: [0],
+
+    // Way to get selectedHostIndexes with legacy host filter
+    _getSelectedHostIndexesFromURL: function() {
+      const hostIndexParam = new URL(window.parent.location.href).searchParams?.get('host_index') || '';
+      const selectedHostIndexes = hostIndexParam.split(',').map(index => Number(index));
+      return selectedHostIndexes.length ? selectedHostIndexes : [0];
+    },
+
+    // Way to get selectedHostIndexes with revamped host filter
+    _getSelectedHostIndexesFromURI: function() {
+      const traceViewerLink = new URL(window.location.origin + this.traceDataUrl);
+      return (traceViewerLink.searchParams.get('hosts') || '').split(',');
+   },
+
+   _getInitialSelectedHostIndexes: function() {
+      return this._showFilterForm ? this._getSelectedHostIndexesFromURI() : this._getSelectedHostIndexesFromURL();
+    },
+
+    _getSelectedHostIndexes: function() {
+      // When using legacy host selector, selectedHostIndexes will be reactively updated
+      return this._showFilterForm ? this._getSelectedHostIndexesFromURI() : this._selectedHostIndexes;
+    },
+
+    _getSelectedHosts() {
+        if (this._showFilterForm) {
+          // host-selector does not exist, this._hosts is not fetched
+          const traceViewerLink = new URL(window.location.origin + this.traceDataUrl);
+          return (traceViewerLink.searchParams.get('hosts') || '').split(',');
+        } else {
+          // has valid this._hosts
+          const selectedHosts = [];
+          this._hosts.forEach((host, index) => {
+              if (this._selectedHostIndexes.includes(index)) {
+                selectedHosts.push(host);
+              }
+          })
+          return selectedHosts;
+        }
+    },
 
     _convertTimeToCycles: function(e) {
       if (this._tasks === undefined || this._tasks.length === 0) return;
@@ -494,7 +534,7 @@ dashboard would integrate trace viewer app using iframe.
                 new URL(window.location.origin + '/trace_viewer/' + this._sessionId);
           traceViewerConnectedEventsLink.searchParams.append(
                 "selected_group_ids", event.args['connected_group_ids']);
-          this._addSelectedHostIndexToURL(traceViewerConnectedEventsLink);
+          this._addSelectedHostIndexToTraceViewerURL(traceViewerConnectedEventsLink);
           const traceViewerConnectedEventsLinkElement = document.createElement('div');
           traceViewerConnectedEventsLinkElement.innerHTML = 'Trace Viewer:<a href="' +
                 traceViewerConnectedEventsLink.href +
@@ -506,7 +546,7 @@ dashboard would integrate trace viewer app using iframe.
           const traceViewerStepLink =
                 new URL(window.location.origin + '/trace_viewer/' + this._sessionId);
           traceViewerStepLink.searchParams.append("selected_group_ids", event.args['group_id']);
-          this._addSelectedHostIndexToURL(traceViewerStepLink);
+          this._addSelectedHostIndexToTraceViewerURL(traceViewerStepLink);
           const traceViewerStepLinkElement = document.createElement('div');
           traceViewerStepLinkElement.innerHTML = 'Trace Viewer:<a href="' + traceViewerStepLink.href +
                 '" target="_blank"> see events ONLY for this step/group ' +
@@ -516,61 +556,90 @@ dashboard would integrate trace viewer app using iframe.
       }
     },
 
-    // Only pushes a new state to history, won't reload the page
-    _updateUrlHostIndex: function() {
+    /**
+     *************************************************************
+     * BEGIN - Functions only used when trace filter form disabled
+     *************************************************************
+     */
+    _updateUrlHostIndex: function(selectedHostIndexes) {
       const queryParams = new URLSearchParams(window.parent.location.search);
-      queryParams.set('host_index', this._selectedHostIndex - 1);
+      if (selectedHostIndexes.length) {
+        queryParams.set('host_index', selectedHostIndexes.join(','));
+      } else {
+        queryParams.delete('host_index');
+      }
+      // Only pushes a new state to history, won't reload the page
       const url = `${window.location.origin}/trace_viewer/${this._sessionId}?${queryParams.toString()}`;
       window.parent.history.pushState({}, '', url);
     },
 
+    _onSelectedHostIndexesChange: function() {
+      this._updateUrlHostIndex(this._selectedHostIndexes);
+      // When the host changes, we need to clear the Process Filter Dropdown
+      // since it contains devices (pids) associated with the previous host.
+      this._clearProcessList();
+      this._loadTrace(null, /* replaceModel= */ true);  // reload data.
+    },
+
     _createHostFilter: function() {
       hosts = this._hosts || [];
-      const hostSelector = document.createElement('select');
+      if (hosts.length <= 1) {
+        return;
+      }
+
+      const hostSelector = document.createElement('tr-ui-b-dropdown');
+      hostSelector.setAttribute('label', 'Hosts');
       hostSelector.setAttribute('name', 'host');
       hostSelector.setAttribute('id', 'host_selector');
-
-      const option = document.createElement('option');
-      option.setAttribute('value', '');
-      option.innerText = 'All hosts';
-      hostSelector.appendChild(option);
-
-      hosts.forEach(host => {
-        const option = document.createElement('option');
-        option.setAttribute('value', host);
-        option.innerText = host;
-        hostSelector.appendChild(option);
-      });
-
-      if (hostSelector.children.length <= 2) {
-        hostSelector.hidden = true;
-      } else {
-        // By default select host 1, which is the first host except from all hosts.
-        this._selectedHostIndex = 1;
-        const traceDataLink = new URL(this.traceDataUrl, window.location.origin);
-        const urlHostIndex = Number(traceDataLink.searchParams.get('host_index'));
-        if (urlHostIndex && urlHostIndex < hostSelector.children.length - 1) {
-          // Select host based on host query parameter.
-          this._selectedHostIndex = urlHostIndex + 1;
+      const hostsDialog = hostSelector.getElementsByTagName('dialog')[0];
+      const hostOptionCheckboxes = [];
+      const updateAllHostsSelection = (checked) => {
+        for (const hostOptionCheckbox of hostOptionCheckboxes) {
+          hostOptionCheckbox.checked = checked;
         }
-        hostSelector.children[this._selectedHostIndex].selected = 'selected';
-      }
-      hostSelector.addEventListener("change", () => {
-        // When the host changes, we need to clear the Process Filter Dropdown
-        // since it contains devices (pids) associated with the previous host.
-        this._selectedHostIndex = document.getElementById('host_selector').selectedIndex;
-        this._updateUrlHostIndex();
-        this._clearProcessList();
-        this._loadTrace(null, /* replaceModel= */ true);  // reload data.
-        this._updatePerfettoButton();
-      });
+        this._selectedHostIndexes = checked ? Array.from(Array(this._hosts.length).keys()) : [];
+        this._onSelectedHostIndexesChange();
+      };
 
+      hostsDialog.appendChild(tr.ui.b.createButton('All', () => {
+        updateAllHostsSelection(true);
+
+      }));
+      hostsDialog.appendChild(tr.ui.b.createButton('None', () => {
+        updateAllHostsSelection(false);
+      }));
+      for (const [index, host] of hosts.entries()) {
+        const hostOptionCheckbox = tr.ui.b.createCheckBox(undefined, undefined, undefined,
+            true, host);
+
+        hostOptionCheckbox.checked = this._selectedHostIndexes.includes(index);
+        hostOptionCheckbox.addEventListener('change', () => {
+          const checked = hostOptionCheckbox.checked;
+          const hostName = hostOptionCheckbox.textContent;
+          const hostIndex = hosts.findIndex(host => host === hostName);
+          const indexOfIndex = this._selectedHostIndexes.findIndex(index => index === hostIndex);
+          if ((indexOfIndex === -1) && checked) {
+            this._selectedHostIndexes.push(hostIndex);
+          }
+          if ((indexOfIndex !== -1) && !checked) {
+            this._selectedHostIndexes.splice(indexOfIndex, 1);
+          }
+          this._onSelectedHostIndexesChange();
+        });
+        hostsDialog.appendChild(hostOptionCheckbox);
+        hostOptionCheckboxes.push(hostOptionCheckbox);
+      }
       Polymer.dom(this._traceViewer.leftControls).appendChild(hostSelector);
     },
 
     _createProcessesFilter: function() {
       this._traceViewer.updateProcessList_ = this._updateProcessList.bind(this);
     },
+    /**
+     *************************************************************
+     * END - Functions only used when trace filter form disabled
+     *************************************************************
+     */
 
     _createDetailFilter: function() {
       const detailsSelector = document.createElement('tr-ui-b-dropdown');
@@ -584,31 +653,20 @@ dashboard would integrate trace viewer app using iframe.
       processDropdown.setAttribute('style', 'display:none;');
     },
 
-    _addSelectedHostIndexToURL: function(url) {
-      if (this._selectedHostIndex >= 1) {
-        // Skip All Hosts selection.
-        url.searchParams.append("host_index", this._selectedHostIndex - 1);
-      }
-    },
-
-    _allHostsSelected: function() {
-      const hostSelector = document.getElementById("host_selector");
-      return hostSelector.value === '';
-    },
-
-    _updatePerfettoButton: function() {
-      const perfettoButton = document.getElementById('perfetto');
-      if (this._allHostsSelected()) {
-        perfettoButton?.setAttribute('disabled', true);
-      } else if (perfettoButton.disabled) {
-        perfettoButton?.removeAttribute('disabled');
+    // This function is called when generating trace viewer links given hosts selection
+    _addSelectedHostIndexToTraceViewerURL: function(url) {
+      const selectedHostIndexes = this._getSelectedHostIndexes();
+      if (selectedHostIndexes > 0) {
+        url.searchParams.append("host_index", selectedHostIndexes.join(','));
       }
     },
 
     _perfettoButtonOnclickCallback: function() {
-      const hostSelector = document.getElementById("host_selector");
       const sessionPerfettoUrl = new URL(`/perfetto/${this._sessionId}`, window.location.href);
-      sessionPerfettoUrl.searchParams.set(hostSelector.name, hostSelector.value);
+      const selectedHosts = this._getSelectedHosts();
+      if (selectedHosts) {
+        sessionPerfettoUrl.searchParams.set('hosts', selectedHosts);
+      }
       window.open(sessionPerfettoUrl.toString());
     },
 
@@ -1109,14 +1167,20 @@ dashboard would integrate trace viewer app using iframe.
       return Math.round(viewerWidth / minEventWidth);
     },
 
+    _updateHostsParamToBaseUrl: function(requestURL) {
+      const selectedHosts = this._getSelectedHosts();
+      if (selectedHosts.length) {
+        requestURL.searchParams.set('hosts', selectedHosts.join(','));
+      } else {
+        requestURL.searchParams.set('hosts', 'None');
+      }
+    },
+
     // Builds a base URL for fetching json data. The URL will be assembled with
     // all filtering URL parameters, except resolution and range.
     _buildBaseURL: function() {
       const requestURL = new URL(this.traceDataUrl, window.location.href);
-      requestURL.searchParams.delete('host_index');
-      const hostSelector = document.getElementById("host_selector");
-      // Don't set "host" parameter for "all hosts".
-      if (hostSelector?.value) requestURL.searchParams.set(hostSelector.name, hostSelector.value);
+      this._updateHostsParamToBaseUrl(requestURL);
       const detailsSelector = document.getElementById("details_selector");
       const detailsDialog = detailsSelector.getElementsByTagName('dialog')[0];
       const checkboxDivs = detailsDialog.getElementsByTagName('div');
