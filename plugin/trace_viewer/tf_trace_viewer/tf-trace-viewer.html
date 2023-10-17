@@ -405,7 +405,6 @@ dashboard would integrate trace viewer app using iframe.
         var currentThread = event.parentContainer;
         var currentProcess = currentThread.parent;
         var hloOp;
-        console.log(' ABRAHAM 0 ');
         // DarwiNN layer has a long layer identifier, thus no chance to be conflict with other systems.
         const darwinn_layer = ['Compute Utilization/Roofline Efficiency', 'Data motion layers utilization'].includes(event.parentContainer.name);
         const xla_ops = ('XLA Ops' === event.parentContainer.name);
