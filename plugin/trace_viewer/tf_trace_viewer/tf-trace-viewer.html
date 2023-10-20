@@ -327,7 +327,6 @@ dashboard would integrate trace viewer app using iframe.
             } catch(err) {  // not fatal.
               console.log('cannot find session id');
             }
-            this._showFilterForm = (traceViewerLink.searchParams.get('show_filter_form') === 'true');
           }
         } else if (key === 'is_streaming') {
           this._isStreaming = value === 'true';
@@ -337,6 +336,8 @@ dashboard would integrate trace viewer app using iframe.
           this.hostsDataUrl = value;
         } else if (key === 'resolution') {
           this._resolution = Number(value);
+        } else if (key === 'show_filter_form') {
+          this._showFilterForm = value === 'true';
         }
       }.bind(this));
 
