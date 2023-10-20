@@ -452,8 +452,7 @@ dashboard would integrate trace viewer app using iframe.
         if (xla_ops || darwinn_layer) {
           var hloOp = event.title;
           if (darwinn_layer) {
-            let n = event.title.split(" ");
-            hloOp = n[n.length - 1];
+            hloOp = event.args?.Name;
           }
           var hloModule = 'default';
           for (t in currentProcess.threads) {
