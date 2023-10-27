@@ -130,8 +130,8 @@ export class ProgramOrderChart implements OnChanges, OnInit {
 
     const dataTable = new google.visualization.DataTable();
     dataTable.addColumn('number', 'Schedule');
-    dataTable.addColumn('number', 'Heap Size');
-    dataTable.addColumn('number', 'Heap Size');
+    dataTable.addColumn('number', 'Size');
+    dataTable.addColumn('number', 'Unpadded Size');
     dataTable.addRows(data);
 
     const options: google.visualization.LineChartOptions = {
