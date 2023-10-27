@@ -19,6 +19,8 @@ export class OpDetails {
   /** the session id */
   @Input() sessionId = '';
   @Input() rootNode?: Node;
+  /** the list of modules */
+  @Input() moduleList: string[] = [];
 
   node?: Node;
   color: string = '';
@@ -60,11 +62,27 @@ export class OpDetails {
         });
   }
 
+  hasValidGraphViewerLink() {
+    const aggregatedBy = this.selectedOpNodeChain[0];
+    if (aggregatedBy === 'by_category' && this.moduleList.length > 1) {
+      return false;
+    }
+    // Condition for both 'by_program' and 'by_category'
+    return this.selectedOpNodeChain.length >= 2 && this.expression;
+  }
+
   getGraphViewerLink() {
+    const aggregatedBy = this.selectedOpNodeChain[0];
     // expression format assumption: '%<op_name> = ...'
     const opName = this.expression.split('=')[0].trim().slice(1);
-    return `/graph_viewer/${this.sessionId}?module_name=${
-        this.selectedOpNodeChain[1]}&node_name=${opName}`;
+    if (aggregatedBy === 'by_program') {
+      return `/graph_viewer/${this.sessionId}?module_name=${
+          this.selectedOpNodeChain[1]}&node_name=${opName}`;
+    } else if (aggregatedBy === 'by_category') {
+      return `/graph_viewer/${this.sessionId}?module_name=${
+          this.moduleList[0]}&node_name=${opName}`;
+    }
+    return '';
   }
 
   dimensionColor(dimension?: Node.XLAInstruction.LayoutAnalysis.Dimension):
