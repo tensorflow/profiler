@@ -11,6 +11,20 @@
         </div>
       </div>
       <div class="info-content">
+        <div class="info" id="graph-viewer-link" [hidden]="!hasValidGraphViewerLink()">
+          <a [href]="getGraphViewerLink()" target="_blank" style="text-decoration:none;">
+            <button
+              mat-stroked-button
+              extended
+              type="button"
+              color="primary"
+              appearance="fill"
+              aria-label="go to graph viewer"
+              i18n-aria-label="A button to corresponding graph viewer page">
+             > Graph Viewer
+            </button>
+          </a>
+        </div>
         <div class="info" [hidden]="!flopsUtilization">
           <div class="title">FLOPS utilization:</div>
           <div class="bar-container">
@@ -115,20 +129,6 @@
         <div class="info" [hidden]="!computationPrimitiveSize">
           <div class="title"> Hardware Computation Size:</div>
           <code class="expression">{{computationPrimitiveSize}}</code>
-        </div>
-        <div [hidden]="!hasValidGraphViewerLink()">
-          <a [href]="getGraphViewerLink()" target="_blank" style="text-decoration:none;">
-            <button
-              mat-stroked-button
-              extended
-              type="button"
-              color="primary"
-              appearance="fill"
-              aria-label="go to graph viewer"
-              i18n-aria-label="A button to corresponding graph viewer page">
-             > Graph Viewer
-            </button>
-          </a>
         </div>
       </div>
     </mat-card-content>
