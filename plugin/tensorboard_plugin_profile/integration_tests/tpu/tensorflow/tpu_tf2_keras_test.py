@@ -147,9 +147,13 @@ class TpuKerasTest(absltest.TestCase):
     )
     result = json.loads(result)
     thread_names = []
+    process_names = []
     for event in result['traceEvents']:
-      if 'name' in event and event['name'] == 'thread_name':
-        thread_names.append((event['args']['name']))
+      if 'name' in event:
+        if event['name'] == 'thread_name':
+          thread_names.append((event['args']['name']))
+        elif event['name'] == 'process_name':
+          process_names.append((event['args']['name']))
     self.assertContainsSubset(
         [
             'TensorFlow Name Scope',
@@ -160,6 +164,9 @@ class TpuKerasTest(absltest.TestCase):
             'Steps',
         ],
         thread_names,
+    )
+    self.assertContainsSubset(
+        ['/device:TPU:0', '/device:TPU:1', '/host:CPU'], process_names
     )
 
 
