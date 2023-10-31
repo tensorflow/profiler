@@ -578,7 +578,6 @@ dashboard would integrate trace viewer app using iframe.
       // When the host changes, we need to clear the Process Filter Dropdown
       // since it contains devices (pids) associated with the previous host.
       this._clearProcessList();
-      this._loadTrace(null, /* replaceModel= */ true);  // reload data.
     },
 
     _createHostFilter: function() {
@@ -601,13 +600,17 @@ dashboard would integrate trace viewer app using iframe.
         this._onSelectedHostIndexesChange();
       };
 
-      hostsDialog.appendChild(tr.ui.b.createButton('All', () => {
+      hostsDialog.appendChild(tr.ui.b.createButton('Check All', () => {
         updateAllHostsSelection(true);
 
       }));
-      hostsDialog.appendChild(tr.ui.b.createButton('None', () => {
+      hostsDialog.appendChild(tr.ui.b.createButton('Check None', () => {
         updateAllHostsSelection(false);
       }));
+      const loadButton = hostsDialog.appendChild(tr.ui.b.createButton('Load', () => {
+        this._loadTrace(null, /* replaceModel= */ true);  // reload data.
+      }));
+      loadButton.setAttribute('style', loadButton.getAttribute('style') + ';cursor:pointer;');
       for (const [index, host] of hosts.entries()) {
         const hostOptionCheckbox = tr.ui.b.createCheckBox(undefined, undefined, undefined,
             true, host);
@@ -1056,23 +1059,22 @@ dashboard would integrate trace viewer app using iframe.
       };
 
       const dropdown = Polymer.dom(document.getElementById("process_filter_dropdown"));
-      dropdown.appendChild(tr.ui.b.createButton('All', () => {
+      dropdown.appendChild(tr.ui.b.createButton('Check All', () => {
         updateAll(true);
-        this._loadTrace(null, /* replaceModel= */ true);  // reload data.
       }));
-      dropdown.appendChild(tr.ui.b.createButton('None', () => {
+      dropdown.appendChild(tr.ui.b.createButton('Check None', () => {
         updateAll(false);
+      }));
+      const loadButton = dropdown.appendChild(tr.ui.b.createButton('Load', () => {
         this._loadTrace(null, /* replaceModel= */ true);  // reload data.
       }));
+      loadButton.setAttribute('style', loadButton.getAttribute('style') + ';cursor:pointer;');
 
       for (const pid in this._devices) {
         const cbox = tr.ui.b.createCheckBox(undefined, undefined, undefined,
             true, `${this._devices[pid]} (pid ${pid})`);
 
         cbox.checked = selectedDeviceIds.includes(pid);
-        cbox.addEventListener('change', () => {
-          this._loadTrace(null, /* replaceModel= */ true);  // reload data.
-        });
 
         cboxes.push(cbox);
         dropdown.appendChild(cbox);
@@ -1195,8 +1197,8 @@ dashboard would integrate trace viewer app using iframe.
       // Populate query parameter "selected_device_ids".
       const dropdown = Polymer.dom(document.getElementById("process_filter_dropdown"));
       const selectedDeviceIds = [];
-      // Checkbox nodes start at index 2 since the first two nodes are the "All" and "None" button.
-      for (let i = 2; i < dropdown.childNodes.length; ++i) {
+      // Checkbox nodes start at index 3 since the first 3 nodes are the "All", "None" and "Load" button.
+      for (let i = 3; i < dropdown.childNodes.length; ++i) {
         const checkbox = dropdown.childNodes[i].getElementsByTagName('input')[0];
         if (checkbox.checked) {
           const label = dropdown.childNodes[i].getElementsByTagName('label')[0];
