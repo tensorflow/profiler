@@ -1,6 +1,5 @@
-import {Component, OnDestroy} from '@angular/core';
+import {Component, Input, OnDestroy} from '@angular/core';
 import {Store} from '@ngrx/store';
-
 import {HeapObject} from 'org_xprof/frontend/app/common/interfaces/heap_object';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {getActiveHeapObjectState} from 'org_xprof/frontend/app/store/selectors';
@@ -16,6 +15,11 @@ import {takeUntil} from 'rxjs/operators';
 export class BufferDetails implements OnDestroy {
   /** Handles on-destroy Subject, used to unsubscribe. */
   private readonly destroyed = new ReplaySubject<void>(1);
+
+  /** Selected module name in memory viewer */
+  @Input() selectedModule = '';
+  /** The session id */
+  @Input() sessionId = '';
 
   heapObject: HeapObject|null = null;
   instructionName?: string;
@@ -36,6 +40,15 @@ export class BufferDetails implements OnDestroy {
         .subscribe((heapObject: HeapObject|null) => {
           this.update(heapObject);
         });
+  }
+
+  hasValidGraphViewerLink() {
+    return this.instructionName && this.selectedModule && this.sessionId;
+  }
+
+  getGraphViewerLink() {
+    return `/graph_viewer/${this.sessionId}?module_name=${
+        this.selectedModule}&node_name=${this.instructionName}`;
   }
 
   update(heapObject: HeapObject|null) {
