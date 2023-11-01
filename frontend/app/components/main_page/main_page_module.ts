@@ -1,6 +1,6 @@
 import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
-import {MatProgressBarModule} from '@angular/material/progress-bar';
+import {MatProgressBarModule} from '@angular/material/mdc-progress-bar';
 import {MatSidenavModule} from '@angular/material/sidenav';
 import {RouterModule, Routes} from '@angular/router';
 import {DcnCollectiveStats} from 'org_xprof/frontend/app/components/dcn_collective_stats/dcn_collective_stats';
