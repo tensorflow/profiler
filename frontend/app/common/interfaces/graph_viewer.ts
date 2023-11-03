@@ -16,4 +16,5 @@ export declare interface GraphViewerQueryParams {
   show_metadata: boolean;
   merge_fusion: boolean;
   program_id?: string;
+  graph_type?: string;
 }
