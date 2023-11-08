@@ -18,6 +18,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import gzip
 import json
 import logging
 import os
@@ -252,7 +253,9 @@ def respond(body, content_type, code=200, content_encoding=None):
     content_type: Response content-type (`str`); use `application/json` to
       automatically serialize structures.
     code: HTTP status code (`int`).
-    content_encoding: Response Content-Encoding header ('str'); e.g. 'gzip'.
+    content_encoding: Response Content-Encoding header ('str'); e.g. 'gzip'. If
+      the content type is not set, The data would be compressed and the content
+      encoding would be set to gzip.
 
   Returns:
     A `werkzeug.wrappers.BaseResponse` object.
@@ -297,6 +300,9 @@ def respond(body, content_type, code=200, content_encoding=None):
   ]
   if content_encoding:
     headers.append(('Content-Encoding', content_encoding))
+  else:
+    headers.append(('Content-Encoding', 'gzip'))
+    body = gzip.compress(body)
   return wrappers.Response(
       body, content_type=content_type, status=code, headers=headers)
 
