@@ -1,6 +1,6 @@
-import { InputPipelineDataTable, InputPipelineDeviceAnalysisOrNull, InputPipelineHostAnalysisOrNull, SimpleDataTableOrNull } from 'org_xprof/frontend/app/common/interfaces/data_table';
-import { Diagnostics } from 'org_xprof/frontend/app/common/interfaces/diagnostics';
-import { parseDiagnosticsDataTable } from 'org_xprof/frontend/app/common/utils/utils';
+import {DEFAULT_SIMPLE_DATA_TABLE, InputPipelineDataTable, InputPipelineDeviceAnalysisOrNull, InputPipelineHostAnalysisOrNull, SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
+import {parseDiagnosticsDataTable} from 'org_xprof/frontend/app/common/utils/utils';
 
 const COLUMN_ID_DEVICE_ANALYSIS = 'stepnum';
 const COLUMN_ID_HOST_ANALYSIS = 'opName';
@@ -35,11 +35,11 @@ export class InputPipelineCommon {
   diagnostics: Diagnostics = { info: [], warnings: [], errors: [] };
 
   findAnalysisData(
-    data: InputPipelineDataTable[], columnId: string,
-    properties: string[] = []): InputPipelineDeviceAnalysisOrNull
-    | InputPipelineHostAnalysisOrNull | SimpleDataTableOrNull {
+      data: InputPipelineDataTable[], columnId: string,
+      properties: string[] = []): InputPipelineDeviceAnalysisOrNull
+      |InputPipelineHostAnalysisOrNull|SimpleDataTableOrNull {
     if (!data) {
-      return {};
+      return DEFAULT_SIMPLE_DATA_TABLE;
     }
     for (let i = 0; i < data.length; i++) {
       const analysis = data[i];
@@ -61,7 +61,7 @@ export class InputPipelineCommon {
         }
       }
     }
-    return {};
+    return DEFAULT_SIMPLE_DATA_TABLE;
   }
 
   updateHasDeviceAanlysisRows() {

@@ -1,6 +1,6 @@
 import {Component} from '@angular/core';
 import {Store} from '@ngrx/store';
-
+import {DEFAULT_SIMPLE_DATA_TABLE} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {addAnchorTag, convertKnownToolToAnchorTag} from 'org_xprof/frontend/app/common/utils/utils';
 import {setCurrentToolStateAction} from 'org_xprof/frontend/app/store/actions';
 
@@ -68,7 +68,7 @@ export class RecommendationResultView extends RecommendationResultViewCommon {
   }
 
    parseTips() {
-    const data = this.recommendationResult || {};
+    const data = this.recommendationResult || DEFAULT_SIMPLE_DATA_TABLE;
     const hostTips: string[] = [];
     const deviceTips: string[] = [];
     const documentationTips: string[] = [];

@@ -4,59 +4,40 @@ import * as memoryViewerPreprocess from 'org_xprof/frontend/app/common/interface
 import * as opProfileProto from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
 import * as diagnosticsProto from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 
-/** The base interface for a table filter.  */
-export declare interface Filter {
-  column: number;
-  value: string|number;
-  test?: (value: string) => boolean;
-}
-
-/** The base interface for a cell.  */
-declare interface Cell<T> {
-  v?: T;
-  p?: {[key: string]: T};
-}
-
-/** All cell type. */
-export type DataTableCell = Cell<DataTableCellValue>;
+/** Constant of empty data in SimpleDataTable typing */
+export const DEFAULT_SIMPLE_DATA_TABLE = {
+  cols: [],
+  rows: [],
+  p: {},
+};
 
 /** All cell value type */
 export type DataTableCellValue = string|number|boolean;
 
-/** The base interface for a column. */
-export declare interface DataTableColumn {
-  id?: string;
-  label?: string;
-  type?: string;
-  p?: {[propertyKey: string]: string|boolean};
-}
-
-/** The base interface for a row value. */
-export declare interface DataTableRow {
-  c?: DataTableCell[];
-}
-
-/** The base interface for an empty property. */
-declare interface EmptyProperty {}
+/** The base interface for a table filter.  */
+export declare interface Filter extends
+    google.visualization.DataTableCellFilter {}
 
 /** The base interface for a genreal property object. */
+// Make the property k-v pair more general, note:
+// (1) value is always string
+// (2) Frontend should be responsible of correct key reference
+// and always have a default value fallback
 declare interface GeneralProperty {
   [key: string]: string;
 }
 
 /** The base interface for data table without perperty. */
-export declare interface SimpleDataTable {
-  cols?: DataTableColumn[];
-  rows?: DataTableRow[];
-  p?: EmptyProperty;
-}
+// We still needs this wrapper over gviz typing because our `p` is optional,
+// which is the contract between Xprof FE and BE (API implementation also has p
+// as optional)
+// We partially extends the gviz interface to enable that
+export interface SimpleDataTable extends
+    Partial<google.visualization.DataObject> {}
 
 /** The base interface for data table with. */
-export declare interface GeneralDataTable {
-  cols?: DataTableColumn[];
-  rows?: DataTableRow[];
-  p?: GeneralProperty;
-}
+// TODO (yinzz) merge SimpleDataTable and GeneralDataTable
+export declare interface GeneralDataTable extends SimpleDataTable {}
 
 /** The data table type for data table without perperty or null. */
 export type SimpleDataTableOrNull = SimpleDataTable|null;
@@ -72,10 +53,8 @@ declare interface MetaHostOpTableProperty {
 /* tslint:enable */
 
 /** The base interface for meta host-op table. */
-export declare interface MetaHostOpTable {
-  cols?: DataTableColumn[];
-  rows?: DataTableRow[];
-  p: MetaHostOpTableProperty;
+export declare interface MetaHostOpTable extends SimpleDataTable {
+  p?: MetaHostOpTableProperty;
 }
 
 /** MetaHostOpTable type or Null. */
@@ -89,23 +68,15 @@ declare interface HostOpTableProperty {
 }
 
 /** The base interface for host-op table. */
-export declare interface HostOpTable {
-  cols?: DataTableColumn[];
-  rows?: DataTableRow[];
-  p: HostOpTableProperty;
+export declare interface HostOpTable extends SimpleDataTable {
+  p?: HostOpTableProperty;
 }
 
 /** HostOpTable type or Null. */
 export type HostOpTableOrNull = HostOpTable|null;
 
 /** The base interface for a general analysis. */
-export declare interface GeneralAnalysis {
-  cols?: DataTableColumn[];
-  rows?: DataTableRow[];
-  // Make the property k-v pair more general, note:
-  // (1) value is always string
-  // (2) Frontend should be responsible of correct key reference
-  // and always have a default value fallback
+export declare interface GeneralAnalysis extends SimpleDataTable {
   p?: GeneralProperty;
 }
 
@@ -113,13 +84,7 @@ export declare interface GeneralAnalysis {
 export type GeneralAnalysisOrNull = GeneralAnalysis|null;
 
 /** The base interface for an input pipeline analysis. */
-export declare interface InputPipelineAnalysis {
-  cols?: DataTableColumn[];
-  rows?: DataTableRow[];
-  // Make the property k-v pair more general, note:
-  // (1) value is always string
-  // (2) Frontend should be responsible of correct key reference
-  // and always have a default value fallback
+export declare interface InputPipelineAnalysis extends SimpleDataTable {
   p?: GeneralProperty;
 }
 
@@ -150,9 +115,7 @@ declare interface RunEnvironmentProperty {
 /* tslint:enable */
 
 /** The base interface for a run environment. */
-export declare interface RunEnvironment {
-  cols?: DataTableColumn[];
-  rows?: DataTableRow[];
+export declare interface RunEnvironment extends SimpleDataTable {
   p?: RunEnvironmentProperty;
 }
 
@@ -178,9 +141,7 @@ declare interface RecommendationResultProperty {
 /* tslint:enable */
 
 /** The base interface for a recommendation result. */
-export declare interface RecommendationResult {
-  cols?: DataTableColumn[];
-  rows?: DataTableRow[];
+export declare interface RecommendationResult extends SimpleDataTable {
   p?: RecommendationResultProperty;
 }
 
@@ -207,9 +168,8 @@ declare interface NormalizedAcceleratorPerformanceProperty {
 /* tslint:enable */
 
 /** The base interface for a normalized accelerator performance. */
-export declare interface NormalizedAcceleratorPerformance {
-  cols?: DataTableColumn[];
-  rows?: DataTableRow[];
+export declare interface NormalizedAcceleratorPerformance extends
+    SimpleDataTable {
   p?: NormalizedAcceleratorPerformanceProperty;
 }
 
@@ -236,9 +196,7 @@ declare interface InputPipelineHostAnalysisProperty {
 /* tslint:enable */
 
 /** The base interface for an input pipeline host-side analysis. */
-export declare interface InputPipelineHostAnalysis {
-  cols?: DataTableColumn[];
-  rows?: DataTableRow[];
+export declare interface InputPipelineHostAnalysis extends SimpleDataTable {
   p?: InputPipelineHostAnalysisProperty;
 }
 
@@ -267,9 +225,7 @@ declare interface TensorflowStatsProperty {
 /* tslint:enable */
 
 /** The base interface for a tensorflow stats. */
-export declare interface TensorflowStatsData {
-  cols?: DataTableColumn[];
-  rows?: DataTableRow[];
+export declare interface TensorflowStatsData extends SimpleDataTable {
   p?: TensorflowStatsProperty;
 }
 
@@ -426,9 +382,7 @@ declare interface TfFunctionExplanationTableProperty {
 /* tslint:enable */
 
 /** The explanation table in tf-function stats. */
-export declare interface TfFunctionExplanationTable {
-  cols?: DataTableColumn[];
-  rows?: DataTableRow[];
+export declare interface TfFunctionExplanationTable extends SimpleDataTable {
   p?: TfFunctionExplanationTableProperty;
 }
 
@@ -443,10 +397,8 @@ declare interface TfFunctionDataTableProperty {
 /* tslint:enable */
 
 /** The function table in tf-function stats. */
-export declare interface TfFunctionDataTable {
-  cols: DataTableColumn[];
-  rows: DataTableRow[];
-  p: TfFunctionDataTableProperty;
+export declare interface TfFunctionDataTable extends SimpleDataTable {
+  p?: TfFunctionDataTableProperty;
 }
 
 /** The function table in tf-function stats or null. */
@@ -469,9 +421,19 @@ export type PodViewerDatabaseOrNull = PodViewerDatabase|null;
 /** The data types with number, string, or undefined. */
 export type PrimitiveTypeNumberStringOrUndefined = number|string|undefined;
 
-/** All data table type. */
+/** All data type from tool response data. */
 export type DataTable =
-    OverviewDataTable[]|InputPipelineDataTable[]|TensorflowStatsData[]|
-    hloProto.HloProto|memoryViewerPreprocess.PreprocessResult|
+    SimpleDataTable|OverviewDataTable[]|InputPipelineDataTable[]|
+    TensorflowStatsData[]|hloProto.HloProto|
+    memoryViewerPreprocess.PreprocessResult|
     memoryProfileProto.MemoryProfile|opProfileProto.Profile|PodViewerDatabase|
     null;
+
+/**
+ * All DataTable types extended from google.visualization.DataTable.
+ */
+export type DataTableUnion =
+    SimpleDataTable|TensorflowStatsData|TfFunctionExplanationTable|
+    TfFunctionDataTable|MetaHostOpTable|HostOpTable|GeneralDataTable|
+    GeneralAnalysis|InputPipelineAnalysis|InputPipelineHostAnalysis|
+    RunEnvironment|RecommendationResult|RecommendationResult;

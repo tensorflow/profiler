@@ -97,6 +97,7 @@ ts_library(
         ":memory_viewer_preprocess_proto_defs",
         ":op_profile_proto_defs",
         ":xla_proto_defs",
+        "@npm//@types/google.visualization",
     ],
 )
 

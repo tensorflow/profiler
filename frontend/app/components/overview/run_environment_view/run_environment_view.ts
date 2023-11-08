@@ -1,6 +1,5 @@
 import {Component, Input} from '@angular/core';
-
-import {RunEnvironment} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {DEFAULT_SIMPLE_DATA_TABLE, RunEnvironment} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 /** A run environment view component. */
 @Component({
@@ -12,7 +11,7 @@ export class RunEnvironmentView {
   /** The run environment data. */
   @Input()
   set runEnvironment(data: RunEnvironment|null) {
-    data = data || {};
+    data = data || DEFAULT_SIMPLE_DATA_TABLE;
     data.p = data.p || {};
     this.deviceCoreCount = data.p.device_core_count || '';
     this.deviceType = data.p.device_type || '';

@@ -1,6 +1,5 @@
 import {Component, Input} from '@angular/core';
-
-import {NormalizedAcceleratorPerformanceOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {DEFAULT_SIMPLE_DATA_TABLE, NormalizedAcceleratorPerformanceOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 /** A normalized accelerator performance view component. */
 @Component({
@@ -13,7 +12,7 @@ export class NormalizedAcceleratorPerformanceView {
   @Input()
   set normalizedAcceleratorPerformance(
       data: NormalizedAcceleratorPerformanceOrNull) {
-    data = data || {};
+    data = data || DEFAULT_SIMPLE_DATA_TABLE;
     data.p = data.p || {};
 
     this.backgroundInfos = [];

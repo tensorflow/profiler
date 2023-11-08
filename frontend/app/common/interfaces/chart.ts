@@ -1,4 +1,4 @@
-import {SimpleDataTableOrNull} from './data_table';
+import {DataTableUnion} from './data_table';
 
 /** The enumerator for Google Chart type. */
 export const enum ChartType {
@@ -47,7 +47,7 @@ export type DataTableOrDataViewOrNull =
 
 /** The base interface for an information of chart data. */
 export interface ChartDataInfo {
-  data: SimpleDataTableOrNull|Array<Array<(string | number)>>;
+  data: DataTableUnion|Array<Array<(string | number)>>|null;
   dataProvider: ChartDataProvider;
   filters?: google.visualization.DataTableCellFilter[];
   options?: ChartOptions;
@@ -58,7 +58,7 @@ export interface ChartDataInfo {
 export interface ChartDataProvider {
   setChart(chart: ChartClass): void;
   // Create a DataTable from JSON data or arrays.
-  parseData(data: SimpleDataTableOrNull|Array<Array<(string | number)>>): void;
+  parseData(data: DataTableUnion|Array<Array<(string | number)>>|null): void;
   setFilters(filters: google.visualization.DataTableCellFilter[]): void;
   process(): DataTableOrDataViewOrNull;
   // When using the chart function in customChartDataProcessor, get the chart

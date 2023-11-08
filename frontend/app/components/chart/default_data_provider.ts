@@ -1,6 +1,6 @@
 import {EventEmitter} from '@angular/core';
 import {ChartClass, ChartDataProvider, ChartOptions, DataTableOrDataViewOrNull} from 'org_xprof/frontend/app/common/interfaces/chart';
-import {DataTableRow, SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 /** A default chart data provider. */
 export class DefaultDataProvider implements ChartDataProvider {
@@ -102,7 +102,7 @@ export class ReplicaGroupDataProvider extends DefaultDataProvider {
   selfTimeIndex?: number;    // 'total_self_time' column
 
    parseData(data: SimpleDataTable) {
-    const rowWithReplicaGroups: DataTableRow[] = [];
+    const rowWithReplicaGroups: google.visualization.DataObjectRow[] = [];
 
     if (!data || !data.cols || !data.rows) return;
 
@@ -126,7 +126,7 @@ export class ReplicaGroupDataProvider extends DefaultDataProvider {
     // replica groups.
     for (const row of data.rows) {
       if (row?.c) {
-        const hloOpName = row.c[this.hloOpNameIndex].v;
+        const hloOpName = row.c[this.hloOpNameIndex]?.v;
 
         if (typeof hloOpName !== 'string') return;
 

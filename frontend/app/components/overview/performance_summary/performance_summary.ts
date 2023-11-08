@@ -1,5 +1,5 @@
 import {Component, Input, OnChanges, OnInit, SimpleChanges} from '@angular/core';
-import {DataTableCell, GeneralAnalysis, InputPipelineAnalysis} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {GeneralAnalysis, InputPipelineAnalysis} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {GeneralProps, SummaryInfo, SummaryInfoConfig} from 'org_xprof/frontend/app/common/interfaces/summary_info';
 
 /**
@@ -248,7 +248,7 @@ export class PerformanceSummary implements OnChanges, OnInit {
 
   readSummaryInfoFromConfig(
       config: SummaryInfoConfig, props: GeneralProps,
-      customInput?: DataTableCell[]): SummaryInfo|null {
+      customInput?: google.visualization.DataObjectCell[]): SummaryInfo|null {
     if (config.trainingOnly && this.isInference) return null;
     if (config.inferenceOnly && !this.isInference) return null;
 
@@ -301,7 +301,7 @@ export class PerformanceSummary implements OnChanges, OnInit {
   parseDataFromConfig(
       summaryConfigs: SummaryInfoConfig[]|undefined, props: GeneralProps,
       summaryInfoCombined: SummaryInfo[], level = 0,
-      customInput?: DataTableCell[]) {
+      customInput?: google.visualization.DataObjectCell[]) {
     if (!summaryConfigs) return;
     summaryConfigs.forEach((config: SummaryInfoConfig) => {
       const summaryInfo =

@@ -108,7 +108,7 @@ export class ProgramOrderChart implements OnChanges, OnInit {
 
     this.activeChartDataInfo = {
       ...this.activeChartDataInfo,
-      data: dataTable.toJSON() as SimpleDataTableOrNull,
+      data: JSON.parse(dataTable.toJSON()) as SimpleDataTableOrNull,
       options,
     };
   }
@@ -160,7 +160,7 @@ export class ProgramOrderChart implements OnChanges, OnInit {
 
     this.heapChartDataInfo = {
       ...this.heapChartDataInfo,
-      data: dataTable.toJSON() as SimpleDataTableOrNull,
+      data: JSON.parse(dataTable.toJSON()) as SimpleDataTableOrNull,
       options,
     };
   }
@@ -219,7 +219,7 @@ export class ProgramOrderChart implements OnChanges, OnInit {
 
     this.peakChartDataInfo = {
       ...this.peakChartDataInfo,
-      data: dataTable.toJSON() as SimpleDataTableOrNull,
+      data: JSON.parse(dataTable.toJSON()) as SimpleDataTableOrNull,
       options,
     };
   }

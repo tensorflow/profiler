@@ -1,7 +1,7 @@
 import {PlatformLocation} from '@angular/common';
 import {HttpClient, HttpParams} from '@angular/common/http';
 import {Injectable} from '@angular/core';
-import {API_PREFIX, CAPTURE_PROFILE_API, DATA_API, HOSTS_API, LOCAL_URL, PLUGIN_NAME, RUNS_API, RUN_TOOLS_API} from 'org_xprof/frontend/app/common/constants/constants';
+import {API_PREFIX, CAPTURE_PROFILE_API, DATA_API, HOSTS_API, LOCAL_URL, PLUGIN_NAME, RUN_TOOLS_API, RUNS_API} from 'org_xprof/frontend/app/common/constants/constants';
 import {CaptureProfileOptions, CaptureProfileResponse} from 'org_xprof/frontend/app/common/interfaces/capture_profile';
 import {DataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {Observable, of} from 'rxjs';

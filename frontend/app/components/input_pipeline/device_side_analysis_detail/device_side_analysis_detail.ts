@@ -1,6 +1,6 @@
 import {Component, Input, OnChanges, SimpleChanges} from '@angular/core';
 import {ChartDataInfo} from 'org_xprof/frontend/app/common/interfaces/chart';
-import {InputPipelineDeviceAnalysisOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {DEFAULT_SIMPLE_DATA_TABLE, InputPipelineDeviceAnalysisOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 import {DeviceSideAnalysisDetailDataProvider} from './device_side_analysis_detail_data_provider';
 
@@ -65,7 +65,7 @@ export class DeviceSideAnalysisDetail implements OnChanges {
   @Input()
   set deviceAnalysis(analysis: InputPipelineDeviceAnalysisOrNull) {
     this.inputPipelineDeviceAnalysis = analysis;
-    analysis = analysis || {};
+    analysis = analysis || DEFAULT_SIMPLE_DATA_TABLE;
     analysis.p = analysis.p || {};
     if (!analysis.rows || analysis.rows.length === 0) {
       return;

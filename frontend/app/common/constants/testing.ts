@@ -1,4 +1,4 @@
-import {DataTableCell, DataTableCellValue, DataTableColumn, DataTableRow, Filter, GeneralDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {DataTableCellValue, GeneralDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 class DataTableForTesting {
   // Note the constructor takes a js object (not a literal string)
@@ -101,7 +101,8 @@ class DataTableForTesting {
     }
     return this.data.p[propName];
   }
-  getFilteredRows(filters: Filter[]): number[] {
+  getFilteredRows(filters: google.visualization.DataTableCellFilter[]):
+      number[] {
     if (!this.data || !this.data.rows) {
       return [];
     }
@@ -134,7 +135,7 @@ class DataTableForTesting {
   setColumn() {}
   setValue() {}
   setCell() {}
-  addRow(row: DataTableCell[]|DataTableCellValue[]) {
+  addRow(row: google.visualization.DataObjectCell[]|DataTableCellValue[]) {
     this.data?.rows?.push({c: []});
     if (!row) return;
     row.forEach(colVal => {
@@ -142,7 +143,8 @@ class DataTableForTesting {
         this.data?.rows?.slice(-1)[0].c?.push(
             {v: colVal as DataTableCellValue});
       } else {
-        this.data?.rows?.slice(-1)[0].c?.push(colVal as DataTableCell);
+        this.data?.rows?.slice(-1)[0].c?.push(
+            colVal as google.visualization.DataObjectCell);
       }
     });
   }
@@ -237,17 +239,18 @@ class DataViewForTesting {
   getSortedRows(sortColumnIdxes: number[] = []) {
     return [];
   }
-  getFilteredRows(filters: Filter[]): number[] {
+  getFilteredRows(filters: google.visualization.DataTableCellFilter[]):
+      number[] {
     return [];
   }
   toDataTable() {
     return new DataTableForTesting({
       cols: this.table?.data?.cols?.filter(
-                (col: DataTableColumn, index: number) =>
+                (col: google.visualization.DataObjectColumn, index: number) =>
                     this.visCols.includes(index)) ||
           [],
       rows: this.table?.data?.rows?.filter(
-                (row: DataTableRow, index: number) =>
+                (row: google.visualization.DataObjectRow, index: number) =>
                     this.visRows.includes(index)) ||
           [],
       p: this.table?.data?.p || {},

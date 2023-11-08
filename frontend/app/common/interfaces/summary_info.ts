@@ -1,5 +1,3 @@
-import {DataTableCell} from './data_table';
-
 /** The base interface for a information of performance summary view. */
 export interface SummaryInfo {
   level?: number;  // Top level metric is level 1, use to control styles
@@ -33,9 +31,10 @@ export interface SummaryInfoConfig {
   childrenInfoConfig?: SummaryInfoConfig[];
   // custom callback to read value
   // valueKey and getValue are mutual exclusive
-  getValue?: (arg: DataTableCell[]) => string;
+  getValue?: (arg: google.visualization.DataObjectCell[]) => string;
   // custom callback function to get a nested metrics list
-  getChildValues?: (arg: GeneralProps|DataTableCell[]) => string[];
+  getChildValues?: (arg: GeneralProps|
+                    google.visualization.DataObjectCell[]) => string[];
   unit?: string;
   valueColor?: string;
   trainingOnly?: boolean;

@@ -1,6 +1,7 @@
 import {Store} from '@ngrx/store';
 import {Node as OpProfileNode} from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
-import {PodStatsRecord, SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {ChartDataInfo} from 'org_xprof/frontend/app/common/interfaces/chart';
+import {DataTableUnion, PodStatsRecord, SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
 
@@ -382,4 +383,18 @@ export function bytesToGiBs(stat: string|number|undefined) {
 export function picoToMilli(timePs: string|undefined) {
   if (!Number(timePs)) return 0;
   return Number(timePs) / Math.pow(10, 9);
+}
+
+/**
+ * Helper function to construct dataInfo given vague data type.
+ * Need this because response data type from getData / getDataTable varies
+ * But ChartDataInfo's data field has more strict typing restriction
+ */
+// tslint:disable-next-line:no-any
+export function addDataToDataInfo(dataInfo: ChartDataInfo, data: any) {
+  const isOneOfDataTableUnion = data && data.cols && data.rows;
+  return {
+    ...dataInfo,
+    data: isOneOfDataTableUnion ? (data as DataTableUnion) : null,
+  };
 }

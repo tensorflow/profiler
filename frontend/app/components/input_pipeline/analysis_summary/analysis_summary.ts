@@ -1,6 +1,5 @@
 import {Component, Input} from '@angular/core';
-
-import {InputPipelineDeviceAnalysis} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {DEFAULT_SIMPLE_DATA_TABLE, InputPipelineDeviceAnalysis} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 /** A summary of input pipeline analysis component. */
 @Component({
@@ -12,7 +11,7 @@ export class AnalysisSummary {
   /** The input pipeline device anaysis data. */
   @Input()
   set deviceAnalysis(analysis: InputPipelineDeviceAnalysis|null) {
-    analysis = analysis || {};
+    analysis = analysis || DEFAULT_SIMPLE_DATA_TABLE;
     analysis.p = analysis.p || {};
     this.inputConclusion = analysis.p['input_conclusion'] || '';
     this.summaryNextstep =

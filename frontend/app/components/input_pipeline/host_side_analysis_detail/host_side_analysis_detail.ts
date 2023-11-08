@@ -1,6 +1,6 @@
 import {Component, Input, OnChanges, OnInit, SimpleChanges} from '@angular/core';
 import {ChartDataInfo} from 'org_xprof/frontend/app/common/interfaces/chart';
-import {InputPipelineHostAnalysisOrNull, SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {DEFAULT_SIMPLE_DATA_TABLE, InputPipelineHostAnalysisOrNull, SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {TABLE_OPTIONS} from 'org_xprof/frontend/app/components/chart/chart_options';
 import {ArrayDataProvider} from 'org_xprof/frontend/app/components/chart/default_data_provider';
 
@@ -19,7 +19,7 @@ export class HostSideAnalysisDetail implements OnInit, OnChanges {
   /** The recommendation data. */
   @Input()
   set recommendation(data: SimpleDataTableOrNull) {
-    data = data || {};
+    data = data || DEFAULT_SIMPLE_DATA_TABLE;
     data.rows = data.rows || [];
     data.rows.forEach(row => {
       if (row.c && row.c[0] && row.c[0].v) {
