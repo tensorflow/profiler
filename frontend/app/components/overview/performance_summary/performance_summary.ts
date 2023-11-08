@@ -24,6 +24,8 @@ import {GeneralProps, SummaryInfo, SummaryInfoConfig} from 'org_xprof/frontend/a
  * 3. Values are by default read from k-v pairs, we can also use a custom
  * callback function (eg. getChildValues) to read data into the propertyValues
  * as a string list.
+ * 4. If `customInput` is specified when calling `parseDataFromConfig`, it will
+ * be used as input to callback function `getValue` or `getChildValues`.
  */
 
 /** Generic summary info, display on top of the list */
@@ -273,8 +275,9 @@ export class PerformanceSummary implements OnChanges, OnInit {
       value = config.getValue(customInput);
       valueStr = `${value} ${config.unit || ''}`;
     }
-    const propertyValues =
-        config.getChildValues ? config.getChildValues(props) : [];
+    const propertyValues = config.getChildValues ?
+        config.getChildValues(customInput || props) :
+        [];
     const childrenInfoCombined: SummaryInfo[] = [];
     if (config.childrenInfoConfig) {
       this.parseDataFromConfig(
