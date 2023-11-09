@@ -1,8 +1,8 @@
-import {DataTableCellValue, GeneralDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {DataTableCellValue, SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 class DataTableForTesting {
   // Note the constructor takes a js object (not a literal string)
-  constructor(public data: GeneralDataTable = {cols: [], rows: [], p: {}}) {}
+  constructor(public data: SimpleDataTable = {cols: [], rows: [], p: {}}) {}
   addColumn(type: string, label?: string, id?: string) {
     this.data?.cols?.push({type, label, id});
   }
@@ -276,7 +276,8 @@ export const GVIZ_FOR_TESTING = {
     NumberFormat: () => {
       return {format: () => {}};
     },
-    DataTable: (data: GeneralDataTable = {
+    /* tslint:disable-next-line enforce-name-casing */
+    DataTable: (data: SimpleDataTable = {
       cols: [],
       rows: [],
       p: {}

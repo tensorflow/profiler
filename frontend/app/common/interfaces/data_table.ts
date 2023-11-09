@@ -35,10 +35,6 @@ declare interface GeneralProperty {
 export interface SimpleDataTable extends
     Partial<google.visualization.DataObject> {}
 
-/** The base interface for data table with. */
-// TODO (yinzz) merge SimpleDataTable and GeneralDataTable
-export declare interface GeneralDataTable extends SimpleDataTable {}
-
 /** The data table type for data table without perperty or null. */
 export type SimpleDataTableOrNull = SimpleDataTable|null;
 
@@ -432,8 +428,7 @@ export type DataTable =
 /**
  * All DataTable types extended from google.visualization.DataTable.
  */
-export type DataTableUnion =
-    SimpleDataTable|TensorflowStatsData|TfFunctionExplanationTable|
-    TfFunctionDataTable|MetaHostOpTable|HostOpTable|GeneralDataTable|
+export type DataTableUnion = SimpleDataTable|TensorflowStatsData|
+    TfFunctionExplanationTable|TfFunctionDataTable|MetaHostOpTable|HostOpTable|
     GeneralAnalysis|InputPipelineAnalysis|InputPipelineHostAnalysis|
     RunEnvironment|RecommendationResult|RecommendationResult;
