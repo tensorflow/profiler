@@ -1,4 +1,4 @@
-import {ChartDataProvider, CustomChartDataProcessor, DataTableOrDataViewOrNull} from 'org_xprof/frontend/app/common/interfaces/chart';
+import {ChartDataProvider, CustomChartDataProcessor, DataTableOrDataView} from 'org_xprof/frontend/app/common/interfaces/chart';
 
 /** A custom chart data processor with support for extra filters. */
 export class FilterDataProcessor implements CustomChartDataProcessor {
@@ -14,7 +14,7 @@ export class FilterDataProcessor implements CustomChartDataProcessor {
     this.extraFilters = filters;
   }
 
-  process(dataProvider: ChartDataProvider): DataTableOrDataViewOrNull {
+  process(dataProvider: ChartDataProvider): DataTableOrDataView|null {
     if (!dataProvider) {
       return null;
     }

@@ -1,7 +1,7 @@
 import {Component, OnDestroy} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {Store} from '@ngrx/store';
-import {SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import {Dashboard} from 'org_xprof/frontend/app/components/chart/dashboard/dashboard';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
@@ -95,23 +95,30 @@ export class TfDataBottleneckAnalysis extends Dashboard implements OnDestroy {
           }));
 
           if (data) {
-            const d = data as SimpleDataTableOrNull[];
-            this.parseData(d[EVENT_DATA_INDEX]);
-            this.styleOrgChart();
-            this.summaryDataTable =
-                new google.visualization.DataTable(d[SUMMARY_DATA_INDEX]);
-            this.summaryDataView =
-                new google.visualization.DataView(this.summaryDataTable);
-            this.bottleneckDataTable =
-                new google.visualization.DataTable(d[BOTTLENECK_DATA_INDEX]);
-            this.bottleneckDataView =
-                new google.visualization.DataView(this.bottleneckDataTable);
-            if (this.bottleneckDataTable.getTableProperty(
-                    IS_INPUT_BOUND_TABLE_PROPERTY_NAME) === TRUE_STR) {
-              this.isInputBound = true;
+            const d = data as SimpleDataTable[] | null;
+            if (!d) return;
+            if (d.hasOwnProperty(EVENT_DATA_INDEX)) {
+              this.parseData(d[EVENT_DATA_INDEX]);
+              this.styleOrgChart();
             }
-            this.summaryMessage = this.bottleneckDataTable.getTableProperty(
-                SUMMARY_MESSAGE_TABLE_PROPERTY_NAME);
+            if (d.hasOwnProperty(SUMMARY_DATA_INDEX)) {
+              this.summaryDataTable =
+                  new google.visualization.DataTable(d[SUMMARY_DATA_INDEX]);
+              this.summaryDataView =
+                  new google.visualization.DataView(this.summaryDataTable);
+            }
+            if (d.hasOwnProperty(BOTTLENECK_DATA_INDEX)) {
+              this.bottleneckDataTable =
+                  new google.visualization.DataTable(d[BOTTLENECK_DATA_INDEX]);
+              this.bottleneckDataView =
+                  new google.visualization.DataView(this.bottleneckDataTable);
+              if (this.bottleneckDataTable.getTableProperty(
+                      IS_INPUT_BOUND_TABLE_PROPERTY_NAME) === TRUE_STR) {
+                this.isInputBound = true;
+              }
+              this.summaryMessage = this.bottleneckDataTable.getTableProperty(
+                  SUMMARY_MESSAGE_TABLE_PROPERTY_NAME);
+            }
           }
         });
   }

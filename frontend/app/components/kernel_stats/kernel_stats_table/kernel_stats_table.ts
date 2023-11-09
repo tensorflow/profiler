@@ -1,5 +1,5 @@
 import {Component, ElementRef, Input, OnChanges, OnInit, SimpleChanges, ViewChild} from '@angular/core';
-import {SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 declare interface KernelStatsColumn {
   rank: number;
@@ -37,7 +37,7 @@ const OP_NAME_COLUMN_ID = 'op_name';
 })
 export class KernelStatsTable implements OnChanges, OnInit {
   /** The kernel stats data. */
-  @Input() kernelStatsData: SimpleDataTableOrNull = null;
+  @Input() kernelStatsData: SimpleDataTable|null = null;
 
   @ViewChild('table', {static: false}) tableRef!: ElementRef;
 

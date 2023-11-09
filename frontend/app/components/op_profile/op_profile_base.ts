@@ -1,11 +1,11 @@
 import {Node} from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
-import {ProfileOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {OpProfileProto} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 import {OpProfileData} from './op_profile_data';
 
 /** Base class of Op Profile component. */
 export class OpProfileBase {
-  profile: ProfileOrNull = null;
+  profile: OpProfileProto|null = null;
   rootNode?: Node;
   data = new OpProfileData();
   hasMultiModules = false;
@@ -42,7 +42,7 @@ export class OpProfileBase {
     this.deviceType = this.profile.deviceType || 'TPU';
   }
 
-  parseData(data: ProfileOrNull) {
+  parseData(data: OpProfileProto|null) {
     this.profile = data;
     this.hasMultiModules =
         !!this.profile && !!this.profile.byCategory && !!this.profile.byProgram;

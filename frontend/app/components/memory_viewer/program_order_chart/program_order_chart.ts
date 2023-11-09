@@ -1,7 +1,7 @@
 import {Component, ElementRef, Input, OnChanges, OnInit, SimpleChanges, ViewChild} from '@angular/core';
 import {BufferAllocationInfo} from 'org_xprof/frontend/app/common/interfaces/buffer_allocation_info';
 import {ChartDataInfo, ChartType} from 'org_xprof/frontend/app/common/interfaces/chart';
-import {SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {DefaultDataProvider} from 'org_xprof/frontend/app/components/chart/default_data_provider';
 
 /** A program order chart view component. */
@@ -108,7 +108,7 @@ export class ProgramOrderChart implements OnChanges, OnInit {
 
     this.activeChartDataInfo = {
       ...this.activeChartDataInfo,
-      data: JSON.parse(dataTable.toJSON()) as SimpleDataTableOrNull,
+      data: JSON.parse(dataTable.toJSON()) as SimpleDataTable,
       options,
     };
   }
@@ -160,7 +160,7 @@ export class ProgramOrderChart implements OnChanges, OnInit {
 
     this.heapChartDataInfo = {
       ...this.heapChartDataInfo,
-      data: JSON.parse(dataTable.toJSON()) as SimpleDataTableOrNull,
+      data: JSON.parse(dataTable.toJSON()) as SimpleDataTable,
       options,
     };
   }
@@ -219,7 +219,7 @@ export class ProgramOrderChart implements OnChanges, OnInit {
 
     this.peakChartDataInfo = {
       ...this.peakChartDataInfo,
-      data: JSON.parse(dataTable.toJSON()) as SimpleDataTableOrNull,
+      data: JSON.parse(dataTable.toJSON()) as SimpleDataTable,
       options,
     };
   }

@@ -2,7 +2,7 @@ import {Component, OnDestroy} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {Store} from '@ngrx/store';
 import {ChartDataInfo} from 'org_xprof/frontend/app/common/interfaces/chart';
-import {SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import {TABLE_OPTIONS} from 'org_xprof/frontend/app/components/chart/chart_options';
 import {Dashboard} from 'org_xprof/frontend/app/components/chart/dashboard/dashboard';
@@ -65,12 +65,14 @@ export class DcnCollectiveStats extends Dashboard implements OnDestroy {
             }
           }));
 
-          const d = data as SimpleDataTableOrNull[];
-          this.parseData(d[DCN_COLLECTIVE_STATS_INDEX]);
-          this.dataInfo = {
-            ...this.dataInfo,
-            data: d[DCN_COLLECTIVE_STATS_INDEX],
-          };
+          const d = data as SimpleDataTable[] | null;
+          if (d && d.hasOwnProperty(DCN_COLLECTIVE_STATS_INDEX)) {
+            this.parseData(d[DCN_COLLECTIVE_STATS_INDEX]);
+            this.dataInfo = {
+              ...this.dataInfo,
+              data: d[DCN_COLLECTIVE_STATS_INDEX],
+            };
+          }
         });
   }
 

@@ -1,5 +1,5 @@
 import {AfterViewInit, Component, ElementRef, HostListener, Input, OnChanges, SimpleChanges, ViewChild} from '@angular/core';
-import {MemoryProfileProtoOrNull, MemoryProfileSnapshot} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {MemoryProfileProto, MemoryProfileSnapshot} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {bytesToGiBs, picoToMilli} from 'org_xprof/frontend/app/common/utils/utils';
 
 const MAX_CHART_WIDTH = 1500;
@@ -12,10 +12,10 @@ const MAX_CHART_WIDTH = 1500;
 })
 export class MemoryTimelineGraph implements AfterViewInit, OnChanges {
   /** The memory profile data. */
-  @Input() memoryProfileProtoOrNull: MemoryProfileProtoOrNull = null;
+  @Input() memoryProfileProto: MemoryProfileProto|null = null;
 
   /** The selected memory ID to show memory profile for. */
-  @Input() memoryId: string = '';
+  @Input() memoryId = '';
 
   @ViewChild('chart', {static: false}) chartRef!: ElementRef;
 
@@ -42,8 +42,8 @@ export class MemoryTimelineGraph implements AfterViewInit, OnChanges {
 
   drawChart() {
     if (!this.chartRef || !this.chart || this.memoryId === '' ||
-        !this.memoryProfileProtoOrNull ||
-        !this.memoryProfileProtoOrNull.memoryProfilePerAllocator) {
+        !this.memoryProfileProto ||
+        !this.memoryProfileProto.memoryProfilePerAllocator) {
       return;
     }
 
@@ -51,13 +51,13 @@ export class MemoryTimelineGraph implements AfterViewInit, OnChanges {
         Math.min(MAX_CHART_WIDTH, this.chartRef.nativeElement.offsetWidth);
 
     let snapshots =
-        this.memoryProfileProtoOrNull.memoryProfilePerAllocator[this.memoryId]
+        this.memoryProfileProto.memoryProfilePerAllocator[this.memoryId]
             .memoryProfileSnapshots;
     // If version is set to 1, this means the backend is using the new snapshot
     // sampling algorithm, timeline data is stored in sampledTimelineSnapshots.
-    if (this.memoryProfileProtoOrNull.version === 1) {
+    if (this.memoryProfileProto.version === 1) {
       snapshots =
-          this.memoryProfileProtoOrNull.memoryProfilePerAllocator[this.memoryId]
+          this.memoryProfileProto.memoryProfilePerAllocator[this.memoryId]
               .sampledTimelineSnapshots;
     }
 

@@ -1,7 +1,7 @@
 import {Component, OnDestroy} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {Store} from '@ngrx/store';
-import {MemoryViewerPreprocessResultOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {MemoryViewerPreprocessResult} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
 import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
@@ -15,7 +15,7 @@ import {takeUntil} from 'rxjs/operators';
   styleUrls: ['./memory_viewer.scss']
 })
 export class MemoryViewer implements OnDestroy {
-  memoryViewerPreprocessResult: MemoryViewerPreprocessResultOrNull = null;
+  memoryViewerPreprocessResult: MemoryViewerPreprocessResult|null = null;
 
   /** Handles on-destroy Subject, used to unsubscribe. */
   private readonly destroyed = new ReplaySubject<void>(1);
@@ -50,7 +50,7 @@ export class MemoryViewer implements OnDestroy {
           }));
           if (!data) return;
           this.memoryViewerPreprocessResult =
-              data as MemoryViewerPreprocessResultOrNull;
+              data as MemoryViewerPreprocessResult | null;
         });
   }
 

@@ -1,7 +1,7 @@
 import {DataTableUnion} from './data_table';
 
 /** The enumerator for Google Chart type. */
-export const enum ChartType {
+export enum ChartType {
   UNKNOWN = '',
   AREA_CHART = 'AreaChart',
   BAR_CHART = 'BarChart',
@@ -41,9 +41,9 @@ export type ChartOptions = google.visualization.AreaChartOptions|
                            google.visualization.SteppedAreaChartOptions|
                            google.visualization.TableOptions;
 
-/** The data type of DataTable, DataView or null. */
-export type DataTableOrDataViewOrNull =
-    google.visualization.DataTable|google.visualization.DataView|null;
+/** The data type of DataTable, DataView. */
+export type DataTableOrDataView =
+    google.visualization.DataTable|google.visualization.DataView;
 
 /** The base interface for an information of chart data. */
 export interface ChartDataInfo {
@@ -60,7 +60,7 @@ export interface ChartDataProvider {
   // Create a DataTable from JSON data or arrays.
   parseData(data: DataTableUnion|Array<Array<(string | number)>>|null): void;
   setFilters(filters: google.visualization.DataTableCellFilter[]): void;
-  process(): DataTableOrDataViewOrNull;
+  process(): DataTableOrDataView|null;
   // When using the chart function in customChartDataProcessor, get the chart
   // through this function.
   getChart(): ChartClass|null;
@@ -72,5 +72,5 @@ export interface ChartDataProvider {
 
 /** The base interface for a class with custom process method. */
 export interface CustomChartDataProcessor {
-  process(dataProvider: ChartDataProvider): DataTableOrDataViewOrNull;
+  process(dataProvider: ChartDataProvider): DataTableOrDataView|null;
 }

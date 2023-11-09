@@ -1,5 +1,5 @@
 import {Component, Input} from '@angular/core';
-import {DEFAULT_SIMPLE_DATA_TABLE, NormalizedAcceleratorPerformanceOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {DEFAULT_SIMPLE_DATA_TABLE, NormalizedAcceleratorPerformance} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 /** A normalized accelerator performance view component. */
 @Component({
@@ -10,8 +10,8 @@ import {DEFAULT_SIMPLE_DATA_TABLE, NormalizedAcceleratorPerformanceOrNull} from 
 export class NormalizedAcceleratorPerformanceView {
   /** The run environment data. */
   @Input()
-  set normalizedAcceleratorPerformance(
-      data: NormalizedAcceleratorPerformanceOrNull) {
+  set normalizedAcceleratorPerformance(data: NormalizedAcceleratorPerformance|
+                                       null) {
     data = data || DEFAULT_SIMPLE_DATA_TABLE;
     data.p = data.p || {};
 

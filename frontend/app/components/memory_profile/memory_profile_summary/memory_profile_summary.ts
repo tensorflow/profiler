@@ -1,5 +1,5 @@
 import {AfterViewInit, ChangeDetectorRef, Component, Input, OnChanges, SimpleChanges} from '@angular/core';
-import {MemoryProfileProtoOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {MemoryProfileProto} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {humanReadableText} from 'org_xprof/frontend/app/common/utils/utils';
 
 /** A memory profile summary view component. */
@@ -10,10 +10,10 @@ import {humanReadableText} from 'org_xprof/frontend/app/common/utils/utils';
 })
 export class MemoryProfileSummary implements AfterViewInit, OnChanges {
   /** The memory profile summary data. */
-  @Input() data: MemoryProfileProtoOrNull = null;
+  @Input() data: MemoryProfileProto|null = null;
 
   /** The selected memory ID to show memory profile for. */
-  @Input() memoryId: string = '';
+  @Input() memoryId = '';
 
   constructor(private readonly changeDetector: ChangeDetectorRef) {}
 

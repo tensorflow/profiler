@@ -1,5 +1,5 @@
 import {EventEmitter} from '@angular/core';
-import {ChartClass, ChartDataProvider, ChartOptions, DataTableOrDataViewOrNull} from 'org_xprof/frontend/app/common/interfaces/chart';
+import {ChartClass, ChartDataProvider, ChartOptions, DataTableOrDataView} from 'org_xprof/frontend/app/common/interfaces/chart';
 import {SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 /** A default chart data provider. */
@@ -34,7 +34,7 @@ export class DefaultDataProvider implements ChartDataProvider {
     this.filters = filters;
   }
 
-  process(): DataTableOrDataViewOrNull {
+  process(): DataTableOrDataView|null {
     if (!this.dataTable) {
       return null;
     }

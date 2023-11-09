@@ -1,4 +1,4 @@
-import {ChartDataProvider, CustomChartDataProcessor, DataTableOrDataViewOrNull} from 'org_xprof/frontend/app/common/interfaces/chart';
+import {ChartDataProvider, CustomChartDataProcessor, DataTableOrDataView} from 'org_xprof/frontend/app/common/interfaces/chart';
 
 import {computeGroupView} from './table_utils';
 
@@ -9,7 +9,7 @@ export class CategoryTableDataProcessor implements CustomChartDataProcessor {
       private readonly gColumn: number, private readonly vColumn: number,
       private readonly showSingleCategory: boolean = true) {}
 
-  process(dataProvider: ChartDataProvider): DataTableOrDataViewOrNull {
+  process(dataProvider: ChartDataProvider): DataTableOrDataView|null {
     if (!dataProvider) {
       return null;
     }

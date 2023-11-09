@@ -1,5 +1,4 @@
-import * as preprocessedProto from 'org_xprof/frontend/app/common/interfaces/memory_viewer_preprocess.jsonpb_decls';
-import {MemoryViewerPreprocessResultOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {MemoryViewerPreprocessResult} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {HeapObject} from 'org_xprof/frontend/app/common/interfaces/heap_object';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 
@@ -42,8 +41,7 @@ export class MemoryUsage {
 
   // Only one of hloProto or preprocess is valid to construct MemoryUsage.
   constructor(
-      preprocess: MemoryViewerPreprocessResultOrNull,
-      memorySpaceColor: number) {
+      preprocess: MemoryViewerPreprocessResult|null, memorySpaceColor: number) {
     this.nColor = 0;
 
     this.peakHeapSizeBytes = 0;
@@ -85,8 +83,8 @@ export class MemoryUsage {
   /**
    * Initializes memory usage from precomputed results.
    */
-  private initMemoryUsageFromPrecomputed(
-      preprocess: preprocessedProto.PreprocessResult) {
+  private initMemoryUsageFromPrecomputed(preprocess:
+                                             MemoryViewerPreprocessResult) {
     // Copy the fields from preprocessed result.
     this.moduleName = preprocess.moduleName || '';
     this.timelineUrl = preprocess.allocationTimeline || '';

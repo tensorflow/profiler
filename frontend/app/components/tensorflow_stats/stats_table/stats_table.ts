@@ -1,6 +1,6 @@
 import {Component, Input, OnChanges, OnInit, SimpleChanges} from '@angular/core';
 import {ChartDataInfo} from 'org_xprof/frontend/app/common/interfaces/chart';
-import {TensorflowStatsDataOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {TensorflowStatsData} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 import {StatsTableDataProvider} from './stats_table_data_provider';
 
@@ -21,10 +21,10 @@ const TABLE_COLUMN_LABEL_OPERATION = 'Operation';
 })
 export class StatsTable implements OnChanges, OnInit {
   /** The tensorflow stats data. */
-  @Input() tensorflowStatsData: TensorflowStatsDataOrNull = null;
+  @Input() tensorflowStatsData: TensorflowStatsData|null = null;
 
   /** The tensorflow stats data for diff. */
-  @Input() diffData: TensorflowStatsDataOrNull = null;
+  @Input() diffData: TensorflowStatsData|null = null;
 
   /** Whether to use diff. */
   @Input() hasDiff = false;

@@ -1,8 +1,8 @@
-import {SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 /** State of common data store */
 export interface CommonDataStoreState {
-  kernelStatsData: SimpleDataTableOrNull;
+  kernelStatsData: SimpleDataTable|null;
 }
 
 /** Initial state object */

@@ -1,4 +1,4 @@
-import {ChartDataProvider, CustomChartDataProcessor, DataTableOrDataViewOrNull} from 'org_xprof/frontend/app/common/interfaces/chart';
+import {ChartDataProvider, CustomChartDataProcessor, DataTableOrDataView} from 'org_xprof/frontend/app/common/interfaces/chart';
 
 /** A xy table data processor. */
 export class XyTableDataProcessor implements CustomChartDataProcessor {
@@ -8,7 +8,7 @@ export class XyTableDataProcessor implements CustomChartDataProcessor {
       private readonly filters: google.visualization.DataTableCellFilter[],
       private readonly xColumn: number, private readonly yColumn: number) {}
 
-  process(dataProvider: ChartDataProvider): DataTableOrDataViewOrNull {
+  process(dataProvider: ChartDataProvider): DataTableOrDataView|null {
     if (!dataProvider) {
       return null;
     }

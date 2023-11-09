@@ -1,6 +1,6 @@
 import {Component, Input, OnChanges, OnInit, SimpleChanges} from '@angular/core';
 import {ChartDataInfo} from 'org_xprof/frontend/app/common/interfaces/chart';
-import {DEFAULT_SIMPLE_DATA_TABLE, InputPipelineHostAnalysisOrNull, SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {DEFAULT_SIMPLE_DATA_TABLE, InputPipelineHostAnalysis, SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {TABLE_OPTIONS} from 'org_xprof/frontend/app/components/chart/chart_options';
 import {ArrayDataProvider} from 'org_xprof/frontend/app/components/chart/default_data_provider';
 
@@ -14,11 +14,11 @@ import {HostSideAnalysisDetailTableDataProvider} from './host_side_analysis_deta
 })
 export class HostSideAnalysisDetail implements OnInit, OnChanges {
   /** The input pipeline host anaysis data. */
-  @Input() hostAnalysis: InputPipelineHostAnalysisOrNull = null;
+  @Input() hostAnalysis: InputPipelineHostAnalysis|null = null;
 
   /** The recommendation data. */
   @Input()
-  set recommendation(data: SimpleDataTableOrNull) {
+  set recommendation(data: SimpleDataTable|null) {
     data = data || DEFAULT_SIMPLE_DATA_TABLE;
     data.rows = data.rows || [];
     data.rows.forEach(row => {
@@ -74,7 +74,7 @@ export class HostSideAnalysisDetail implements OnInit, OnChanges {
     };
   }
 
-  parseColumnChartData(hostAnalysis: InputPipelineHostAnalysisOrNull) {
+  parseColumnChartData(hostAnalysis: InputPipelineHostAnalysis|null) {
     if (!hostAnalysis) {
       this.hasHostOps = false;
       return;

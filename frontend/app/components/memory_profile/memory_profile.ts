@@ -1,7 +1,7 @@
 import {Component, OnDestroy} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {Store} from '@ngrx/store';
-import {MemoryProfileProtoOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {MemoryProfileProto} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import {MemoryProfileBase} from 'org_xprof/frontend/app/components/memory_profile/memory_profile_base';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
@@ -53,7 +53,7 @@ export class MemoryProfile extends MemoryProfileBase implements OnDestroy {
               message: '',
             }
           }));
-          this.parseData(data as MemoryProfileProtoOrNull);
+          this.parseData(data as MemoryProfileProto | null);
         });
   }
 

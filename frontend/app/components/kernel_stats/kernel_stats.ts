@@ -1,6 +1,6 @@
 import {Component} from '@angular/core';
 import {Store} from '@ngrx/store';
-import {SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {getKernelStatsDataState} from 'org_xprof/frontend/app/store/common_data_store/selectors';
 
 /** A Kernel Stats component. */
@@ -10,17 +10,17 @@ import {getKernelStatsDataState} from 'org_xprof/frontend/app/store/common_data_
   styleUrls: ['./kernel_stats.css']
 })
 export class KernelStats {
-  data: SimpleDataTableOrNull = null;
+  data: SimpleDataTable|null = null;
   hasDataRow = false;
 
   constructor(store: Store<{}>) {
     store.select(getKernelStatsDataState)
-        .subscribe((data: SimpleDataTableOrNull) => {
+        .subscribe((data: SimpleDataTable|null) => {
           this.update(data);
         });
   }
 
-  update(data: SimpleDataTableOrNull) {
+  update(data: SimpleDataTable|null) {
     this.data = data;
     this.hasDataRow = !!(data) && !!(data.rows) && data.rows.length > 0;
   }

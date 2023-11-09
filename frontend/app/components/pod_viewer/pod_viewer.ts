@@ -1,7 +1,7 @@
 import {Component, OnDestroy} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {Store} from '@ngrx/store';
-import {PodViewerDatabaseOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {PodViewerDatabase} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
 import {setActivePodViewerInfoAction, setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
@@ -47,7 +47,7 @@ export class PodViewer extends PodViewerCommon implements OnDestroy {
             }
           }));
 
-          this.parseData(data as PodViewerDatabaseOrNull);
+          this.parseData(data as PodViewerDatabase | null);
         });
   }
 

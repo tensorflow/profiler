@@ -1,7 +1,7 @@
 import {Component, OnDestroy} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {Store} from '@ngrx/store';
-import {ProfileOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {OpProfileProto} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
 import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
@@ -47,7 +47,7 @@ export class OpProfile extends OpProfileBase implements OnDestroy {
               message: '',
             }
           }));
-          this.parseData(data as ProfileOrNull);
+          this.parseData(data as OpProfileProto | null);
         });
   }
 

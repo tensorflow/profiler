@@ -1,7 +1,7 @@
 import {Component, Input, OnChanges, OnDestroy} from '@angular/core';
 import {Store} from '@ngrx/store';
 import {BufferAllocationInfo} from 'org_xprof/frontend/app/common/interfaces/buffer_allocation_info';
-import {MemoryViewerPreprocessResultOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {MemoryViewerPreprocessResult} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 import {HeapObject} from 'org_xprof/frontend/app/common/interfaces/heap_object';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
@@ -22,7 +22,7 @@ interface BufferSpan {
 export class MemoryViewerMain implements OnDestroy, OnChanges {
   /** Preprocessed result for memory viewer */
   @Input()
-  memoryViewerPreprocessResult: MemoryViewerPreprocessResultOrNull = null;
+  memoryViewerPreprocessResult: MemoryViewerPreprocessResult|null = null;
 
   /** XLA memory space color */
   @Input() memorySpaceColor: number = 0;

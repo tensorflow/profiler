@@ -1,4 +1,4 @@
-import {SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 /** A base class for a google-charts dashboard. */
 export class Dashboard {
@@ -14,7 +14,7 @@ export class Dashboard {
 
   dataView?: google.visualization.DataView;
 
-  parseData(data: SimpleDataTableOrNull) {
+  parseData(data: SimpleDataTable|null) {
     if (!data) return;
 
     this.dataTable = new google.visualization.DataTable(data);

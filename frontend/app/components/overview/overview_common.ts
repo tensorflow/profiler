@@ -1,4 +1,4 @@
-import {GeneralAnalysisOrNull, InputPipelineAnalysisOrNull, NormalizedAcceleratorPerformanceOrNull, OverviewDataTuple, RecommendationResultOrNull, RunEnvironmentOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {GeneralAnalysis, InputPipelineAnalysis, NormalizedAcceleratorPerformance, OverviewDataTuple, RecommendationResult, RunEnvironment} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 import {parseDiagnosticsDataTable} from 'org_xprof/frontend/app/common/utils/utils';
 
@@ -14,11 +14,11 @@ export class OverviewCommon {
   private propertyValues: string[] = [];
 
   diagnostics: Diagnostics = {info: [], warnings: [], errors: []};
-  generalAnalysis: GeneralAnalysisOrNull = null;
-  inputPipelineAnalysis: InputPipelineAnalysisOrNull = null;
-  recommendationResult: RecommendationResultOrNull = null;
-  runEnvironment: RunEnvironmentOrNull = null;
-  normalizedAcceleratorPerformance: NormalizedAcceleratorPerformanceOrNull =
+  generalAnalysis: GeneralAnalysis|null = null;
+  inputPipelineAnalysis: InputPipelineAnalysis|null = null;
+  recommendationResult: RecommendationResult|null = null;
+  runEnvironment: RunEnvironment|null = null;
+  normalizedAcceleratorPerformance: NormalizedAcceleratorPerformance|null =
       null;
 
   get averageStepTimePropertyValues(): string[] {

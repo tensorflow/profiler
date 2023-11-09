@@ -1,5 +1,5 @@
 import {Component, ElementRef, EventEmitter, Input, NgModule, OnChanges, OnInit, Output, SimpleChanges} from '@angular/core';
-import {ChartClass, ChartDataInfo, ChartType, CustomChartDataProcessor, DataTableOrDataViewOrNull} from 'org_xprof/frontend/app/common/interfaces/chart';
+import {ChartClass, ChartDataInfo, ChartType, CustomChartDataProcessor, DataTableOrDataView} from 'org_xprof/frontend/app/common/interfaces/chart';
 
 /** A common chart component. */
 @Component({
@@ -59,7 +59,7 @@ export class Chart implements OnChanges, OnInit {
   }
 
   getProcessedData(customChartDataProcessor: CustomChartDataProcessor|
-                   undefined): DataTableOrDataViewOrNull {
+                   undefined): DataTableOrDataView|null {
     if (!this.dataInfo || !this.dataInfo.dataProvider) {
       return null;
     }

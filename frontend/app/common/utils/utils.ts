@@ -1,7 +1,7 @@
 import {Store} from '@ngrx/store';
 import {Node as OpProfileNode} from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
 import {ChartDataInfo} from 'org_xprof/frontend/app/common/interfaces/chart';
-import {DataTableUnion, PodStatsRecord, SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {DataTableUnion, PodStatsRecord, SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
 
@@ -336,8 +336,8 @@ export function convertKnownToolToAnchorTag(value: string = ''): string {
 /**
  * Parse diagnostics data table and returns Diagnostics object.
  */
-export function parseDiagnosticsDataTable(
-    diagnosticsTable: SimpleDataTableOrNull): Diagnostics {
+export function parseDiagnosticsDataTable(diagnosticsTable: SimpleDataTable|
+                                          null): Diagnostics {
   const diagnostics: Diagnostics = {info: [], warnings: [], errors: []};
   if (!diagnosticsTable || !diagnosticsTable.rows) return diagnostics;
   /** Convert data table to string arrays */

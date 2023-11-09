@@ -1,4 +1,4 @@
-import {DEFAULT_SIMPLE_DATA_TABLE, InputPipelineDataTable, InputPipelineDeviceAnalysisOrNull, InputPipelineHostAnalysisOrNull, SimpleDataTableOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {DEFAULT_SIMPLE_DATA_TABLE, InputPipelineDataTable, InputPipelineDeviceAnalysis, InputPipelineHostAnalysis, SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 import {parseDiagnosticsDataTable} from 'org_xprof/frontend/app/common/utils/utils';
 
@@ -28,16 +28,16 @@ const PROPERTIES_HOST_ANALYSIS = [
 
 /** A common class for the input-pipeline component. */
 export class InputPipelineCommon {
-  deviceAnalysis: InputPipelineDeviceAnalysisOrNull = null;
-  hostAnalysis: InputPipelineHostAnalysisOrNull = null;
-  recommendation: SimpleDataTableOrNull = null;
+  deviceAnalysis: InputPipelineDeviceAnalysis|null = null;
+  hostAnalysis: InputPipelineHostAnalysis|null = null;
+  recommendation: SimpleDataTable|null = null;
   hasDiviceAanlysisRows = true;
   diagnostics: Diagnostics = { info: [], warnings: [], errors: [] };
 
   findAnalysisData(
       data: InputPipelineDataTable[], columnId: string,
-      properties: string[] = []): InputPipelineDeviceAnalysisOrNull
-      |InputPipelineHostAnalysisOrNull|SimpleDataTableOrNull {
+      properties: string[] = []): InputPipelineDeviceAnalysis
+      |InputPipelineHostAnalysis|SimpleDataTable|null {
     if (!data) {
       return DEFAULT_SIMPLE_DATA_TABLE;
     }
@@ -74,14 +74,14 @@ export class InputPipelineCommon {
     this.deviceAnalysis = this.findAnalysisData(
       data, COLUMN_ID_DEVICE_ANALYSIS,
       PROPERTIES_DEVICE_ANALYSIS) as
-      InputPipelineDeviceAnalysisOrNull;
+      InputPipelineDeviceAnalysis|null;
     this.hostAnalysis =
       this.findAnalysisData(
         data, COLUMN_ID_HOST_ANALYSIS, PROPERTIES_HOST_ANALYSIS) as
-      InputPipelineHostAnalysisOrNull;
+      InputPipelineHostAnalysis;
     this.recommendation =
       this.findAnalysisData(data, COLUMN_ID_RECOMMENDATION) as
-      SimpleDataTableOrNull;
+      SimpleDataTable|null;
     this.diagnostics = parseDiagnosticsDataTable(
       this.findAnalysisData(data, COLUMN_ID_DIAGNOSTICS));
     this.updateHasDeviceAanlysisRows();

@@ -1,6 +1,6 @@
 import {Component, Input, OnChanges, SimpleChanges} from '@angular/core';
 import {ChartDataInfo} from 'org_xprof/frontend/app/common/interfaces/chart';
-import {DEFAULT_SIMPLE_DATA_TABLE, InputPipelineDeviceAnalysisOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {DEFAULT_SIMPLE_DATA_TABLE, InputPipelineDeviceAnalysis} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 import {DeviceSideAnalysisDetailDataProvider} from './device_side_analysis_detail_data_provider';
 
@@ -63,7 +63,7 @@ interface DeviceSideAnalysisMetrics {
 export class DeviceSideAnalysisDetail implements OnChanges {
   /** The input pipeline device analysis data. */
   @Input()
-  set deviceAnalysis(analysis: InputPipelineDeviceAnalysisOrNull) {
+  set deviceAnalysis(analysis: InputPipelineDeviceAnalysis|null) {
     this.inputPipelineDeviceAnalysis = analysis;
     analysis = analysis || DEFAULT_SIMPLE_DATA_TABLE;
     analysis.p = analysis.p || {};
@@ -92,7 +92,7 @@ export class DeviceSideAnalysisDetail implements OnChanges {
   @Input() columnColors = COLORS_FOR_TPU;
 
   isTpu = true;
-  inputPipelineDeviceAnalysis: InputPipelineDeviceAnalysisOrNull = null;
+  inputPipelineDeviceAnalysis: InputPipelineDeviceAnalysis|null = null;
   infeedPercentMetrics: DeviceSideAnalysisMetrics = {};
   steptimeMsMetrics: DeviceSideAnalysisMetrics = {};
   areaChart: google.visualization.AreaChart|null = null;

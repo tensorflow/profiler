@@ -1,15 +1,15 @@
 import {Store} from '@ngrx/store';
-import {AllReduceOpInfo, ChannelInfo, PodStatsMap, PodStatsRecord, PodViewerDatabaseOrNull, PodViewerTopology, PrimitiveTypeNumberStringOrUndefined, StepBreakdownEvent} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {AllReduceOpInfo, ChannelInfo, PodStatsMap, PodStatsRecord, PodViewerDatabase, PodViewerTopology, PrimitiveTypeNumberStringOrUndefined, StepBreakdownEvent} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {setActivePodViewerInfoAction} from 'org_xprof/frontend/app/store/actions';
 
 /** A common class of pod viewer component. */
 export class PodViewerCommon {
-  data: PodViewerDatabaseOrNull = null;
-  minStep: number = 0;
-  maxStep: number = 0;
-  selectedStep: string = '';
+  data: PodViewerDatabase|null = null;
+  minStep = 0;
+  maxStep = 0;
+  selectedStep = '';
   allReduceOpDb?: AllReduceOpInfo[];
   allReduceOpChartData?: PrimitiveTypeNumberStringOrUndefined[][];
   channelDb?: ChannelInfo[];
@@ -22,9 +22,9 @@ export class PodViewerCommon {
   podStatsChartData?: PrimitiveTypeNumberStringOrUndefined[][];
   topology?: PodViewerTopology;
   stepBreakdownEvents: StepBreakdownEvent[] = [];
-  stepBreakdownChartDescription: string = '';
-  deviceType: string = '';
-  isTPU: boolean = false;
+  stepBreakdownChartDescription = '';
+  deviceType = '';
+  isTPU = false;
 
   constructor(readonly store: Store<{}>) {}
 
@@ -194,7 +194,7 @@ export class PodViewerCommon {
     }));
   }
 
-  setDiagnostics(data: PodViewerDatabaseOrNull) {
+  setDiagnostics(data: PodViewerDatabase|null) {
     if (!data || !data.diagnostics) return;
     this.diagnostics.info = data.diagnostics.info || [];
     this.diagnostics.warnings = data.diagnostics.warnings || [];
@@ -211,7 +211,7 @@ export class PodViewerCommon {
     }
   }
 
-  parseData(data: PodViewerDatabaseOrNull) {
+  parseData(data: PodViewerDatabase|null) {
     this.data = data;
     this.deviceType = this.data ? this.data.deviceType || '' : '';
     this.isTPU = !this.deviceType.includes('GPU') && this.deviceType !== 'CPU';

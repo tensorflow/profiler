@@ -1,5 +1,5 @@
 import {Component, ElementRef, Input, OnChanges, OnInit, SimpleChanges, ViewChild} from '@angular/core';
-import {MemoryProfileProtoOrNull} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {MemoryProfileProto} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {bytesToGiBs} from 'org_xprof/frontend/app/common/utils/utils';
 
 const DATA_TABLE_OPERATION_INDEX = 0;
@@ -12,7 +12,7 @@ const DATA_TABLE_OPERATION_INDEX = 0;
 })
 export class MemoryBreakdownTable implements OnChanges, OnInit {
   /** The memory profile proto data. */
-  @Input() memoryProfileData: MemoryProfileProtoOrNull = null;
+  @Input() memoryProfileData: MemoryProfileProto|null = null;
 
   /** The selected memory ID to show memory profile for. */
   @Input() memoryId: string = '';

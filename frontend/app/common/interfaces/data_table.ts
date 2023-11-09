@@ -35,9 +35,6 @@ declare interface GeneralProperty {
 export interface SimpleDataTable extends
     Partial<google.visualization.DataObject> {}
 
-/** The data table type for data table without perperty or null. */
-export type SimpleDataTableOrNull = SimpleDataTable|null;
-
 /* tslint:disable enforce-name-casing */
 /** The base interface for properties of meta host-op table. */
 declare interface MetaHostOpTableProperty {
@@ -53,9 +50,6 @@ export declare interface MetaHostOpTable extends SimpleDataTable {
   p?: MetaHostOpTableProperty;
 }
 
-/** MetaHostOpTable type or Null. */
-export type MetaHostOpTableOrNull = MetaHostOpTable|null;
-
 /** The base interface for properties of host-op table. */
 declare interface HostOpTableProperty {
   hostop: string;
@@ -68,24 +62,15 @@ export declare interface HostOpTable extends SimpleDataTable {
   p?: HostOpTableProperty;
 }
 
-/** HostOpTable type or Null. */
-export type HostOpTableOrNull = HostOpTable|null;
-
 /** The base interface for a general analysis. */
 export declare interface GeneralAnalysis extends SimpleDataTable {
   p?: GeneralProperty;
 }
 
-/** The data table type for a general analysis or null. */
-export type GeneralAnalysisOrNull = GeneralAnalysis|null;
-
 /** The base interface for an input pipeline analysis. */
 export declare interface InputPipelineAnalysis extends SimpleDataTable {
   p?: GeneralProperty;
 }
-
-/** The data table type for an input pipeline analysis or null. */
-export type InputPipelineAnalysisOrNull = InputPipelineAnalysis|null;
 
 /** The base interface for a top ops table column. */
 export declare interface TopOpsColumn {
@@ -115,9 +100,6 @@ export declare interface RunEnvironment extends SimpleDataTable {
   p?: RunEnvironmentProperty;
 }
 
-/** The data table type for a run environment or null. */
-export type RunEnvironmentOrNull = RunEnvironment|null;
-
 /* tslint:disable enforce-name-casing */
 /** The base interface for a property of recommendation result. */
 declare interface RecommendationResultProperty {
@@ -140,9 +122,6 @@ declare interface RecommendationResultProperty {
 export declare interface RecommendationResult extends SimpleDataTable {
   p?: RecommendationResultProperty;
 }
-
-/** The data table type for a recommendation result or null. */
-export type RecommendationResultOrNull = RecommendationResult|null;
 
 /* tslint:disable enforce-name-casing */
 /** The base interface for a property of normalized accelerator performance. */
@@ -169,16 +148,8 @@ export declare interface NormalizedAcceleratorPerformance extends
   p?: NormalizedAcceleratorPerformanceProperty;
 }
 
-/** The data table type for a normalized accelerator performance or null. */
-export type NormalizedAcceleratorPerformanceOrNull =
-    NormalizedAcceleratorPerformance|null;
-
 /** The data table type for an input pipeline device-side analysis. */
 export type InputPipelineDeviceAnalysis = InputPipelineAnalysis;
-
-/** The data table type for an input pipeline device-side analysis or null. */
-export type InputPipelineDeviceAnalysisOrNull =
-    InputPipelineDeviceAnalysis|null;
 
 /* tslint:disable enforce-name-casing */
 /** The base interface for a property of input pipeline host-side anaysis. */
@@ -195,9 +166,6 @@ declare interface InputPipelineHostAnalysisProperty {
 export declare interface InputPipelineHostAnalysis extends SimpleDataTable {
   p?: InputPipelineHostAnalysisProperty;
 }
-
-/** The data table type for an input pipeline host-side analysis or null. */
-export type InputPipelineHostAnalysisOrNull = InputPipelineHostAnalysis|null;
 
 /** The base interface for a host ops table column. */
 export interface HostOpsColumn {
@@ -331,24 +299,21 @@ export declare interface StepBreakdownDetailsCard {
   nodeId?: /* int32 */ number;
 }
 
-/** The data table type for a tensorflow stats or null. */
-export type TensorflowStatsDataOrNull = TensorflowStatsData|null;
+/** The data table type for a HloProto */
+export type HloProto = hloProto.HloProto;
 
-/** The data table type for a HloProto or null. */
-export type HloProtoOrNull = (hloProto.HloProto)|null;
+/** The data table type for a preprocessed memory viewer */
+export type MemoryViewerPreprocessResult =
+    memoryViewerPreprocess.PreprocessResult;
 
-/** The data table type for a preprocessed memory viewer or null. */
-export type MemoryViewerPreprocessResultOrNull =
-    (memoryViewerPreprocess.PreprocessResult)|null;
-
-/** The data table type for a MemoryProfile or null. */
-export type MemoryProfileProtoOrNull = (memoryProfileProto.MemoryProfile)|null;
+/** The data table type for a MemoryProfile. */
+export type MemoryProfileProto = memoryProfileProto.MemoryProfile;
 
 /** The data table type for a MemoryProfileSnapshot. */
 export type MemoryProfileSnapshot = memoryProfileProto.MemoryProfileSnapshot;
 
-/** The data table type for a Profile or null. */
-export type ProfileOrNull = (opProfileProto.Profile)|null;
+/** The data table type for an Op Profile */
+export type OpProfileProto = opProfileProto.Profile;
 
 /** All overview page data table type. */
 export type OverviewDataTable =
@@ -357,13 +322,13 @@ export type OverviewDataTable =
 
 /** All overview page data tuple type. */
 export type OverviewDataTuple = [
-  GeneralAnalysisOrNull,
-  InputPipelineAnalysisOrNull,
-  RunEnvironmentOrNull,
-  RecommendationResultOrNull,
-  SimpleDataTableOrNull,
-  NormalizedAcceleratorPerformanceOrNull,
-  SimpleDataTableOrNull,
+  GeneralAnalysis,
+  InputPipelineAnalysis,
+  RunEnvironment,
+  RecommendationResult,
+  SimpleDataTable,
+  NormalizedAcceleratorPerformance,
+  SimpleDataTable,
 ];
 
 /* tslint:disable enforce-name-casing */
@@ -382,9 +347,6 @@ export declare interface TfFunctionExplanationTable extends SimpleDataTable {
   p?: TfFunctionExplanationTableProperty;
 }
 
-/** The explanation table in tf-function stats or null. */
-export type TfFunctionExplanationTableOrNull = TfFunctionExplanationTable|null;
-
 /* tslint:disable enforce-name-casing */
 declare interface TfFunctionDataTableProperty {
   has_concrete?: string;
@@ -397,22 +359,13 @@ export declare interface TfFunctionDataTable extends SimpleDataTable {
   p?: TfFunctionDataTableProperty;
 }
 
-/** The function table in tf-function stats or null. */
-export type TfFunctionDataTableOrNull = TfFunctionDataTable|null;
-
 /** The data table type in tf-function stats. */
 export type TfFunctionStatsTable =
     TfFunctionDataTable|TfFunctionExplanationTable;
 
-/** The data table type in tf-function stats or null. */
-export type TfFunctionStatsTableOrNull = TfFunctionStatsTable|null;
-
 /** All input pipeline page data table type. */
 export type InputPipelineDataTable = InputPipelineDeviceAnalysis|
     InputPipelineHostAnalysis|MetaHostOpTable|HostOpTable|SimpleDataTable;
-
-/** The data table type for a PodViewerDatabase or null. */
-export type PodViewerDatabaseOrNull = PodViewerDatabase|null;
 
 /** The data types with number, string, or undefined. */
 export type PrimitiveTypeNumberStringOrUndefined = number|string|undefined;
@@ -420,10 +373,8 @@ export type PrimitiveTypeNumberStringOrUndefined = number|string|undefined;
 /** All data type from tool response data. */
 export type DataTable =
     SimpleDataTable|OverviewDataTable[]|InputPipelineDataTable[]|
-    TensorflowStatsData[]|hloProto.HloProto|
-    memoryViewerPreprocess.PreprocessResult|
-    memoryProfileProto.MemoryProfile|opProfileProto.Profile|PodViewerDatabase|
-    null;
+    TensorflowStatsData[]|HloProto|MemoryViewerPreprocessResult|
+    MemoryProfileProto|OpProfileProto|PodViewerDatabase;
 
 /**
  * All DataTable types extended from google.visualization.DataTable.
