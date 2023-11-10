@@ -17,6 +17,7 @@ export class MainPage implements OnDestroy {
 
   loading = true;
   loadingMessage = '';
+  isSideNavOpen = true;
 
   constructor(store: Store<{}>) {
     store.select(getLoadingState)
