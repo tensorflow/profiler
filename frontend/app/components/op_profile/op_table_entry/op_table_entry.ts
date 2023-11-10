@@ -133,8 +133,17 @@ export class OpTableEntry implements OnChanges {
                             this.node.children.slice();
     if (this.byWasted && this.rootNode) {
       children.sort(
-          (a, b) => utils.timeWasted(b, this.rootNode!) -
-              utils.timeWasted(a, this.rootNode!));
+          (a, b) => {
+            const timeWastedA = utils.timeWasted(a, this.rootNode!);
+            const timeWastedB = utils.timeWasted(b, this.rootNode!);
+            if (isNaN(timeWastedA)) {
+              return 1;
+            } else if (isNaN(timeWastedB)) {
+              return -1;
+            }
+            return utils.timeWasted(b, this.rootNode!) -
+              utils.timeWasted(a, this.rootNode!);
+          });
     }
 
     return children;
