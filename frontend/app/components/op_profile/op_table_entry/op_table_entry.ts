@@ -126,11 +126,7 @@ export class OpTableEntry implements OnChanges {
     if (!this.node || !this.node.children || !this.rootNode) {
       return [];
     }
-    let children: Node[] = [];
-    const k = this.get90ChildrenIndex();
-
-    children = this.level ? this.node.children.slice(0, k) :
-                            this.node.children.slice();
+    let children: Node[]  = this.node.children.slice();
     if (this.byWasted && this.rootNode) {
       children.sort(
           (a, b) => {
@@ -145,6 +141,9 @@ export class OpTableEntry implements OnChanges {
               utils.timeWasted(a, this.rootNode!);
           });
     }
+    const k = this.get90ChildrenIndex();
+
+    children = this.level ? children.slice(0, k) : children;
 
     return children;
   }
