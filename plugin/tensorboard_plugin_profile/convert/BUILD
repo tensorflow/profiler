@@ -44,6 +44,7 @@ py_test(
     deps = [
         ":diagnostics",
         "//:expect_tensorflow_installed",
+        "//third_party/py/google/protobuf:use_fast_cpp_protos",  # Automatically added go/proto_python_upb_flip
         "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
     ],
 )
@@ -68,6 +69,7 @@ py_test(
     deps = [
         ":input_pipeline_proto_to_gviz",
         requirement("absl-py"),
+        "//third_party/py/google/protobuf:use_fast_cpp_protos",  # Automatically added go/proto_python_upb_flip
         requirement("gviz_api"),
         "//:expect_tensorflow_installed",
         "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
@@ -95,6 +97,7 @@ py_test(
     deps = [
         ":overview_page_proto_to_gviz",
         requirement("absl-py"),
+        "//third_party/py/google/protobuf:use_fast_cpp_protos",  # Automatically added go/proto_python_upb_flip
         requirement("gviz_api"),
         "//:expect_tensorflow_installed",
         "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
@@ -118,6 +121,7 @@ py_test(
     deps = [
         ":tf_stats_proto_to_gviz",
         requirement("absl-py"),
+        "//third_party/py/google/protobuf:use_fast_cpp_protos",  # Automatically added go/proto_python_upb_flip
         requirement("gviz_api"),
         "//:expect_tensorflow_installed",
         "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
@@ -144,6 +148,7 @@ py_test(
         ":trace_events_json",
         requirement("absl-py"),
         "//:expect_tensorflow_installed",
+        "//third_party/py/google/protobuf:use_fast_cpp_protos",  # Automatically added go/proto_python_upb_flip
         "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
     ],
 )
@@ -165,6 +170,7 @@ py_test(
     deps = [
         ":kernel_stats_proto_to_gviz",
         requirement("absl-py"),
+        "//third_party/py/google/protobuf:use_fast_cpp_protos",  # Automatically added go/proto_python_upb_flip
         requirement("gviz_api"),
         "//:expect_tensorflow_installed",
         "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
@@ -190,6 +196,7 @@ py_test(
     deps = [
         ":tf_data_stats_proto_to_gviz",
         requirement("absl-py"),
+        "//third_party/py/google/protobuf:use_fast_cpp_protos",  # Automatically added go/proto_python_upb_flip
         requirement("gviz_api"),
         "//:expect_tensorflow_installed",
         "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
@@ -212,6 +219,7 @@ py_test(
     srcs_version = "PY2AND3",
     deps = [
         ":dcn_collective_stats_proto_to_gviz",
+        "//third_party/py/google/protobuf:use_fast_cpp_protos",  # Automatically added go/proto_python_upb_flip
         requirement("gviz_api"),
         "//:expect_tensorflow_installed",
         "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
