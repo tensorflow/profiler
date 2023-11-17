@@ -404,28 +404,11 @@ class ProfilePlugin(base_plugin.TBPlugin):
   def is_active(self):
     """Whether this plugin is active and has any profile data to show.
 
-    Detecting profile data is expensive, so this process runs asynchronously
-    and the value reported by this method is the cached value and may be stale.
     Returns:
       Whether any run has profile data.
     """
-    # If we are already active, we remain active and don't recompute this.
-    # Otherwise, try to acquire the lock without blocking; if we get it and
-    # we're still not active, launch a thread to check if we're active and
-    # release the lock once the computation is finished. Either way, this
-    # thread returns the current cached value to avoid blocking.
-    if not self._is_active and self._is_active_lock.acquire(False):
-      if self._is_active:
-        self._is_active_lock.release()
-      else:
-
-        def compute_is_active():
-          self._is_active = any(self.generate_runs())
-          self._is_active_lock.release()
-
-        new_thread = threading.Thread(
-            target=compute_is_active, name='DynamicProfilePluginIsActiveThread')
-        new_thread.start()
+    if not self._is_active:
+      self._is_active = any(self.generate_runs())
     return self._is_active
 
   def get_plugin_apps(self):
