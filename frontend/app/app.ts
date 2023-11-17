@@ -26,6 +26,12 @@ export class App implements OnInit {
         document.dispatchEvent(new Event('plugin-reload'));
       }
     });
+    // 'plugin-reload' will be fired when new profile is captured
+    document.addEventListener('plugin-reload', () => {
+      if (!this.loading) {
+        this.initRunsAndTools();
+      }
+    });
   }
 
   ngOnInit() {
@@ -34,11 +40,13 @@ export class App implements OnInit {
 
   async initRunsAndTools() {
     const runs = await firstValueFrom(this.dataService.getRuns()) as string[];
+    console.log('zzzz1, get runs:', runs);
     if (runs.length === 0) {
       this.loading = false;
       return;
     }
     this.dataFound = true;
+    console.log('zzzzz setting dataFound to true');
     this.store.dispatch(actions.setCurrentRunAction({currentRun: runs[0]}));
     const tools =
         await firstValueFrom(this.dataService.getRunTools(runs[0])) as string[];
