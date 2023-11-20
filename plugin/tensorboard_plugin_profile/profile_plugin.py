@@ -402,14 +402,12 @@ class ProfilePlugin(base_plugin.TBPlugin):
     self._run_to_profile_run_dir = {}
 
   def is_active(self):
-    """Whether this plugin is active and has any profile data to show.
+    """Returns whether the plugin is active.
 
-    Returns:
-      Whether any run has profile data.
+    Always set plugin to be active to be shown on Tensorboard plugins tab list
+    Even with empty data, profiler plugin can be used to capture new profiles
     """
-    if not self._is_active:
-      self._is_active = any(self.generate_runs())
-    return self._is_active
+    return True
 
   def get_plugin_apps(self):
     return {
