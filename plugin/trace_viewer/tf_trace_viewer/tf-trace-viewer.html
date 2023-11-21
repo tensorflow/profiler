@@ -944,10 +944,11 @@ dashboard would integrate trace viewer app using iframe.
     // Returns a void promise.
     _updateModel: function(data, replaceModel) {
       data = JSON.parse(data);
-      if (!data['returnedEventsSize']) {
-        this._displayOverlay('Trace Viewer', 'No trace events data returned.');
-      }
       if (!this._model /* first load */ || replaceModel) {
+        // Only give no events alert for first load or replace load
+        if (!data['returnedEventsSize']) {
+          this._displayOverlay('Trace Viewer', 'No trace events data returned.');
+        }
         this._dirty = true;
         this._model = new tr.Model();
         this._loadedTraceEvents = new Set();
