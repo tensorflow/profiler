@@ -244,7 +244,45 @@ class ProfilePluginTest(tf.test.TestCase):
 
   def testActive(self):
 
-    # Profiler plugin will aways be active
+    def wait_for_thread():
+      with self.plugin._is_active_lock:
+        pass
+
+    # Launch thread to check if active.
+    self.plugin.is_active()
+    wait_for_thread()
+    # Should be false since there's no data yet.
+    self.assertFalse(self.plugin.is_active())
+    wait_for_thread()
+    generate_testdata(self.logdir)
+    self.multiplexer.Reload()
+    # Launch a new thread to check if active.
+    self.plugin.is_active()
+    wait_for_thread()
+    # Now that there's data, this should be active.
+    self.assertTrue(self.plugin.is_active())
+
+  def testActive_subdirectoryOnly(self):
+
+    def wait_for_thread():
+      with self.plugin._is_active_lock:
+        pass
+
+    # Launch thread to check if active.
+    self.plugin.is_active()
+    wait_for_thread()
+    # Should be false since there's no data yet.
+    self.assertFalse(self.plugin.is_active())
+    wait_for_thread()
+    subdir_a = os.path.join(self.logdir, 'a')
+    generate_testdata(subdir_a)
+    write_empty_event_file(subdir_a)
+    self.multiplexer.AddRunsFromDirectory(self.logdir)
+    self.multiplexer.Reload()
+    # Launch a new thread to check if active.
+    self.plugin.is_active()
+    wait_for_thread()
+    # Now that there's data, this should be active.
     self.assertTrue(self.plugin.is_active())
 
 
