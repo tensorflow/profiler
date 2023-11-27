@@ -852,13 +852,6 @@ dashboard would integrate trace viewer app using iframe.
         .catch((err) => {
           this._displayOverlay('Trace Viewer', err);
         })
-        .then(() => {
-          // Don't immediately load new data after the very first load. When
-          // we first load the trace viewer, the actual view is not properly
-          // initialized and we get an incorrect viewport leading to a spurious
-          // load of data.
-          if (success && requestedRange) this._maybeLoad();
-        });
     },
 
     // Loads a time window (the whole trace if requestedRange is null).
@@ -1034,11 +1027,6 @@ dashboard would integrate trace viewer app using iframe.
     // create the Process Filter Dropdown.
     // Ref: http://cs/github/catapult-project/catapult/tracing/tracing/ui/timeline_view.html?l=433
     //
-    // In our implementation, for every process checkbox on change event for
-    // select/deselect process, we call this._loadTrace(...) to load a new trace using the url with
-    // the "selected_device_ids" query parameter populated from the process filter dropdown
-    // selection.
-    //
     // If this._selectedDeviceIds is set from the data["selected_device_ids"] from the Trace JSON
     // we only check pids that are in "selected_device_ids". This means Process Filter Dropdown
     // should be consistent even as the user zooms/pans and new Trace JSON is loaded.
@@ -1106,12 +1094,22 @@ dashboard would integrate trace viewer app using iframe.
           this._traceViewer.model = this._model;
           if (this._traceViewer.trackView != null) {
             // Only initialized if data in nonempty!
-            // Wait 200ms to let an animated zoom/pan operation complete. Ideally,
+            // Wait 500ms to let an animated zoom/pan operation complete. Ideally,
             // we could just explicitly wait for its end.
+            const debounce = (func, wait = 500) => {
+              let timer;
 
+              return (...args) => {
+                clearTimeout(timer);
+                timer = setTimeout(() => {
+                  func(...args);
+                }, wait);
+              };
+            }
+            const debouncedReload = debounce(this._maybeLoad.bind(this))
             this._traceViewer.trackView.viewport.addEventListener(
               'change',
-              () => setTimeout(this._maybeLoad.bind(this), 200)
+              debouncedReload
             );
           }
           this._traceViewer.viewTitle = '';
