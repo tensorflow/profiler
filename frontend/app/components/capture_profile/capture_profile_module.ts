@@ -6,7 +6,6 @@ import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatSnackBarModule} from '@angular/material/snack-bar';
 
 import {CaptureProfile} from './capture_profile';
-import {CaptureProfileDialog} from './capture_profile_dialog/capture_profile_dialog';
 import {CaptureProfileDialogModule} from './capture_profile_dialog/capture_profile_dialog_module';
 
 /** A capture profile view module. */
@@ -21,7 +20,6 @@ import {CaptureProfileDialogModule} from './capture_profile_dialog/capture_profi
     MatSnackBarModule,
   ],
   exports: [CaptureProfile],
-  entryComponents: [CaptureProfileDialog],
 })
 export class CaptureProfileModule {
 }
