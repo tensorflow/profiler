@@ -734,9 +734,10 @@ class ProfilePlugin(base_plugin.TBPlugin):
   def _get_graph_viewer_options(self, request):
     node_name = request.args.get('node_name')
     module_name = request.args.get('module_name')
-    graph_width = request.args.get('graph_width')
-    show_metadata = request.args.get('show_metadata')
-    merge_fusion = request.args.get('merge_fusion')
+    graph_width_str = request.args.get('graph_width') or ''
+    graph_width = int(graph_width_str) if graph_width_str.isdigit() else 3
+    show_metadata = int(request.args.get('show_metadata') == 'true')
+    merge_fusion = int(request.args.get('merge_fusion') == 'true')
     return {
         'node_name': node_name,
         'module_name': module_name,
