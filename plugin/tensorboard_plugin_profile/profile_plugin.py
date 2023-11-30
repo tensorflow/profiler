@@ -277,7 +277,19 @@ def respond(body, content_type, code=200, content_encoding=None):
       'style-src': [
           "'self'",
           "'unsafe-inline'",
+          'https://fonts.googleapis.com',
           'https://www.gstatic.com',
+      ],
+      'font-src': [
+          "'self'",
+          'https://fonts.googleapis.com',
+          'https://fonts.gstatic.com',
+          'data:',
+      ],
+      'connect-src': [
+          "'self'",
+          'data:',
+          'www.gstatic.com',
       ],
       'img-src': [
           "'self'",

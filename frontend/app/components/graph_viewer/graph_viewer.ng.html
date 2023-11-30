@@ -1,15 +1,15 @@
 <mat-sidenav-container>
   <mat-sidenav mode="side" opened>
     <div class="item-container">
-      <graph-config [initialInputs]="initialParams" [moduleList]="moduleList" [isHloOssTool]="true" (plot)="onPlot()" (update)="onUpdateParam($event)"></graph-config>
+      <graph-config [initialInputs]="initialParams" [moduleList]="moduleList" [isHloOssTool]="true" (plot)="onSearchGraph()" (update)="onUpdateParam($event)"></graph-config>
     </div>
   </mat-sidenav>
   <mat-sidenav-content>
     <diagnostics-view [diagnostics]="diagnostics"></diagnostics-view>
-    <div class="progress-container" *ngIf="loading">
+    <div class="progress-container" *ngIf="loadingGraphHtml">
       <div class="loading-message">Loading graph viewer data</div>
       <mat-progress-bar color="primary" mode="indeterminate"></mat-progress-bar>
     </div>
-    <iframe #iframe id="graph-html" [src]="graphvizUri | safe" (load)="onIframeLoaded()"></iframe>
+    <iframe #iframe id="graph-html" [src]="graphvizUri | safe"></iframe>
   </mat-sidenav-content>
 </mat-sidenav-container>
