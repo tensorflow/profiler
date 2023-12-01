@@ -1180,19 +1180,7 @@ dashboard would integrate trace viewer app using iframe.
       }
     },
 
-    // Builds a base URL for fetching json data. The URL will be assembled with
-    // all filtering URL parameters, except resolution and range.
-    _buildBaseURL: function() {
-      const requestURL = new URL(this.traceDataUrl, window.location.href);
-      this._updateHostsParamToBaseUrl(requestURL);
-      const detailsSelector = document.getElementById("details_selector");
-      const detailsDialog = detailsSelector.getElementsByTagName('dialog')[0];
-      const checkboxDivs = detailsDialog.getElementsByTagName('div');
-      for (let i = 0; i < checkboxDivs.length; ++i) {
-        const checkbox = checkboxDivs[i].getElementsByTagName('input')[0];
-        requestURL.searchParams.set(checkbox.name, checkbox.checked);
-      }
-
+    _updateProcessesSelectionToBaseUrl: function(requestURL) {
       // Populate query parameter "selected_device_ids".
       const dropdown = Polymer.dom(document.getElementById("process_filter_dropdown"));
       const selectedDeviceIds = [];
@@ -1210,6 +1198,24 @@ dashboard would integrate trace viewer app using iframe.
       // with a list of devices (pids) checkboxes.
       if (dropdown.childNodes.length > 2) {
         requestURL.searchParams.set('selected_device_ids', selectedDeviceIds.join(','));
+      }
+    },
+
+    // Builds a base URL for fetching json data. The URL will be assembled with
+    // all filtering URL parameters, except resolution and range.
+    _buildBaseURL: function() {
+      const requestURL = new URL(this.traceDataUrl, window.location.href);
+      this._updateHostsParamToBaseUrl(requestURL);
+      const detailsSelector = document.getElementById("details_selector");
+      const detailsDialog = detailsSelector.getElementsByTagName('dialog')[0];
+      const checkboxDivs = detailsDialog.getElementsByTagName('div');
+      for (let i = 0; i < checkboxDivs.length; ++i) {
+        const checkbox = checkboxDivs[i].getElementsByTagName('input')[0];
+        requestURL.searchParams.set(checkbox.name, checkbox.checked);
+      }
+
+      if (!this._showFilterForm) {
+        this._updateProcessSelectionToBaseUrl(requestURL);
       }
 
       if (requestURL.searchParams.has('use_saved_result')) {
