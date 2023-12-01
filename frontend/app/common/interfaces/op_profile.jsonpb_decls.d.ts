@@ -53,4 +53,5 @@ export interface Metrics {
   rawTime?: /* double */ number;
   rawFlops?: /* double */ number;
   rawBytesAccessedArray?: /* double */ number[];
+  avgTimePs?: /* double */ number;
 }

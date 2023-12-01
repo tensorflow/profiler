@@ -94,8 +94,12 @@
           <code class="expression">{{provenance}}</code>
         </div>
         <div class="info" [hidden]="!rawTimeMs">
-          <div class="title">Raw Time:</div>
+          <div class="title">Total Time Sum:</div>
           <code class="expression">{{rawTimeMs}}</code>
+        </div>
+        <div class="info" [hidden]="!avgTimeMs">
+          <div class="title">Total Time Avg:</div>
+          <code class="expression">{{avgTimeMs}}</code>
         </div>
         <div class="info" [hidden]="!fused">
           <div class="unavailable">

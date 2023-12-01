@@ -41,6 +41,7 @@ export class OpDetails {
   expression: string = '';
   provenance: string = '';
   rawTimeMs = '';
+  avgTimeMs = '';
   fused: boolean = false;
   hasCategory: boolean = false;
   hasLayout: boolean = false;
@@ -188,6 +189,13 @@ export class OpDetails {
           this.node.metrics.rawTime / 1e9, {si: true, dp: 2, suffix: ' ms'});
     } else {
       this.rawTimeMs = '';
+    }
+
+    if (this.node.metrics && this.node.metrics.avgTimePs) {
+      this.avgTimeMs = utils.humanReadableText(
+          this.node.metrics.avgTimePs / 1e9, {si: true, dp: 2, suffix: ' ms'});
+    } else {
+      this.avgTimeMs = '';
     }
 
     this.fused = !!this.node.xla && !this.node.metrics;
