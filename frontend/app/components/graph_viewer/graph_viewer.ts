@@ -144,8 +144,8 @@ export class GraphViewer implements OnDestroy {
     // third_party/tensorflow/compiler/xla/service/hlo_graph_dumper.cc to
     // determine if the graph has been loaded completedly.
     // We need add a test to detect the breaking change ahread.
-    const svg = (doc.getElementsByTagName('svg') || [])[0];
-    return svg && svg.childElementCount > 0;
+    const loadingIdentifierNode = (doc.getElementsByTagName('head') || [])[0];
+    return loadingIdentifierNode && loadingIdentifierNode.childElementCount > 0;
   }
 
   // Append diagnostic message after data loaded for each sections
@@ -179,18 +179,11 @@ export class GraphViewer implements OnDestroy {
       }, 1000);
       return;
     } else {
-      const doc = this.getGraphIframeDocument();
       this.loadingGraphHtml = false;
       const htmlSize =
           (document.getElementById('graph-html') as HTMLIFrameElement)
               .contentDocument!.documentElement.innerHTML.length;
-      // check if the page returns error
-      const title = (doc.getElementsByTagName('title') || [])[0];
-      if (title?.innerText?.toLowerCase()?.includes('error')) {
-        const errorMessage = `Error loading graph html: ${title.innerText}`;
-        this.onCompleteLoad({errors: [errorMessage]} as Diagnostics);
-        this.clearGraphIframeHtml();
-      } else if (htmlSize > GRAPH_HTML_THRESHOLD) {
+      if (htmlSize > GRAPH_HTML_THRESHOLD) {
         this.onCompleteLoad({
           warnings: [
             'Your graph is large. If you can\'t see the graph, please lower the width and retry.'
