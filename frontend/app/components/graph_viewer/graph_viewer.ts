@@ -25,7 +25,8 @@ export class GraphViewer implements OnDestroy {
   private readonly destroyed = new ReplaySubject<void>(1);
 
   @ViewChild(GraphConfig) config!: GraphConfig;
-  @ViewChild('iframe', {static: false}) graphRef!: ElementRef;
+  @ViewChild('iframe', {static: false})
+  graphRef!: ElementRef<HTMLIFrameElement>;
 
   run = '';
   tag = 'graph_viewer';
@@ -133,8 +134,7 @@ export class GraphViewer implements OnDestroy {
   }
 
   getGraphIframeDocument() {
-    return this.graphRef?.nativeElement?.contentDocument ||
-        this.graphRef?.nativeElement?.contentWindow;
+    return this.graphRef?.nativeElement?.contentDocument;
   }
 
   graphIframeLoaded() {
