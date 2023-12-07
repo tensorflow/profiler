@@ -207,7 +207,10 @@ py_library(
     name = "dcn_collective_stats_proto_to_gviz",
     srcs = ["dcn_collective_stats_proto_to_gviz.py"],
     srcs_version = "PY2AND3",
-    deps = [requirement("gviz_api")],
+    deps = [
+        requirement("gviz_api"),
+        "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
+    ],
 )
 
 py_test(
