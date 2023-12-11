@@ -114,7 +114,7 @@ class ProtoToGvizTest(tf.test.TestCase):
     )
 
     self.assertEqual(0, data_table.NumberOfRows())
-    self.assertLen(data_table.columns, 9)
+    self.assertLen(data_table.columns, 10)
 
   def test_dcn_collective_stats_table(self):
     dcn_slack_analysis = self.create_mock_dcn_slack_analysis()
@@ -127,8 +127,8 @@ class ProtoToGvizTest(tf.test.TestCase):
 
     self.assertLen(data, 3)
     self.assertEqual(3, data_table.NumberOfRows())
-    self.assertLen(table_description, 9)
-    self.assertLen(data_table.columns, 9)
+    self.assertLen(table_description, 10)
+    self.assertLen(data_table.columns, 10)
 
     csv_file = io.StringIO(data_table.ToCsv())
     reader = csv.reader(csv_file)
@@ -141,6 +141,7 @@ class ProtoToGvizTest(tf.test.TestCase):
         MockValues.OBSERVED_DURATION_US,
         MockValues.STALL_DURATION_MS,
         MockValues.OCCURRENCES,
+        int(MockValues.STALL_DURATION_MS) * int(MockValues.OCCURRENCES),
         "576.012 KB",
         MockValues.REQUIRED_BANDWIDTH,
     ]
@@ -160,8 +161,8 @@ class ProtoToGvizTest(tf.test.TestCase):
 
     self.assertLen(data, 3)
     self.assertEqual(3, data_table.NumberOfRows())
-    self.assertLen(table_description, 9)
-    self.assertLen(data_table.columns, 9)
+    self.assertLen(table_description, 10)
+    self.assertLen(data_table.columns, 10)
 
     csv_file = io.StringIO(data_table.ToCsv())
     reader = csv.reader(csv_file)
@@ -174,6 +175,7 @@ class ProtoToGvizTest(tf.test.TestCase):
         MockValues.OBSERVED_DURATION_US,
         MockValues.STALL_DURATION_MS,
         MockValues.OCCURRENCES,
+        int(MockValues.STALL_DURATION_MS) * int(MockValues.OCCURRENCES),
         "576.012 KB",
         sys.maxsize,
     ]

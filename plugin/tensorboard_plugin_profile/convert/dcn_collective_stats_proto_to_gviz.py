@@ -87,6 +87,7 @@ def get_dcn_collective_stats_table_args(dcn_slack_analysis):
       ("observedDuration", "number", "Observed Duration (ms)"),
       ("stallDuration", "number", "Stall Duration (ms)"),
       ("occurrences", "number", "Occurrences"),
+      ("totalStallDuration", "number", "Aggregated Total Stall (ms)"),
       ("dataTransmittedSize", "string", "Data Transmitted Size"),
       ("requiredBandwidth", "number", "Required Bandwidth (Gbps)"),
   ]
@@ -101,6 +102,7 @@ def get_dcn_collective_stats_table_args(dcn_slack_analysis):
         slack.observed_duration_us / 1000,
         slack.stall_duration_us / 1000,
         slack.occurrences,
+        (slack.stall_duration_us * slack.occurrences) / 1000,
         convert_bytes_to_human_readable_format(
             slack.bytes_transmitted_over_network
         ),
