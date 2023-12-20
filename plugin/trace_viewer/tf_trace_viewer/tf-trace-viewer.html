@@ -434,6 +434,25 @@ dashboard would integrate trace viewer app using iframe.
       }
     },
 
+    createCrossToolLink: function(toolName, toolLabel, params, text) {
+      const toolLink =
+            new URL(`${window.location.origin}/${toolName}/${this._sessionId}`);
+      for (const [key, value] of Object.entries(params)) {
+        toolLink.searchParams.append(key, value);
+      }
+      const toolLinkElement = document.createElement('div');
+      toolLinkElement.innerHTML = `${toolLabel}: <a href="${toolLink.href}" target="_blank">${text}</a>`;
+      this._eventDetails.appendChild(toolLinkElement);
+      toolLinkElement.addEventListener('click', () => {
+            window.gtag && window.gtag('event', 'tv-hlo-click', {
+              'screen_name': 'trace viewer',
+              'event_category': 'click',
+              'event_label': `${toolName}_link`,
+              'event_variable': toolLink.href,
+            });
+          });
+    },
+
     onSelectionChange: function(e) {
       if (!this._sessionId) return;
       this._eventDetails.innerHTML = '<div id="event-details" ' +
@@ -468,34 +487,23 @@ dashboard would integrate trace viewer app using iframe.
               }
             }
           }
-          const graphViewLink =
-                new URL(window.location.origin + '/graph_viewer/' + this._sessionId);
-          graphViewLink.searchParams.append("node_name", hloOp);
+          // Add Graph Viewer link per event selection
+          const graphViewParams = {"node_name": hloOp};
           if (hloModule != 'default') {
-            graphViewLink.searchParams.append("module_name", hloModule);
+            graphViewParams["module_name"] = hloModule;
           }
-          const graphViewLinkElement = document.createElement('div');
-          graphViewLinkElement.innerHTML = 'Graph Viewer:<a href="' + graphViewLink.href +
-                '" target="_blank"> see hlo graph for ' +
-                hloOp + '@' + hloModule + '</a>';
-          this._eventDetails.appendChild(graphViewLinkElement);
-
-          const hloOpStatsLink = new URL(`${window.location.origin}/hlo_stats/${this._sessionId}`);
-          hloOpStatsLink.searchParams.append("hlo_op_name", hloOp);
-          hloOpStatsLink.searchParams.append("program_id", hloModule);
-          const hloOpStatsLinkElement = document.createElement('div');
-          hloOpStatsLinkElement.innerHTML = 'Hlo Stats:<a href="' + hloOpStatsLink.href +
-                '" target="_blank"> see hlo stats for ' +
-                hloOp + '@' + hloModule + '</a>';
-          hloOpStatsLinkElement.addEventListener('click', () => {
-            window.gtag && window.gtag('event', 'tv-hlo-click', {
-              'screen_name': 'trace viewer',
-              'event_category': 'click',
-              'event_label': 'hlo_stats_link',
-              'event_variable': hloOpStatsLink.href,
-            });
-          });
-          this._eventDetails.appendChild(hloOpStatsLinkElement);
+          const graphViewText = `see hlo graph for ${hloOp} @ ${hloModule}`;
+          this.createCrossToolLink("graph_viewer", "Graph Viewer", graphViewParams, graphViewText);
+          // Add Hlo Stats link per event selection
+          const opStatsParams = {
+            "hlo_op_name": hloOp,
+            "program_id": hloModule,
+          };
+          const opStatsText = `see hlo stats for ${hloOp} @ ${hloModule}`;
+          this.createCrossToolLink("hlo_stats", "Hlo Stats", opStatsParams, opStatsText);
+          // Add Roofline Model link per event selection
+          const rooflineText = `see op level analysis for ${hloOp}`;
+          this.createCrossToolLink("roofline_model", "Roofline Model", {"roofline_op_name": hloOp}, rooflineText);
         }
         // For `TfrtModelRun` event, add links to the associated MLIR graphs.
         if (event.title.includes("TfrtModelRun")) {
