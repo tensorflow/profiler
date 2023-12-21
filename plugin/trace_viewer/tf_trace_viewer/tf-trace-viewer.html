@@ -336,7 +336,7 @@ dashboard would integrate trace viewer app using iframe.
           this.hostsDataUrl = value;
         } else if (key === 'resolution') {
           this._resolution = Number(value);
-        } else if (key === 'show_filter_form') {
+        } else if (key === 'show_filter_form' || key === 'enable_filter') {
           this._showFilterForm = value === 'true';
         }
       }.bind(this));
