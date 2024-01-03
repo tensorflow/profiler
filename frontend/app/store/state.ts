@@ -19,6 +19,7 @@ type ActiveOpProfileNodeState = Node|null;
 export interface OpProfileState {
   activeOpProfileNode: ActiveOpProfileNodeState;
   selectedOpNodeChain: string[];
+  rootNode: ActiveOpProfileNodeState;
 }
 
 /** Type for active pod viewer info state */
@@ -109,6 +110,7 @@ const INIT_ACTIVE_OP_PROFILE_NODE_STATE: ActiveOpProfileNodeState = null;
 export const INIT_OP_PROFILE_STATE: OpProfileState = {
   activeOpProfileNode: INIT_ACTIVE_OP_PROFILE_NODE_STATE,
   selectedOpNodeChain: [],
+  rootNode: INIT_ACTIVE_OP_PROFILE_NODE_STATE,
 };
 
 /** Initial state of active pod viewer info */

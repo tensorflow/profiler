@@ -1,6 +1,6 @@
-load("//defs:defs.bzl", "xprof_ng_module")
 load("@npm//@bazel/concatjs:index.bzl", "ts_library")
 load("@io_bazel_rules_sass//:defs.bzl", "sass_binary", "sass_library")
+load("//defs:defs.bzl", "xprof_ng_module")
 
 package(default_visibility = ["//frontend:internal"])
 
@@ -39,10 +39,11 @@ ts_library(
         "op_profile_data.ts",
     ],
     deps = [
+        "@npm//@ngrx/store",
         "@org_xprof//frontend/app/common/interfaces",
-        "@org_xprof//frontend/app/common/interfaces:op_metrics_proto_defs",
         "@org_xprof//frontend/app/common/interfaces:op_profile_proto_defs",
         "@org_xprof//frontend/app/common/utils",
+        "@org_xprof//frontend/app/store",
     ],
 )
 

@@ -2,7 +2,7 @@ import {Component, Input} from '@angular/core';
 import {Store} from '@ngrx/store';
 import {Node} from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
-import {getActiveOpProfileNodeState, getSelectedOpNodeChainState} from 'org_xprof/frontend/app/store/selectors';
+import {getActiveOpProfileNodeState, getOpProfileRootNode, getSelectedOpNodeChainState} from 'org_xprof/frontend/app/store/selectors';
 import {ReplaySubject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 
@@ -18,10 +18,10 @@ export class OpDetails {
 
   /** the session id */
   @Input() sessionId = '';
-  @Input() rootNode?: Node;
   /** the list of modules */
   @Input() moduleList: string[] = [];
 
+  rootNode?: Node;
   node?: Node;
   color: string = '';
   name: string = '';
@@ -60,6 +60,11 @@ export class OpDetails {
         .pipe(takeUntil(this.destroyed))
         .subscribe((nodeChain: string[]) => {
           this.selectedOpNodeChain = nodeChain;
+        });
+    this.store.select(getOpProfileRootNode)
+        .pipe(takeUntil(this.destroyed))
+        .subscribe((node: Node|null) => {
+          this.rootNode = node || undefined;
         });
   }
 

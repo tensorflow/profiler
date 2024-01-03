@@ -49,6 +49,18 @@ export const reducer: ActionReducer<AppState, Action> = createReducer(
         },
         ),
     on(
+        actions.setOpProfileRootNodeAction,
+        (state: AppState, action: ActionCreatorAny) => {
+          return {
+            ...state,
+            opProfileState: {
+              ...state.opProfileState,
+              rootNode: action.rootNode,
+            }
+          };
+        },
+        ),
+    on(
         actions.setActivePodViewerInfoAction,
         (state: AppState, action: ActionCreatorAny) => {
           return {

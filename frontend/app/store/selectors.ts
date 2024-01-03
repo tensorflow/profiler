@@ -29,6 +29,11 @@ export const getActiveOpProfileNodeState: MemoizedSelectorAny = createSelector(
     getOpProfileState,
     (opProfileState: OpProfileState) => opProfileState.activeOpProfileNode);
 
+/** Update Root node when loaded */
+export const getOpProfileRootNode: MemoizedSelectorAny = createSelector(
+    getOpProfileState,
+    (opProfileState: OpProfileState) => opProfileState.rootNode);
+
 /** Selector for PodViewerState */
 export const getPodViewerState: MemoizedSelectorAny =
     createSelector(appState, (appState: AppState) => appState.podViewerState);
