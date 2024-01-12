@@ -58,10 +58,11 @@ def xspace_to_tools_data_from_byte_string(xspace_byte_list, filenames, tool,
   Returns:
     Returns a string of tool data.
   """
-
-  def xspace_wrapper_func(xspace_arg, tool_arg):
+# pylint:disable=dangerous-default-value
+  def xspace_wrapper_func(xspace_arg, tool_arg, params={}):
     return _pywrap_profiler.xspace_to_tools_data_from_byte_string(
-        xspace_arg, filenames, tool_arg)
+        xspace_arg, filenames, tool_arg, params)
+# pylint:enable=dangerous-default-value
 
   return xspace_to_tool_data(xspace_byte_list, tool, params,
                              xspace_wrapper_func)
@@ -116,7 +117,9 @@ def xspace_to_tool_data(
     # Streaming trace viewer handles one host at a time.
     assert len(xspace_paths) == 1
     options = params.get('trace_viewer_options', {})
-    data, success = xspace_wrapper_func(xspace_paths, tool, options)
+    raw_data, success = xspace_wrapper_func(xspace_paths, tool, options)
+    if success:
+      data = raw_data
   elif tool == 'overview_page':
     raw_data, success = xspace_wrapper_func(xspace_paths, tool)
     if success:
