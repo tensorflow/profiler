@@ -198,34 +198,45 @@ dashboard would integrate trace viewer app using iframe.
     height: 100%;
   }
   /* The "throbber": a spinning loading indicator */
-  @keyframes spin {
-    to {
-      transform: rotate(1turn);
-    }
-  }
+  #throbber-initial,
   #throbber {
-    animation: spin 1s infinite linear;
-    color: black;
-    font-size: 256px;
-    /* Display in the upper center of the screen */
+    /* Position: top right of the page, non-blocking to the trace events exploration */
     position: fixed;
+    top: 64px;
+    right: 48px;
+    border: 5px solid #fafafa;
+    border-radius: 50%;
+    border-top: 5px solid #e6e6e6; /* control bar background color */
+    width: 16px;
+    height: 16px;
+    -webkit-animation: spin 1s linear infinite; /* Safari */
+    animation: spin 1s linear infinite;
     z-index: 10;
-    top: 200px;
-    left: 50%;
-    width: 256px;
-    margin-left: -128px;
-    /* Center within that box */
-    line-height: 256px;
-    text-align: center;
-    pointer-events: none;
-
+    /* Hide the throbber when it's inactive */
     opacity: 0;
-    transition: opacity 0.3s ease-in-out;
   }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  #throbber-initial.active,
   #throbber.active {
-    opacity: 0.15;
+    opacity: 1;
     /* Wait a short time before showing the throbber (no delay for hiding). */
     transition-delay: 0.3s;
+  }
+
+  #throbber-initial {
+    /* Put intial loading throbber on page center for better visibility */
+    top: 20%;
+    left: 50%;
+    margin-left: -128px;
+    width: 64px;
+    height: 64px;
+    border: 14px solid #fafafa;
+    border-radius: 50%;
+    border-top: 14px solid #e6e6e6; /* control bar background color */
   }
 </style>
 <script src="tf-trace-viewer-helper.js"></script>
@@ -307,8 +318,7 @@ dashboard would integrate trace viewer app using iframe.
       this._traceViewer.globalMode = false;
 
       this._throbber = document.createElement('div');
-      this._throbber.id = 'throbber';
-      Polymer.dom(this._throbber).appendChild(document.createTextNode('↻'));
+      this._throbber.id = 'throbber-initial';
 
       Polymer.dom(this.root).appendChild(this._traceViewer);
       Polymer.dom(this.root).appendChild(this._throbber);
@@ -759,6 +769,7 @@ dashboard would integrate trace viewer app using iframe.
           'event_label': `trace_viewer_${this._isStreaming ? 'streaming' : 'nonstreaming'}`,
         });
         this._isInitialLoad = false;
+        this._throbber.id = 'throbber';
       } else {
          // measure time consuming for page reloading when streaming
          window.parent.gtag && window.parent.gtag('event', 'timing_complete', {
