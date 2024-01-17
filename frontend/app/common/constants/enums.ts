@@ -1,28 +1,28 @@
 // tslint:disable:enforce-comments-on-exported-symbols global enums
-export const enum IdleOption {
+export enum IdleOption {
   YES = 'Yes',
   NO = 'No',
 }
 
-export const enum OpExecutor {
+export enum OpExecutor {
   NONE = '',
   DEVICE = 'Device',
   HOST = 'Host'
 }
 
-export const enum OpKind {
+export enum OpKind {
   NONE = '',
   NAME = 'Name',
   TYPE = 'Type'
 }
 
-export const enum OpType {
+export enum OpType {
   NONE = '',
   TENSORFLOW = 'TensorFlow',
   XLA_HLO = 'HLO',
 }
 
-export const enum DataRequestType {
+export enum DataRequestType {
   UNKNOWN = 0,
   DATA_REQUEST_BEGIN,
   KERNEL_STATS,
@@ -33,7 +33,7 @@ export const enum DataRequestType {
   DIFF_DATA_REQUEST_END,
 }
 
-export const enum FileExtensionType {
+export enum FileExtensionType {
   UNKNOWN = '',
   PROTO_BINARY = 'pb',
   PROTO_TEXT = 'pbtxt',

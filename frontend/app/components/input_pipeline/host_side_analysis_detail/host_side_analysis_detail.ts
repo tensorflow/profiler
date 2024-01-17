@@ -1,6 +1,6 @@
 import {Component, Input, OnChanges, OnInit, SimpleChanges} from '@angular/core';
 import {ChartDataInfo} from 'org_xprof/frontend/app/common/interfaces/chart';
-import {DEFAULT_SIMPLE_DATA_TABLE, InputPipelineHostAnalysis, SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {DEFAULT_SIMPLE_DATA_TABLE, type InputPipelineHostAnalysis, type SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {TABLE_OPTIONS} from 'org_xprof/frontend/app/components/chart/chart_options';
 import {ArrayDataProvider} from 'org_xprof/frontend/app/components/chart/default_data_provider';
 

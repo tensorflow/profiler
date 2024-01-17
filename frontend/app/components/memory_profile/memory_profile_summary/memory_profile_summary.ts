@@ -1,5 +1,5 @@
 import {AfterViewInit, ChangeDetectorRef, Component, Input, OnChanges, SimpleChanges} from '@angular/core';
-import {MemoryProfileProto} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {type MemoryProfileProto} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {humanReadableText} from 'org_xprof/frontend/app/common/utils/utils';
 
 /** A memory profile summary view component. */

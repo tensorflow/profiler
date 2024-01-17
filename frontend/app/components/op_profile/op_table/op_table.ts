@@ -1,6 +1,6 @@
 import {Component, Input, OnDestroy} from '@angular/core';
 import {Store} from '@ngrx/store';
-import {Node} from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
+import {type Node} from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
 import {setActiveOpProfileNodeAction} from 'org_xprof/frontend/app/store/actions';
 
 /** An op table view component. */

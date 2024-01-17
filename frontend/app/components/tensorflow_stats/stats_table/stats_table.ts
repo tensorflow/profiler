@@ -1,6 +1,6 @@
 import {Component, Input, OnChanges, OnInit, SimpleChanges} from '@angular/core';
 import {ChartDataInfo} from 'org_xprof/frontend/app/common/interfaces/chart';
-import {TensorflowStatsData} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {type TensorflowStatsData} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 import {StatsTableDataProvider} from './stats_table_data_provider';
 

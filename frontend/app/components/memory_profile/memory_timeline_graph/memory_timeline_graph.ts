@@ -1,5 +1,5 @@
 import {AfterViewInit, Component, ElementRef, HostListener, Input, OnChanges, SimpleChanges, ViewChild} from '@angular/core';
-import {MemoryProfileProto, MemoryProfileSnapshot} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {type MemoryProfileProto, MemoryProfileSnapshot} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {bytesToGiBs, picoToMilli} from 'org_xprof/frontend/app/common/utils/utils';
 
 const MAX_CHART_WIDTH = 1500;

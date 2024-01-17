@@ -1,5 +1,5 @@
 import {Component, ElementRef, Input, OnChanges, OnInit, SimpleChanges, ViewChild} from '@angular/core';
-import {SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {type SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 declare interface KernelStatsColumn {
   rank: number;

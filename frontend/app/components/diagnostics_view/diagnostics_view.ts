@@ -1,5 +1,5 @@
 import {Component, Input} from '@angular/core';
-import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
+import {type Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 
 /** An diagnostics view component. */
 @Component({

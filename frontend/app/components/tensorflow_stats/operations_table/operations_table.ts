@@ -1,7 +1,7 @@
 import {Component, Input, OnChanges, SimpleChanges} from '@angular/core';
 import {OpExecutor} from 'org_xprof/frontend/app/common/constants/enums';
 import {ChartDataInfo} from 'org_xprof/frontend/app/common/interfaces/chart';
-import {TensorflowStatsData} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {type TensorflowStatsData} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 import {OperationsTableDataProvider} from './operations_table_data_provider';
 

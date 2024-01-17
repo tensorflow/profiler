@@ -1,6 +1,6 @@
 import {AfterViewInit, Component, ElementRef, Input, OnChanges, ViewChild} from '@angular/core';
 
-import {GeneralAnalysis, InputPipelineAnalysis, TopOpsColumn} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {type GeneralAnalysis, type InputPipelineAnalysis, TopOpsColumn} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 const FLOP_RATE_COLUMN_INDEX = 4;
 

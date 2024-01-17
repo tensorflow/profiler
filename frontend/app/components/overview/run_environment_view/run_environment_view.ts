@@ -1,5 +1,5 @@
 import {Component, Input} from '@angular/core';
-import {DEFAULT_SIMPLE_DATA_TABLE, RunEnvironment} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {DEFAULT_SIMPLE_DATA_TABLE, type RunEnvironment} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 /** A run environment view component. */
 @Component({

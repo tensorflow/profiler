@@ -1,6 +1,6 @@
 import {Directive, Input, OnChanges, SimpleChanges} from '@angular/core';
 
-import {RecommendationResult} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {type RecommendationResult} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 interface StatementData {
   value: string;

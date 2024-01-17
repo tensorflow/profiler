@@ -1,6 +1,6 @@
 import {Component, Input, OnChanges, SimpleChanges} from '@angular/core';
 import {ChartDataInfo} from 'org_xprof/frontend/app/common/interfaces/chart';
-import {DEFAULT_SIMPLE_DATA_TABLE, InputPipelineDeviceAnalysis} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {DEFAULT_SIMPLE_DATA_TABLE, type InputPipelineDeviceAnalysis} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 import {DeviceSideAnalysisDetailDataProvider} from './device_side_analysis_detail_data_provider';
 

@@ -1,7 +1,7 @@
 import {Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output} from '@angular/core';
 import {Store} from '@ngrx/store';
 import {KELLY_COLORS} from 'org_xprof/frontend/app/common/constants/constants';
-import {AllReduceOpInfo, ChannelInfo, PodStatsRecord, PodViewerTopology, StepBreakdownEvent} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {AllReduceOpInfo, ChannelInfo, PodStatsRecord, type PodViewerTopology, StepBreakdownEvent} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {getActivePodViewerInfoState} from 'org_xprof/frontend/app/store/selectors';
 import {ReplaySubject} from 'rxjs';

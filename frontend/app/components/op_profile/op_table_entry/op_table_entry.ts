@@ -1,6 +1,6 @@
 import {Component, EventEmitter, Input, OnChanges, Output, SimpleChanges} from '@angular/core';
 import {Store} from '@ngrx/store';
-import {Node} from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
+import {type Node} from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {updateSelectedOpNodeChainAction} from 'org_xprof/frontend/app/store/actions';
 

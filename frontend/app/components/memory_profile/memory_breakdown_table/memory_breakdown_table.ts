@@ -1,5 +1,5 @@
 import {Component, ElementRef, Input, OnChanges, OnInit, SimpleChanges, ViewChild} from '@angular/core';
-import {MemoryProfileProto} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {type MemoryProfileProto} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {bytesToGiBs} from 'org_xprof/frontend/app/common/utils/utils';
 
 const DATA_TABLE_OPERATION_INDEX = 0;

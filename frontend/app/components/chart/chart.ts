@@ -1,5 +1,5 @@
 import {Component, ElementRef, EventEmitter, Input, NgModule, OnChanges, OnInit, Output, SimpleChanges} from '@angular/core';
-import {ChartClass, ChartDataInfo, ChartType, CustomChartDataProcessor, DataTableOrDataView} from 'org_xprof/frontend/app/common/interfaces/chart';
+import {ChartClass, type ChartDataInfo, ChartType, CustomChartDataProcessor, DataTableOrDataView} from 'org_xprof/frontend/app/common/interfaces/chart';
 
 /** A common chart component. */
 @Component({

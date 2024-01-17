@@ -1,6 +1,6 @@
 import {AfterViewInit, Component, ElementRef, HostListener, Input, OnChanges, SimpleChanges, ViewChild} from '@angular/core';
 
-import {InputPipelineAnalysis} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {type InputPipelineAnalysis} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 const MAX_CHART_WIDTH = 800;
 const COLUMN_IDS_FOR_TPU = [

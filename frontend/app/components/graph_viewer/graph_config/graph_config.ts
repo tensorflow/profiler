@@ -1,5 +1,5 @@
 import {Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges} from '@angular/core';
-import {GraphConfigInput} from 'org_xprof/frontend/app/common/interfaces/graph_viewer';
+import {type GraphConfigInput} from 'org_xprof/frontend/app/common/interfaces/graph_viewer';
 import {ReplaySubject} from 'rxjs';
 
 /** A graph viewer component. */
