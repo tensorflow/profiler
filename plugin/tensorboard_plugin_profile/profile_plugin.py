@@ -890,6 +890,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
       # tf-trace-viewer.html that stream trace viewer should be used.
       tools.discard('trace_viewer#')
       tools.discard('trace_viewer')
+      tools.discard('trace_viewer^')
     if 'trace_viewer#' in tools:
       # use compressed trace
       tools.discard('trace_viewer')
