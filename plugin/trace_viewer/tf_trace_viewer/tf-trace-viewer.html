@@ -261,6 +261,7 @@ dashboard would integrate trace viewer app using iframe.
         type: String,
         value: null,
       },
+      // TODO(tf-profiler): Fix naming (Leading underscores are not allowed in field names)
       // _traceData is used for static mode.
       _traceData: {
         type: Object,
@@ -286,7 +287,7 @@ dashboard would integrate trace viewer app using iframe.
       _isInitialLoad: {type: Boolean, value: true},
       _replaceModel: {type: Boolean, value: true},
       _hosts: {type: Array, value: []},
-      _showFilterForm: {type: Boolean, value: false},
+      _showFilterForm: {type: Boolean, value: true},
     },
 
     ready: function() {
@@ -346,8 +347,8 @@ dashboard would integrate trace viewer app using iframe.
           this.hostsDataUrl = value;
         } else if (key === 'resolution') {
           this._resolution = Number(value);
-        } else if (key === 'show_filter_form' || key === 'enable_filter') {
-          this._showFilterForm = value === 'true';
+        } else if (key === 'enable_filter') {
+          this._showFilterForm = !(value === 'false');
         }
       }.bind(this));
 
