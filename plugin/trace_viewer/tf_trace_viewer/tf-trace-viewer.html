@@ -325,7 +325,6 @@ dashboard would integrate trace viewer app using iframe.
       Polymer.dom(this.root).appendChild(this._throbber);
 
       this._resolution = this._resolutionFromViewerWidth(this._traceViewer.clientWidth);
-      this._selectedHostIndexes = this._getInitialSelectedHostIndexes();
       // Retrieve the URL of trace data.
       var query = new URL(window.location.href);
       query.searchParams.forEach(function(value, key, searchParams) {
@@ -356,6 +355,7 @@ dashboard would integrate trace viewer app using iframe.
         this._displayOverlay('Trace Viewer', 'Trace data URL is not provided.');
         return null;
       }
+      this._selectedHostIndexes = this._getSelectedHostIndexesFromURL();
       this._init();
       this._adjustUI();
 
@@ -387,26 +387,11 @@ dashboard would integrate trace viewer app using iframe.
     _devices: null,
     _selectedHostIndexes: [0],
 
-    // Way to get selectedHostIndexes with legacy host filter
+    // SelectedHostIndexes will be reactively updated for both legacy and new filter view
     _getSelectedHostIndexesFromURL: function() {
       const hostIndexParam = new URL(window.parent.location.href).searchParams?.get('host_index') || '';
       const selectedHostIndexes = hostIndexParam.split(',').map(index => Number(index));
       return selectedHostIndexes.length ? selectedHostIndexes : [0];
-    },
-
-    // Way to get selectedHostIndexes with revamped host filter
-    _getSelectedHostIndexesFromURI: function() {
-      const traceViewerLink = new URL(window.location.origin + this.traceDataUrl);
-      return (traceViewerLink.searchParams.get('hosts') || '').split(',');
-   },
-
-   _getInitialSelectedHostIndexes: function() {
-      return this._showFilterForm ? this._getSelectedHostIndexesFromURI() : this._getSelectedHostIndexesFromURL();
-    },
-
-    _getSelectedHostIndexes: function() {
-      // When using legacy host selector, selectedHostIndexes will be reactively updated
-      return this._showFilterForm ? this._getSelectedHostIndexesFromURI() : this._selectedHostIndexes;
     },
 
     _getSelectedHosts() {
@@ -580,6 +565,8 @@ dashboard would integrate trace viewer app using iframe.
      * BEGIN - Functions only used when trace filter form disabled
      *************************************************************
      */
+    // Note for both legacy and new filter view, host_index in URL
+    // is the source of truth / most up-to-date for current selected hosts
     _updateUrlHostIndex: function(selectedHostIndexes) {
       const queryParams = new URLSearchParams(window.parent.location.search);
       if (selectedHostIndexes.length) {
@@ -677,7 +664,7 @@ dashboard would integrate trace viewer app using iframe.
 
     // This function is called when generating trace viewer links given hosts selection
     _addSelectedHostIndexToTraceViewerURL: function(url) {
-      const selectedHostIndexes = this._getSelectedHostIndexes();
+      const selectedHostIndexes = this._getSelectedHostIndexesFromURL();
       if (selectedHostIndexes > 0) {
         url.searchParams.append("host_index", selectedHostIndexes.join(','));
       }
