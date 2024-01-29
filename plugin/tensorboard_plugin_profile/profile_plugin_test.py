@@ -177,9 +177,9 @@ class ProfilePluginTest(tf.test.TestCase):
     self.assertListEqual(['host0', 'host1'], hosts)
     hosts_a = self.plugin.host_impl('a/foo', 'trace_viewer')
     self.assertListEqual(['host0', 'host1'], hosts_a)
-    hosts_q = self.plugin.host_impl('qux', 'tensorflow_stats')
+    hosts_q = self.plugin.host_impl('qux', 'framework_op_stats')
     self.assertEmpty(hosts_q)
-    hosts_abc_tf_stats = self.plugin.host_impl('abc', 'tensorflow_stats^')
+    hosts_abc_tf_stats = self.plugin.host_impl('abc', 'framework_op_stats^')
     self.assertListEqual(['ALL_HOSTS', 'host1', 'host2'], hosts_abc_tf_stats)
     # TraceViewer and MemoryProfile does not support all hosts.
     hosts_abc_trace_viewer = self.plugin.host_impl('abc', 'trace_viewer^')

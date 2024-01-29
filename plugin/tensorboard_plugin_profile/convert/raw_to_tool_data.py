@@ -128,13 +128,22 @@ def xspace_to_tool_data(
     raw_data, success = xspace_wrapper_func(xspace_paths, tool)
     if success:
       data = input_pipeline_proto_to_gviz.to_json(raw_data)
-  elif tool == 'tensorflow_stats':
+  elif tool == 'framework_op_stats':
     raw_data, success = xspace_wrapper_func(xspace_paths, tool)
     if success:
       if tqx == 'out:csv':
         data = tf_stats_proto_to_gviz.to_csv(raw_data)
       else:
         data = tf_stats_proto_to_gviz.to_json(raw_data)
+    # Try legacy tool name: Handle backward compatibility with lower TF version
+    else:
+      legacy_tool = 'tensorflow_stats'
+      raw_data, success = xspace_wrapper_func(xspace_paths, legacy_tool)
+      if success:
+        if tqx == 'out:csv':
+          data = tf_stats_proto_to_gviz.to_csv(raw_data)
+        else:
+          data = tf_stats_proto_to_gviz.to_json(raw_data)
   elif tool == 'kernel_stats':
     raw_data, success = xspace_wrapper_func(xspace_paths, tool)
     if success:
@@ -197,7 +206,7 @@ def tool_proto_to_tool_data(tool_proto, tool, params):
   tqx = params.get('tqx', '')
   if tool == 'trace_viewer':
     data = process_raw_trace(tool_proto)
-  elif tool == 'tensorflow_stats':
+  elif tool == 'framework_op_stats':
     if tqx == 'out:csv;':
       data = tf_stats_proto_to_gviz.to_csv(tool_proto)
     else:

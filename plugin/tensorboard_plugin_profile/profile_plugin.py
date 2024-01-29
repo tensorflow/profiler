@@ -73,7 +73,7 @@ TOOLS = {
     'overview_page@': 'overview_page.pb',
     'memory_viewer': 'memory_viewer.json',
     'pod_viewer': 'pod_viewer.json',
-    'tensorflow_stats': 'tensorflow_stats.pb',
+    'framework_op_stats': 'tensorflow_stats.pb',
     'kernel_stats': 'kernel_stats.pb',
     'memory_profile#': 'memory_profile.json.gz',
     'xplane': 'xplane.pb',
@@ -99,7 +99,7 @@ XPLANE_TOOLS = [
     'trace_viewer@^',  # streaming since TF 2.14
     'overview_page^',
     'input_pipeline_analyzer^',
-    'tensorflow_stats^',
+    'framework_op_stats^',
     'kernel_stats^',
     'memory_profile^',
     'pod_viewer^',
@@ -110,7 +110,7 @@ XPLANE_TOOLS = [
 # XPlane generated tools that support all host mode.
 XPLANE_TOOLS_ALL_HOSTS_SUPPORTED = frozenset([
     'input_pipeline_analyzer^',
-    'tensorflow_stats^',
+    'framework_op_stats^',
     'kernel_stats^',
     'overview_page^',
     'pod_viewer^',
