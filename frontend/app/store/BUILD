@@ -21,7 +21,7 @@ xprof_ng_module(
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/interfaces:op_profile_proto_defs",
         "@org_xprof//frontend/app/store/common_data_store",
-        "@org_xprof//frontend/app/store/tensorflow_stats",
+        "@org_xprof//frontend/app/store/framework_op_stats",
     ],
 )
 

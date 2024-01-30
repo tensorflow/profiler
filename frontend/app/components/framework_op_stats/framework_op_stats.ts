@@ -2,12 +2,12 @@ import {Component} from '@angular/core';
 import {Store} from '@ngrx/store';
 import {IdleOption, OpExecutor, OpKind, OpType} from 'org_xprof/frontend/app/common/constants/enums';
 import {ChartDataInfo} from 'org_xprof/frontend/app/common/interfaces/chart';
-import {TensorflowStatsData} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {FrameworkOpStatsData} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {CategoryDiffTableDataProcessor} from 'org_xprof/frontend/app/components/chart/category_diff_table_data_processor';
 import {CategoryTableDataProcessor} from 'org_xprof/frontend/app/components/chart/category_table_data_processor';
 import {PIE_CHART_OPTIONS} from 'org_xprof/frontend/app/components/chart/chart_options';
 import {DefaultDataProvider} from 'org_xprof/frontend/app/components/chart/default_data_provider';
-import * as selectors from 'org_xprof/frontend/app/store/tensorflow_stats/selectors';
+import * as selectors from 'org_xprof/frontend/app/store/framework_op_stats/selectors';
 
 const OP_EXECUTOR_ID = 'host_or_device';
 const OP_TYPE_ID = 'type';
@@ -17,15 +17,15 @@ const MEASURED_FLOP_RATE_ID = 'measured_flop_rate';
 
 /** A TensorFlow Stats component. */
 @Component({
-  selector: 'tensorflow-stats',
-  templateUrl: './tensorflow_stats.ng.html',
-  styleUrls: ['./tensorflow_stats.css']
+  selector: 'framework-op-stats',
+  templateUrl: './framework_op_stats.ng.html',
+  styleUrls: ['./framework_op_stats.css']
 })
-export class TensorflowStats {
-  data: TensorflowStatsData[]|null = null;
-  diffData: TensorflowStatsData[]|null = null;
-  selectedData: TensorflowStatsData|null = null;
-  selectedDiffData: TensorflowStatsData|null = null;
+export class FrameworkOpStats {
+  data: FrameworkOpStatsData[]|null = null;
+  diffData: FrameworkOpStatsData[]|null = null;
+  selectedData: FrameworkOpStatsData|null = null;
+  selectedDiffData: FrameworkOpStatsData|null = null;
   idleMenuButtonLabel = IdleOption.NO;
   idleOptionItems = [IdleOption.YES, IdleOption.NO];
   opExecutorDevice = OpExecutor.DEVICE;
@@ -87,12 +87,12 @@ export class TensorflowStats {
           this.showPprofLink = Boolean(showPprofLink);
         });
     this.store.select(selectors.getDiffDataState)
-        .subscribe((diffData: TensorflowStatsData[]) => {
+        .subscribe((diffData: FrameworkOpStatsData[]) => {
           this.diffData = (diffData || []);
           this.setIdleOption();
         });
     this.store.select(selectors.getDataState)
-        .subscribe((data: TensorflowStatsData[]) => {
+        .subscribe((data: FrameworkOpStatsData[]) => {
           this.data = (data || []);
           this.setIdleOption();
         });

@@ -16,7 +16,7 @@ ts_library(
         "@org_xprof//frontend/app/store",
         "@org_xprof//frontend/app/store:types",
         "@org_xprof//frontend/app/store/common_data_store",
-        "@org_xprof//frontend/app/store/tensorflow_stats",
+        "@org_xprof//frontend/app/store/framework_op_stats",
     ],
 )
 

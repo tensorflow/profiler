@@ -1,6 +1,6 @@
 import {OpExecutor} from 'org_xprof/frontend/app/common/constants/enums';
 import {ChartOptions} from 'org_xprof/frontend/app/common/interfaces/chart';
-import {TensorflowStatsData} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {FrameworkOpStatsData} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {DefaultDataProvider} from 'org_xprof/frontend/app/components/chart/default_data_provider';
 import {computeDiffTable} from 'org_xprof/frontend/app/components/chart/table_utils';
 
@@ -22,7 +22,7 @@ export class OperationsTableDataProvider extends DefaultDataProvider {
     },
   };
 
-  setDiffData(diffData: TensorflowStatsData|null) {
+  setDiffData(diffData: FrameworkOpStatsData|null) {
     this.diffTable =
         diffData ? new google.visualization.DataTable(diffData) : undefined;
   }

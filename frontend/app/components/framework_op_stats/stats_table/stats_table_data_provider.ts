@@ -1,6 +1,6 @@
 import {EventEmitter} from '@angular/core';
 import {ChartClass, ChartOptions} from 'org_xprof/frontend/app/common/interfaces/chart';
-import {SimpleDataTable, TensorflowStatsData} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {FrameworkOpStatsData, SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {DefaultDataProvider} from 'org_xprof/frontend/app/components/chart/default_data_provider';
 import {computeDiffTable} from 'org_xprof/frontend/app/components/chart/table_utils';
 
@@ -62,7 +62,7 @@ export class StatsTableDataProvider extends DefaultDataProvider {
     }
   }
 
-  setDiffData(diffData: TensorflowStatsData|null) {
+  setDiffData(diffData: FrameworkOpStatsData|null) {
     this.diffTable = diffData ?
         new google.visualization.DataTable(diffData) :
         undefined;

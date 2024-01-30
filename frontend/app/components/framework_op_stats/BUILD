@@ -4,12 +4,12 @@ load("//defs:defs.bzl", "xprof_ng_module")
 package(default_visibility = ["//frontend:internal"])
 
 xprof_ng_module(
-    name = "tensorflow_stats_adapter",
+    name = "framework_op_stats_adapter",
     srcs = [
-        "tensorflow_stats_adapter.ts",
+        "framework_op_stats_adapter.ts",
     ],
     deps = [
-        ":tensorflow_stats",
+        ":framework_op_stats",
         "@npm//@angular/core",
         "@npm//@angular/router",
         "@npm//@ngrx/store",
@@ -17,19 +17,19 @@ xprof_ng_module(
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/store",
-        "@org_xprof//frontend/app/store/tensorflow_stats",
+        "@org_xprof//frontend/app/store/framework_op_stats",
     ],
 )
 
 xprof_ng_module(
-    name = "tensorflow_stats",
+    name = "framework_op_stats",
     srcs = [
-        "tensorflow_stats.ts",
-        "tensorflow_stats_module.ts",
+        "framework_op_stats.ts",
+        "framework_op_stats_module.ts",
     ],
     assets = [
-        ":tensorflow_stats_css",
-        "tensorflow_stats.ng.html",
+        ":framework_op_stats_css",
+        "framework_op_stats.ng.html",
     ],
     deps = [
         "@npm//@angular/core",
@@ -47,17 +47,17 @@ xprof_ng_module(
         "@org_xprof//frontend/app/components/chart:data_processor",
         "@org_xprof//frontend/app/components/chart:default_data_provider",
         "@org_xprof//frontend/app/components/controls/export_as_csv",
-        "@org_xprof//frontend/app/components/tensorflow_stats/flop_rate_chart",
-        "@org_xprof//frontend/app/components/tensorflow_stats/model_properties",
-        "@org_xprof//frontend/app/components/tensorflow_stats/operations_table",
-        "@org_xprof//frontend/app/components/tensorflow_stats/stats_table",
-        "@org_xprof//frontend/app/store/tensorflow_stats",
+        "@org_xprof//frontend/app/components/framework_op_stats/flop_rate_chart",
+        "@org_xprof//frontend/app/components/framework_op_stats/model_properties",
+        "@org_xprof//frontend/app/components/framework_op_stats/operations_table",
+        "@org_xprof//frontend/app/components/framework_op_stats/stats_table",
+        "@org_xprof//frontend/app/store/framework_op_stats",
     ],
 )
 
 sass_binary(
-    name = "tensorflow_stats_css",
-    src = "tensorflow_stats.scss",
+    name = "framework_op_stats_css",
+    src = "framework_op_stats.scss",
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

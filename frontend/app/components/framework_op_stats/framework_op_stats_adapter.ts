@@ -4,18 +4,18 @@ import {Store} from '@ngrx/store';
 import {DataRequestType} from 'org_xprof/frontend/app/common/constants/enums';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import {setDataRequestStateAction} from 'org_xprof/frontend/app/store/actions';
-import * as actions from 'org_xprof/frontend/app/store/tensorflow_stats/actions';
+import * as actions from 'org_xprof/frontend/app/store/framework_op_stats/actions';
 import {ReplaySubject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 
-import {TensorflowStatsModule} from './tensorflow_stats_module';
+import {FrameworkOpStatsModule} from './framework_op_stats_module';
 
 /** An overview adapter component. */
 @Component({
-  selector: 'tensorflow-stats-adapter',
-  template: '<tensorflow-stats></tensorflow-stats>',
+  selector: 'framework-op-stats-adapter',
+  template: '<framework-op-stats></framework-op-stats>',
 })
-export class TensorflowStatsAdapter implements OnDestroy {
+export class FrameworkOpStatsAdapter implements OnDestroy {
   /** Handles on-destroy Subject, used to unsubscribe. */
   private readonly destroyed = new ReplaySubject<void>(1);
 
@@ -23,13 +23,13 @@ export class TensorflowStatsAdapter implements OnDestroy {
     route.params.pipe(takeUntil(this.destroyed)).subscribe((params) => {
       this.update(params as NavigationEvent);
     });
-    this.store.dispatch(actions.setTitleAction({title: 'TensorFlow Stats'}));
+    this.store.dispatch(actions.setTitleAction({title: 'Framework Op Stats'}));
   }
 
   update(event: NavigationEvent) {
     const params = {
       run: event.run || '',
-      tag: event.tag || 'tensorflow_stats',
+      tag: event.tag || 'framework_op_stats',
       host: event.host || '',
     };
     this.store.dispatch(setDataRequestStateAction(
@@ -44,9 +44,9 @@ export class TensorflowStatsAdapter implements OnDestroy {
 }
 
 @NgModule({
-  declarations: [TensorflowStatsAdapter],
-  imports: [TensorflowStatsModule],
-  exports: [TensorflowStatsAdapter]
+  declarations: [FrameworkOpStatsAdapter],
+  imports: [FrameworkOpStatsModule],
+  exports: [FrameworkOpStatsAdapter]
 })
-export class TensorflowStatsAdapterModule {
+export class FrameworkOpStatsAdapterModule {
 }

@@ -1,7 +1,7 @@
 import {Component, Input, OnChanges, SimpleChanges} from '@angular/core';
 import {OpExecutor} from 'org_xprof/frontend/app/common/constants/enums';
 import {ChartDataInfo} from 'org_xprof/frontend/app/common/interfaces/chart';
-import {type TensorflowStatsData} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {type FrameworkOpStatsData} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 import {OperationsTableDataProvider} from './operations_table_data_provider';
 
@@ -12,11 +12,14 @@ import {OperationsTableDataProvider} from './operations_table_data_provider';
   styleUrls: ['./operations_table.scss']
 })
 export class OperationsTable implements OnChanges {
-  /** The tensorflow stats data. */
-  @Input() tensorflowStatsData: TensorflowStatsData|null = null;
+  /**
+   * The tensorflow stats data.
+   *  TODO(tf-profiler) rename to "frameworkOpStatsData"
+   */
+  @Input() tensorflowStatsData: FrameworkOpStatsData|null = null;
 
   /** The tensorflow stats data for diff. */
-  @Input() diffData: TensorflowStatsData|null = null;
+  @Input() diffData: FrameworkOpStatsData|null = null;
 
   /** Whether to use diff. */
   @Input() hasDiff = false;

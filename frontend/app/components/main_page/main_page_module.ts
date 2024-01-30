@@ -9,6 +9,7 @@ import {DcnCollectiveStats} from 'org_xprof/frontend/app/components/dcn_collecti
 import {DcnCollectiveStatsModule} from 'org_xprof/frontend/app/components/dcn_collective_stats/dcn_collective_stats_module';
 import {EmptyPage} from 'org_xprof/frontend/app/components/empty_page/empty_page';
 import {EmptyPageModule} from 'org_xprof/frontend/app/components/empty_page/empty_page_module';
+import {FrameworkOpStatsAdapter, FrameworkOpStatsAdapterModule} from 'org_xprof/frontend/app/components/framework_op_stats/framework_op_stats_adapter';
 import {GraphViewer} from 'org_xprof/frontend/app/components/graph_viewer/graph_viewer';
 import {GraphViewerModule} from 'org_xprof/frontend/app/components/graph_viewer/graph_viewer_module';
 import {InputPipeline} from 'org_xprof/frontend/app/components/input_pipeline/input_pipeline';
@@ -25,7 +26,6 @@ import {OverviewModule} from 'org_xprof/frontend/app/components/overview/overvie
 import {PodViewer} from 'org_xprof/frontend/app/components/pod_viewer/pod_viewer';
 import {PodViewerModule} from 'org_xprof/frontend/app/components/pod_viewer/pod_viewer_module';
 import {SideNavModule} from 'org_xprof/frontend/app/components/sidenav/sidenav_module';
-import {TensorflowStatsAdapter, TensorflowStatsAdapterModule} from 'org_xprof/frontend/app/components/tensorflow_stats/tensorflow_stats_adapter';
 import {TfDataBottleneckAnalysis} from 'org_xprof/frontend/app/components/tf_data_bottleneck_analysis/tf_data_bottleneck_analysis';
 import {TfDataBottleneckAnalysisModule} from 'org_xprof/frontend/app/components/tf_data_bottleneck_analysis/tf_data_bottleneck_analysis_module';
 import {TraceViewer} from 'org_xprof/frontend/app/components/trace_viewer/trace_viewer';
@@ -53,8 +53,8 @@ export const routes: Routes = [
   {path: 'pod_viewer', component: PodViewer},
   {path: 'pod_viewer^', component: PodViewer},
   {path: 'tf_data_bottleneck_analysis^', component: TfDataBottleneckAnalysis},
-  {path: 'framework_op_stats', component: TensorflowStatsAdapter},
-  {path: 'framework_op_stats^', component: TensorflowStatsAdapter},
+  {path: 'framework_op_stats', component: FrameworkOpStatsAdapter},
+  {path: 'framework_op_stats^', component: FrameworkOpStatsAdapter},
   {path: 'trace_viewer', component: TraceViewer},
   {path: 'trace_viewer#', component: TraceViewer},
   {path: 'trace_viewer@^', component: TraceViewer},
@@ -85,7 +85,7 @@ export const routes: Routes = [
     PodViewerModule,
     GraphViewerModule,
     TfDataBottleneckAnalysisModule,
-    TensorflowStatsAdapterModule,
+    FrameworkOpStatsAdapterModule,
     DcnCollectiveStatsModule,
     RouterModule.forRoot(routes),
   ],

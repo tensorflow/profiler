@@ -2,15 +2,15 @@ import {Action, ActionReducer, createReducer, on} from '@ngrx/store';
 import {ActionCreatorAny} from 'org_xprof/frontend/app/store/types';
 
 import * as actions from './actions';
-import {INIT_TENSORFLOW_STATS_STATE, TensorflowStatsState} from './state';
+import {FrameworkOpStatsState, INIT_FRAMEWORK_OP_STATS_STATE} from './state';
 
 /** Reduce functions of tensorflow stats. */
-export const reducer: ActionReducer<TensorflowStatsState, Action> =
+export const reducer: ActionReducer<FrameworkOpStatsState, Action> =
     createReducer(
-        INIT_TENSORFLOW_STATS_STATE,
+        INIT_FRAMEWORK_OP_STATS_STATE,
         on(
             actions.setDataAction,
-            (state: TensorflowStatsState, action: ActionCreatorAny) => {
+            (state: FrameworkOpStatsState, action: ActionCreatorAny) => {
               return {
                 ...state,
                 data: action.data,
@@ -19,7 +19,7 @@ export const reducer: ActionReducer<TensorflowStatsState, Action> =
             ),
         on(
             actions.setDiffDataAction,
-            (state: TensorflowStatsState, action: ActionCreatorAny) => {
+            (state: FrameworkOpStatsState, action: ActionCreatorAny) => {
               return {
                 ...state,
                 diffData: action.diffData,
@@ -28,7 +28,7 @@ export const reducer: ActionReducer<TensorflowStatsState, Action> =
             ),
         on(
             actions.setHasDiffAction,
-            (state: TensorflowStatsState, action: ActionCreatorAny) => {
+            (state: FrameworkOpStatsState, action: ActionCreatorAny) => {
               return {
                 ...state,
                 hasDiff: action.hasDiff,
@@ -37,7 +37,7 @@ export const reducer: ActionReducer<TensorflowStatsState, Action> =
             ),
         on(
             actions.setShowPprofLinkAction,
-            (state: TensorflowStatsState, action: ActionCreatorAny) => {
+            (state: FrameworkOpStatsState, action: ActionCreatorAny) => {
               return {
                 ...state,
                 showPprofLink: action.showPprofLink,
@@ -46,7 +46,7 @@ export const reducer: ActionReducer<TensorflowStatsState, Action> =
             ),
         on(
             actions.setShowFlopRateChartAction,
-            (state: TensorflowStatsState, action: ActionCreatorAny) => {
+            (state: FrameworkOpStatsState, action: ActionCreatorAny) => {
               return {
                 ...state,
                 showFlopRateChart: action.showFlopRateChart,
@@ -55,7 +55,7 @@ export const reducer: ActionReducer<TensorflowStatsState, Action> =
             ),
         on(
             actions.setShowModelPropertiesAction,
-            (state: TensorflowStatsState, action: ActionCreatorAny) => {
+            (state: FrameworkOpStatsState, action: ActionCreatorAny) => {
               return {
                 ...state,
                 showModelProperties: action.showModelProperties,
@@ -64,7 +64,7 @@ export const reducer: ActionReducer<TensorflowStatsState, Action> =
             ),
         on(
             actions.setTitleAction,
-            (state: TensorflowStatsState, action: ActionCreatorAny) => {
+            (state: FrameworkOpStatsState, action: ActionCreatorAny) => {
               return {
                 ...state,
                 title: action.title,
@@ -74,7 +74,7 @@ export const reducer: ActionReducer<TensorflowStatsState, Action> =
     );
 
 /** Tensorflow Stats reducer */
-export function tensorFlowStatsReducer(
-    state: TensorflowStatsState|undefined, action: Action) {
+export function frameworkOpStatsReducer(
+    state: FrameworkOpStatsState|undefined, action: Action) {
   return reducer(state, action);
 }

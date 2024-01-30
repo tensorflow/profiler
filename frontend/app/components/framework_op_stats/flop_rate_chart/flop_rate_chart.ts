@@ -1,6 +1,6 @@
 import {Component, Input, OnChanges, SimpleChanges} from '@angular/core';
 import {ChartDataInfo} from 'org_xprof/frontend/app/common/interfaces/chart';
-import {type SimpleDataTable, type TensorflowStatsData} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {type FrameworkOpStatsData, type SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {COLUMN_CHART_OPTIONS} from 'org_xprof/frontend/app/components/chart/chart_options';
 import {DefaultDataProvider} from 'org_xprof/frontend/app/components/chart/default_data_provider';
 import {XyTableDataProcessor} from 'org_xprof/frontend/app/components/chart/xy_table_data_processor';
@@ -13,7 +13,7 @@ import {XyTableDataProcessor} from 'org_xprof/frontend/app/components/chart/xy_t
 })
 export class FlopRateChart implements OnChanges {
   /** The input data. */
-  @Input() data: SimpleDataTable|TensorflowStatsData|null = null;
+  @Input() data: SimpleDataTable|FrameworkOpStatsData|null = null;
   /** Index of the Column that corresponds to the x-axis. */
   @Input() xColumn = 0;
   /** Index of the Column that corresponds to the y-axis. */

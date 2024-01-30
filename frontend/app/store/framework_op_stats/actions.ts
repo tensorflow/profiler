@@ -1,17 +1,17 @@
 import {createAction, props} from '@ngrx/store';
-import {TensorflowStatsData} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {FrameworkOpStatsData} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {ActionCreatorAny} from 'org_xprof/frontend/app/store/types';
 
 /** Action to set data property */
 export const setDataAction: ActionCreatorAny = createAction(
     '[Tensorflow Stats] Set data property',
-    props<{data: TensorflowStatsData[]}>(),
+    props<{data: FrameworkOpStatsData[]}>(),
 );
 
 /** Action to set diffData property */
 export const setDiffDataAction: ActionCreatorAny = createAction(
     '[Tensorflow Stats] Set diffData property',
-    props<{diffData: TensorflowStatsData[]}>(),
+    props<{diffData: FrameworkOpStatsData[]}>(),
 );
 
 /** Action to set hasDiff property */

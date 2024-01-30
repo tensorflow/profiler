@@ -1,9 +1,9 @@
-import {TensorflowStatsData} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {FrameworkOpStatsData} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 /** State of tensorflow stats */
-export interface TensorflowStatsState {
-  data: TensorflowStatsData[];
-  diffData: TensorflowStatsData[];
+export interface FrameworkOpStatsState {
+  data: FrameworkOpStatsData[];
+  diffData: FrameworkOpStatsData[];
   hasDiff: boolean;
   showPprofLink: boolean;
   showFlopRateChart: boolean;
@@ -12,7 +12,7 @@ export interface TensorflowStatsState {
 }
 
 /** Initial state object */
-export const INIT_TENSORFLOW_STATS_STATE: TensorflowStatsState = {
+export const INIT_FRAMEWORK_OP_STATS_STATE: FrameworkOpStatsState = {
   data: [],
   diffData: [],
   hasDiff: false,
@@ -23,4 +23,4 @@ export const INIT_TENSORFLOW_STATS_STATE: TensorflowStatsState = {
 };
 
 /** Feature key for store */
-export const TENSORFLOW_STATS_STORE_KEY = 'tensorflow_stats';
+export const FRAMEWORK_OP_STATS_STORE_KEY = 'framework_op_stats';

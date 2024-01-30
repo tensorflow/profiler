@@ -180,7 +180,7 @@ export interface HostOpsColumn {
 
 /* tslint:disable enforce-name-casing */
 /** The base interface for a property of tensorflow stats. */
-declare interface TensorflowStatsProperty {
+declare interface FrameworkOpStatsProperty {
   architecture_type?: string;
   device_tf_pprof_link?: string;
   host_tf_pprof_link?: string;
@@ -189,8 +189,8 @@ declare interface TensorflowStatsProperty {
 /* tslint:enable */
 
 /** The base interface for a tensorflow stats. */
-export declare interface TensorflowStatsData extends SimpleDataTable {
-  p?: TensorflowStatsProperty;
+export declare interface FrameworkOpStatsData extends SimpleDataTable {
+  p?: FrameworkOpStatsProperty;
 }
 
 /** The base interface for a replica group. */
@@ -373,13 +373,13 @@ export type PrimitiveTypeNumberStringOrUndefined = number|string|undefined;
 /** All data type from tool response data. */
 export type DataTable =
     SimpleDataTable|OverviewDataTable[]|InputPipelineDataTable[]|
-    TensorflowStatsData[]|HloProto|MemoryViewerPreprocessResult|
+    FrameworkOpStatsData[]|HloProto|MemoryViewerPreprocessResult|
     MemoryProfileProto|OpProfileProto|PodViewerDatabase;
 
 /**
  * All DataTable types extended from google.visualization.DataTable.
  */
-export type DataTableUnion = SimpleDataTable|TensorflowStatsData|
+export type DataTableUnion = SimpleDataTable|FrameworkOpStatsData|
     TfFunctionExplanationTable|TfFunctionDataTable|MetaHostOpTable|HostOpTable|
     GeneralAnalysis|InputPipelineAnalysis|InputPipelineHostAnalysis|
     RunEnvironment|RecommendationResult|RecommendationResult;

@@ -3,7 +3,7 @@ load("//defs:defs.bzl", "xprof_ng_module")
 package(default_visibility = ["//frontend:internal"])
 
 xprof_ng_module(
-    name = "tensorflow_stats",
+    name = "framework_op_stats",
     srcs = [
         "actions.ts",
         "reducers.ts",

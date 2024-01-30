@@ -2,9 +2,9 @@ import {Action, createAction, Store} from '@ngrx/store';
 import {DataRequestType} from 'org_xprof/frontend/app/common/constants/enums';
 import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
 import * as commonDataStoreActions from 'org_xprof/frontend/app/store/common_data_store/actions';
+import * as frameworkOpStatsActions from 'org_xprof/frontend/app/store/framework_op_stats/actions';
 import {getDataRequest, getExportAsCsv} from 'org_xprof/frontend/app/store/selectors';
 import {DataRequest} from 'org_xprof/frontend/app/store/state';
-import * as tensorFlowStatsActions from 'org_xprof/frontend/app/store/tensorflow_stats/actions';
 import {ActionCreatorAny} from 'org_xprof/frontend/app/store/types';
 import {Observable, of} from 'rxjs';
 
@@ -53,9 +53,9 @@ export class DataDispatcherBase {
       return commonDataStoreActions.setKernelStatsDataAction(
           {kernelStatsData: data});
     } else if (dataRequest.type === DataRequestType.TENSORFLOW_STATS) {
-      return tensorFlowStatsActions.setDataAction({data});
+      return frameworkOpStatsActions.setDataAction({data});
     } else if (dataRequest.type === DataRequestType.TENSORFLOW_STATS_DIFF) {
-      return tensorFlowStatsActions.setDiffDataAction({diffData: data});
+      return frameworkOpStatsActions.setDiffDataAction({diffData: data});
     }
     return doNothingAction();
   }
