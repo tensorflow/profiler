@@ -41,16 +41,6 @@ NVIDIA® `CUDA 10.2` must be installed on your system:
    ```
 4. Run the model again and look for `Successfully opened dynamic library libcupti.so.10.1` in the logs. Your setup is now complete.
 
-## Alternative approach
-
-If you cannot install `CUDA 10.2`, another option is via environment variable on GPU worker.
-
-`$ export TF_GPU_CUPTI_USE_ACTIVITY_API=false`
-
-However, this approach has higher measurement overhead (~20%). Therefore, this mode can be used for debugging and improving the
-performance, but not recommend to compare and report absolute numbers.
-
-
 ## Known issues
 * Multi-GPU Profiling does not work with `CUDA 10.1`. While `CUDA 10.2` is not officially supported by TF, profiling on `CUDA 10.2` is known to work on some configurations.
 * Faking the symbolic links IS NOT a suggested way of using CUDA per NVIDIA's standard (the suggested way is to recompile TF with `CUDA 10.2` toolchain). But that gives a simple and easy way to try whether things work without spending a lot of time figuring out the compilation steps.
