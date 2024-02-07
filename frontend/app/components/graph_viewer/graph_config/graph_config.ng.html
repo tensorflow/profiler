@@ -9,9 +9,8 @@
       <mat-select
         name="selectedModule"
         panelClass="panel-override"
-        [ngModel]="params.selectedModule"
+        [(ngModel)]="params.selectedModule"
         [disabled]="useProgramId"
-        (ngModelChange)="onUpdateParam({ selectedModule: $event })"
       >
         <mat-option *ngFor="let module of getModuleList()" [value]="module">
           {{ module }}
@@ -37,8 +36,7 @@
         aria-label="op-name"
         required
         autocomplete="off"
-        [ngModel]="params.opName"
-        (ngModelChange)="onUpdateParam({ opName: $event.trim() })"
+        [(ngModel)]="params.opName"
         name="opName"
       />
     </mat-form-field>
@@ -51,24 +49,21 @@
         type="number"
         min="1"
         step="1"
-        [ngModel]="params.graphWidth"
-        (ngModelChange)="onUpdateParam({ graphWidth: $event })"
+        [(ngModel)]="params.graphWidth"
         name="graphWidth"
       />
     </mat-form-field>
 
     <mat-checkbox
-      [ngModel]="params.showMetadata"
+      [(ngModel)]="params.showMetadata"
       name="showMetadata"
-      (ngModelChange)="onUpdateParam({ showMetadata: $event })"
       class="full-width"
       >Show Metadata</mat-checkbox
     >
     <mat-checkbox
-      [ngModel]="params.mergeFusion"
+      [(ngModel)]="params.mergeFusion"
       name="mergeFusion"
       matTooltip="Hide the fusion subcomputations in the rendered graph"
-      (ngModelChange)="onUpdateParam({ mergeFusion: $event })"
       class="full-width"
     >
       Merge Fusion

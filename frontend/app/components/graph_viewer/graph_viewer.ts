@@ -67,18 +67,13 @@ export class GraphViewer implements OnDestroy {
     this.host = event.host || '';
     // host equals to module name for graph viewer
     this.selectedModule = this.host;
-    this.initialParams = {
-      opName: this.opName,
-      selectedModule: this.selectedModule,
-      graphWidth: this.graphWidth,
-      showMetadata: this.showMetadata,
-      mergeFusion: this.mergeFusion,
-    };
+    this.initialParams = this.getParams();
     this.onPlot();
   }
 
   // Function called whenever user click the search graph button
-  onSearchGraph() {
+  onSearchGraph(params: Partial<GraphConfigInput>) {
+    this.updateParams(params);
     this.resetPage();
     this.onPlot();
     // Reload iframe to re-inject html body
@@ -87,8 +82,17 @@ export class GraphViewer implements OnDestroy {
     iframe.contentWindow!.location.reload();
   }
 
-  // Update single param value
-  onUpdateParam(param: Partial<GraphConfigInput>) {
+  getParams(): GraphConfigInput {
+    return {
+      selectedModule: this.selectedModule,
+      opName: this.opName,
+      graphWidth: this.graphWidth,
+      showMetadata: this.showMetadata,
+      mergeFusion: this.mergeFusion,
+    };
+  }
+
+  updateParams(param: Partial<GraphConfigInput>) {
     Object.entries(param).forEach(([key, value]) => {
       if (GRAPH_CONFIG_KEYS.includes(key)) {
         Object.assign(this, {[key]: value});

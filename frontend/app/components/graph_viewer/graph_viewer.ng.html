@@ -1,7 +1,7 @@
 <mat-sidenav-container>
   <mat-sidenav mode="side" opened>
     <div class="item-container">
-      <graph-config [initialInputs]="initialParams" [moduleList]="moduleList" [isHloOssTool]="true" (plot)="onSearchGraph()" (update)="onUpdateParam($event)"></graph-config>
+      <graph-config [initialInputs]="initialParams" [moduleList]="moduleList" [isHloOssTool]="true" (plot)="onSearchGraph($event)"></graph-config>
     </div>
   </mat-sidenav>
   <mat-sidenav-content>

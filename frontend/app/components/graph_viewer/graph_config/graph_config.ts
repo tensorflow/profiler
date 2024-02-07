@@ -12,10 +12,7 @@ export class GraphConfig implements OnDestroy, OnChanges {
   /** Handles on-destroy Subject, used to unsubscribe. */
   private readonly destroyed = new ReplaySubject<void>(1);
 
-  @Output() readonly plot = new EventEmitter<void>();
-  @Output()
-  readonly update =
-      new EventEmitter<{[key: string]: string | number | boolean}>();
+  @Output() readonly plot = new EventEmitter<Partial<GraphConfigInput>>();
 
   /** Form inputs properties */
   @Input() initialInputs: GraphConfigInput|undefined = undefined;
@@ -34,8 +31,9 @@ export class GraphConfig implements OnDestroy, OnChanges {
   };
 
   ngOnChanges(changes: SimpleChanges) {
-    // Initiate once with property values (read from url query parameters)
-    if (!this.inputsInited && changes.hasOwnProperty('initialInputs') &&
+    // Initiate the first time loading (read from url query parameters)
+    // or, update params given refreshed initialInputs (for graph navigating)
+    if (changes.hasOwnProperty('initialInputs') &&
         Object.entries(changes['initialInputs'].currentValue || {}).length) {
       this.params = {...this.initialInputs as GraphConfigInput};
       this.inputsInited = true;
@@ -64,19 +62,9 @@ export class GraphConfig implements OnDestroy, OnChanges {
     }
   }
 
-  onUpdateParam(update: Partial<GraphConfigInput>) {
-    // Doing this instead of this.params[key]=value due to "type cannot be
-    // assigned to never" error
-    this.params = {
-      ...this.params,
-      ...update,
-    };
-    this.update.emit(update);
-  }
-
   onSubmit() {
     if (!this.validToSubmit()) return;
-    this.plot.emit();
+    this.plot.emit(this.params);
   }
 
   ngOnDestroy() {
