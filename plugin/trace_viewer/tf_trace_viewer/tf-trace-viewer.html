@@ -1180,9 +1180,7 @@ dashboard would integrate trace viewer app using iframe.
 
     _updateHostsParamToBaseUrl: function(requestURL) {
       const selectedHosts = this._getSelectedHosts();
-      if (selectedHosts.length) {
-        requestURL.searchParams.set('hosts', selectedHosts.join(','));
-      } else {
+      if (!selectedHosts.length) {
         requestURL.searchParams.set('hosts', 'None');
       }
     },
