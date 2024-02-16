@@ -511,6 +511,20 @@ class ProfilePlugin(base_plugin.TBPlugin):
     """
     return list(self.generate_tools_of_run(run))
 
+  def _run_host_impl(self, run, run_dir, tool):
+    if not run_dir:
+      logger.warning('Cannot find asset directory for: %s', run)
+      return []
+    tool_pattern = make_filename('*', tool)
+    filenames = []
+    try:
+      filenames = tf.io.gfile.glob(os.path.join(run_dir, tool_pattern))
+    except tf.errors.OpError as e:
+      logger.warning('Cannot read asset directory: %s, OpError %s', run_dir, e)
+    filenames = [os.path.basename(f) for f in filenames]
+
+    return filenames_to_hosts(filenames, tool)
+
   def host_impl(self, run, tool, request=None):
     """Returns available hosts for the run and tool in the log directory.
 
@@ -550,18 +564,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
         host_impl(run1, memory_viewer) --> ["module1", "module2"]
     """
     run_dir = self._run_dir(run)
-    if not run_dir:
-      logger.warning('Cannot find asset directory for: %s', run)
-      return []
-    tool_pattern = make_filename('*', tool)
-    filenames = []
-    try:
-      filenames = tf.io.gfile.glob(os.path.join(run_dir, tool_pattern))
-    except tf.errors.OpError as e:
-      logger.warning('Cannot read asset directory: %s, OpError %s', run_dir, e)
-    filenames = [os.path.basename(f) for f in filenames]
-
-    return filenames_to_hosts(filenames, tool)
+    return self._run_host_impl(run, run_dir, tool)
 
   @wrappers.Request.application
   def hosts_route(self, request):
@@ -889,9 +892,11 @@ class ProfilePlugin(base_plugin.TBPlugin):
       # the trailing '@' is to inform tf-profile-dashboard.html and
       # tf-trace-viewer.html that stream trace viewer should be used.
       tools.discard('trace_viewer#')
+      tools.discard('trace_viewer^')
       tools.discard('trace_viewer')
     if 'trace_viewer#' in tools:
       # use compressed trace
+      tools.discard('trace_viewer^')
       tools.discard('trace_viewer')
     # Return sorted list of tools with 'overview_page' at the front.
     op = frozenset(['overview_page@', 'overview_page', 'overview_page^'])
