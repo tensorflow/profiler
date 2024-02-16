@@ -29,20 +29,23 @@ import {GeneralProps, SummaryInfo, SummaryInfoConfig} from 'org_xprof/frontend/a
  */
 
 /** Generic summary info, display on top of the list */
-const GENERIC_SUMMARY_INFO_BEFORE: SummaryInfoConfig[] = [{
-  title: 'Average Step Time',
-  goodMetric: false,
-  valueKey: 'steptime_ms_average',
-  sdvKey: 'steptime_ms_standard_deviation',
-  unit: 'ms',
-  valueColor: 'red',
-  trainingOnly: true,
-  childrenInfoConfig: [
-    {title: 'Idle', valueKey: 'idle_ms_average', unit: 'ms'},
-    {title: 'Input', valueKey: 'input_ms_average', unit: 'ms'},
-    {title: 'Compute', valueKey: 'compute_ms_average', unit: 'ms'},
-  ],
-}];
+const GENERIC_SUMMARY_INFO_BEFORE: SummaryInfoConfig[] = [
+  {
+    title: 'Average Step Time',
+    goodMetric: false,
+    valueKey: 'steptime_ms_average',
+    sdvKey: 'steptime_ms_standard_deviation',
+    unit: 'ms',
+    valueColor: 'red',
+    trainingOnly: true,
+    childrenInfoConfig: [
+      {title: 'Idle', valueKey: 'idle_ms_average', unit: 'ms'},
+      {title: 'Input', valueKey: 'input_ms_average', unit: 'ms'},
+      {title: 'Compute', valueKey: 'compute_ms_average', unit: 'ms'},
+    ],
+  },
+];
+
 
 /** Generic summary info, display on bottom of the list */
 const GENERIC_SUMMARY_INFO_AFTER: SummaryInfoConfig[] = [
