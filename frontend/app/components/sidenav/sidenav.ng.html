@@ -49,7 +49,7 @@
 </div>
 
 <div [hidden]="!selectedTag.startsWith('op_profile')">
-  <op-details></op-details>
+  <op-details [isOss]="true"></op-details>
 </div>
 
 <div [hidden]="!selectedTag.startsWith('pod_viewer')">

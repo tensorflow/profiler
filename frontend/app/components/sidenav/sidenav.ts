@@ -2,8 +2,10 @@ import {Component, OnDestroy} from '@angular/core';
 import {Router} from '@angular/router';
 import {Store} from '@ngrx/store';
 import {DEFAULT_HOST, HLO_TOOLS} from 'org_xprof/frontend/app/common/constants/constants';
+import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import {RunToolsMap} from 'org_xprof/frontend/app/common/interfaces/tool';
 import {setLoadingState} from 'org_xprof/frontend/app/common/utils/utils';
+import {CommunicationService} from 'org_xprof/frontend/app/services/communication_service/communication_service';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
 import {setCurrentRunAction, updateRunToolsMapAction} from 'org_xprof/frontend/app/store/actions';
 import {getCurrentRun, getRunToolsMap} from 'org_xprof/frontend/app/store/selectors';
@@ -31,12 +33,14 @@ export class SideNav implements OnDestroy {
   selectedRun = '';
   selectedTag = '';
   selectedHost = '';
+  navigationParams: {[key: string]: string} = {};
   // The text to display on host selector.
   hostSelectorDisplayName = 'Hosts';
 
   constructor(
       private readonly router: Router,
       private readonly dataService: DataService,
+      private readonly communicationService: CommunicationService,
       private readonly store: Store<{}>) {
     // TODO(b/241842487): stream is not updated when the state change, should
     // trigger subscribe reactively
@@ -50,6 +54,19 @@ export class SideNav implements OnDestroy {
         this.afterUpdateRun();
       }
     });
+    this.communicationService.navigationChange.subscribe(
+        (navigationEvent: NavigationEvent) => {
+          this.onUpdateRoute(navigationEvent);
+        });
+  }
+
+  getNavigationEvent(): NavigationEvent {
+    return {
+      run: this.selectedRun,
+      tag: this.selectedTag,
+      host: this.selectedHost === DEFAULT_HOST ? '' : this.selectedHost,
+      ...this.navigationParams,
+    };
   }
 
   getDisplayTagName(tag: string): string {
@@ -142,9 +159,9 @@ export class SideNav implements OnDestroy {
   }
 
   async updateHosts() {
-    this.resetHost();
     this.hosts = await this.getHostsForSelectedTag();
-    this.selectedHost = this.hosts[0];
+    this.selectedHost =
+        this.hosts.find(host => host === this.selectedHost) || this.hosts[0];
     this.afterUpdateHost();
   }
 
@@ -153,12 +170,10 @@ export class SideNav implements OnDestroy {
   }
 
   navigateTools() {
+    const navigationEvent = this.getNavigationEvent();
     this.router.navigate([
-      this.selectedTag || 'empty', {
-        run: this.selectedRun,
-        tag: this.selectedTag,
-        host: this.selectedHost === DEFAULT_HOST ? '' : this.selectedHost,
-      }
+      this.selectedTag || 'empty',
+      navigationEvent,
     ]);
   }
 
@@ -174,6 +189,49 @@ export class SideNav implements OnDestroy {
     }
     if (!isHloTool) {
       this.hostSelectorDisplayName = 'Hosts';
+    }
+  }
+
+  onUpdateRoute(event: NavigationEvent) {
+    let {run = '', tag = '', host = ''} = event;
+    tag =
+        this.tags.find(validTag => validTag.includes(tag)) || this.selectedTag;
+    run =
+        this.runs.find(validRun => validRun.includes(run)) || this.selectedRun;
+    host = this.hosts.find(validHost => validHost.includes(host)) ||
+        this.selectedHost;
+    this.navigationParams = {
+      ...this.navigationParams,
+      ...event,
+    };
+    delete this.navigationParams['run'];
+    delete this.navigationParams['tag'];
+    delete this.navigationParams['host'];
+    let routeUpdateFrom = 0;
+    if (this.selectedRun !== run) {
+      this.selectedRun = run;
+      routeUpdateFrom = 1;
+    }
+    if (this.selectedTag !== tag) {
+      this.selectedTag = tag;
+      routeUpdateFrom = routeUpdateFrom ? routeUpdateFrom : 2;
+    }
+    if (this.selectedHost !== host) {
+      this.selectedHost = host;
+      routeUpdateFrom = routeUpdateFrom ? routeUpdateFrom : 3;
+    }
+    switch (routeUpdateFrom) {
+      case 1:
+        this.afterUpdateRun();
+        break;
+      case 2:
+        this.afterUpdateTag();
+        break;
+      case 3:
+        this.afterUpdateHost();
+        break;
+      default:
+        break;
     }
   }
 

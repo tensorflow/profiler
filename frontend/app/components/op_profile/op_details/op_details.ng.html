@@ -12,7 +12,7 @@
       </div>
       <div class="info-content">
         <div class="info" id="graph-viewer-link" [hidden]="!hasValidGraphViewerLink()">
-          <a [href]="getGraphViewerLink()" target="_blank" style="text-decoration:none;">
+          <a *ngIf="!isOss" [href]="getGraphViewerLink()" target="_blank" style="text-decoration:none;">
             <button
               mat-stroked-button
               extended
@@ -24,6 +24,18 @@
              > Graph Viewer
             </button>
           </a>
+          <button
+            *ngIf="isOss"
+            mat-stroked-button
+            extended
+            type="button"
+            color="primary"
+            appearance="fill"
+            aria-label="go to graph viewer"
+            i18n-aria-label="A button to corresponding graph viewer page"
+            (click)="navigateToGraphViewer()">
+            > Graph Viewer
+          </button>
         </div>
         <div class="info" [hidden]="!flopsUtilization">
           <div class="title">FLOPS utilization:</div>

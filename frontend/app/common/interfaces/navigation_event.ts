@@ -1,6 +1,8 @@
 /** The base interface for a navigation event. */
-export interface NavigationEvent {
-  run: string;
-  tag: string;
-  host: string;
+export declare interface NavigationEvent {
+  run?: string;
+  tag?: string;
+  host?: string;
+  // Graph Viewer crosslink params
+  paramsOpName?: string;
 }

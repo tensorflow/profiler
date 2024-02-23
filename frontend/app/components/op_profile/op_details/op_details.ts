@@ -1,7 +1,9 @@
-import {Component, Input} from '@angular/core';
+import {Component, EventEmitter, Input, Output} from '@angular/core';
 import {Store} from '@ngrx/store';
 import {Node} from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
+import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
+import {CommunicationService} from 'org_xprof/frontend/app/services/communication_service/communication_service';
 import {getActiveOpProfileNodeState, getOpProfileRootNode, getSelectedOpNodeChainState} from 'org_xprof/frontend/app/store/selectors';
 import {ReplaySubject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
@@ -16,10 +18,15 @@ export class OpDetails {
   /** Handles on-destroy Subject, used to unsubscribe. */
   private readonly destroyed = new ReplaySubject<void>(1);
 
+  /** When updating app route to other tools through crosslink */
+  @Output() readonly updateRoute = new EventEmitter<NavigationEvent>();
+
   /** the session id */
   @Input() sessionId = '';
   /** the list of modules */
   @Input() moduleList: string[] = [];
+  /** If the op-detail component is used in OSS tool or not */
+  @Input() isOss = false;
 
   rootNode?: Node;
   node?: Node;
@@ -50,7 +57,10 @@ export class OpDetails {
   selectedOpNodeChain: string[] = [];
   memBwType = utils.MemBwType;
 
-  constructor(private readonly store: Store<{}>) {
+  constructor(
+      private readonly store: Store<{}>,
+      private readonly communicationService: CommunicationService,
+  ) {
     this.store.select(getActiveOpProfileNodeState)
         .pipe(takeUntil(this.destroyed))
         .subscribe((node: Node|null) => {
@@ -77,16 +87,36 @@ export class OpDetails {
     return this.selectedOpNodeChain.length >= 2 && this.expression;
   }
 
+  // OSS function
+  navigateToGraphViewer() {
+    const navigationEvent = {
+      tag: 'graph_viewer',
+      host: this.getSelectedModuleName(),
+      paramsOpName: this.getSelectedOpName(),
+    };
+    this.communicationService.onNavigate(navigationEvent);
+  }
+
+  // expression format assumption: '%<op_name> = ...'
+  getSelectedOpName() {
+    return this.expression.split('=')[0].trim().slice(1);
+  }
+
+  getSelectedModuleName() {
+    const aggregatedBy = this.selectedOpNodeChain[0];
+    // 'by_program' or 'by_category'
+    return aggregatedBy === 'by_program' ? this.selectedOpNodeChain[1] :
+                                           this.moduleList[0];
+  }
+
   getGraphViewerLink() {
     const aggregatedBy = this.selectedOpNodeChain[0];
-    // expression format assumption: '%<op_name> = ...'
-    const opName = this.expression.split('=')[0].trim().slice(1);
     if (aggregatedBy === 'by_program') {
       return `/graph_viewer/${this.sessionId}?module_name=${
-          this.selectedOpNodeChain[1]}&node_name=${opName}`;
+          this.getSelectedModuleName()}&node_name=${this.getSelectedOpName()}`;
     } else if (aggregatedBy === 'by_category') {
       return `/graph_viewer/${this.sessionId}?module_name=${
-          this.moduleList[0]}&node_name=${opName}`;
+          this.getSelectedModuleName()}&node_name=${this.getSelectedOpName()}`;
     }
     return '';
   }
