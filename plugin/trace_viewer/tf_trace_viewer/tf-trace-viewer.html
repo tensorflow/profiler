@@ -449,8 +449,24 @@ dashboard would integrate trace viewer app using iframe.
           });
     },
 
+    createCrossToolLinkOss: function(toolName, toolLabel, params, text) {
+      if (!this._isOss) return;
+      const toolLinkElement = document.createElement('div');
+      toolLinkElement.innerHTML = `${toolLabel}: <span style="cursor:pointer;text-decoration:underline;color:blue;">${text}</span>`;
+      this._eventDetails.appendChild(toolLinkElement);
+      const {hloOp, hloModule} = params;
+      toolLinkElement.addEventListener('click', () => {
+        window.parent.postMessage({
+              name: 'navigate-tv-gv',
+              data: {
+                  'opName': hloOp,
+                  'moduleName': hloModule !== 'default' ? hloModule : undefined,
+              }
+            }, window.top.origin)
+          });
+    },
+
     onSelectionChange: function(e) {
-      if (!this._sessionId) return;
       this._eventDetails.innerHTML = '<div id="event-details" ' +
             'style="display: block;"></div>';
       events = this._traceViewer.brushingStateController.currentBrushingState.selection;
@@ -483,26 +499,33 @@ dashboard would integrate trace viewer app using iframe.
               }
             }
           }
-          // Add Graph Viewer link per event selection
-          const graphViewParams = {"node_name": hloOp};
-          if (hloModule != 'default') {
-            graphViewParams["module_name"] = hloModule;
-          }
           const graphViewText = `see hlo graph for ${hloOp} @ ${hloModule}`;
-          this.createCrossToolLink("graph_viewer", "Graph Viewer", graphViewParams, graphViewText);
-          // Add Hlo Stats link per event selection
-          const opStatsParams = {
-            "hlo_op_name": hloOp,
-            "program_id": hloModule,
-          };
           const opStatsText = `see hlo stats for ${hloOp} @ ${hloModule}`;
-          this.createCrossToolLink("hlo_stats", "Hlo Stats", opStatsParams, opStatsText);
-          // Add Roofline Model link per event selection
-          const rooflineText = `see op level analysis for ${hloOp}`;
-          this.createCrossToolLink("roofline_model", "Roofline Model", {"roofline_op_name": hloOp}, rooflineText);
+          if (this._sessionId) {
+            // Add Graph Viewer link per event selection for session
+            const graphViewParams = {"node_name": hloOp};
+            if (hloModule != 'default') {
+              graphViewParams["module_name"] = hloModule;
+            }
+            this.createCrossToolLink("graph_viewer", "Graph Viewer", graphViewParams, graphViewText);
+            // Add Hlo Stats link per event selection
+            const opStatsParams = {
+              "hlo_op_name": hloOp,
+              "program_id": hloModule,
+            };
+            this.createCrossToolLink("hlo_stats", "Hlo Stats", opStatsParams, opStatsText);
+            // Add Roofline Model link per event selection
+            const rooflineText = `see op level analysis for ${hloOp}`;
+            this.createCrossToolLink("roofline_model", "Roofline Model", {"roofline_op_name": hloOp}, rooflineText);
+          } else {
+            // Add crosslink form trace viewer to graph viewer
+            // per event selection for tensorboard profiler
+            const params = {hloOp, hloModule};
+            this.createCrossToolLinkOss("graph_viewer", "Graph Viewer", params, graphViewText);
+          }
         }
         // For `TfrtModelRun` event, add links to the associated MLIR graphs.
-        if (event.title.includes("TfrtModelRun")) {
+        if (this._sessionId && event.title.includes("TfrtModelRun")) {
           // First link is for TF MLIR.
           {
             const graphViewLink =
@@ -530,10 +553,10 @@ dashboard would integrate trace viewer app using iframe.
             this._eventDetails.appendChild(graphViewLinkElement);
           }
         }
-        if (currentProcess.name.includes("SparseCore")) {
+        if (this._sessionId && currentProcess.name.includes("SparseCore")) {
             this._convertTimeToCycles(event);
         }
-        if ('connected_group_ids' in event.args) {
+        if (this._sessionId && 'connected_group_ids' in event.args) {
           const traceViewerConnectedEventsLink =
                 new URL(window.location.origin + '/trace_viewer/' + this._sessionId);
           traceViewerConnectedEventsLink.searchParams.append(
@@ -546,7 +569,7 @@ dashboard would integrate trace viewer app using iframe.
                 event.args['group_id'] +
                 ' and other steps/groups connected to it';
           this._eventDetails.appendChild(traceViewerConnectedEventsLinkElement);
-        } else if ('group_id' in event.args) {
+        } else if (this._sessionId && 'group_id' in event.args) {
           const traceViewerStepLink =
                 new URL(window.location.origin + '/trace_viewer/' + this._sessionId);
           traceViewerStepLink.searchParams.append("selected_group_ids", event.args['group_id']);

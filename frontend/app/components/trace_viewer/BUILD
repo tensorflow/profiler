@@ -22,6 +22,7 @@ xprof_ng_module(
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/pipes",
+        "@org_xprof//frontend/app/services/communication_service",
     ],
 )
 
