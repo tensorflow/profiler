@@ -65,11 +65,46 @@
       </table>
     </div>
     <ul>
-      <li class="primary-content">Timestamp: {{ timestampAtPeakMs }} ms</li>
-      <li class="primary-content">Stack Reservation: {{ stackAtPeak }}</li>
-      <li class="primary-content">Heap Allocation: {{ heapAtPeak }} </li>
-      <li class="primary-content">Free Memory: {{ freeAtPeak }} </li>
-      <li class="primary-content">Fragmentation: {{ fragmentationAtPeakPct }}</li>
+      <li class="primary-content">Timestamp: {{ timestampAtPeakMs }} ms
+        <mat-icon
+          class="tooltip-icon"
+          matTooltip="Where this happens on the Timeline Graph."
+          matTooltipPosition="above">
+          info
+        </mat-icon>
+      </li>
+      <li class="primary-content">Stack Reservation: {{ stackAtPeak }}
+        <mat-icon
+          class="tooltip-icon"
+          matTooltip="Amount of memory (in GiBs) reserved on the stack"
+          matTooltipPosition="above">
+          info
+        </mat-icon>
+      </li>
+      <li class="primary-content">Heap Allocation: {{ heapAtPeak }}
+        <mat-icon
+          class="tooltip-icon"
+          matTooltip="Amount of memory (in GiBs) allocated on the heap"
+          matTooltipPosition="above">
+          info
+        </mat-icon>
+      </li>
+      <li class="primary-content">Free Memory: {{ freeAtPeak }}
+        <mat-icon
+          class="tooltip-icon"
+          matTooltip="Amount of memory (in GiBs) that is free (so Stack Reservation + Heap Allocation + Free Memory = Memory Capacity)."
+          matTooltipPosition="above">
+          info
+        </mat-icon>
+      </li>
+      <li class="primary-content">Fragmentation: {{ fragmentationAtPeakPct }}
+      <mat-icon
+        class="tooltip-icon"
+        matTooltip="The percentage of fragmentation (lower is better), It is defined as: Fragmentation = 100% * (1 - largest-chunk-of-free-memory / total-free-memory)"
+        matTooltipPosition="above">
+        info
+      </mat-icon>
+      </li>
     </ul>
   </mat-card-content>
 </mat-card>

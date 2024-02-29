@@ -51,3 +51,15 @@ ul {
   color: #e8710a;
   border-bottom: 1px dotted #e8710a;
 }
+
+.tooltip-icon-container {
+  position: relative;
+}
+
+.tooltip-icon {
+  color: #e8710a;
+  font-size: 20px;
+  vertical-align: bottom;
+  cursor: pointer;
+}
+
