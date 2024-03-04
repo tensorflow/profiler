@@ -73,7 +73,7 @@ def xspace_to_tool_data(
     tool: A string of tool name.
     params: user input parameters.
     xspace_wrapper_func: A callable that takes a list of strings and a tool and
-      returns the raw data.
+      returns the raw data. If failed, raw data contains the error message.
 
   Returns:
     Returns a string of tool data and the content type for the response.
@@ -152,6 +152,12 @@ def xspace_to_tool_data(
     if success:
       data = raw_data
       content_type = 'text/html'
+    else:
+      # TODO(tf-profiler) Handle errors for other tools as well,
+      # to pass along the error message to client
+      if isinstance(raw_data, bytes):
+        raw_data = raw_data.decode('utf-8')
+      raise ValueError(raw_data)
   elif tool == 'memory_viewer':
     options = {'module_name': params.get('host')}
     raw_data, success = xspace_wrapper_func(xspace_paths, tool, options)

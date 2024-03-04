@@ -478,7 +478,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
     try:
       contents = self._read_static_file_impl(filename)
     except IOError:
-      return respond('404 Not Found', 'text/plain', code=404)
+      return respond('Fail to read the files.', 'text/plain', code=404)
     return respond(contents, mimetype)
 
   @wrappers.Request.application
@@ -622,14 +622,23 @@ class ProfilePlugin(base_plugin.TBPlugin):
         except tf.errors.OpError as e:
           logger.warning('Cannot read asset directory: %s, OpError %s', run_dir,
                          e)
+          raise IOError(
+              'Cannot read asset directory: %s, OpError %s' % (run_dir, e)
+          ) from e
       else:
         asset_paths = [asset_path]
 
       try:
         data, content_type = convert.xspace_to_tool_data(
             asset_paths, tool, params)
-      except AttributeError:
+      except AttributeError as e:
         logger.warning('XPlane converters are available after Tensorflow 2.4')
+        raise AttributeError(
+            'XPlane converters are available after Tensorflow 2.4'
+        ) from e
+      except ValueError as e:
+        logger.warning('XPlane convert to tool data failed as %s', e)
+        raise e
       return data, content_type, content_encoding
 
     raw_data = None
@@ -650,10 +659,18 @@ class ProfilePlugin(base_plugin.TBPlugin):
   def data_route(self, request):
     # params
     #   request: XMLHTTPRequest.
-    data, content_type, content_encoding = self.data_impl(request)
-    if data is None:
-      return respond('404 Not Found', 'text/plain', code=404)
-    return respond(data, content_type, content_encoding=content_encoding)
+    try:
+      data, content_type, content_encoding = self.data_impl(request)
+      if data is None:
+        return respond('No Data', 'text/plain', code=404)
+      return respond(data, content_type, content_encoding=content_encoding)
+    # Data fetch error handler
+    except AttributeError as e:
+      return respond(str(e), 'text/plain', code=500)
+    except ValueError as e:
+      return respond(str(e), 'text/plain', code=500)
+    except IOError as e:
+      return respond(str(e), 'text/plain', code=500)
 
   @wrappers.Request.application
   def capture_route(self, request):
