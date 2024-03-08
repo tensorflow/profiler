@@ -156,8 +156,8 @@ class TpuKerasTest(absltest.TestCase):
           process_names.append((event['args']['name']))
     self.assertContainsSubset(
         [
-            'TensorFlow Name Scope',
-            'TensorFlow Ops',
+            'Framework Name Scope',
+            'Framework Ops',
             'XLA Modules',
             'XLA Ops',
             'XLA TraceMe',

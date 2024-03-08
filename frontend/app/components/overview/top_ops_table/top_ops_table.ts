@@ -47,7 +47,7 @@ export class TopOpsTable implements AfterViewInit, OnChanges {
 
     this.inputPipelineAnalysis.p = this.inputPipelineAnalysis.p || {};
     this.title = 'Top ' + String(dataTable.getNumberOfRows()) +
-        ' TensorFlow operations on ' +
+        ' Framework Operations on ' +
         (this.inputPipelineAnalysis.p['hardware_type'] || 'TPU');
 
     const columns: TopOpsColumn = {

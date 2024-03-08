@@ -50,8 +50,8 @@ const GENERIC_SUMMARY_INFO_BEFORE: SummaryInfoConfig[] = [
 /** Generic summary info, display on bottom of the list */
 const GENERIC_SUMMARY_INFO_AFTER: SummaryInfoConfig[] = [
   {
-    title: 'TF Op Placement',
-    tooltip: 'Ratio of TF Ops executed on the host and device.',
+    title: 'Framework Op Placement',
+    tooltip: 'Ratio of Framework Ops executed on the host and device.',
     description: 'generally desired to have more ops on device',
     childrenInfoConfig: [
       {title: 'Host', valueKey: 'host_tf_op_percent'},
