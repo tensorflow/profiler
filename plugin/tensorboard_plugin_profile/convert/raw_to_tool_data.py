@@ -45,6 +45,29 @@ def process_raw_trace(raw_trace):
   return ''.join(trace_events_json.TraceEventsJsonStream(trace))
 
 
+def xspace_to_tools_data_from_byte_string(xspace_byte_list, filenames, tool,
+                                          params):
+  """Helper function for getting an XSpace tool from a bytes string.
+
+  Args:
+    xspace_byte_list: A list of byte strings read from a XSpace proto file.
+    filenames: Names of the read files.
+    tool: A string of tool name.
+    params: user input parameters.
+
+  Returns:
+    Returns a string of tool data.
+  """
+# pylint:disable=dangerous-default-value
+  def xspace_wrapper_func(xspace_arg, tool_arg, params={}):
+    return _pywrap_profiler.xspace_to_tools_data_from_byte_string(
+        xspace_arg, filenames, tool_arg, params)
+# pylint:enable=dangerous-default-value
+
+  return xspace_to_tool_data(xspace_byte_list, tool, params,
+                             xspace_wrapper_func)
+
+
 def xspace_to_tool_names(xspace_paths):
   """Converts XSpace to all the available tool names.
 
