@@ -52,6 +52,7 @@ def get_step_breakdown_table_args(ipa):
       ("tooltip", "string", "tooltip", {
           "role": "tooltip"
       }),
+      ("stepTimeMs", "number", "Step time"),
   ]
 
   # Parameters for input analysis summary.
@@ -94,7 +95,7 @@ def get_step_breakdown_table_args(ipa):
         details.host_compute_ms, details.host_prepare_ms,
         details.host_wait_input_ms + details.host_to_device_ms,
         details.output_ms, details.host_compile_ms, details.unknown_time_ms,
-        tooltip
+        tooltip, details.step_time_ms,
     ]
     data.append(row)
 

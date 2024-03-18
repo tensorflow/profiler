@@ -162,8 +162,8 @@ class ProtoToGvizTest(tf.test.TestCase):
 
     self.assertEqual(0, data_table.NumberOfRows(),
                      "Empty table should have 0 rows.")
-    # Input pipeline chart data table has 11 columns.
-    self.assertLen(data_table.columns, 11)
+    # Input pipeline chart data table has 12 columns.
+    self.assertLen(data_table.columns, 12)
 
   def test_input_pipeline_step_breakdown(self):
     ipa = self.create_mock_input_pipeline()
@@ -174,10 +174,10 @@ class ProtoToGvizTest(tf.test.TestCase):
     # Data is a list of 3 rows.
     self.assertLen(data, 3)
     self.assertEqual(3, data_table.NumberOfRows(), "Simple table has 3 rows.")
-    # Table descriptor is a list of 11 columns.
-    self.assertLen(table_description, 11)
-    # DataTable also has 10 columns.
-    self.assertLen(data_table.columns, 11)
+    # Table descriptor is a list of 12 columns.
+    self.assertLen(table_description, 12)
+    # DataTable also has 12 columns.
+    self.assertLen(data_table.columns, 12)
 
     csv_file = io.StringIO(data_table.ToCsv())
     reader = csv.reader(csv_file)
@@ -194,6 +194,7 @@ class ProtoToGvizTest(tf.test.TestCase):
         int(MockValues.HOST_COMPILE_MS),
         int(MockValues.UNKNOWN_TIME_MS),
         MockValues.TOOLTIP.value,
+        int(MockValues.STEP_TIME_MS),
     ]
 
     for (rr, row_values) in enumerate(reader):

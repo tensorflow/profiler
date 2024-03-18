@@ -5,6 +5,7 @@ import {type InputPipelineAnalysis} from 'org_xprof/frontend/app/common/interfac
 const MAX_CHART_WIDTH = 800;
 const COLUMN_IDS_FOR_TPU = [
   'stepnum',
+  'stepTimeMs',
   'computeTimeMs',
   'inputTimeMs',
   'idleTimeMs',
