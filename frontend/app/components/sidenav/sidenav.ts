@@ -1,4 +1,4 @@
-import {Component, OnDestroy} from '@angular/core';
+import {Component, OnDestroy, OnInit} from '@angular/core';
 import {Router} from '@angular/router';
 import {Store} from '@ngrx/store';
 import {DEFAULT_HOST, HLO_TOOLS} from 'org_xprof/frontend/app/common/constants/constants';
@@ -18,7 +18,7 @@ import {takeUntil} from 'rxjs/operators';
   templateUrl: './sidenav.ng.html',
   styleUrls: ['./sidenav.scss']
 })
-export class SideNav implements OnDestroy {
+export class SideNav implements OnInit, OnDestroy {
   /** Handles on-destroy Subject, used to unsubscribe. */
   private readonly destroyed = new ReplaySubject<void>(1);
   runToolsMap$: Observable<RunToolsMap> =
@@ -60,6 +60,23 @@ export class SideNav implements OnDestroy {
         });
   }
 
+  navigateWithUrl() {
+    const params = new URLSearchParams(window.parent.location.search);
+    const navigationEvent: NavigationEvent = {
+      run: params.get('run') || '',
+      tag: params.get('tool') || '',
+      host: params.get('host') || '',
+    };
+    if (params.has('opName')) {
+      navigationEvent.paramsOpName = params.get('opName') || '';
+    }
+    this.communicationService.onNavigate(navigationEvent);
+  }
+
+  ngOnInit() {
+    this.navigateWithUrl();
+  }
+
   getNavigationEvent(): NavigationEvent {
     return {
       run: this.selectedRun,
@@ -89,6 +106,8 @@ export class SideNav implements OnDestroy {
   }
 
   async getToolsForSelectedRun() {
+    // TODO(tf-profiler) Don't set the global loading status from mutliple
+    // requests
     setLoadingState(true, this.store, 'Loading tools data for run');
     const tools =
         await firstValueFrom(this.dataService.getRunTools(this.selectedRun)

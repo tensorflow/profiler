@@ -452,18 +452,19 @@ dashboard would integrate trace viewer app using iframe.
     createCrossToolLinkOss: function(toolName, toolLabel, params, text) {
       if (!this._isOss) return;
       const toolLinkElement = document.createElement('div');
-      toolLinkElement.innerHTML = `${toolLabel}: <span style="cursor:pointer;text-decoration:underline;color:blue;">${text}</span>`;
+      let toolLink = new URL(window.top.location.origin);
+      toolLink.hash = 'profile';
+      toolLink.searchParams.set('tool', toolName);
+      const traceViewerLink = new URL(window.location.origin + this.traceDataUrl);
+      const currentRun = traceViewerLink.searchParams.get('run');
+      toolLink.searchParams.set('run', currentRun);
+      if (toolName === 'graph_viewer') {
+        const {hloOp, hloModule} = params;
+        toolLink.searchParams.set('opName', hloOp);
+        toolLink.searchParams.set('host', hloModule !== 'default' ? hloModule : undefined);
+      }
+      toolLinkElement.innerHTML = `${toolLabel}: <a href="${toolLink.href}" target="_blank">${text}</a>`;
       this._eventDetails.appendChild(toolLinkElement);
-      const {hloOp, hloModule} = params;
-      toolLinkElement.addEventListener('click', () => {
-        window.parent.postMessage({
-              name: 'navigate-tv-gv',
-              data: {
-                  'opName': hloOp,
-                  'moduleName': hloModule !== 'default' ? hloModule : undefined,
-              }
-            }, window.top.origin)
-          });
     },
 
     onSelectionChange: function(e) {

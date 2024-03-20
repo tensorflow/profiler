@@ -3,9 +3,8 @@ import {Store} from '@ngrx/store';
 import {Node} from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
-import {CommunicationService} from 'org_xprof/frontend/app/services/communication_service/communication_service';
-import {getActiveOpProfileNodeState, getOpProfileRootNode, getSelectedOpNodeChainState} from 'org_xprof/frontend/app/store/selectors';
-import {ReplaySubject} from 'rxjs';
+import {getActiveOpProfileNodeState, getCurrentRun, getOpProfileRootNode, getSelectedOpNodeChainState} from 'org_xprof/frontend/app/store/selectors';
+import {Observable, ReplaySubject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 
 /** An op details view component. */
@@ -27,6 +26,9 @@ export class OpDetails {
   @Input() moduleList: string[] = [];
   /** If the op-detail component is used in OSS tool or not */
   @Input() isOss = false;
+
+  currentRun$: Observable<string> =
+      this.store.select(getCurrentRun).pipe(takeUntil(this.destroyed));
 
   rootNode?: Node;
   node?: Node;
@@ -56,10 +58,10 @@ export class OpDetails {
   computationPrimitiveSize: string = '';
   selectedOpNodeChain: string[] = [];
   memBwType = utils.MemBwType;
+  currentRun = '';
 
   constructor(
       private readonly store: Store<{}>,
-      private readonly communicationService: CommunicationService,
   ) {
     this.store.select(getActiveOpProfileNodeState)
         .pipe(takeUntil(this.destroyed))
@@ -76,6 +78,11 @@ export class OpDetails {
         .subscribe((node: Node|null) => {
           this.rootNode = node || undefined;
         });
+    this.currentRun$.subscribe(run => {
+      if (run) {
+        this.currentRun = run;
+      }
+    });
   }
 
   hasValidGraphViewerLink() {
@@ -85,16 +92,6 @@ export class OpDetails {
     }
     // Condition for both 'by_program' and 'by_category'
     return this.selectedOpNodeChain.length >= 2 && this.expression;
-  }
-
-  // OSS function
-  navigateToGraphViewer() {
-    const navigationEvent = {
-      tag: 'graph_viewer',
-      host: this.getSelectedModuleName(),
-      paramsOpName: this.getSelectedOpName(),
-    };
-    this.communicationService.onNavigate(navigationEvent);
   }
 
   // expression format assumption: '%<op_name> = ...'
@@ -110,6 +107,13 @@ export class OpDetails {
   }
 
   getGraphViewerLink() {
+    if (this.isOss) {
+      const tag = 'graph_viewer';
+      const host = this.getSelectedModuleName();
+      const opName = this.getSelectedOpName();
+      return `${window.parent.location.origin}?tool=${tag}&host=${
+          host}&opName=${opName}&run=${this.currentRun}#profile`;
+    }
     const aggregatedBy = this.selectedOpNodeChain[0];
     if (aggregatedBy === 'by_program') {
       return `/graph_viewer/${this.sessionId}?module_name=${
