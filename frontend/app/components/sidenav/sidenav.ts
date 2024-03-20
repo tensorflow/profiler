@@ -4,7 +4,6 @@ import {Store} from '@ngrx/store';
 import {DEFAULT_HOST, HLO_TOOLS} from 'org_xprof/frontend/app/common/constants/constants';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import {RunToolsMap} from 'org_xprof/frontend/app/common/interfaces/tool';
-import {setLoadingState} from 'org_xprof/frontend/app/common/utils/utils';
 import {CommunicationService} from 'org_xprof/frontend/app/services/communication_service/communication_service';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
 import {setCurrentRunAction, updateRunToolsMapAction} from 'org_xprof/frontend/app/store/actions';
@@ -106,13 +105,9 @@ export class SideNav implements OnInit, OnDestroy {
   }
 
   async getToolsForSelectedRun() {
-    // TODO(tf-profiler) Don't set the global loading status from mutliple
-    // requests
-    setLoadingState(true, this.store, 'Loading tools data for run');
     const tools =
         await firstValueFrom(this.dataService.getRunTools(this.selectedRun)
                                  .pipe(takeUntil(this.destroyed)));
-    setLoadingState(false, this.store);
 
     this.store.dispatch(updateRunToolsMapAction({
       run: this.selectedRun,
@@ -122,11 +117,9 @@ export class SideNav implements OnInit, OnDestroy {
   }
 
   async getHostsForSelectedTag() {
-    setLoadingState(true, this.store, 'Loading hosts data for tag');
     const response = await firstValueFrom(
         this.dataService.getHosts(this.selectedRun, this.selectedTag)
             .pipe(takeUntil(this.destroyed)));
-    setLoadingState(false, this.store);
 
     let hosts = (response as string[]) || [];
     if (hosts.length === 0) {
