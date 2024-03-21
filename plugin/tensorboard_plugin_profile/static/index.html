@@ -40,33 +40,33 @@
       return script;
     }
 
+    function setLocationHref() {
+      const defaultPath = '/data/plugin/profile';
+      let newPath = defaultPath + '/';
+      if (document?.location?.pathname?.includes(defaultPath)) {
+        newPath = document.location.pathname.split(defaultPath)[0] + defaultPath + '/';
+      }
+      document.location.href = document.location.origin + newPath + 'index.html';
+    }
+
     function setReloadOfIFrame() {
       try {
         const tfTensorboard =
-              window.parent.document.querySelector('tf-tensorboard');
-        const iFrame = tfTensorboard.shadowRoot.querySelector(
+              window.parent.document?.querySelector('tf-tensorboard');
+        const iFrame = tfTensorboard?.shadowRoot?.querySelector(
           'div[data-dashboard="profile"] > iframe');
         iFrame.reload = () => {
           if (tfTensorboard.autoReloadEnabled) {
             document.dispatchEvent(new Event('tensorboard-reload'));
           } else {
-            const defaultPath = '/data/plugin/profile';
-            let newPath = defaultPath + '/';
-            if (document.location.pathname.includes(defaultPath)) {
-              newPath = document.location.pathname.split(defaultPath)[0] + defaultPath + '/';
-            }
-            document.location.href = document.location.origin + newPath + 'index.html';
+            setLocationHref();
           }
         };
       } catch (err) {
+        console.error('Fail to reload tensorboard profiler:', err);
       }
       document.addEventListener('plugin-reload', () => {
-          const defaultPath = '/data/plugin/profile';
-          let newPath = defaultPath + '/';
-          if (document.location.pathname.includes(defaultPath)) {
-            newPath = document.location.pathname.split(defaultPath)[0] + defaultPath + '/';
-          }
-          document.location.href = document.location.origin + newPath + 'index.html';
+          setLocationHref();
       });
     }
 
