@@ -5,6 +5,9 @@ load("@org_xprof//plugin/tensorboard_plugin_profile/build_utils:profiler_test.bz
 profiler_test(
     name = "tpu_tf2_keras_xla_test",
     srcs = ["tpu_tf2_keras_test.py"],
+    args = [
+        "--xprof_libtpu_exclude_host_tracer_for_test=True",  # workaround for b/283969200
+    ],
     main = "tpu_tf2_keras_test.py",
     platforms = [
         "v2",
