@@ -24,6 +24,7 @@ from __future__ import division
 from __future__ import print_function
 
 import logging
+import tempfile
 
 from tensorflow.python.profiler.internal import _pywrap_profiler  # pylint: disable=g-direct-tensorflow-import
 from tensorboard_plugin_profile.convert import dcn_collective_stats_proto_to_gviz
@@ -45,6 +46,14 @@ def process_raw_trace(raw_trace):
   return ''.join(trace_events_json.TraceEventsJsonStream(trace))
 
 
+def xspace_to_sstable_data_from_byte_string(
+    xspace_byte_list, filenames, sstable_path
+):
+  return _pywrap_profiler.xspace_to_sstable_data_from_byte_string(
+      xspace_byte_list, filenames, sstable_path
+  )
+
+
 def xspace_to_tools_data_from_byte_string(xspace_byte_list, filenames, tool,
                                           params):
   """Helper function for getting an XSpace tool from a bytes string.
@@ -58,11 +67,16 @@ def xspace_to_tools_data_from_byte_string(xspace_byte_list, filenames, tool,
   Returns:
     Returns a string of tool data.
   """
-# pylint:disable=dangerous-default-value
+  # pylint:disable=dangerous-default-value
   def xspace_wrapper_func(xspace_arg, tool_arg, params={}):
+    if tool_arg == 'trace_viewer@':
+      temp_file = tempfile.NamedTemporaryFile()
+      return _pywrap_profiler.sstable_to_tools_data_from_byte_string(
+          xspace_arg, tool_arg, temp_file.name, params
+      )
     return _pywrap_profiler.xspace_to_tools_data_from_byte_string(
         xspace_arg, filenames, tool_arg, params)
-# pylint:enable=dangerous-default-value
+  # pylint:enable=dangerous-default-value
 
   return xspace_to_tool_data(xspace_byte_list, tool, params,
                              xspace_wrapper_func)
