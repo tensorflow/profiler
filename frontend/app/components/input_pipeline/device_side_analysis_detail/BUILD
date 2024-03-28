@@ -1,6 +1,6 @@
-load("//defs:defs.bzl", "xprof_ng_module")
-load("@npm//@bazel/concatjs:index.bzl", "ts_library")
 load("@io_bazel_rules_sass//:defs.bzl", "sass_binary")
+load("@npm//@bazel/concatjs:index.bzl", "ts_library")
+load("//defs:defs.bzl", "xprof_ng_module")
 
 package(default_visibility = ["//frontend:internal"])
 

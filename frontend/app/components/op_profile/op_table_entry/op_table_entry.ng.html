@@ -3,7 +3,9 @@
     class="row"
     (click)="toggleExpanded()"
     (mouseenter)="hover.emit(node)"
-    (mouseleave)="hover.emit(null)">
+    (mouseleave)="hover.emit(null)"
+    role="button" tabindex="0"
+    >
     <div class="bar" [style.width]="barWidth"></div>
     <div class="row-focus" [hidden]="node !== selectedNode"></div>
     <span class="time">{{percent}}</span>
@@ -49,7 +51,7 @@
     [showP90]="showP90"
     [childrenCount]="childrenCount"
     (hover)="hover.emit($event);"
-    (selected)="onSelect($event)">
+    (selected)="onSelect($event);">
   </op-table-entry>
   <div class="leftout" *ngIf="numLeftOut > 0">
     <span [style.padding-left]="offset">{{numLeftOut}} categories or ops have been left out.</span>

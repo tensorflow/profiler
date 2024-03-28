@@ -19,5 +19,5 @@
   [showP90]="showP90"
   [childrenCount]="childrenCount"
   (hover)="updateActive($event)"
-  (selected)="updateSelected($event)">
+  (selected)="updateSelected($event); updateActive($event);">
 </op-table-entry>

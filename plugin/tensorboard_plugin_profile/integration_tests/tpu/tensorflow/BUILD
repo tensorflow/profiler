@@ -1,5 +1,5 @@
-load("//plugin/tensorboard_plugin_profile/build_utils:strict.default.bzl", "py_strict_library", "py_strict_test")
 load("@org_xprof//plugin/tensorboard_plugin_profile/build_utils:profiler_test.bzl", "profiler_test")
+load("//plugin/tensorboard_plugin_profile/build_utils:strict.default.bzl", "py_strict_library", "py_strict_test")
 
 # NOTE: need blaze test --define='with_tpu_support=true' for these tests.
 profiler_test(
