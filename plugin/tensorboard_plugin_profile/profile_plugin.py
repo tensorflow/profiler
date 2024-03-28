@@ -493,7 +493,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
       request: Optional; werkzeug request used for grabbing ctx and experiment
         id for other host implementations
     """
-    return list(self.generate_runs())
+    return sorted(list(self.generate_runs()), reverse=True)
 
   @wrappers.Request.application
   def run_tools_route(self, request):
