@@ -42,32 +42,13 @@
 
     function setReloadOfIFrame() {
       try {
-        const tfTensorboard =
-              window.parent.document.querySelector('tf-tensorboard');
-        const iFrame = tfTensorboard.shadowRoot.querySelector(
-          'div[data-dashboard="profile"] > iframe');
+        const iFrame = window.parent.document.querySelector('iframe');
         iFrame.reload = () => {
-          if (tfTensorboard.autoReloadEnabled) {
-            document.dispatchEvent(new Event('tensorboard-reload'));
-          } else {
-            const defaultPath = '/data/plugin/profile';
-            let newPath = defaultPath + '/';
-            if (document.location.pathname.includes(defaultPath)) {
-              newPath = document.location.pathname.split(defaultPath)[0] + defaultPath + '/';
-            }
-            document.location.href = document.location.origin + newPath + 'index.html';
-          }
+          document.dispatchEvent(new Event('tensorboard-reload'));
         };
       } catch (err) {
+        console.error(err);
       }
-      document.addEventListener('plugin-reload', () => {
-          const defaultPath = '/data/plugin/profile';
-          let newPath = defaultPath + '/';
-          if (document.location.pathname.includes(defaultPath)) {
-            newPath = document.location.pathname.split(defaultPath)[0] + defaultPath + '/';
-          }
-          document.location.href = document.location.origin + newPath + 'index.html';
-      });
     }
 
     const script = loadChart('www.gstatic.com');

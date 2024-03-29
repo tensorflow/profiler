@@ -23,7 +23,7 @@ export class App implements OnInit {
       private readonly store: Store<{}>) {
     document.addEventListener('tensorboard-reload', () => {
       if (!this.loading) {
-        document.dispatchEvent(new Event('plugin-reload'));
+        this.initRunsAndTools();
       }
     });
   }
@@ -33,6 +33,7 @@ export class App implements OnInit {
   }
 
   async initRunsAndTools() {
+    this.loading = true;
     const runs = await firstValueFrom(this.dataService.getRuns()) as string[];
     if (runs.length === 0) {
       this.loading = false;
