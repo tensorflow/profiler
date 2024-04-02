@@ -8,10 +8,10 @@
     >
     <div class="bar" [style.width]="barWidth"></div>
     <div class="row-focus" [hidden]="node !== selectedNode"></div>
-    <span class="time">{{percent}}</span>
-    <span class="wasted">{{timeWasted}}</span>
-    <span class="hbmFraction">{{hbmFraction}}</span>
-    <span class="name" [style.padding-left]="offset">
+    <span aria-label="Time %:"></span><span class="time">{{percent}}</span>
+    <span aria-label="Wasted %:"></span><span class="wasted">{{timeWasted}}</span>
+    <span aria-label="HBM %:"></span><span class="hbmFraction">{{hbmFraction}}</span>
+    <span aria-label="Name:"></span><span class="name" [style.padding-left]="offset">
       <span class="disclosure">
         <span [hidden]="!children.length">
           <span [hidden]="expanded">&#x25ba;</span>
@@ -20,8 +20,8 @@
       </span>
       {{name}}
     </span>
-    <span class="provenance">{{provenance}}&nbsp;</span>
-    <span
+    <span aria-label="Framework Op type:"></span><span class="provenance">{{provenance}}&nbsp;</span>
+    <span aria-label="FLOPS:"></span><span
       class="utilization">
       {{flopsUtilization}}
     </span>
@@ -29,7 +29,7 @@
       class="flame-color-circle"
       [style.background-color]="flameColor">
     </span>
-    <span
+    <span class="accessible_text">HBM</span><span
       class="hbmUtilization">
       {{hbmUtilization}}
     </span>
