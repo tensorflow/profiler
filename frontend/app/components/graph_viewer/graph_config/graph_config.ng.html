@@ -11,6 +11,7 @@
         panelClass="panel-override"
         [(ngModel)]="params.selectedModule"
         [disabled]="useProgramId"
+        (selectionChange)="onModuleSelectionChange($event)"
       >
         <mat-option *ngFor="let module of getModuleList()" [value]="module">
           {{ module }}

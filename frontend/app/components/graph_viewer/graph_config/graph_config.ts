@@ -1,4 +1,5 @@
 import {Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges} from '@angular/core';
+import {MatSelectChange} from '@angular/material/select';
 import {type GraphConfigInput} from 'org_xprof/frontend/app/common/interfaces/graph_viewer';
 import {ReplaySubject} from 'rxjs';
 
@@ -13,6 +14,7 @@ export class GraphConfig implements OnDestroy, OnChanges {
   private readonly destroyed = new ReplaySubject<void>(1);
 
   @Output() readonly plot = new EventEmitter<Partial<GraphConfigInput>>();
+  @Output() readonly updateSelectedModule = new EventEmitter<string>();
 
   /** Form inputs properties */
   @Input() initialInputs: GraphConfigInput|undefined = undefined;
@@ -65,6 +67,10 @@ export class GraphConfig implements OnDestroy, OnChanges {
   onSubmit() {
     if (!this.validToSubmit()) return;
     this.plot.emit(this.params);
+  }
+
+  onModuleSelectionChange(e: MatSelectChange) {
+    this.updateSelectedModule.emit(e.value);
   }
 
   ngOnDestroy() {
