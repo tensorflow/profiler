@@ -1,7 +1,7 @@
 import {Component, OnDestroy} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {Store} from '@ngrx/store';
-import {OverviewDataTuple} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {OverviewDataTuple, RunEnvironmentProperty} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
 import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
@@ -19,6 +19,8 @@ import {OverviewCommon} from './overview_common';
 export class Overview extends OverviewCommon implements OnDestroy {
   /** Handles on-destroy Subject, used to unsubscribe. */
   private readonly destroyed = new ReplaySubject<void>(1);
+
+  profileStartTime = '';
 
   constructor(
       route: ActivatedRoute, private readonly dataService: DataService,
@@ -53,7 +55,14 @@ export class Overview extends OverviewCommon implements OnDestroy {
 
           /** Transfer data to Overview DataTable type */
           this.parseOverviewData((data || []) as OverviewDataTuple);
+          this.parseRunEnvironmentDetail();
         });
+  }
+
+  parseRunEnvironmentDetail() {
+    const runEnvironmentProp: RunEnvironmentProperty =
+        (this.runEnvironment || {}).p || {};
+    this.profileStartTime = runEnvironmentProp.profile_start_time || '';
   }
 
   ngOnDestroy() {

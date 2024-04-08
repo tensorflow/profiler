@@ -85,13 +85,14 @@ export declare interface TopOpsColumn {
 
 /* tslint:disable enforce-name-casing */
 /** The base interface for a property of run environment. */
-declare interface RunEnvironmentProperty {
+export declare interface RunEnvironmentProperty {
   error_message?: string;
   host_count?: string;
   device_core_count?: string;
   device_type?: string;
   is_training?: string;
   tpu_core_count?: string;
+  profile_start_time?: string;
 }
 /* tslint:enable */
 

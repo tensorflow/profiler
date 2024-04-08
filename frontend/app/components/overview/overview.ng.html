@@ -18,7 +18,14 @@
           [generalAnalysis]="generalAnalysis"
           [inputPipelineAnalysis]="inputPipelineAnalysis">
       </performance-summary>
-      <run-environment-view [runEnvironment]="runEnvironment"></run-environment-view>
+      <run-environment-view [runEnvironment]="runEnvironment">
+        <div profileDetail>
+          <p [hidden]="!profileStartTime">
+            <span class="key-label">Profile start time (local)</span>:
+            <span>{{profileStartTime}}</span>
+          </p>
+        </div>
+      </run-environment-view>
     </div>
 
     <div class="right-column">
