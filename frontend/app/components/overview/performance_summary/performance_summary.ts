@@ -167,7 +167,46 @@ const TPU_SUMMARY_INFO: SummaryInfoConfig[] = [
     valueKey: 'memory_bw_utilization_relative_to_hw_limit',
   },
   {
-    title: 'Power Metrics',
+    title: 'Firmeware Power Metrics (Power/Timescale)',
+    tooltip:
+        'Max power consumption of different components/rails with different timescale.',
+    childrenInfoConfig: [
+      {
+        title: 'Max VDD Core FW PowerMeter PL1',
+        valueKey: 'fw_max_vdd_core_pl1_power_watts',
+      },
+      {
+        title: 'Max VDD Core FW PowerMeter PL2',
+        valueKey: 'fw_max_vdd_core_pl2_power_watts',
+      },
+      {
+        title: 'Max VDD Core FW PowerMeter PL3',
+        valueKey: 'fw_max_vdd_core_pl3_power_watts',
+      },
+      {
+        title: 'Max VDD Core FW PowerMeter PL4',
+        valueKey: 'fw_max_vdd_core_pl4_power_watts',
+      },
+      {
+        title: 'Max HBM FW PowerMeter PL1',
+        valueKey: 'fw_max_hbm_pl1_power_watts',
+      },
+      {
+        title: 'Max HBM FW PowerMeter PL2',
+        valueKey: 'fw_max_hbm_pl2_power_watts',
+      },
+      {
+        title: 'Max HBM FW PowerMeter PL3',
+        valueKey: 'fw_max_hbm_pl3_power_watts',
+      },
+      {
+        title: 'Max HBM FW PowerMeter PL4',
+        valueKey: 'fw_max_hbm_pl4_power_watts',
+      },
+    ]
+  },
+  {
+    title: 'SPI Sampler Power Metrics',
     tooltip:
         'Avg/Max power consumption of different components/rails, including max of moving average of window size of 100us/1ms/10ms.',
     getChildValues: (props) =>
