@@ -50,6 +50,7 @@ export class OpDetails {
   expression: string = '';
   provenance: string = '';
   rawTimeMs = '';
+  occurrences = 0;
   avgTimeMs = '';
   fused: boolean = false;
   hasCategory: boolean = false;
@@ -229,6 +230,7 @@ export class OpDetails {
     } else {
       this.rawTimeMs = '';
     }
+    this.occurrences = this.node.metrics?.occurrences || 0;
 
     if (this.node.metrics && this.node.metrics.avgTimePs) {
       this.avgTimeMs = utils.humanReadableText(

@@ -97,6 +97,10 @@
           <div class="title">Total Time Sum:</div>
           <code class="expression">{{rawTimeMs}}</code>
         </div>
+        <div class="info" [hidden]="!occurrences">
+          <div class="title">Occurrences:</div>
+          <code class="expression">{{occurrences}}</code>
+        </div>
         <div class="info" [hidden]="!avgTimeMs">
           <div class="title">Total Time Avg:</div>
           <code class="expression">{{avgTimeMs}}</code>

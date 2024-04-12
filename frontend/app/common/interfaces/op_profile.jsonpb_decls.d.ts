@@ -47,11 +47,11 @@ export namespace Node {
  *  Metrics are always "total" rather than "self".
  */
 export interface Metrics {
-  time?: /* double */ number;
   flops?: /* double */ number;
   bandwidthUtils?: /* double */ number[];
   rawTime?: /* double */ number;
   rawFlops?: /* double */ number;
   rawBytesAccessedArray?: /* double */ number[];
+  occurrences?: /* uint32 */ number;
   avgTimePs?: /* double */ number;
 }
