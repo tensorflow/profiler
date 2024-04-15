@@ -273,8 +273,8 @@ export function percent(fraction: number, defaultValueIfNull = '-'): string {
   if (fraction < 0.00001) {
     return '0.0%';
   } else {
-    // Round to 1 decimal place.
-    return `${(fraction * 100).toFixed(1)}%`;
+    // Round to 2 decimal place.
+    return `${(fraction * 100).toFixed(2)}%`;
   }
 }
 
