@@ -53,6 +53,19 @@
   cursor: pointer;
 }
 
+// set left margin of 16px to match leading span for each cell (for aria-label)
+.time-header,
+.wasted-header,
+.hbmFraction-header,
+.name-header,
+.provenance-header,
+.utilization-hader,
+.hbmUtilization-header,
+.utilization-header,
+.hbmUtilization-header {
+  margin-left: 16px;
+}
+
 .time-header,
 .wasted-header,
 .hbmFraction-header,
@@ -87,6 +100,11 @@
   font-size: smaller;
 }
 
+.wasted,
+.wasted-header {
+  width: 8%;
+}
+
 .name-header,
 .name {
   display: inline-block;
@@ -96,7 +114,8 @@
   word-break: break-all;
 }
 
-.name {
+.name,
+.provenance {
   text-align: left;
 }
 
