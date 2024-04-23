@@ -34,7 +34,7 @@ xprof_ng_module(
         "@org_xprof//frontend/app/components/memory_profile",
         "@org_xprof//frontend/app/components/memory_viewer",
         "@org_xprof//frontend/app/components/op_profile",
-        "@org_xprof//frontend/app/components/overview",
+        "@org_xprof//frontend/app/components/overview_page",
         "@org_xprof//frontend/app/components/pod_viewer",
         "@org_xprof//frontend/app/components/sidenav",
         "@org_xprof//frontend/app/components/tf_data_bottleneck_analysis",

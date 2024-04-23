@@ -317,12 +317,12 @@ export type MemoryProfileSnapshot = memoryProfileProto.MemoryProfileSnapshot;
 export type OpProfileProto = opProfileProto.Profile;
 
 /** All overview page data table type. */
-export type OverviewDataTable =
+export type OverviewPageDataTable =
     GeneralAnalysis|InputPipelineAnalysis|RecommendationResult|RunEnvironment|
     SimpleDataTable|NormalizedAcceleratorPerformance;
 
 /** All overview page data tuple type. */
-export type OverviewDataTuple = [
+export type OverviewPageDataTuple = [
   GeneralAnalysis,
   InputPipelineAnalysis,
   RunEnvironment,
@@ -373,7 +373,7 @@ export type PrimitiveTypeNumberStringOrUndefined = number|string|undefined;
 
 /** All data type from tool response data. */
 export type DataTable =
-    SimpleDataTable|OverviewDataTable[]|InputPipelineDataTable[]|
+    SimpleDataTable|OverviewPageDataTable[]|InputPipelineDataTable[]|
     FrameworkOpStatsData[]|HloProto|MemoryViewerPreprocessResult|
     MemoryProfileProto|OpProfileProto|PodViewerDatabase;
 

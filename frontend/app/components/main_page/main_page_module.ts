@@ -21,8 +21,8 @@ import {MemoryViewer} from 'org_xprof/frontend/app/components/memory_viewer/memo
 import {MemoryViewerModule} from 'org_xprof/frontend/app/components/memory_viewer/memory_viewer_module';
 import {OpProfile} from 'org_xprof/frontend/app/components/op_profile/op_profile';
 import {OpProfileModule} from 'org_xprof/frontend/app/components/op_profile/op_profile_module';
-import {Overview} from 'org_xprof/frontend/app/components/overview/overview';
-import {OverviewModule} from 'org_xprof/frontend/app/components/overview/overview_module';
+import {OverviewPage} from 'org_xprof/frontend/app/components/overview_page/overview_page';
+import {OverviewPageModule} from 'org_xprof/frontend/app/components/overview_page/overview_page_module';
 import {PodViewer} from 'org_xprof/frontend/app/components/pod_viewer/pod_viewer';
 import {PodViewerModule} from 'org_xprof/frontend/app/components/pod_viewer/pod_viewer_module';
 import {SideNavModule} from 'org_xprof/frontend/app/components/sidenav/sidenav_module';
@@ -36,9 +36,9 @@ import {MainPage} from './main_page';
 /** The list of all routes available in the application. */
 export const routes: Routes = [
   {path: 'empty', component: EmptyPage},
-  {path: 'overview_page', component: Overview},
-  {path: 'overview_page@', component: Overview},
-  {path: 'overview_page^', component: Overview},
+  {path: 'overview_page', component: OverviewPage},
+  {path: 'overview_page@', component: OverviewPage},
+  {path: 'overview_page^', component: OverviewPage},
   {path: 'input_pipeline_analyzer', component: InputPipeline},
   {path: 'input_pipeline_analyzer@', component: InputPipeline},
   {path: 'input_pipeline_analyzer^', component: InputPipeline},
@@ -76,7 +76,7 @@ export const routes: Routes = [
     EmptyPageModule,
     SideNavModule,
     TraceViewerModule,
-    OverviewModule,
+    OverviewPageModule,
     InputPipelineModule,
     KernelStatsAdapterModule,
     MemoryProfileModule,

@@ -1,22 +1,22 @@
 import {Component, OnDestroy} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {Store} from '@ngrx/store';
-import {OverviewDataTuple, RunEnvironmentProperty} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {OverviewPageDataTuple, RunEnvironmentProperty} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
 import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
 import {ReplaySubject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 
-import {OverviewCommon} from './overview_common';
+import {OverviewPageCommon} from './overview_page_common';
 
 /** An overview page component. */
 @Component({
-  selector: 'overview',
-  templateUrl: './overview.ng.html',
-  styleUrls: ['./overview.css']
+  selector: 'overview_page',
+  templateUrl: './overview_page.ng.html',
+  styleUrls: ['./overview_page.css']
 })
-export class Overview extends OverviewCommon implements OnDestroy {
+export class OverviewPage extends OverviewPageCommon implements OnDestroy {
   /** Handles on-destroy Subject, used to unsubscribe. */
   private readonly destroyed = new ReplaySubject<void>(1);
 
@@ -53,8 +53,8 @@ export class Overview extends OverviewCommon implements OnDestroy {
             }
           }));
 
-          /** Transfer data to Overview DataTable type */
-          this.parseOverviewData((data || []) as OverviewDataTuple);
+          /** Transfer data to Overview Page DataTable type */
+          this.parseOverviewPageData((data || []) as OverviewPageDataTuple);
           this.parseRunEnvironmentDetail();
         });
   }

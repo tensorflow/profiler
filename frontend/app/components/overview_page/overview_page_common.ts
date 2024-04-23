@@ -1,4 +1,4 @@
-import {GeneralAnalysis, InputPipelineAnalysis, NormalizedAcceleratorPerformance, OverviewDataTuple, RecommendationResult, RunEnvironment} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {GeneralAnalysis, InputPipelineAnalysis, NormalizedAcceleratorPerformance, OverviewPageDataTuple, RecommendationResult, RunEnvironment} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 import {parseDiagnosticsDataTable} from 'org_xprof/frontend/app/common/utils/utils';
 
@@ -10,7 +10,7 @@ const NORMALIZED_ACCELERATOR_PERFORMANCE_INDEX = 5;
 const DIAGNOSTICS_INDEX = 6;
 
 /** A common class of overview page component. */
-export class OverviewCommon {
+export class OverviewPageCommon {
   private propertyValues: string[] = [];
 
   diagnostics: Diagnostics = {info: [], warnings: [], errors: []};
@@ -29,7 +29,7 @@ export class OverviewCommon {
     this.propertyValues = propertyValues;
   }
 
-  parseOverviewData(data: OverviewDataTuple) {
+  parseOverviewPageData(data: OverviewPageDataTuple) {
     this.generalAnalysis = data[GENERAL_ANALYSIS_INDEX];
     this.inputPipelineAnalysis = data[INPUT_PIPELINE_ANALYSIS_INDEX];
     this.runEnvironment = data[RUN_ENVIRONMENT_INDEX];

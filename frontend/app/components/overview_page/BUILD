@@ -4,15 +4,15 @@ load("//defs:defs.bzl", "xprof_ng_module")
 package(default_visibility = ["//frontend:internal"])
 
 xprof_ng_module(
-    name = "overview",
+    name = "overview_page",
     srcs = [
-        "overview.ts",
-        "overview_common.ts",
-        "overview_module.ts",
+        "overview_page.ts",
+        "overview_page_common.ts",
+        "overview_page_module.ts",
     ],
     assets = [
-        ":overview_css",
-        "overview.ng.html",
+        ":overview_page_css",
+        "overview_page.ng.html",
     ],
     deps = [
         "@npm//@angular/common",
@@ -24,20 +24,20 @@ xprof_ng_module(
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/utils",
         "@org_xprof//frontend/app/components/diagnostics_view",
-        "@org_xprof//frontend/app/components/overview/normalized_accelerator_performance_view",
-        "@org_xprof//frontend/app/components/overview/performance_summary",
-        "@org_xprof//frontend/app/components/overview/recommendation_result_view",
-        "@org_xprof//frontend/app/components/overview/run_environment_view",
-        "@org_xprof//frontend/app/components/overview/step_time_graph",
-        "@org_xprof//frontend/app/components/overview/top_ops_table",
+        "@org_xprof//frontend/app/components/overview_page/normalized_accelerator_performance_view",
+        "@org_xprof//frontend/app/components/overview_page/performance_summary",
+        "@org_xprof//frontend/app/components/overview_page/recommendation_result_view",
+        "@org_xprof//frontend/app/components/overview_page/run_environment_view",
+        "@org_xprof//frontend/app/components/overview_page/step_time_graph",
+        "@org_xprof//frontend/app/components/overview_page/top_ops_table",
         "@org_xprof//frontend/app/services/data_service",
         "@org_xprof//frontend/app/store",
     ],
 )
 
 sass_binary(
-    name = "overview_css",
-    src = "overview.scss",
+    name = "overview_page_css",
+    src = "overview_page.scss",
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",
