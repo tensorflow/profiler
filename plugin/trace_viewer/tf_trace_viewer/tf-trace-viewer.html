@@ -287,6 +287,7 @@ dashboard would integrate trace viewer app using iframe.
       _isInitialLoad: {type: Boolean, value: true},
       _replaceModel: {type: Boolean, value: true},
       _hosts: {type: Array, value: []},
+      _selectedHosts: {type: Array, value: []},
       _showFilterForm: {type: Boolean, value: true},
     },
 
@@ -334,6 +335,7 @@ dashboard would integrate trace viewer app using iframe.
             try {
               traceViewerLink = new URL(window.location.origin + this.traceDataUrl);
               this._sessionId = traceViewerLink.searchParams.get('session_id');
+              this._selectedHosts = (traceViewerLink.searchParams.get('hosts') || '').split(',');
             } catch(err) {  // not fatal.
               console.log('cannot find session id');
             }
@@ -355,7 +357,6 @@ dashboard would integrate trace viewer app using iframe.
         this._displayOverlay('Trace Viewer', 'Trace data URL is not provided.');
         return null;
       }
-      this._selectedHostIndexes = this._getSelectedHostIndexesFromURL();
       this._init();
       this._adjustUI();
 
@@ -385,31 +386,7 @@ dashboard would integrate trace viewer app using iframe.
     _sessionId: string = '',
     _selectedDeviceIds: null,
     _devices: null,
-    _selectedHostIndexes: [0],
 
-    // SelectedHostIndexes will be reactively updated for both legacy and new filter view
-    _getSelectedHostIndexesFromURL: function() {
-      const hostIndexParam = new URL(window.parent.location.href).searchParams?.get('host_index') || '';
-      const selectedHostIndexes = hostIndexParam.split(',').map(index => Number(index));
-      return selectedHostIndexes.length ? selectedHostIndexes : [0];
-    },
-
-    _getSelectedHosts() {
-        if (this._showFilterForm) {
-          // host-selector does not exist, this._hosts is not fetched
-          const traceViewerLink = new URL(window.location.origin + this.traceDataUrl);
-          return (traceViewerLink.searchParams.get('hosts') || '').split(',');
-        } else {
-          // has valid this._hosts
-          const selectedHosts = [];
-          this._hosts.forEach((host, index) => {
-              if (this._selectedHostIndexes.includes(index)) {
-                selectedHosts.push(host);
-              }
-          })
-          return selectedHosts;
-        }
-    },
 
     _convertTimeToCycles: function(e) {
       if (this._tasks === undefined || this._tasks.length === 0) return;
@@ -562,7 +539,7 @@ dashboard would integrate trace viewer app using iframe.
                 new URL(window.location.origin + '/trace_viewer/' + this._sessionId);
           traceViewerConnectedEventsLink.searchParams.append(
                 "selected_group_ids", event.args['connected_group_ids']);
-          this._addSelectedHostIndexToTraceViewerURL(traceViewerConnectedEventsLink);
+          this._addSelectedHostsToTraceViewerURL(traceViewerConnectedEventsLink);
           const traceViewerConnectedEventsLinkElement = document.createElement('div');
           traceViewerConnectedEventsLinkElement.innerHTML = 'Trace Viewer:<a href="' +
                 traceViewerConnectedEventsLink.href +
@@ -574,7 +551,7 @@ dashboard would integrate trace viewer app using iframe.
           const traceViewerStepLink =
                 new URL(window.location.origin + '/trace_viewer/' + this._sessionId);
           traceViewerStepLink.searchParams.append("selected_group_ids", event.args['group_id']);
-          this._addSelectedHostIndexToTraceViewerURL(traceViewerStepLink);
+          this._addSelectedHostsToTraceViewerURL(traceViewerStepLink);
           const traceViewerStepLinkElement = document.createElement('div');
           traceViewerStepLinkElement.innerHTML = 'Trace Viewer:<a href="' + traceViewerStepLink.href +
                 '" target="_blank"> see events ONLY for this step/group ' +
@@ -589,10 +566,17 @@ dashboard would integrate trace viewer app using iframe.
      * BEGIN - Functions only used when trace filter form disabled
      *************************************************************
      */
-    // Note for both legacy and new filter view, host_index in URL
+    // Note for both legacy and new filter view, hosts in URL
     // is the source of truth / most up-to-date for current selected hosts
-    _updateUrlHostIndex: function(selectedHostIndexes) {
+    _updateHostsUrl: function() {
       const queryParams = new URLSearchParams(window.parent.location.search);
+      if (this._selectedHosts.length) {
+        queryParams.set('hosts', this._selectedHosts.join(','));
+      } else {
+        queryParams.delete('hosts');
+      }
+      const selectedHostIndexes = this._hosts.map((host, index) => (this._selectedHosts.includes(host) ? index : -1)).filter((index) => index >= 0);
+
       if (selectedHostIndexes.length) {
         queryParams.set('host_index', selectedHostIndexes.join(','));
       } else {
@@ -603,8 +587,8 @@ dashboard would integrate trace viewer app using iframe.
       window.parent.history.pushState({}, '', url);
     },
 
-    _onSelectedHostIndexesChange: function() {
-      this._updateUrlHostIndex(this._selectedHostIndexes);
+    _onSelectedHostsChange: function() {
+      this._updateHostsUrl();
       // When the host changes, we need to clear the Process Filter Dropdown
       // since it contains devices (pids) associated with the previous host.
       this._clearProcessList();
@@ -626,8 +610,8 @@ dashboard would integrate trace viewer app using iframe.
         for (const hostOptionCheckbox of hostOptionCheckboxes) {
           hostOptionCheckbox.checked = checked;
         }
-        this._selectedHostIndexes = checked ? Array.from(Array(this._hosts.length).keys()) : [];
-        this._onSelectedHostIndexesChange();
+        this._selectedHosts = checked ? this._hosts : [];
+        this._onSelectedHostsChange();
       };
 
       hostsDialog.appendChild(tr.ui.b.createButton('Check All', () => {
@@ -645,19 +629,19 @@ dashboard would integrate trace viewer app using iframe.
         const hostOptionCheckbox = tr.ui.b.createCheckBox(undefined, undefined, undefined,
             true, host);
 
-        hostOptionCheckbox.checked = this._selectedHostIndexes.includes(index);
+        hostOptionCheckbox.checked = this._selectedHosts.includes(host);
         hostOptionCheckbox.addEventListener('change', () => {
           const checked = hostOptionCheckbox.checked;
           const hostName = hostOptionCheckbox.textContent;
           const hostIndex = hosts.findIndex(host => host === hostName);
-          const indexOfIndex = this._selectedHostIndexes.findIndex(index => index === hostIndex);
-          if ((indexOfIndex === -1) && checked) {
-            this._selectedHostIndexes.push(hostIndex);
+          if (!this._selectedHosts.includes(hostName) && checked) {
+            this._selectedHosts.push(hostName);
           }
-          if ((indexOfIndex !== -1) && !checked) {
-            this._selectedHostIndexes.splice(indexOfIndex, 1);
+          if (this._selectedHosts.includes(hostName) && !checked) {
+            const indexOfSelectedHosts = this._selectedHosts.findIndex(host => host === hostName);
+            this._selectedHosts.splice(indexOfSelectedHosts, 1);
           }
-          this._onSelectedHostIndexesChange();
+          this._onSelectedHostsChange();
         });
         hostsDialog.appendChild(hostOptionCheckbox);
         hostOptionCheckboxes.push(hostOptionCheckbox);
@@ -687,18 +671,16 @@ dashboard would integrate trace viewer app using iframe.
     },
 
     // This function is called when generating trace viewer links given hosts selection
-    _addSelectedHostIndexToTraceViewerURL: function(url) {
-      const selectedHostIndexes = this._getSelectedHostIndexesFromURL();
-      if (selectedHostIndexes > 0) {
-        url.searchParams.append("host_index", selectedHostIndexes.join(','));
+    _addSelectedHostsToTraceViewerURL: function(url) {
+      if (this._selectedHosts.length > 0) {
+        url.searchParams.set("hosts", this._selectedHosts.join(','));
       }
     },
 
     _perfettoButtonOnclickCallback: function() {
       const sessionPerfettoUrl = new URL(`/perfetto/${this._sessionId}`, window.location.href);
-      const selectedHosts = this._getSelectedHosts();
-      if (selectedHosts) {
-        sessionPerfettoUrl.searchParams.set('hosts', selectedHosts);
+      if (this._selectedHosts.length) {
+        sessionPerfettoUrl.searchParams.set('hosts', this._selectedHosts.join(','));
       }
       window.open(sessionPerfettoUrl.toString());
     },
@@ -1203,9 +1185,8 @@ dashboard would integrate trace viewer app using iframe.
     },
 
     _updateHostsParamToBaseUrl: function(requestURL) {
-      const selectedHosts = this._getSelectedHosts();
-      if (selectedHosts.length) {
-        requestURL.searchParams.set('hosts', selectedHosts.join(','));
+      if (this._selectedHosts.length) {
+        requestURL.searchParams.set('hosts', this._selectedHosts.join(','));
       } else {
         requestURL.searchParams.set('hosts', 'none');
       }
