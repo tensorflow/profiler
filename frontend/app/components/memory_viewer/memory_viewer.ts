@@ -16,6 +16,8 @@ import {takeUntil} from 'rxjs/operators';
 })
 export class MemoryViewer implements OnDestroy {
   memoryViewerPreprocessResult: MemoryViewerPreprocessResult|null = null;
+  currentRun = '';
+  currentHost = '';
 
   /** Handles on-destroy Subject, used to unsubscribe. */
   private readonly destroyed = new ReplaySubject<void>(1);
@@ -51,6 +53,8 @@ export class MemoryViewer implements OnDestroy {
           if (!data) return;
           this.memoryViewerPreprocessResult =
               data as MemoryViewerPreprocessResult | null;
+          this.currentRun = event.run || '';
+          this.currentHost = event.host || '';
         });
   }
 

@@ -602,6 +602,11 @@ class ProfilePlugin(base_plugin.TBPlugin):
     if tool not in TOOLS and not use_xplane(tool):
       return None, content_type, None
 
+    if tool == 'memory_viewer^' and request.args.get(
+        'view_memory_allocation_timeline'
+    ):
+      params['view_memory_allocation_timeline'] = True
+
     if tool == 'trace_viewer@^':
       options = {}
       options['resolution'] = request.args.get('resolution', 8000)

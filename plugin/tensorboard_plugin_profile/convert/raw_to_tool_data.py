@@ -182,10 +182,18 @@ def xspace_to_tool_data(
         raw_data = raw_data.decode('utf-8')
       raise ValueError(raw_data)
   elif tool == 'memory_viewer':
-    options = {'module_name': params.get('host')}
+    view_memory_allocation_timeline = params.get(
+        'view_memory_allocation_timeline', False
+    )
+    options = {
+        'module_name': params.get('host'),
+        'view_memory_allocation_timeline': view_memory_allocation_timeline,
+    }
     raw_data, success = xspace_wrapper_func(xspace_paths, tool, options)
     if success:
       data = raw_data
+      if view_memory_allocation_timeline:
+        content_type = 'text/html'
   elif tool == 'dcn_collective_stats':
     options = {'host_name': params.get('host')}
     raw_data, success = xspace_wrapper_func(xspace_paths, tool, options)

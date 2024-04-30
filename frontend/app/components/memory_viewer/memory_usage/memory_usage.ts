@@ -41,7 +41,8 @@ export class MemoryUsage {
 
   // Only one of hloProto or preprocess is valid to construct MemoryUsage.
   constructor(
-      preprocess: MemoryViewerPreprocessResult|null, memorySpaceColor: number) {
+      preprocess: MemoryViewerPreprocessResult|null, memorySpaceColor: number,
+      currentRun: string|null, currentHost: string|null) {
     this.nColor = 0;
 
     this.peakHeapSizeBytes = 0;
@@ -76,20 +77,25 @@ export class MemoryUsage {
 
     if (preprocess) {
       // Initialize memory viewer from preprocessed data.
-      this.initMemoryUsageFromPrecomputed(preprocess);
+      this.initMemoryUsageFromPrecomputed(preprocess, currentRun, currentHost);
     }
   }
 
   /**
    * Initializes memory usage from precomputed results.
    */
-  private initMemoryUsageFromPrecomputed(preprocess:
-                                             MemoryViewerPreprocessResult) {
+  private initMemoryUsageFromPrecomputed(
+      preprocess: MemoryViewerPreprocessResult, currentRun: string|null,
+      currentHost: string|null) {
     // Copy the fields from preprocessed result.
     this.moduleName = preprocess.moduleName || '';
     this.timelineUrl = preprocess.allocationTimeline || '';
     if (!this.timelineUrl.startsWith('/memory_viewer.json')) {
-      this.timelineUrl = '';
+      // redirecting memory allocation timeline to this url on TensorBoard
+      this.timelineUrl =
+          `${window.parent.location.origin}/data/plugin/profile/data?run=${
+              currentRun}&tag=memory_viewer%5E&host=${
+              currentHost}&view_memory_allocation_timeline=true`;
     }
     this.peakHeapSizeBytes =
         (preprocess.totalBufferAllocationMib || 0) * 1024 * 1024;
