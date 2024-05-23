@@ -461,23 +461,28 @@ dashboard would integrate trace viewer app using iframe.
         var hloOp;
         // DarwiNN layer has a long layer identifier, thus no chance to be conflict with other systems.
         const darwinn_layer = ['Compute Utilization/Roofline Efficiency', 'Data motion layers utilization'].includes(event.parentContainer.name);
-        const xla_ops = ('XLA Ops' === event.parentContainer.name);
+        // Event is an XLA op if it is part of the XLA Ops line or in case of host XLA ops, it has hlo_op and hlo_module in the event args.
+        const xla_ops = ('XLA Ops' === event.parentContainer.name || (event.args?.hlo_op && event.args?.hlo_module));
         if (xla_ops || darwinn_layer) {
           var hloOp = event.title;
           if (darwinn_layer) {
             hloOp = event.args?.Name;
           }
           var hloModule = 'default';
-          for (t in currentProcess.threads) {
-            var thread = currentProcess.threads[t];
-            if (thread.name != 'XLA Modules') continue;
-            // Perform a linear search for containing module, because we are not expecting too
-            // many modules per session. But binary search is possible here because the modules
-            // array seems sorted.
-            for (const module of thread.sliceGroup.slices) {
-              if (module.start < event.start && module.start + module.duration > event.start) {
-                hloModule = module.title;
-                break;
+          if (event.args?.hlo_module) {
+            hloModule = event.args?.hlo_module + "(" + event.args?.hlo_module_id + ")"
+          } else {
+            for (t in currentProcess.threads) {
+              var thread = currentProcess.threads[t];
+              if (thread.name != 'XLA Modules') continue;
+              // Perform a linear search for containing module, because we are not expecting too
+              // many modules per session. But binary search is possible here because the modules
+              // array seems sorted.
+              for (const module of thread.sliceGroup.slices) {
+                if (module.start < event.start && module.start + module.duration > event.start) {
+                  hloModule = module.title;
+                  break;
+                }
               }
             }
           }
