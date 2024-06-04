@@ -25,6 +25,10 @@
             </button>
           </a>
         </div>
+        <div class="info" [hidden]="!avgTimeMs">
+          <div class="title">Total Time Avg:</div>
+          <code class="expression">{{avgTimeMs}}</code>
+        </div>
         <div class="info" [hidden]="!flopsUtilization">
           <div class="title">FLOPS utilization:</div>
           <div class="bar-container">
@@ -100,10 +104,6 @@
         <div class="info" [hidden]="!occurrences">
           <div class="title">Occurrences:</div>
           <code class="expression">{{occurrences}}</code>
-        </div>
-        <div class="info" [hidden]="!avgTimeMs">
-          <div class="title">Total Time Avg:</div>
-          <code class="expression">{{avgTimeMs}}</code>
         </div>
         <div class="info" [hidden]="!fused">
           <div class="unavailable">
