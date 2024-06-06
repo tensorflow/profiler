@@ -60,6 +60,7 @@ export class OpDetails {
   selectedOpNodeChain: string[] = [];
   memBwType = utils.MemBwType;
   currentRun = '';
+  showUtilizationWarning = false;
 
   constructor(
       private readonly store: Store<{}>,
@@ -171,6 +172,7 @@ export class OpDetails {
     if (!this.node || !this.rootNode) {
       return;
     }
+    this.showUtilizationWarning = false;
     this.color = utils.flameColor(
         utils.flopsUtilization(this.node, this.rootNode), 0.7, 1, Math.sqrt);
     this.name = this.node.name || '';
@@ -178,6 +180,9 @@ export class OpDetails {
 
     if (utils.hasFlopsUtilization(this.node)) {
       const flopsUtilization = utils.flopsUtilization(this.node, this.rootNode);
+      if (flopsUtilization === 1) {
+        this.showUtilizationWarning = true;
+      }
       this.flopsUtilization = utils.percent(flopsUtilization, '');
       this.flopsColor = utils.flopsColor(flopsUtilization);
     } else {
@@ -197,6 +202,9 @@ export class OpDetails {
          i <= utils.MemBwType.MEM_BW_TYPE_MAX; i++) {
       if (utils.hasBandwidthUtilization(this.node, i)) {
         const utilization = utils.memoryBandwidthUtilization(this.node, i);
+        if (utilization === 1) {
+          this.showUtilizationWarning = true;
+        }
         this.bandwidthUtilizations[i] = utils.percent(utilization, '');
         this.bwColors[i] = utils.bwColor(utilization);
       } else {

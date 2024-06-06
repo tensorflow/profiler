@@ -138,6 +138,9 @@
           <div class="title"> Hardware Computation Size:</div>
           <code class="expression">{{computationPrimitiveSize}}</code>
         </div>
+        <div class="warning" [hidden]="!showUtilizationWarning">
+          <p>Utilization may have been capped at 100% as accurate bandwidth could not be determined.</p><p [hidden]="isOss">See <a href="b/329965643">b/329965643</a></p>
+        </div>
       </div>
     </mat-card-content>
   </mat-card>
