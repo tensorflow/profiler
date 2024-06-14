@@ -332,6 +332,7 @@ dashboard would integrate trace viewer app using iframe.
       this._resolution = this._resolutionFromViewerWidth(this._traceViewer.clientWidth);
       // Retrieve the URL of trace data.
       var query = new URL(window.location.href);
+      this._listenForViewportChanges();
       query.searchParams.forEach(function(value, key, searchParams) {
         if (key === 'trace_data_url') {
           this.traceDataUrl = value;
@@ -826,14 +827,13 @@ dashboard would integrate trace viewer app using iframe.
       //         [----preserve----]       - issue loads to keep this full of data
       //     [---------fetch----------]   - fetch this much data with each load
       // [-----------full bounds--------] - the whole profile
-      var viewport = this._trackViewRange(this._traceViewer.trackView);
+      var viewport = this._trackViewRange(this._traceViewer.trackView)
+      var fetch = this._calcFetchRange(viewport);
       var PRESERVE_RATIO = tf_component_traceviewer.PRESERVE_RATIO;
       var preserve = tf_component_traceviewer.intersect(
         tf_component_traceviewer.expand(viewport, PRESERVE_RATIO),
         this._fullBounds
       );
-      var FETCH_RATIO = tf_component_traceviewer.FETCH_RATIO;
-      var fetch = tf_component_traceviewer.expand(viewport, FETCH_RATIO);
       var zoomFactor =
         tf_component_traceviewer.length(this._loadedRange) /
         tf_component_traceviewer.length(fetch);
@@ -1106,38 +1106,10 @@ dashboard would integrate trace viewer app using iframe.
         return;
       }
       this._dirty = false;
-      // We can't assign the model until the viewer is attached. This may be
-      // delayed indefinitely if the tab is backgrounded. This version of polymer
-      // doesn't provide a direct way to observe the viewer being attached.
-      // This is a workaround: the browser won't paint until the viewer is attached.
-      // Promisify this to make the trace loading process synchronized
-      await new Promise(resolve => window.requestAnimationFrame(
-        function() {
-          this._traceViewer.model = this._model;
-          if (this._traceViewer.trackView != null) {
-            // Only initialized if data in nonempty!
-            // Wait 500ms to let an animated zoom/pan operation complete. Ideally,
-            // we could just explicitly wait for its end.
-            const debounce = (func, wait = 500) => {
-              let timer;
-
-              return (...args) => {
-                clearTimeout(timer);
-                timer = setTimeout(() => {
-                  func(...args);
-                }, wait);
-              };
-            }
-            const debouncedReload = debounce(this._maybeLoad.bind(this))
-            this._traceViewer.trackView.viewport.addEventListener(
-              'change',
-              debouncedReload
-            );
-          }
-          this._traceViewer.viewTitle = '';
-          resolve();
-        }.bind(this)
-      ));
+      // TraceViewer queues up a model to be built, waits for being attached to the DOM, and then
+      // builds the model. The builtPromise attribute doesn't resolve until the model is built.
+      this._traceViewer.model = this._model;
+      await this._traceViewer.builtPromise;
     },
 
     // Dummy node inserted to enable webdriver detect render complete signal
@@ -1174,9 +1146,28 @@ dashboard would integrate trace viewer app using iframe.
 
     // Access the {min, max} range of a trackView.
     _trackViewRange: function(trackView) {
-      var xfm = trackView.viewport.currentDisplayTransform;
+      return this._calcViewportRange(trackView.viewport.currentDisplayTransform, trackView.viewWidth_);
+    },
+
+    _calcFetchRange: function(viewportRange) {
+      var FETCH_RATIO = tf_component_traceviewer.FETCH_RATIO;
+      var fetch = tf_component_traceviewer.expand(viewportRange, FETCH_RATIO);
+      if (this.traceDataUrl) {
+        // clip fetch to filtered range before checking whether load should occur
+        const sp = new URLSearchParams(window.location.search);
+        if (sp.has('start_time_ms')) {
+          fetch.min = Math.max(fetch.min, Number(sp.get('start_time_ms')));
+        }
+        if (sp.has('end_time_ms')) {
+          fetch.max = Math.min(fetch.max, Number(sp.get('end_time_ms')));
+        }
+      }
+      return fetch;
+    },
+
+    _calcViewportRange: function(xfm, viewWidth) {
       const pixelRatio = window.devicePixelRatio || 1;
-      const devicePixelWidth = pixelRatio * trackView.viewWidth_;
+      const devicePixelWidth = pixelRatio * viewWidth;
       return {
         min: xfm.xViewToWorld(0),
         max: xfm.xViewToWorld(devicePixelWidth),
@@ -1276,6 +1267,31 @@ dashboard would integrate trace viewer app using iframe.
       overlay.textContent = content;
       overlay.title = title;
       overlay.visible = true;
+    },
+
+    _onViewportChanged: function() {
+      if (this._isStreaming) {
+        this._maybeLoad();
+      }
+    },
+
+    _listenForViewportChanges: function() {
+      const _debouncedOnViewportChanged = tf_component_traceviewer.debounce(this._onViewportChanged.bind(this));
+      const tvOnViewportChanged = this._traceViewer.onViewportChanged_.bind(this._traceViewer);
+      const traceViewer = this._traceViewer;
+      let prevTrackView = traceViewer.trackView;
+      this._traceViewer.onViewportChanged_ = (...args) => {
+        tvOnViewportChanged(...args);
+
+        if (traceViewer.trackView != undefined) {
+          _debouncedOnViewportChanged();
+        }
+      };
+      // if called after trackView already created, then reset listener
+      if (!!this._traceViewer.trackView) {
+        this._traceViewer.trackView.viewport.removeEventListener('change', tvOnViewportChanged);
+        this._traceViewer.trackView.viewport.addEventListener('change', this._traceViewer.onViewportChanged_);
+      }
     },
   });
 </script>
