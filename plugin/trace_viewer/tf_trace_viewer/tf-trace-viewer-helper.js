@@ -59,4 +59,22 @@ var tf_component_traceviewer;
         };
     }
     tf_component_traceviewer.intersect = intersect;
+    /**
+     * Return a function that will call the given function after the given delay.
+     * If called again before the delay, the first call will be cancelled, and
+     * the delay will be reset.
+     * @param {function(...*): *} func The function to debounce.
+     * @param {number=} wait The delay in milliseconds.
+     * @return {function(...*): *} The debounced function.
+     */
+    function debounce(func, wait = 500) {
+      let timer;
+      return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          func(...args);
+        }, wait);
+      };
+    }
+    tf_component_traceviewer.debounce = debounce;
 })(tf_component_traceviewer || (tf_component_traceviewer = {})); // namespace tf_component_traceviewer
