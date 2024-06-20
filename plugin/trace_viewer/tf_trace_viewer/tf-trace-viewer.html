@@ -265,6 +265,7 @@ dashboard would integrate trace viewer app using iframe.
         type: String,
         value: null,
       },
+      currentViewportRange: Object,
       // TODO(tf-profiler): Fix naming (Leading underscores are not allowed in field names)
       // _traceData is used for static mode.
       _traceData: {
@@ -329,10 +330,20 @@ dashboard would integrate trace viewer app using iframe.
       Polymer.dom(this.root).appendChild(this._traceViewer);
       Polymer.dom(this.root).appendChild(this._throbber);
 
+      this._listenForViewportChanges();
+
       this._resolution = this._resolutionFromViewerWidth(this._traceViewer.clientWidth);
       // Retrieve the URL of trace data.
       var query = new URL(window.location.href);
-      this._listenForViewportChanges();
+      // Extract the viewport range from the URL. Only used for initializing the first viewport;
+      // does not affect any filters.
+      if (query.searchParams.has('view_start') && query.searchParams.has('view_end')) {
+        // Initialize the current viewport range.
+        this.currentViewportRange = {
+          min: Number(query.searchParams.get('view_start')),
+          max: Number(query.searchParams.get('view_end')),
+        };
+      }
       query.searchParams.forEach(function(value, key, searchParams) {
         if (key === 'trace_data_url') {
           this.traceDataUrl = value;
@@ -362,7 +373,7 @@ dashboard would integrate trace viewer app using iframe.
         this._displayOverlay('Trace Viewer', 'Trace data URL is not provided.');
         return null;
       }
-      this._init();
+      this._init(this.currentViewportRange);
       this._adjustUI();
 
       window.addEventListener('load', function(e) {
@@ -734,7 +745,7 @@ dashboard would integrate trace viewer app using iframe.
       Polymer.dom(this._traceViewer.leftControls).insertBefore(helpButton, perfettoSelector);
     },
 
-    _init: async function() {
+    _init: async function(initialViewportRange) {
       if (this._isStreaming) {
         // TODO(yinzz) cleanup hosts and process filter code later when the new filtering rolls out
         if (!this._showFilterForm) {
@@ -747,7 +758,11 @@ dashboard would integrate trace viewer app using iframe.
         this._createDetailFilter();
         this._createPerfettoButton();
       }
-      this._loadTrace(null, /* replaceModel= */ true);
+      let initialRequestedRange = null;
+      if (initialViewportRange) {
+        initialRequestedRange = this._calcFetchRange(initialViewportRange);
+      }
+      this._loadTrace(initialRequestedRange, /* replaceModel= */ true);
     },
 
     _loadTrace: async function(requestedRange, replaceModel) {
@@ -1278,7 +1293,24 @@ dashboard would integrate trace viewer app using iframe.
       overlay.visible = true;
     },
 
+    /**
+     * Initialize the viewport to the currentViewportRange if provided.
+     * Implementation note: this accesses internal state objects of the TrackView and the low-level
+     * canvas element to construct the initial DisplayTransform.
+     */
+    _initViewport: function() {
+      if (!this.currentViewportRange) return;
+      const displayTransform = new tr.ui.TimelineDisplayTransform();
+      displayTransform.xSetWorldBounds(this.currentViewportRange.min, this.currentViewportRange.max, this._traceViewer.trackView.modelTrackContainer_.canvas.width);
+      this._traceViewer.trackView.viewport.setDisplayTransformImmediately(displayTransform);
+    },
+
     _onViewportChanged: function() {
+      // Update the current viewport range so future viewport initialization uses the latest viewport.
+      this.currentViewportRange = this._trackViewRange(this._traceViewer.trackView);
+      // Emit viewport changed event that includes the current viewport range. Parent components can
+      // persist the current viewport range and pass back down to initialize the viewport.
+      this.dispatchEvent(new CustomEvent('viewport-changed', {detail: { range: this.currentViewportRange }}));
       if (this._isStreaming) {
         this._maybeLoad();
       }
@@ -1291,13 +1323,19 @@ dashboard would integrate trace viewer app using iframe.
      * NOTE: this does not currently listen for scroll events.
      */
     _listenForViewportChanges: function() {
+      const _trackViewChanged = this._trackViewChanged.bind(this);
       const _debouncedOnViewportChanged = tf_component_traceviewer.debounce(this._onViewportChanged.bind(this));
       const superOnViewportChanged_ = this._traceViewer.onViewportChanged_.bind(this._traceViewer);
+      let prevTrackView = this._traceViewer.trackView;
       this._traceViewer.onViewportChanged_ = (...args) => {
         superOnViewportChanged_(...args);
 
         if (this._traceViewer.trackView != undefined) {
           _debouncedOnViewportChanged();
+          if (this._traceViewer.trackView !== prevTrackView) {
+            prevTrackView = this._traceViewer.trackView;
+            _trackViewChanged(this._traceViewer.trackView);
+          }
         }
       };
       // if called after trackView already created, then reset listener
@@ -1305,6 +1343,19 @@ dashboard would integrate trace viewer app using iframe.
         this._traceViewer.trackView.viewport.removeEventListener('change', superOnViewportChanged_);
         this._traceViewer.trackView.viewport.addEventListener('change', this._traceViewer.onViewportChanged_);
       }
+    },
+
+    /**
+     * Handle a new TrackView instance. This should include any initialization
+     * that needs to be done when a new TrackView is created such as: event listeners, viewport
+     * initialization, etc.
+     */
+    _trackViewChanged: function(newTrackView) {
+      const superSetInitialViewport_ = newTrackView.setInitialViewport_.bind(newTrackView);
+      newTrackView.setInitialViewport_ = () => {
+        superSetInitialViewport_();
+        this._initViewport();
+      };
     },
   });
 </script>
