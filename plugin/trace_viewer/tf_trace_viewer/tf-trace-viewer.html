@@ -373,7 +373,7 @@ dashboard would integrate trace viewer app using iframe.
         this._displayOverlay('Trace Viewer', 'Trace data URL is not provided.');
         return null;
       }
-      this._init(this.currentViewportRange);
+      this._init();
       this._adjustUI();
 
       window.addEventListener('load', function(e) {
@@ -745,7 +745,7 @@ dashboard would integrate trace viewer app using iframe.
       Polymer.dom(this._traceViewer.leftControls).insertBefore(helpButton, perfettoSelector);
     },
 
-    _init: async function(initialViewportRange) {
+    _init: async function() {
       if (this._isStreaming) {
         // TODO(yinzz) cleanup hosts and process filter code later when the new filtering rolls out
         if (!this._showFilterForm) {
@@ -758,11 +758,7 @@ dashboard would integrate trace viewer app using iframe.
         this._createDetailFilter();
         this._createPerfettoButton();
       }
-      let initialRequestedRange = null;
-      if (initialViewportRange) {
-        initialRequestedRange = this._calcFetchRange(initialViewportRange);
-      }
-      this._loadTrace(initialRequestedRange, /* replaceModel= */ true);
+      this._loadTrace(null, /* replaceModel= */ true);
     },
 
     _loadTrace: async function(requestedRange, replaceModel) {
@@ -848,6 +844,8 @@ dashboard would integrate trace viewer app using iframe.
       var zoomFactor =
         tf_component_traceviewer.length(this._loadedRange) /
         tf_component_traceviewer.length(fetch);
+      // if fetch range is invalid, do not request data
+      if (!tf_component_traceviewer.isValidRange(fetch)) return;
       if (
         !tf_component_traceviewer.within(preserve, this._loadedRange) ||
         zoomFactor > tf_component_traceviewer.ZOOM_RATIO

@@ -77,4 +77,16 @@ var tf_component_traceviewer;
       };
     }
     tf_component_traceviewer.debounce = debounce;
+    /**
+     * Check whether the given range is valid. A range is considered valid if:
+     * 1. it has a min and max
+     * 2. min <= max
+     * @param {?Object} range The range to check.
+     * @return {boolean} Whether the range is valid.
+     */
+    function isValidRange(range) {
+      return range != undefined && range.min != undefined &&
+          range.max != undefined && range.min <= range.max;
+    }
+    tf_component_traceviewer.isValidRange = isValidRange;
 })(tf_component_traceviewer || (tf_component_traceviewer = {})); // namespace tf_component_traceviewer
