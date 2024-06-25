@@ -461,9 +461,11 @@ dashboard would integrate trace viewer app using iframe.
     },
 
     onSelectionChange: function(e) {
-      this._eventDetails.innerHTML = '<div id="event-details" ' +
+      if (this._eventDetails) {
+        this._eventDetails.innerHTML = '<div id="event-details" ' +
             'style="display: block;"></div>';
-      events = this._traceViewer.brushingStateController.currentBrushingState.selection;
+      }
+      events = this._traceViewer?.brushingStateController.currentBrushingState.selection;
       if (events === undefined) return;
       if (events.length != 1) return;
 
@@ -861,35 +863,31 @@ dashboard would integrate trace viewer app using iframe.
       let startUpdateModel;
       let startUpdateView;
 
-      await this._loadJSON(requestedRange)
-        .then((data) => {
-          if (!this._isOss) {
-            this._addInitialResponseDataLatency(performance.now());
-            this._addDataResponseSize(data.length);
-          }
-          startUpdateModel = performance.now();
-          this._updateModel(data, replaceModel);
-          if (!this._isOss) {
-            this._addUpdateModelLatency(performance.now() - startUpdateModel);
-          }
-        })
-        .then(async () => {
-          // Wait for the Promise in requestAnimationFrame callback
-          // to be resolved so we can make the load trace flow synchronized
-          startUpdateView = performance.now();
-          await this._updateView(requestedRange);
-          if (!this._isOss) {
-            this._addUpdateViewLatency(performance.now() - startUpdateView);
-          }
-        })
-        .catch((err) => {
-          this._displayOverlay('Trace Viewer', err);
-        })
+      try {
+        const data = await this._loadJSON(requestedRange)
+        if (!this._isOss) {
+          this._addInitialResponseDataLatency(performance.now());
+          this._addDataResponseSize(data.length);
+        }
+        startUpdateModel = performance.now();
+        this._updateModel(data, replaceModel);
+        if (!this._isOss) {
+          this._addUpdateModelLatency(performance.now() - startUpdateModel);
+        }
+        startUpdateView = performance.now();
+        await this._updateView(requestedRange);
+        if (!this._isOss) {
+          this._addUpdateViewLatency(performance.now() - startUpdateView);
+        }
+      } catch (err) {
+        console.error('Error load streaming trace:', err);
+        this._displayOverlay('Trace Viewer', err);
+      }
     },
 
     // Loads a time window (the whole trace if requestedRange is null).
     // Returns a promise for the JSON event data.
-    _loadJSON: function(requestedRange) {
+    _loadJSON: async function(requestedRange) {
       // Set up an XMLHTTPRequest to the JSON endpoint, populating range and
       // resolution if appropriate.
       var requestURL = this._buildBaseURL();
@@ -1043,8 +1041,6 @@ dashboard would integrate trace viewer app using iframe.
       for (const pid in this._model.processes) {
         this._devices[pid] = this._model.processes[pid].name;
       }
-
-      return Promise.resolve();
     },
 
     // Remove all checkboxes in the Process Filter Dropdown.
