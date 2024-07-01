@@ -140,6 +140,14 @@ Trace Viewer.
     overflow-wrap: anywhere;
   }
 
+  a.button {
+    padding: 1px 6px;
+    border: 1px outset buttonborder;
+    border-radius: 3px;
+    color: buttontext;
+    background-color: buttonface;
+    text-decoration: none;
+  }
 </style>
 
 <div class="no-webcomponents-container hidden">
@@ -294,6 +302,7 @@ dashboard would integrate trace viewer app using iframe.
       _hosts: {type: Array, value: []},
       _selectedHosts: {type: Array, value: []},
       _showFilterForm: {type: Boolean, value: true},
+      _enableTrimmedSessionCreation: {type: Boolean, value: false},
     },
 
     ready: function() {
@@ -366,6 +375,9 @@ dashboard would integrate trace viewer app using iframe.
           this._resolution = Number(value);
         } else if (key === 'enable_filter') {
           this._showFilterForm = !(value === 'false');
+        } else if (key === 'enable_trim') {
+          console.log('1111 setting enable trim to true...')
+          this._enableTrimmedSessionCreation = true;
         }
       }.bind(this));
 
@@ -421,6 +433,19 @@ dashboard would integrate trace viewer app using iframe.
           break;
         }
       }
+    },
+
+    createTrimmedSessionButton: function(event) {
+      // Contract: using start and duration field in the event object
+      const startTimeNs = Math.round(event.start * 10**6);
+      const endTimeNs = Math.round(startTimeNs + event.duration * 10**6);
+      // Constract: example traceDataUrl: /trace_viewer.json?session_id=narges-8993794330573677829&hosts=uybui3
+      const traceViewerLink = new URL(window.location.origin + this.traceDataUrl);
+      const host = traceViewerLink.searchParams.get('hosts').split(',')[0];
+      const trimmedSessionLink = new URL(`${window.top.location.origin}/trimmed_session?session_id=${this._sessionId}&host=${host}&range_start_ns=${startTimeNs}&range_end_ns=${endTimeNs}`);
+      const trimmedSessionCreationLinkElement = document.createElement('div');
+      trimmedSessionCreationLinkElement.innerHTML = `Create session trimmed on ${event.title}: <a href="${trimmedSessionLink.href}" target="_blank" class="button">Create</a>`;
+      this._eventDetails.appendChild(trimmedSessionCreationLinkElement);
     },
 
     createCrossToolLink: function(toolName, toolLabel, params, text) {
@@ -580,6 +605,9 @@ dashboard would integrate trace viewer app using iframe.
                 '" target="_blank"> see events ONLY for this step/group ' +
                 event.args['group_id'];
           this._eventDetails.appendChild(traceViewerStepLinkElement);
+        }
+        if (this._sessionId && this._enableTrimmedSessionCreation) {
+          this.createTrimmedSessionButton(event);
         }
       }
     },
