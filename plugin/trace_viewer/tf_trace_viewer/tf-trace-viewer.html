@@ -306,8 +306,11 @@ dashboard would integrate trace viewer app using iframe.
       this._traceViewer.track_view_container = this._traceContainer;
       Polymer.dom(this._traceViewer).appendChild(this._traceContainer);
 
-      this._traceViewer.brushingStateController.addEventListener(
-        'change', this.onSelectionChange.bind(this));
+      const superOnSelectionChange = this._traceViewer.brushingStateController.changeSelectionFromTimeline.bind(this._traceViewer.brushingStateController);
+      this._traceViewer.brushingStateController.changeSelectionFromTimeline = async (selection) => {
+        await this.onSelectionChange(selection);
+        superOnSelectionChange(selection);
+      }
 
       // Override the default behavior for find fitler such that pressing find
       // previous, find next which cycles through events in the search filter results
@@ -469,16 +472,16 @@ dashboard would integrate trace viewer app using iframe.
       this._eventDetails.appendChild(toolLinkElement);
     },
 
-    onSelectionChange: function(e) {
+    onSelectionChange: async function(events) {
       if (this._eventDetails) {
         this._eventDetails.innerHTML = '<div id="event-details" ' +
             'style="display: block;"></div>';
       }
-      events = this._traceViewer?.brushingStateController.currentBrushingState.selection;
       if (events === undefined) return;
       if (events.length != 1) return;
 
       for (const event of events) {  // only loop once.
+        await this._maybeFetchEventArgs(event);
         var currentThread = event.parentContainer;
         var currentProcess = currentThread.parent;
         var hloOp;
@@ -749,6 +752,47 @@ dashboard would integrate trace viewer app using iframe.
           originalFilterKeyDown.apply(findController, [keyEvent]);
         }
       };
+    },
+
+    _maybeFetchEventArgs: async function(event) {
+      if (!('uid' in event.args)) return;
+      const requestURL = this._buildBaseURL();
+      requestURL.searchParams.set('replace_model', false);
+      requestURL.searchParams.set('event_name', event.title);
+      requestURL.searchParams.set('start_time_ms', event.start);
+      requestURL.searchParams.set('duration_ms', event.duration);
+      requestURL.searchParams.set('unique_id',event.args['uid']);
+      this._isLoading = true;
+      this._throbber.className = 'active';
+      const fetchData = await new Promise(function(resolve, reject) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', requestURL);
+        xhr.onload = function() {
+          var contentType = this.getResponseHeader('Content-Type');
+          if (this.status !== 200 || !contentType.startsWith('application/json')) {
+            var msg = requestURL + ' could not be loaded.';
+            if (contentType.startsWith('text/plain')) {
+              msg = msg + ': ' + xhr.statusText;
+            }
+            reject(msg);
+          }
+          resolve(xhr.response);
+        };
+        xhr.onerror = function() {
+          reject(`Cannot fetch event metadata with uri ${requestURL}: ${xhr.statusText}`);
+        };
+        xhr.send();
+      });
+      this._isLoading = false;
+      this._throbber.className = 'inactive';
+      const data = JSON.parse(fetchData);
+      // Overwrite the event args in the ThreadSlice.
+      const fullEvent = data.traceEvents[data.traceEvents.length - 1];
+      if (fullEvent.ph == "X") {
+        event.args = data.traceEvents[data.traceEvents.length - 1].args;
+      } else {
+        console.log("failed to fetch event args for event: ", event.title);
+      }
     },
 
     _createDetailFilter: function() {
