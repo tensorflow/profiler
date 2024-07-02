@@ -19,7 +19,7 @@ $theme: mat.define-light-theme(
       warn: $warn,
     ),
     density: 0,
-    typography: mat.define-typography-config(),
+    typography: $typography-config,
   )
 );
 
