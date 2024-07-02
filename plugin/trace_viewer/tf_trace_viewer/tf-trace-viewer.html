@@ -294,6 +294,7 @@ dashboard would integrate trace viewer app using iframe.
       _hosts: {type: Array, value: []},
       _selectedHosts: {type: Array, value: []},
       _showFilterForm: {type: Boolean, value: true},
+      _enableServerSideSearch: {type: Boolean, value: false},
     },
 
     ready: function() {
@@ -352,6 +353,14 @@ dashboard would integrate trace viewer app using iframe.
               traceViewerLink = new URL(window.location.origin + this.traceDataUrl);
               this._sessionId = traceViewerLink.searchParams.get('session_id');
               this._selectedHosts = (traceViewerLink.searchParams.get('hosts') || '').split(',');
+              traceViewerLink.searchParams.forEach((dataQueryValue, dataQueryKey) => {
+                if (dataQueryKey === 'full_search') {
+                  this._enableServerSideSearch = true;
+                }
+              });
+              if (traceViewerLink.searchParams.has('full_search')) {
+                this._enableServerSideSearch = true;
+              }
             } catch(err) {  // not fatal.
               console.log('cannot find session id');
             }
@@ -681,6 +690,67 @@ dashboard would integrate trace viewer app using iframe.
      *************************************************************
      */
 
+    _searchAndAddTraceEvents: async function(searchText) {
+      if (this._isLoading) return;
+      const requestURL = this._buildBaseURL();
+      requestURL.searchParams.set('replace_model', 'false');
+      requestURL.searchParams.set('resolution', 0);
+      // TODO: also populate other filter fields to scope down the search space.
+      requestURL.searchParams.set('search_prefix', searchText);
+      this._isLoading = true;
+      this._throbber.className = 'active';
+      const searchData = await new Promise(function(resolve, reject) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', requestURL);
+        xhr.onload = function() {
+          var contentType = this.getResponseHeader('Content-Type');
+          if (
+            this.status !== 200 ||
+            !contentType.startsWith('application/json')
+          ) {
+            var msg = requestURL + ' could not be loaded';
+            if (contentType.startsWith('text/plain')) {
+              msg = msg + ': ' + xhr.statusText;
+            }
+            reject(msg);
+          }
+          resolve(xhr.response);
+        };
+        xhr.onerror = function() {
+          reject(`Cannot fetch search result with uri ${requestURL}: ${xhr.statusText}`);
+        };
+        xhr.send();
+      });
+      this._isLoading = false;
+      this._throbber.className = 'inactive';
+      try {
+        await this._updateModel(searchData, false);
+        await this._updateView(this._loadedRange);
+      } catch (err) {
+        console.error('Fetch search result failed:', err);
+        this._displayOverlay('Trace Viewer fetch search result failed: ', err);
+      }
+    },
+
+    _updateSearchBehavior: function() {
+      const findController = document.querySelector('tr-ui-find-control');
+      const originalFilterKeyDown = findController.filterKeyDown;
+      const originalFilterTextChange = findController.filterTextChanged;
+      let lastFilterText = '';
+      findController.filterKeyDown = async (keyEvent) => {
+        currentFilterText = findController.$.filter.value;
+        if (keyEvent.keyCode === 13 && currentFilterText != lastFilterText) {
+          lastFilterText = currentFilterText;
+          // Do server side search.
+          await this._searchAndAddTraceEvents(currentFilterText);
+          // Update the highlight and hint after search is done (more events appended).
+          originalFilterTextChange.apply(findController);
+        } else {
+          originalFilterKeyDown.apply(findController, [keyEvent]);
+        }
+      };
+    },
+
     _createDetailFilter: function() {
       const detailsSelector = document.createElement('tr-ui-b-dropdown');
       detailsSelector.setAttribute('id', 'details_selector');
@@ -759,6 +829,9 @@ dashboard would integrate trace viewer app using iframe.
         }
         this._createDetailFilter();
         this._createPerfettoButton();
+        if (this._enableServerSideSearch && !this._isOss) {
+          this._updateSearchBehavior();
+        }
       }
       let initialRequestedRange = null;
       if (initialViewportRange) {
@@ -1029,7 +1102,7 @@ dashboard would integrate trace viewer app using iframe.
         this._selectedDeviceIds = null;
       }
 
-      data.traceEvents = this._filterKnownTraceEvents(data.traceEvents);
+      data.traceEvents = this._filterKnownTraceEvents(data.traceEvents || []);
       if (data.traceEvents.length > 0) {
         var opt = new tr.importer.ImportOptions();
         opt.shiftWorldToZero = false;
