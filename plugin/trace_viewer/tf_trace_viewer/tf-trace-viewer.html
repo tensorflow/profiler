@@ -57,6 +57,16 @@ Trace Viewer.
     background-color: #ececec;
   }
 
+  #side_panel_container,
+  #view_options_dropdown,
+  #view_console_button {
+    display: none;
+  }
+
+  input:focus {
+    outline: none;
+  }
+
   tr-ui-b-tab-view {
     height: fit-content;
     float: left;
@@ -84,17 +94,7 @@ Trace Viewer.
     /* total height = 14px + 2*2padding + 1*2 border = 20px */
     height: 14px;
     cursor: pointer;
-  }
-
-  /* Align style with Detail button */
-  #perfetto {
-    background: url("https://perfetto.dev/assets/favicon.png") no-repeat left;
-    background-color: rgb(248, 248, 248);
-    background-size: 14px;
-    padding-left:20px;
-    border: 1px solid rgba(0, 0, 0, 0.5);
-    cursor: pointer;
-    font-size: 12px;
+    border: silver solid 1px;
   }
 
   #analysis {
@@ -797,9 +797,10 @@ dashboard would integrate trace viewer app using iframe.
 
     _createDetailFilter: function() {
       const detailsSelector = document.createElement('tr-ui-b-dropdown');
+      const flowEventsDropdown = document.getElementById('flow_event_filter_dropdown');
       detailsSelector.setAttribute('id', 'details_selector');
       detailsSelector.style.display = 'none';
-      Polymer.dom(this._traceViewer.leftControls).appendChild(detailsSelector);
+      Polymer.dom(this._traceViewer.rightControls).insertBefore(detailsSelector, flowEventsDropdown);
     },
 
     _hideProcessList: function() {
@@ -822,12 +823,77 @@ dashboard would integrate trace viewer app using iframe.
       window.open(sessionPerfettoUrl.toString());
     },
 
-    _createPerfettoButton: function() {
+    _createOverflowMenu: function() {
+      const dropdown = document.createElement('tr-ui-b-dropdown');
+      dropdown.style.cursor = 'pointer';
+      dropdown.querySelector('button').innerHTML = '&#8942;';
+      dropdown.querySelector('dialog').style.minWidth = '150px';
+      dropdown.querySelector('dialog').style.padding = '0px';
+      dropdown.setAttribute('name', 'overflow_menu');
+      dropdown.setAttribute('id', 'overflow_menu');
+      Polymer.dom(this._traceViewer.rightControls).appendChild(dropdown);
+
+      const dropdownItemStyle = 'border:none;border-bottom: silver solid 0.5px;height:fit-content;padding:5px 5px;';
+      this._reArrangeHelperButton(dropdown, dropdownItemStyle);
+      this._reArrangeMetadataButton(dropdown, dropdownItemStyle);
+      this._createPerfettoButton(dropdown, dropdownItemStyle);
+      this._createSidePanelToggle(dropdown, dropdownItemStyle);
+      this._createViewConsoleToggle(dropdown, dropdownItemStyle);
+    },
+
+    _domToggleCallback: function(id) {
+      const dom = document.getElementById(id);
+      if (dom.style.display == 'none' || !dom.style.display) {
+        dom.style.display = 'inherit';
+      } else {
+        dom.style.display = 'none';
+      }
+    },
+
+    _createViewConsoleToggle: function(overflowMenuDropdown, style) {
+      const consoleToggleButton = document.createElement('tr-ui-b-toolbar-button');
+      consoleToggleButton.innerHTML = 'Toggle View Console';
+      consoleToggleButton.setAttribute('id', 'view_console_toggle');
+      consoleToggleButton.setAttribute('style', style);
+      consoleToggleButton.addEventListener('click', () => this._domToggleCallback('view_console_button'));
+      Polymer.dom(overflowMenuDropdown).appendChild(consoleToggleButton);
+    },
+
+    _createSidePanelToggle: function(overflowMenuDropdown, style) {
+      const sidePanelToggleButton = document.createElement('tr-ui-b-toolbar-button');
+      sidePanelToggleButton.innerHTML = 'Toggle Side Panel';
+      sidePanelToggleButton.setAttribute('id', 'side_panel_toggle');
+      sidePanelToggleButton.setAttribute('style', style);
+      sidePanelToggleButton.addEventListener('click', () => this._domToggleCallback('side_panel_container'));
+      Polymer.dom(overflowMenuDropdown).appendChild( sidePanelToggleButton);
+    },
+
+    _reArrangeMetadataButton: function(overflowMenuDropdown, style) {
+      const metadataButton = document.getElementById("view_metadata_button");
+      metadataButton.innerHTML = 'Trace Metadadta';
+      // Close overflow menu when bring up the overlay of metadata
+      metadataButton.addEventListener('click', () => overflowMenuDropdown.close());
+      metadataButton.setAttribute('style', style);
+      Polymer.dom(overflowMenuDropdown).appendChild(metadataButton);
+    },
+
+    _reArrangeHelperButton: function(overflowMenuDropdown, style) {
+      const helpButton = document.getElementById('view_help_button');
+      helpButton.innerHTML = 'Key Shortcuts';
+      // Close overflow menu when bring up the overlay of the help guide
+      helpButton.addEventListener('click', () => overflowMenuDropdown.close());
+      helpButton.setAttribute('style', style);
+      Polymer.dom(overflowMenuDropdown).appendChild(helpButton);
+    },
+
+    _createPerfettoButton: function(dropdown, style) {
       if (!this._isOss) {
-        const button = tr.ui.b.createButton('Perfetto', this._perfettoButtonOnclickCallback.bind(this));
+        const button = document.createElement('tr-ui-b-toolbar-button');
+        button.innerHTML = 'Perfetto View';
         button.setAttribute('id', 'perfetto');
-        const hostSelector = document.getElementById("host_selector");
-        Polymer.dom(this._traceViewer.leftControls).insertBefore(button, hostSelector);
+        button.setAttribute('style', style);
+        button.addEventListener('click', this._perfettoButtonOnclickCallback.bind(this));
+        Polymer.dom(dropdown).appendChild(button);
       }
     },
 
@@ -845,20 +911,32 @@ dashboard would integrate trace viewer app using iframe.
 
     // Overwrite and fine tune the inherited catapult/tracing UI
     _adjustUI: function() {
+      this._traceViewer.leftControls.style.marginLeft = '2px';
+      this._traceViewer.rightControls.style.marginRight = '2px';
+
+      // Bring search bar to left
+      const searchBar = document.getElementById('view_find_control');
+      Polymer.dom(this._traceViewer.leftControls).appendChild(searchBar);
       // Make search hit number always visible
       const searchInput = document.getElementById('filter');
-      searchInput.setAttribute('style', 'padding-right:64px;width:250px;')
+      searchInput.setAttribute('style', 'padding-right:64px;padding-left:5px;width:250px;')
       const hitCount = document.getElementById('hitCount');
       hitCount.setAttribute('style', 'width:245px;')
 
-      // Move help button to the front of the toolbar
-      const helpButton = document.getElementById('view_help_button');
-      helpButton.setAttribute('style', 'padding-left:5px;padding-right:5px;');
-      if (helpButton.children && helpButton.children.length && helpButton.children[0].textContent) {
-        helpButton.children[0].textContent = 'Key Shortcuts';
+      this._createOverflowMenu();
+
+      // Update button and input style in general
+      const buttons = document.getElementsByTagName('button');
+      for (let i = 0; i < buttons.length; ++i) {
+        const button = buttons[i];
+        button.style.cursor = 'pointer';
+        button.style.border = 'silver solid 1px';
       }
-      const perfettoSelector = document.getElementById("perfetto");
-      Polymer.dom(this._traceViewer.leftControls).insertBefore(helpButton, perfettoSelector);
+      const inputs = document.getElementsByTagName('input');
+      for (let i = 0; i < inputs.length; ++i) {
+        const input = inputs[i];
+        input.style.border = 'silver solid 1px';
+      }
     },
 
     _init: async function(initialViewportRange) {
@@ -872,7 +950,6 @@ dashboard would integrate trace viewer app using iframe.
           this._hideProcessList();
         }
         this._createDetailFilter();
-        this._createPerfettoButton();
         if (this._enableServerSideSearch && !this._isOss) {
           this._updateSearchBehavior();
         }
