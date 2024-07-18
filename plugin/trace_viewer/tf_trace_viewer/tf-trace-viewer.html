@@ -238,9 +238,121 @@ dashboard would integrate trace viewer app using iframe.
     border-radius: 50%;
     border-top: 14px solid #e6e6e6; /* control bar background color */
   }
+  .x-axis-track {
+    height: 24px;
+  }
   #control.tr-ui-timeline-view {
     align-content: center;
+    align-items: center;
     min-height: 30px;
+    background-image: unset;
+    background-color: white;
+    border-bottom: 1px solid #dadce0;
+    border-top: 1px solid #dadce0;
+  }
+  #bar.tr-ui-timeline-view {
+    align-items: center;
+  }
+  #view_console_button.right-controls-button,
+  #button.right-controls-button {
+    height: 36px;
+    background-color: #f8f8f8;
+    border: #f8f8f8 solid 0.5px;
+    margin-left: 2px;
+  }
+  #view_console_button.right-controls-button:hover,
+  #button.right-controls-button:hover {
+    background-color: white;
+    border: #dadce0 solid 0.5px;
+  }
+  #dialog.right-controls-dialog {
+    padding:0px;
+    min-width:150px;
+    border:none;
+    border-radius:5px;
+  }
+  #view_find_control {
+    height: fit-content;
+    padding: 2px;
+  }
+  input.tr-ui-find-control {
+    width:250px;
+    min-height:36px;
+    border:none;
+    margin-left:12px;
+    padding-right:64px;
+    padding-left:5px;
+    cursor: text;
+  }
+  input.tr-ui-find-control:hover {
+    background-color: white;
+    border: #dadce0 solid 0.5px;
+    cursor: text;
+  }
+
+  tr-ui-b-toolbar-button.tr-ui-find-control {
+    border:none;
+    height: 36px;
+    width: 36px;
+    margin-left: 2px;
+  }
+
+  #spinner.tr-ui-find-control {
+    height: 12px;
+    width: 12px;
+    top: 12px;
+  }
+
+  #hitCount.tr-ui-find-control {
+    width: 245px; /* Make search hit number always visible */
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  tr-ui-b-heading {
+    background-color: transparent;
+  }
+
+  tr-ui-b-heading,
+  .process-track-header {
+    border: none;
+    display: flex;
+    align-items: center;
+  }
+
+  .process-track-header {
+    height: 36px;
+    font-size: 14px;
+    background-image: unset;
+    background-color: rgb(243, 245, 247);
+  }
+  .process-track-base.expanded .process-track-header {
+    background-image: unset;
+    background-color: #cbd6e3;
+  }
+  .process-track-base.expanded .process-track-name:before {
+    cursor: pointer;
+  }
+  .process-track-name:before {
+    padding: 0 5px;
+    cursor: pointer;
+  }
+  #arrow.tr-ui-b-heading {
+    cursor: pointer;
+  }
+  .process-track-close {
+    color: #424242;
+    cursor: pointer;
+    border: none;
+  }
+  .process-track-close:hover {
+    outline: none;
+    border: none;
+  }
+  #codesearchLink {
+    display: none;
   }
 </style>
 <script src="tf-trace-viewer-helper.js"></script>
@@ -401,13 +513,6 @@ dashboard would integrate trace viewer app using iframe.
         // associate divider with event details pane.
         verticalDivider.horizontal = false;
         verticalDivider.target = this._eventDetails;
-      }.bind(this));
-      // Hide chromium codesearch link reduce the confusion
-      window.addEventListener('click', function(e) {
-        element = document.getElementById('codesearchLink');
-        if (element) {
-          element.setAttribute('style', 'display: none');
-        }
       }.bind(this));
     },
 
@@ -827,13 +932,15 @@ dashboard would integrate trace viewer app using iframe.
       const dropdown = document.createElement('tr-ui-b-dropdown');
       dropdown.style.cursor = 'pointer';
       dropdown.querySelector('button').innerHTML = '&#8942;';
-      dropdown.querySelector('dialog').style.minWidth = '150px';
-      dropdown.querySelector('dialog').style.padding = '0px';
       dropdown.setAttribute('name', 'overflow_menu');
       dropdown.setAttribute('id', 'overflow_menu');
+      const dialog = dropdown.querySelector('dialog');
+      dialog.classList.add('right-controls-dialog');
+      const button = dropdown.querySelector('button');
+      button.setAttribute('style', 'height:36px;border:none;background:none;margin-left:5px;');
       Polymer.dom(this._traceViewer.rightControls).appendChild(dropdown);
 
-      const dropdownItemStyle = 'border:none;border-bottom: silver solid 0.5px;height:fit-content;padding:5px 5px;';
+      const dropdownItemStyle = 'border:none;border-bottom:#dadce0 solid 0.5px;height:fit-content;padding:5px 5px;';
       this._reArrangeHelperButton(dropdown, dropdownItemStyle);
       this._reArrangeMetadataButton(dropdown, dropdownItemStyle);
       this._createPerfettoButton(dropdown, dropdownItemStyle);
@@ -911,31 +1018,39 @@ dashboard would integrate trace viewer app using iframe.
 
     // Overwrite and fine tune the inherited catapult/tracing UI
     _adjustUI: function() {
+      // 1. Adjust styles of the leftControl and its children
       this._traceViewer.leftControls.style.marginLeft = '2px';
-      this._traceViewer.rightControls.style.marginRight = '2px';
-
       // Bring search bar to left
       const searchBar = document.getElementById('view_find_control');
       Polymer.dom(this._traceViewer.leftControls).appendChild(searchBar);
-      // Make search hit number always visible
       const searchInput = document.getElementById('filter');
-      searchInput.setAttribute('style', 'padding-right:64px;padding-left:5px;width:250px;')
-      const hitCount = document.getElementById('hitCount');
-      hitCount.setAttribute('style', 'width:245px;')
+      searchInput.placeholder = 'Find Events...';
 
+      // 2. Adjust styles of the rightControl and its children
+      this._traceViewer.rightControls.style.marginRight = '2px';
       this._createOverflowMenu();
+      const rightControlsDropdownIds = ['details_selector', 'flow_event_filter_dropdown'];
+      rightControlsDropdownIds.forEach(id => {
+        const dropdown = document.getElementById(id);
+        const dialog = dropdown.querySelector('dialog');
+        dialog.classList.add('right-controls-dialog');
+        if (id == 'flow_event_filter_dropdown') {
+          dialog.setAttribute('style', 'padding:5px;')
+        }
+        const button = dropdown.querySelector('button');
+        button.classList.add('right-controls-button');
+      });
+      const rightControlsButtonIds = ['view_console_button'];
+      rightControlsButtonIds.forEach(id => {
+        const button = document.getElementById(id);
+        button.classList.add('right-controls-button');
+      });
 
-      // Update button and input style in general
+      // 3. Update general styles
       const buttons = document.getElementsByTagName('button');
       for (let i = 0; i < buttons.length; ++i) {
         const button = buttons[i];
         button.style.cursor = 'pointer';
-        button.style.border = 'silver solid 1px';
-      }
-      const inputs = document.getElementsByTagName('input');
-      for (let i = 0; i < inputs.length; ++i) {
-        const input = inputs[i];
-        input.style.border = 'silver solid 1px';
       }
     },
 
@@ -1196,10 +1311,13 @@ dashboard would integrate trace viewer app using iframe.
             return;
           }
           const checkboxDiv = document.createElement('div');
+          checkboxDiv.setAttribute('id', `details-row`);
+          checkboxDiv.setAttribute('style', 'display:flex;align-items:center;cursor:pointer;padding:5px;');
           checkbox = document.createElement('input');
           checkbox.setAttribute('type', 'checkbox');
           checkbox.setAttribute('id', detail.name);
           checkbox.setAttribute('name', detail.name);
+          checkbox.style.cursor = 'pointer';
           checkbox.checked = detail.value;
           checkbox.addEventListener('change', () => {
             this._loadTrace(null, /* replaceModel= */ true);  // reload data.
@@ -1208,6 +1326,7 @@ dashboard would integrate trace viewer app using iframe.
           const checkboxLabel = document.createElement('label');
           checkboxLabel.setAttribute('for', detail.name);
           checkboxLabel.style.textTransform = 'capitalize';
+          checkboxLabel.style.cursor = 'pointer';
           checkboxLabel.innerText = detail.name.replace(/_/g, ' ');
           checkboxDiv.appendChild(checkboxLabel);
           detailsDialog.appendChild(checkboxDiv);
