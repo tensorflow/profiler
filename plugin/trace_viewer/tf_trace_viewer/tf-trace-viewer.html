@@ -895,6 +895,12 @@ dashboard would integrate trace viewer app using iframe.
       const fullEvent = data.traceEvents[data.traceEvents.length - 1];
       if (fullEvent.ph == "X") {
         event.args = data.traceEvents[data.traceEvents.length - 1].args;
+        const stackFrameName = data.stackFrames[1]?.name;
+        if (stackFrameName) {
+          event.startStackFrame =
+            new tr.model.StackFrame(/* parentFrame */ undefined, "g1",
+                                    stackFrameName.substr(2), 13);
+        }
       } else {
         console.log("failed to fetch event args for event: ", event.title);
       }
