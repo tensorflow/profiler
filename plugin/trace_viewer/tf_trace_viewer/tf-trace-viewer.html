@@ -469,11 +469,11 @@ dashboard would integrate trace viewer app using iframe.
               this._sessionId = traceViewerLink.searchParams.get('session_id');
               this._selectedHosts = (traceViewerLink.searchParams.get('hosts') || '').split(',');
               traceViewerLink.searchParams.forEach((dataQueryValue, dataQueryKey) => {
-                if (dataQueryKey === 'full_search') {
+                if (dataQueryKey === 'new_backend') {
                   this._enableServerSideSearch = true;
                 }
               });
-              if (traceViewerLink.searchParams.has('full_search')) {
+              if (traceViewerLink.searchParams.has('new_backend')) {
                 this._enableServerSideSearch = true;
               }
             } catch(err) {  // not fatal.
