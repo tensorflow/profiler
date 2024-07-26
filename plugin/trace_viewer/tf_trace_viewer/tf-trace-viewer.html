@@ -415,6 +415,8 @@ dashboard would integrate trace viewer app using iframe.
       _selectedHosts: {type: Array, value: []},
       _showFilterForm: {type: Boolean, value: true},
       _useNewBackend: {type: Boolean, value: false},
+      // The rect being hovered (represents a trace event).
+      _hoverRect: {type: Object, value: null},
     },
 
     ready: function() {
@@ -843,6 +845,131 @@ dashboard would integrate trace viewer app using iframe.
       }
     },
 
+    _addRectTooltipNode: function() {
+      const tooltipDiv = document.createElement('div');
+      tooltipDiv.setAttribute('id', 'event_tooltip');
+      tooltipDiv.setAttribute('style', `position:absolute;left:0;top:0;visibility:hidden;height:14px;font-size:12px;width:48px;padding:5px;color:black;background-color:white;z-index:10000;display:flex;align-items:center;justify-content:center;`);
+      Polymer.dom(this._traceViewer).appendChild(tooltipDiv);
+    },
+
+    // Updates the position and text of the event tooltip currently hovered,
+    // based on the location (coordinates x and y) of the target event.
+    _updateRectTooltip: function(x, y) {
+      if (this._hoverRect === null) {
+        this._hideRectTooltip();
+        return;
+      };
+      const el = document.getElementById('event_tooltip');
+      // TODO: handle event duration that's < 0.005 ms
+      const text = `${this._hoverRect.title} - [${this._hoverRect.duration.toFixed(2)} ms]`;
+      el.innerText = text;
+      const xOffset = 10;
+      el.style.left=`${x + xOffset}px`;
+      el.style.top =`${y}px`;
+      el.style.visibility = 'visible';
+      el.style.width = `${text.length * 6}px`;
+    },
+
+    _hideRectTooltip: function() {
+      const el = document.getElementById('event_tooltip');
+      el.style.visibility = 'hidden';
+    },
+
+    _unHighlightRect: function() {
+      if (this._hoverRect === null) return;
+      this._hoverRect.selectionState = tr.model.SelectionState.NONE;
+      this._hoverRect = null;
+      const modelTrackContainer = this._traceViewer.trackView.modelTrackContainer_;
+      modelTrackContainer.viewport_.dispatchChangeEvent();
+    },
+
+    _highlightRect: function(rect) {
+      if (rect === null) return;
+      rect.selectionState = tr.model.SelectionState.HIGHLIGHTED;
+      const modelTrackContainer = this._traceViewer.trackView.modelTrackContainer_;
+      modelTrackContainer.viewport_.dispatchChangeEvent();
+    },
+
+    _mouseOnCanvas: function(x, y, canvas) {
+      const clientRect = canvas.getBoundingClientRect();
+      const xWorld = x - clientRect.left;
+      const yWorld = y - clientRect.top;
+      return xWorld >= 0 && yWorld >=0 && xWorld <= clientRect.width && yWorld <= clientRect.height;
+    },
+
+    // This function tries to find a rect given location (x, y) from the sourceRects data set,
+    // and execute the callback function on the found rect.
+    // Note that We are expecting up to one rect matched given a mouse location, as there's no rects overlapping in trace viewer
+    // - posX, posY: current x, y coordination of the mouse.
+    // - sourceRects: the rects (each represent a event) to search the rect for. The rect should itself contains location information.
+    // - callback: the callback function to be executed upon rect if matched.
+    _findRectAndExecute: function(posX, posY, sourceRects, callback) {
+      const y = posY;
+      const x = posX;
+      // Convert to worldspace (relative to the model track canvas area).
+      const canv = this._traceViewer.trackView.modelTrackContainer_.canvas;
+      // Since the events seek is along the track row (where the rects are formed), only xWorld info is needed.
+      const xWorld = x - canv.getBoundingClientRect().left;
+
+      // Assert on valid mouse location for events seeking.
+      if (!this._mouseOnCanvas(x, y, canv)) {
+        this._hideRectTooltip();
+        return;
+      }
+
+      // Figure out what has been focused
+      const pixelRatio = window.devicePixelRatio || 1;
+      const modelTrack = this._traceViewer.trackView.modelTrack_;
+      const dt = modelTrack.viewport.currentDisplayTransform;
+      const viewPixWidthWorld = dt.xViewVectorToWorld(1);
+      // wx: start time marker of event on the ruler scale.
+      const wx = dt.xViewToWorld(xWorld * pixelRatio);
+      const rectWidth = 3 * viewPixWidthWorld;
+
+      // Iterate and execute the callback function on the potential hit event.
+      tr.b.iterateOverIntersectingIntervals(sourceRects,
+          function(x) { return x.start; },
+          function(x) { return x.duration + rectWidth; },
+          wx, wx,
+          callback.bind(this));
+    },
+
+    _onHoverRect: function(e) {
+      // Always reset the highlight when mouse moves.
+      // New highlight will be setup in the onHoverCallback if any rect is hit.
+      this._unHighlightRect();
+
+      const onHoverCallback = (rect) => {
+        // No-Op for mouse action within the same event rect.
+        if (this._hoverRect === rect) {
+          return;
+        }
+        // Update _hoverRect with new and valid rect.
+        if (rect?.title && rect.title !== '') {
+          this._hoverRect = rect;
+          this._highlightRect(rect);
+        }
+      };
+      // Find and operate on the rect that the mouse is hovering on.
+      this._findRectAndExecute(e.clientX, e.clientY, e.rects, onHoverCallback);
+
+      // Always update tooltip positioning with mouse movement.
+      this._updateRectTooltip(e.clientX, e.clientY);
+    },
+
+    _updateModeSelectorBehavior: function() {
+      const modeSelector = document.querySelector('tr-ui-b-mouse-mode-selector');
+      document.addEventListener('mousemove', (e) => {
+        const mouseEvent = new tr.b.Event('recthover', true);
+        mouseEvent.clientX = e.clientX;
+        mouseEvent.clientY = e.clientY;
+        mouseEvent.rects = e.target.rects || [];
+        modeSelector.dispatchEvent(mouseEvent);
+      });
+      this._addRectTooltipNode();
+      modeSelector.addEventListener('recthover', this._onHoverRect.bind(this));
+    },
+
     _updateSearchBehavior: function() {
       const findController = document.querySelector('tr-ui-find-control');
       const originalFilterKeyDown = findController.filterKeyDown;
@@ -1137,6 +1264,7 @@ dashboard would integrate trace viewer app using iframe.
       if (!this._isOss) {
         this._insertRenderCompleteSignal();
       }
+      this._updateModeSelectorBehavior();
     },
 
     _loadNonStreamingTrace: async function() {
