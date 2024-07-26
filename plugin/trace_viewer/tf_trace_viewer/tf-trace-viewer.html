@@ -254,11 +254,19 @@ dashboard would integrate trace viewer app using iframe.
     align-items: center;
   }
   #view_console_button.right-controls-button,
+  #backend_toggle_button,
   #button.right-controls-button {
     height: 36px;
     background-color: #f8f8f8;
     border: #f8f8f8 solid 0.5px;
     margin-left: 2px;
+    align-items: center;
+    padding-left: 5px;
+    padding-right: 5px;
+  }
+  #backend_toggle_button {
+    color: #3f51b5;
+    font-weight: bold;
   }
   #view_console_button.right-controls-button:hover,
   #button.right-controls-button:hover {
@@ -406,7 +414,7 @@ dashboard would integrate trace viewer app using iframe.
       _hosts: {type: Array, value: []},
       _selectedHosts: {type: Array, value: []},
       _showFilterForm: {type: Boolean, value: true},
-      _enableServerSideSearch: {type: Boolean, value: false},
+      _useNewBackend: {type: Boolean, value: false},
     },
 
     ready: function() {
@@ -468,13 +476,8 @@ dashboard would integrate trace viewer app using iframe.
               traceViewerLink = new URL(window.location.origin + this.traceDataUrl);
               this._sessionId = traceViewerLink.searchParams.get('session_id');
               this._selectedHosts = (traceViewerLink.searchParams.get('hosts') || '').split(',');
-              traceViewerLink.searchParams.forEach((dataQueryValue, dataQueryKey) => {
-                if (dataQueryKey === 'new_backend') {
-                  this._enableServerSideSearch = true;
-                }
-              });
               if (traceViewerLink.searchParams.has('new_backend')) {
-                this._enableServerSideSearch = true;
+                this._useNewBackend = traceViewerLink.searchParams.get('new_backend') === 'true';
               }
             } catch(err) {  // not fatal.
               console.log('cannot find session id');
@@ -906,6 +909,19 @@ dashboard would integrate trace viewer app using iframe.
       }
     },
 
+    _createBackendToggleButton: function() {
+      const backendToggleButton = document.createElement('tr-ui-b-toolbar-button');
+      const detailsSelector = document.getElementById('details_selector');
+      backendToggleButton.innerText = this._useNewBackend ? 'Switch to Old Backend' : 'Switch to New Backend';
+      backendToggleButton.setAttribute('id', 'backend_toggle_button');
+      backendToggleButton.addEventListener('click', () => {
+        const url = new URL(`/trace_viewer/${this._sessionId}`, window.location.href);
+        url.searchParams.set('new_backend', !this._useNewBackend);
+        window.open(url.toString());
+      });
+      Polymer.dom(this._traceViewer.rightControls).insertBefore(backendToggleButton, detailsSelector);
+    },
+
     _createDetailFilter: function() {
       const detailsSelector = document.createElement('tr-ui-b-dropdown');
       const flowEventsDropdown = document.getElementById('flow_event_filter_dropdown');
@@ -1071,8 +1087,11 @@ dashboard would integrate trace viewer app using iframe.
           this._hideProcessList();
         }
         this._createDetailFilter();
-        if (this._enableServerSideSearch && !this._isOss) {
-          this._updateSearchBehavior();
+        if (!this._isOss) {
+          this._createBackendToggleButton();
+          if (this._useNewBackend) {
+            this._updateSearchBehavior();
+          }
         }
       }
       let initialRequestedRange = null;
