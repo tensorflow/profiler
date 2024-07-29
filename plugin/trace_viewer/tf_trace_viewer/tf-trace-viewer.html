@@ -192,6 +192,32 @@ The server serves the trace viewer app at a separate endpoint. TensorBoard
 dashboard would integrate trace viewer app using iframe.
 -->
 <style>
+  /* Tooltip text */
+  .tooltip .tooltiptext {
+    visibility: hidden;
+    background-color: white;
+    color: black;
+    font-weight: normal;
+    text-align: center;
+    padding: 5px;
+    text-align: left;
+
+    /* Position the tooltip text */
+    position: absolute;
+    z-index: 1000;
+    top: 56px;
+
+    /* Fade in tooltip */
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  /* Show the tooltip text when you mouse over the tooltip container */
+  .tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 0.9;
+  }
+
   tr-ui-timeline-view {
     position: absolute;
     width: 100%;
@@ -1039,8 +1065,15 @@ dashboard would integrate trace viewer app using iframe.
     _createBackendToggleButton: function() {
       const backendToggleButton = document.createElement('tr-ui-b-toolbar-button');
       const detailsSelector = document.getElementById('details_selector');
-      backendToggleButton.innerText = this._useNewBackend ? 'Switch to Old Backend' : 'Switch to New Backend';
       backendToggleButton.setAttribute('id', 'backend_toggle_button');
+      backendToggleButton.classList.add('tooltip');
+      const tooltipSpan = document.createElement('span');
+      tooltipSpan.classList.add('tooltiptext');
+      tooltipSpan.textContent = 'The new backend enables faster trace data processing and also full trace search.';
+      const labelDiv = document.createElement('div');
+      labelDiv.textContent = this._useNewBackend ? 'Switch to Old Backend' : 'Switch to New Backend';
+      backendToggleButton.appendChild(labelDiv);
+      backendToggleButton.appendChild(tooltipSpan);
       backendToggleButton.addEventListener('click', () => {
         const url = new URL(`/trace_viewer/${this._sessionId}`, window.location.href);
         url.searchParams.set('new_backend', !this._useNewBackend);
