@@ -388,6 +388,10 @@ dashboard would integrate trace viewer app using iframe.
   #codesearchLink {
     display: none;
   }
+  #process_filter_dropdown,
+  #flow_event_filter_dropdown {
+    display: none;
+  }
 </style>
 <script src="tf-trace-viewer-helper.js"></script>
 <script>
@@ -439,7 +443,6 @@ dashboard would integrate trace viewer app using iframe.
       _replaceModel: {type: Boolean, value: true},
       _hosts: {type: Array, value: []},
       _selectedHosts: {type: Array, value: []},
-      _showFilterForm: {type: Boolean, value: true},
       _useNewBackend: {type: Boolean, value: false},
       // The rect being hovered (represents a trace event).
       _hoverRect: {type: Object, value: null},
@@ -519,8 +522,6 @@ dashboard would integrate trace viewer app using iframe.
           this.hostsDataUrl = value;
         } else if (key === 'resolution') {
           this._resolution = Number(value);
-        } else if (key === 'enable_filter') {
-          this._showFilterForm = !(value === 'false');
         }
       }.bind(this));
 
@@ -731,103 +732,6 @@ dashboard would integrate trace viewer app using iframe.
         }
       }
     },
-
-    /**
-     *************************************************************
-     * BEGIN - Functions only used when trace filter form disabled
-     *************************************************************
-     */
-    // Note for both legacy and new filter view, hosts in URL
-    // is the source of truth / most up-to-date for current selected hosts
-    _updateHostsUrl: function() {
-      const queryParams = new URLSearchParams(window.parent.location.search);
-      if (this._selectedHosts.length) {
-        queryParams.set('hosts', this._selectedHosts.join(','));
-      } else {
-        queryParams.delete('hosts');
-      }
-      const selectedHostIndexes = this._hosts.map((host, index) => (this._selectedHosts.includes(host) ? index : -1)).filter((index) => index >= 0);
-
-      if (selectedHostIndexes.length) {
-        queryParams.set('host_index', selectedHostIndexes.join(','));
-      } else {
-        queryParams.delete('host_index');
-      }
-      // Only pushes a new state to history, won't reload the page
-      const url = `${window.location.origin}/trace_viewer/${this._sessionId}?${queryParams.toString()}`;
-      window.parent.history.pushState({}, '', url);
-    },
-
-    _onSelectedHostsChange: function() {
-      this._updateHostsUrl();
-      // When the host changes, we need to clear the Process Filter Dropdown
-      // since it contains devices (pids) associated with the previous host.
-      this._clearProcessList();
-    },
-
-    _createHostFilter: function() {
-      hosts = this._hosts || [];
-      if (hosts.length <= 1) {
-        return;
-      }
-
-      const hostSelector = document.createElement('tr-ui-b-dropdown');
-      hostSelector.setAttribute('label', 'Hosts');
-      hostSelector.setAttribute('name', 'host');
-      hostSelector.setAttribute('id', 'host_selector');
-      const hostsDialog = hostSelector.getElementsByTagName('dialog')[0];
-      const hostOptionCheckboxes = [];
-      const updateAllHostsSelection = (checked) => {
-        for (const hostOptionCheckbox of hostOptionCheckboxes) {
-          hostOptionCheckbox.checked = checked;
-        }
-        this._selectedHosts = checked ? this._hosts : [];
-        this._onSelectedHostsChange();
-      };
-
-      hostsDialog.appendChild(tr.ui.b.createButton('Check All', () => {
-        updateAllHostsSelection(true);
-
-      }));
-      hostsDialog.appendChild(tr.ui.b.createButton('Check None', () => {
-        updateAllHostsSelection(false);
-      }));
-      const loadButton = hostsDialog.appendChild(tr.ui.b.createButton('Load', () => {
-        this._loadTrace(null, /* replaceModel= */ true);  // reload data.
-      }));
-      loadButton.setAttribute('style', loadButton.getAttribute('style') + ';cursor:pointer;');
-      for (const [index, host] of hosts.entries()) {
-        const hostOptionCheckbox = tr.ui.b.createCheckBox(undefined, undefined, undefined,
-            true, host);
-
-        hostOptionCheckbox.checked = this._selectedHosts.includes(host);
-        hostOptionCheckbox.addEventListener('change', () => {
-          const checked = hostOptionCheckbox.checked;
-          const hostName = hostOptionCheckbox.textContent;
-          const hostIndex = hosts.findIndex(host => host === hostName);
-          if (!this._selectedHosts.includes(hostName) && checked) {
-            this._selectedHosts.push(hostName);
-          }
-          if (this._selectedHosts.includes(hostName) && !checked) {
-            const indexOfSelectedHosts = this._selectedHosts.findIndex(host => host === hostName);
-            this._selectedHosts.splice(indexOfSelectedHosts, 1);
-          }
-          this._onSelectedHostsChange();
-        });
-        hostsDialog.appendChild(hostOptionCheckbox);
-        hostOptionCheckboxes.push(hostOptionCheckbox);
-      }
-      Polymer.dom(this._traceViewer.leftControls).appendChild(hostSelector);
-    },
-
-    _createProcessesFilter: function() {
-      this._traceViewer.updateProcessList_ = this._updateProcessList.bind(this);
-    },
-    /**
-     *************************************************************
-     * END - Functions only used when trace filter form disabled
-     *************************************************************
-     */
 
     _searchAndAddTraceEvents: async function(searchText) {
       if (this._isLoading) return;
@@ -1086,14 +990,11 @@ dashboard would integrate trace viewer app using iframe.
       const detailsSelector = document.createElement('tr-ui-b-dropdown');
       const flowEventsDropdown = document.getElementById('flow_event_filter_dropdown');
       detailsSelector.setAttribute('id', 'details_selector');
+      detailsSelector.setAttribute('label', 'Details');
       detailsSelector.style.display = 'none';
       Polymer.dom(this._traceViewer.rightControls).insertBefore(detailsSelector, flowEventsDropdown);
     },
 
-    _hideProcessList: function() {
-      const processDropdown = document.getElementById("process_filter_dropdown");
-      processDropdown.setAttribute('style', 'display:none;');
-    },
 
     // This function is called when generating trace viewer links given hosts selection
     _addSelectedHostsToTraceViewerURL: function(url) {
@@ -1186,18 +1087,6 @@ dashboard would integrate trace viewer app using iframe.
       }
     },
 
-    _loadHosts: async function() {
-      if (!this.hostsDataUrl) {
-        return;
-      }
-      const response = await fetch(this.hostsDataUrl);
-      if (response.ok) {
-        this._hosts = await response.json();
-      } else {
-        this._displayOverlay(response.status, 'Failed to fetch hosts data');
-      }
-    },
-
     // Overwrite and fine tune the inherited catapult/tracing UI
     _adjustUI: function() {
       // 1. Adjust styles of the leftControl and its children
@@ -1212,8 +1101,10 @@ dashboard would integrate trace viewer app using iframe.
       this._traceViewer.rightControls.style.marginRight = '2px';
       this._createOverflowMenu();
       const rightControlsDropdownIds = ['details_selector', 'flow_event_filter_dropdown'];
+      // Details and flow events filter creation requires data preprocessing, delay 1s to ensure the dom is created.
       rightControlsDropdownIds.forEach(id => {
         const dropdown = document.getElementById(id);
+        dropdown.style.display = 'unset';
         const dialog = dropdown.querySelector('dialog');
         dialog.classList.add('right-controls-dialog');
         if (id == 'flow_event_filter_dropdown') {
@@ -1238,14 +1129,7 @@ dashboard would integrate trace viewer app using iframe.
 
     _init: async function(initialViewportRange) {
       if (this._isStreaming) {
-        // TODO(yinzz) cleanup hosts and process filter code later when the new filtering rolls out
-        if (!this._showFilterForm) {
-          await this._loadHosts();
-          this._createHostFilter();
-          this._createProcessesFilter();
-        } else {
-          this._hideProcessList();
-        }
+        // Need to create detail filter in init since it contributes to the baseUrl building.
         this._createDetailFilter();
         if (!this._isOss) {
           this._createBackendToggleButton();
@@ -1488,7 +1372,6 @@ dashboard would integrate trace viewer app using iframe.
       // Populate and show "details" selector.
       if (data['details']) {
         const detailsSelector = document.getElementById('details_selector');
-        detailsSelector.label = "Details";
         const detailsDialog = detailsSelector.getElementsByTagName('dialog')[0];
         data['details'].forEach(detail => {
           let checkbox = detailsDialog.querySelector('#' + detail.name);
@@ -1539,62 +1422,6 @@ dashboard would integrate trace viewer app using iframe.
       this._devices = {};
       for (const pid in this._model.processes) {
         this._devices[pid] = this._model.processes[pid].name;
-      }
-    },
-
-    // Remove all checkboxes in the Process Filter Dropdown.
-    _clearProcessList: function() {
-      const dropdown = Polymer.dom(document.getElementById("process_filter_dropdown"));
-      while (dropdown.firstChild) {
-        dropdown.removeChild(dropdown.firstChild);
-      }
-    },
-
-    // Only for XProf Streaming Mode we need to define our own _updateProcessList()
-    // instead of using the Catapult timeline_view.html _updateProcessList() to
-    // create the Process Filter Dropdown.
-    // Ref: http://cs/github/catapult-project/catapult/tracing/tracing/ui/timeline_view.html?l=433
-    //
-    // If this._selectedDeviceIds is set from the data["selected_device_ids"] from the Trace JSON
-    // we only check pids that are in "selected_device_ids". This means Process Filter Dropdown
-    // should be consistent even as the user zooms/pans and new Trace JSON is loaded.
-    _updateProcessList: function() {
-      let selectedDeviceIds;
-      if (this._selectedDeviceIds !== null) {
-        selectedDeviceIds = this._selectedDeviceIds.map((id) => id.toString());
-      } else {
-        selectedDeviceIds = Object.keys(this._devices);
-      }
-
-      this._clearProcessList();
-
-      const cboxes = [];
-      const updateAll = (checked) => {
-        for (const cbox of cboxes) {
-          cbox.checked = checked;
-        }
-      };
-
-      const dropdown = Polymer.dom(document.getElementById("process_filter_dropdown"));
-      dropdown.appendChild(tr.ui.b.createButton('Check All', () => {
-        updateAll(true);
-      }));
-      dropdown.appendChild(tr.ui.b.createButton('Check None', () => {
-        updateAll(false);
-      }));
-      const loadButton = dropdown.appendChild(tr.ui.b.createButton('Load', () => {
-        this._loadTrace(null, /* replaceModel= */ true);  // reload data.
-      }));
-      loadButton.setAttribute('style', loadButton.getAttribute('style') + ';cursor:pointer;');
-
-      for (const pid in this._devices) {
-        const cbox = tr.ui.b.createCheckBox(undefined, undefined, undefined,
-            true, `${this._devices[pid]} (pid ${pid})`);
-
-        cbox.checked = selectedDeviceIds.includes(pid);
-
-        cboxes.push(cbox);
-        dropdown.appendChild(cbox);
       }
     },
 
@@ -1711,6 +1538,8 @@ dashboard would integrate trace viewer app using iframe.
       }
     },
 
+    // TODO: cleanup query params, as both selected_device_ids and trace_filter_config can act on process filering.
+    // This function is no longer invoked.
     _updateProcessesSelectionToBaseUrl: function(requestURL) {
       // Populate query parameter "selected_device_ids".
       const dropdown = Polymer.dom(document.getElementById("process_filter_dropdown"));
@@ -1743,10 +1572,6 @@ dashboard would integrate trace viewer app using iframe.
       for (let i = 0; i < checkboxDivs.length; ++i) {
         const checkbox = checkboxDivs[i].getElementsByTagName('input')[0];
         requestURL.searchParams.set(checkbox.name, checkbox.checked);
-      }
-
-      if (!this._showFilterForm) {
-        this._updateProcessesSelectionToBaseUrl(requestURL);
       }
 
       if (requestURL.searchParams.has('use_saved_result')) {
