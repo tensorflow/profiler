@@ -5,12 +5,11 @@
         XLA Modules ({{ moduleList.length }})
       </div>
     </div>
-    <mat-form-field class="full-width" *ngIf="!isHloOssTool" id="xla-module-list-selector" appearance="outline">
+    <mat-form-field class="full-width" *ngIf="!isHloOssTool && !useProgramId" id="xla-module-list-selector" appearance="outline">
       <mat-select
         name="selectedModule"
         panelClass="panel-override"
         [(ngModel)]="params.selectedModule"
-        [disabled]="useProgramId"
         (selectionChange)="onModuleSelectionChange($event)"
       >
         <mat-option *ngFor="let module of getModuleList()" [value]="module">
