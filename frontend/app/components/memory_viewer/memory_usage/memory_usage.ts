@@ -105,11 +105,11 @@ export class MemoryUsage {
         (preprocess.entryComputationParametersMib || 0) * 1024 * 1024;
     this.hloTempSizeBytes = this.peakHeapSizeBytes -
         (preprocess.indefiniteBufferAllocationMib || 0) * 1024 * 1024;
-    const framenentationSizeBytes =
+    const fragmentationSizeBytes =
         this.peakHeapSizeBytes - (preprocess.peakHeapMib || 0) * 1024 * 1024;
     if (this.hloTempSizeBytes) {
       this.hloTempFragmentation =
-          framenentationSizeBytes / this.hloTempSizeBytes;
+          fragmentationSizeBytes / this.hloTempSizeBytes;
     }
 
     this.peakHeapSizePosition = (preprocess.peakHeapSizePosition || 0);
