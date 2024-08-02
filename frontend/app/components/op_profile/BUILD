@@ -39,11 +39,9 @@ ts_library(
         "op_profile_data.ts",
     ],
     deps = [
-        "@npm//@ngrx/store",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/interfaces:op_profile_proto_defs",
         "@org_xprof//frontend/app/common/utils",
-        "@org_xprof//frontend/app/store",
     ],
 )
 
