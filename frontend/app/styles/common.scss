@@ -68,6 +68,24 @@ mat-option {
   overflow-wrap: break-word;
 }
 
+// TODO(css-cleanup): Remove redundant styles in component's css files for loading spinner.
+mat-progress-bar {
+  width: 200px;
+  margin: 0 auto;
+}
+
+.loading-message {
+  width: fit-content;
+  margin: 0 auto;
+}
+
+.progress-container {
+  position: absolute;
+  width: 100%;
+  margin: 300px 0;
+  z-index: 1;
+}
+
 @mixin overview-card {
   box-shadow: none !important;
   margin: 8px;
