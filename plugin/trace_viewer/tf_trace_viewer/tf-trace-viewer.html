@@ -228,13 +228,13 @@ dashboard would integrate trace viewer app using iframe.
   #throbber {
     /* Position: top right of the page, non-blocking to the trace events exploration */
     position: fixed;
-    top: 64px;
-    right: 48px;
-    border: 5px solid #fafafa;
+    top: 10%;
+    right: 3%;
+    border: 14px solid #424242;
     border-radius: 50%;
-    border-top: 5px solid #e6e6e6; /* control bar background color */
-    width: 16px;
-    height: 16px;
+    border-top: 14px solid #e6e6e6; /* control bar background color */
+    width: 40px;
+    height: 40px;
     -webkit-animation: spin 1s linear infinite; /* Safari */
     animation: spin 1s linear infinite;
     z-index: 10;
@@ -248,7 +248,7 @@ dashboard would integrate trace viewer app using iframe.
   }
   #throbber-initial.active,
   #throbber.active {
-    opacity: 1;
+    opacity: 0.8;
     /* Wait a short time before showing the throbber (no delay for hiding). */
     transition-delay: 0.3s;
   }
