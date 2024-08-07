@@ -767,7 +767,7 @@ dashboard would integrate trace viewer app using iframe.
       this._isLoading = false;
       this._throbber.className = 'inactive';
       try {
-        await this._updateModel(searchData, false);
+        await this._updateModel(JSON.parse(searchData), false);
         await this._updateView(this._loadedRange);
       } catch (err) {
         console.error('Fetch search result failed:', err);
@@ -1249,7 +1249,11 @@ dashboard would integrate trace viewer app using iframe.
           this._addDataResponseSize(data.length);
         }
         startUpdateModel = performance.now();
-        this._updateModel(data, replaceModel);
+        const jsonData = JSON.parse(data);
+        if (!this._model /* first load */) {
+          this._collapseBigProcessTracks(jsonData);
+        }
+        this._updateModel(jsonData, replaceModel);
         if (!this._isOss) {
           this._addUpdateModelLatency(performance.now() - startUpdateModel);
         }
@@ -1262,6 +1266,23 @@ dashboard would integrate trace viewer app using iframe.
         console.error('Error load streaming trace:', err);
         this._displayOverlay('Trace Viewer', err);
       }
+    },
+
+    // Collapse the process if it has more than 20 threads.
+    _collapseBigProcessTracks: function(jsonData) {
+      let traceViewerTraceModelSettings = JSON.parse(localStorage.getItem('trace-viewertrace_model_settings')) || {"value": {}};
+      for(const traceEvent of jsonData['traceEvents']) {
+        if (traceEvent['name'] === 'process_name') {
+          if (traceEvent['thread_count'] !== undefined && traceEvent['thread_count'] > 20) {
+            // Collapse the process only if preference is not set.
+            const processName = "processes."+traceEvent['args']['name'];
+            if (traceViewerTraceModelSettings['value'][processName] === undefined) {
+              traceViewerTraceModelSettings['value'][processName] = {'expanded': false};
+            }
+          }
+        }
+      }
+      localStorage.setItem('trace-viewertrace_model_settings', JSON.stringify(traceViewerTraceModelSettings));
     },
 
     // Loads a time window (the whole trace if requestedRange is null).
@@ -1344,36 +1365,35 @@ dashboard would integrate trace viewer app using iframe.
     // Updates the model with data returned by the JSON endpoint.
     // If replaceModel is true, the data set is completely replaced; otherwise,
     // the new data is merged with the old data.
-    // Returns a void promise.
-    _updateModel: function(data, replaceModel) {
-      data = JSON.parse(data);
+    // Returns a void promise. Data is expected to be JSON object.
+    _updateModel: function(jsonData, replaceModel) {
       if (!this._model /* first load */ || replaceModel) {
         // Only give no events alert for first load or replace load
-        if (!data['returnedEventsSize']) {
+        if (!jsonData['returnedEventsSize']) {
           this._displayOverlay('Trace Viewer', 'No trace events data returned.');
         }
         this._dirty = true;
         this._model = new tr.Model();
         this._loadedTraceEvents = new Set();
-        this._filteredByVisibility = data['filteredByVisibility'];
-        const fullTimespan = data['fullTimespan'];
+        this._filteredByVisibility = jsonData['filteredByVisibility'];
+        const fullTimespan = jsonData['fullTimespan'];
         this._fullBounds = {min: fullTimespan[0], max: fullTimespan[1]};
-        this._tasks = data['tasks'];
+        this._tasks = jsonData['tasks'];
       } else {
         // Delete fields to prevent traceviewer from accumulating them.
-        delete data['metadata'];
-        delete data['displayTimeUnit'];
-        delete data['tasks'];
-        delete data['filteredByVisibility'];
-        delete data['returnedEventsSize'];
-        delete data['stackFrames'];
+        delete jsonData['metadata'];
+        delete jsonData['displayTimeUnit'];
+        delete jsonData['tasks'];
+        delete jsonData['filteredByVisibility'];
+        delete jsonData['returnedEventsSize'];
+        delete jsonData['stackFrames'];
       }
 
       // Populate and show "details" selector.
-      if (data['details']) {
+      if (jsonData['details']) {
         const detailsSelector = document.getElementById('details_selector');
         const detailsDialog = detailsSelector.getElementsByTagName('dialog')[0];
-        data['details'].forEach(detail => {
+        jsonData['details'].forEach(detail => {
           let checkbox = detailsDialog.querySelector('#' + detail.name);
           if (checkbox) {
             checkbox.checked = detail.value;
@@ -1401,21 +1421,21 @@ dashboard would integrate trace viewer app using iframe.
           detailsDialog.appendChild(checkboxDiv);
         });
         detailsSelector.style.display = 'flex';
-        delete data['details'];
+        delete jsonData['details'];
       }
 
-      if (data['selected_device_ids']) {
-        this._selectedDeviceIds = data['selected_device_ids'];
-        delete data['selected_device_ids'];
+      if (jsonData['selected_device_ids']) {
+        this._selectedDeviceIds = jsonData['selected_device_ids'];
+        delete jsonData['selected_device_ids'];
       } else {
         this._selectedDeviceIds = null;
       }
 
-      data.traceEvents = this._filterKnownTraceEvents(data.traceEvents || []);
-      if (data.traceEvents.length > 0) {
+      jsonData.traceEvents = this._filterKnownTraceEvents(jsonData.traceEvents || []);
+      if (jsonData.traceEvents.length > 0) {
         var opt = new tr.importer.ImportOptions();
         opt.shiftWorldToZero = false;
-        new tr.importer.Import(this._model, opt).importTraces([data]);
+        new tr.importer.Import(this._model, opt).importTraces([jsonData]);
         this._dirty = true;
       }
 
