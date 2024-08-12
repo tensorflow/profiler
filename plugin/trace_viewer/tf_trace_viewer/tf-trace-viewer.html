@@ -485,8 +485,6 @@ dashboard would integrate trace viewer app using iframe.
       Polymer.dom(this.root).appendChild(this._traceViewer);
       Polymer.dom(this.root).appendChild(this._throbber);
 
-      this._listenForViewportChanges();
-
       this._resolution = this._resolutionFromViewerWidth(this._traceViewer.clientWidth);
       // Retrieve the URL of trace data.
       var query = new URL(window.location.href);
@@ -529,6 +527,9 @@ dashboard would integrate trace viewer app using iframe.
         this._displayOverlay('Trace Viewer', 'Trace data URL is not provided.');
         return null;
       }
+
+      this._listenForViewportChanges();
+
       this._init(this.currentViewportRange);
       this._adjustUI();
 
