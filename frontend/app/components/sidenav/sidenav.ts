@@ -20,10 +20,8 @@ import {takeUntil} from 'rxjs/operators';
 export class SideNav implements OnInit, OnDestroy {
   /** Handles on-destroy Subject, used to unsubscribe. */
   private readonly destroyed = new ReplaySubject<void>(1);
-  runToolsMap$: Observable<RunToolsMap> =
-      this.store.select(getRunToolsMap).pipe(takeUntil(this.destroyed));
-  currentRun$: Observable<string> =
-      this.store.select(getCurrentRun).pipe(takeUntil(this.destroyed));
+  runToolsMap$: Observable<RunToolsMap>;
+  currentRun$: Observable<string>;
 
   runToolsMap: RunToolsMap = {};
   runs: string[] = [];
@@ -41,6 +39,10 @@ export class SideNav implements OnInit, OnDestroy {
       private readonly dataService: DataService,
       private readonly communicationService: CommunicationService,
       private readonly store: Store<{}>) {
+    this.runToolsMap$ =
+        this.store.select(getRunToolsMap).pipe(takeUntil(this.destroyed));
+    this.currentRun$ =
+        this.store.select(getCurrentRun).pipe(takeUntil(this.destroyed));
     // TODO(b/241842487): stream is not updated when the state change, should
     // trigger subscribe reactively
     this.runToolsMap$.subscribe((runTools: RunToolsMap) => {

@@ -27,8 +27,7 @@ export class OpDetails {
   /** If the op-detail component is used in OSS tool or not */
   @Input() isOss = false;
 
-  currentRun$: Observable<string> =
-      this.store.select(getCurrentRun).pipe(takeUntil(this.destroyed));
+  currentRun$: Observable<string>;
 
   rootNode?: Node;
   node?: Node;
@@ -65,6 +64,8 @@ export class OpDetails {
   constructor(
       private readonly store: Store<{}>,
   ) {
+    this.currentRun$ =
+        this.store.select(getCurrentRun).pipe(takeUntil(this.destroyed));
     this.store.select(getActiveOpProfileNodeState)
         .pipe(takeUntil(this.destroyed))
         .subscribe((node: Node|null) => {
