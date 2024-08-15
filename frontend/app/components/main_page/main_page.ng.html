@@ -19,7 +19,8 @@
   <mat-sidenav-content>
     <div class="progress-container" *ngIf="loading">
       <div class="loading-message">{{loadingMessage}}</div>
-      <mat-progress-bar color="primary" mode="indeterminate"></mat-progress-bar>
+      <!-- TODO(go/progressbar-aria): Replace the aria-label with a better description, e.g. "Fetching user data" -->
+      <mat-progress-bar color="primary" mode="indeterminate" aria-label="Loading"></mat-progress-bar>
     </div>
     <div [className]="loading ? 'hidden-content' : 'full-height'">
       <router-outlet></router-outlet>

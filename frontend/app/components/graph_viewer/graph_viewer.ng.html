@@ -8,7 +8,8 @@
     <diagnostics-view [diagnostics]="diagnostics"></diagnostics-view>
     <div class="progress-container" *ngIf="loadingGraphHtml">
       <div class="loading-message">Loading graph viewer data</div>
-      <mat-progress-bar color="primary" mode="indeterminate"></mat-progress-bar>
+      <!-- TODO(go/progressbar-aria): Replace the aria-label with a better description, e.g. "Fetching user data" -->
+      <mat-progress-bar color="primary" mode="indeterminate" aria-label="Loading"></mat-progress-bar>
     </div>
     <iframe #iframe id="graph-html" [src]="graphvizUri | safe"></iframe>
   </mat-sidenav-content>
