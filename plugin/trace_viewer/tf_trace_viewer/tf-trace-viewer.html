@@ -1665,8 +1665,7 @@ dashboard would integrate trace viewer app using iframe.
      */
     _listenForViewportChanges: function() {
       const _trackViewChanged = this._trackViewChanged.bind(this);
-      const _debouncedOnViewportChanged = tf_component_traceviewer.debounce(
-        this._onViewportChanged.bind(this), this._useNewBackend ? 100 : 500);
+      const _debouncedOnViewportChanged = tf_component_traceviewer.debounce(this._onViewportChanged.bind(this));
       const superOnViewportChanged_ = this._traceViewer.onViewportChanged_.bind(this._traceViewer);
       let prevTrackView = this._traceViewer.trackView;
       this._traceViewer.onViewportChanged_ = (...args) => {
