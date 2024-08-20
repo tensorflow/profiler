@@ -806,8 +806,18 @@ dashboard would integrate trace viewer app using iframe.
       el.style.visibility = 'hidden';
     },
 
+    _getSearchText: function() {
+      const findController = document.querySelector('tr-ui-find-control');
+      return findController?.$?.filter?.value || '';
+    },
+
     _unHighlightRect: function() {
       if (this._hoverRect === null) return;
+      // Skip highlight/unhighlight if search is on
+      if (this._getSearchText().length > 0) {
+        this._hoverRect = null;
+        return;
+      }
       this._hoverRect.selectionState = tr.model.SelectionState.NONE;
       this._hoverRect = null;
       const modelTrackContainer = this._traceViewer.trackView.modelTrackContainer_;
@@ -815,7 +825,8 @@ dashboard would integrate trace viewer app using iframe.
     },
 
     _highlightRect: function(rect) {
-      if (rect === null) return;
+      // Skip highlight/unhighlight if search is on
+      if (rect === null || this._getSearchText().length > 0) return;
       rect.selectionState = tr.model.SelectionState.HIGHLIGHTED;
       const modelTrackContainer = this._traceViewer.trackView.modelTrackContainer_;
       modelTrackContainer.viewport_.dispatchChangeEvent();
