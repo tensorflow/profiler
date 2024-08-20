@@ -895,10 +895,10 @@ dashboard would integrate trace viewer app using iframe.
         mouseEvent.clientX = e.clientX;
         mouseEvent.clientY = e.clientY;
         mouseEvent.rects = e.target.rects || [];
-        modeSelector.dispatchEvent(mouseEvent);
+        modeSelector?.dispatchEvent(mouseEvent);
       });
       this._addRectTooltipNode();
-      modeSelector.addEventListener('recthover', this._onHoverRect.bind(this));
+      modeSelector?.addEventListener('recthover', this._onHoverRect.bind(this));
     },
 
     _updateSearchBehavior: function() {
@@ -1105,14 +1105,16 @@ dashboard would integrate trace viewer app using iframe.
       // Details and flow events filter creation requires data preprocessing, delay 1s to ensure the dom is created.
       rightControlsDropdownIds.forEach(id => {
         const dropdown = document.getElementById(id);
-        dropdown.style.display = 'unset';
-        const dialog = dropdown.querySelector('dialog');
-        dialog.classList.add('right-controls-dialog');
-        if (id == 'flow_event_filter_dropdown') {
-          dialog.setAttribute('style', 'padding:5px;')
+        if (dropdown) {
+          dropdown.style.display = 'unset';
+          const dialog = dropdown.querySelector('dialog');
+          dialog.classList.add('right-controls-dialog');
+          if (id == 'flow_event_filter_dropdown') {
+            dialog.setAttribute('style', 'padding:5px;')
+          }
+          const button = dropdown.querySelector('button');
+          button.classList.add('right-controls-button');
         }
-        const button = dropdown.querySelector('button');
-        button.classList.add('right-controls-button');
       });
       const rightControlsButtonIds = ['view_console_button'];
       rightControlsButtonIds.forEach(id => {
