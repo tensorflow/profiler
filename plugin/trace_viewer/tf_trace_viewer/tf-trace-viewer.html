@@ -362,16 +362,34 @@ dashboard would integrate trace viewer app using iframe.
     background-image: unset;
     background-color: rgb(243, 245, 247);
   }
+  .process-track-header:hover{
+    cursor: pointer;
+  }
+  /* Move the triangle button from process-track-name to process-track-header to enable track name selection */
+  .process-track-base.expanded .process-track-header:before {
+    content: '\25BE'; /* Down triangle */
+    cursor: pointer;
+  }
+  .process-track-header:before {
+    content: '\25B8'; /* Right triangle */
+    padding: 0 5px;
+    cursor: pointer;
+  }
   .process-track-base.expanded .process-track-header {
     background-image: unset;
     background-color: #cbd6e3;
   }
-  .process-track-base.expanded .process-track-name:before {
-    cursor: pointer;
+  .process-track-name {
+    user-select: text;
+    flex-grow: unset;
+    padding-right: 36px;
+    cursor: text;
   }
   .process-track-name:before {
-    padding: 0 5px;
-    cursor: pointer;
+    display: none;
+  }
+  .process-track-base.expanded .process-track-name:before {
+    display: none;
   }
   #arrow.tr-ui-b-heading {
     cursor: pointer;
@@ -380,6 +398,8 @@ dashboard would integrate trace viewer app using iframe.
     color: #424242;
     cursor: pointer;
     border: none;
+    position: absolute;
+    right: 5px;
   }
   .process-track-close:hover {
     outline: none;
@@ -1099,6 +1119,23 @@ dashboard would integrate trace viewer app using iframe.
       }
     },
 
+    _updateProcessHeader: function() {
+      const processNameEls = document.getElementsByClassName('process-track-name');
+
+      // Overwrite the click event with noop and prevent event propogatin to enable text selection.
+      for (let i = 0; i < processNameEls.length; ++i) {
+        processNameEls[i].addEventListener('mousedown', (e) => {
+          e.stopPropagation();
+        });
+        processNameEls[i].addEventListener('click', (e) => {
+          e.stopPropagation();
+        });
+        processNameEls[i].addEventListener('mousemove', (e) => {
+          e.stopPropagation();
+        });
+      }
+    },
+
     // Overwrite and fine tune the inherited catapult/tracing UI
     _adjustUI: function() {
       // 1. Adjust styles of the leftControl and its children
@@ -1196,6 +1233,7 @@ dashboard would integrate trace viewer app using iframe.
         this._insertRenderCompleteSignal();
       }
       this._updateModeSelectorBehavior();
+      this._updateProcessHeader();
     },
 
     _loadNonStreamingTrace: async function() {
