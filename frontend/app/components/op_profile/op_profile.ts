@@ -4,7 +4,7 @@ import {Store} from '@ngrx/store';
 import {OpProfileProto} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
-import {setLoadingStateAction, setOpProfileRootNodeAction} from 'org_xprof/frontend/app/store/actions';
+import {setLoadingStateAction, setOpProfileRootNodeAction, setProfilingDeviceTypeAction} from 'org_xprof/frontend/app/store/actions';
 import {ReplaySubject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 
@@ -47,7 +47,12 @@ export class OpProfile extends OpProfileBase implements OnDestroy {
               message: '',
             }
           }));
-          this.parseData(data as OpProfileProto | null);
+          if (data) {
+            const profileProtoData = data as OpProfileProto;
+            this.store.dispatch(setProfilingDeviceTypeAction(
+                {deviceType: profileProtoData.deviceType}));
+          }
+          this.parseData(data as (OpProfileProto | null));
           this.store.dispatch(
               setOpProfileRootNodeAction({rootNode: this.rootNode || null}));
         });

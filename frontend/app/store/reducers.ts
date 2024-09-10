@@ -61,6 +61,18 @@ export const reducer: ActionReducer<AppState, Action> = createReducer(
         },
         ),
     on(
+        actions.setProfilingDeviceTypeAction,
+        (state: AppState, action: ActionCreatorAny) => {
+          return {
+            ...state,
+            profilingGeneralState: {
+              ...state.profilingGeneralState,
+              deviceType: action.deviceType,
+            }
+          };
+        },
+        ),
+    on(
         actions.setActivePodViewerInfoAction,
         (state: AppState, action: ActionCreatorAny) => {
           return {

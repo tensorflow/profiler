@@ -34,6 +34,10 @@ export const getOpProfileRootNode: MemoizedSelectorAny = createSelector(
     getOpProfileState,
     (opProfileState: OpProfileState) => opProfileState.rootNode);
 
+/** Selector for getProfilingGeneralState */
+export const getProfilingGeneralState: MemoizedSelectorAny = createSelector(
+    appState, (appState: AppState) => appState.profilingGeneralState);
+
 /** Selector for PodViewerState */
 export const getPodViewerState: MemoizedSelectorAny =
     createSelector(appState, (appState: AppState) => appState.podViewerState);

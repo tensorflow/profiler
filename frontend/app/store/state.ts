@@ -22,6 +22,11 @@ export interface OpProfileState {
   rootNode: ActiveOpProfileNodeState;
 }
 
+/** General State of the Profiling */
+export interface ProfilingGeneralState {
+  deviceType: string;
+}
+
 /** Type for active pod viewer info state */
 type ActivePodViewerInfoState = AllReduceOpInfo|ChannelInfo|PodStatsRecord|null;
 
@@ -93,6 +98,7 @@ export interface AppState {
   dataRequest: DataRequest;
   runToolsMap: RunToolsMap;
   currentRun: string;
+  profilingGeneralState: ProfilingGeneralState;
 }
 
 /** Initial state of active heap object */
@@ -111,6 +117,11 @@ export const INIT_OP_PROFILE_STATE: OpProfileState = {
   activeOpProfileNode: INIT_ACTIVE_OP_PROFILE_NODE_STATE,
   selectedOpNodeChain: [],
   rootNode: INIT_ACTIVE_OP_PROFILE_NODE_STATE,
+};
+
+/** Initial general profiling state */
+export const INIT_PROFILING_GENERAL_STATE: ProfilingGeneralState = {
+  deviceType: 'TPU',
 };
 
 /** Initial state of active pod viewer info */
@@ -172,6 +183,7 @@ export const INIT_APP_STATE: AppState = {
   errorMessage: INIT_ERROR_MESSAGE_STATE,
   runToolsMap: INIT_RUN_TOOLS_MAP,
   currentRun: INIT_CURRENT_RUN,
+  profilingGeneralState: INIT_PROFILING_GENERAL_STATE,
 };
 
 /** Feature key for store */

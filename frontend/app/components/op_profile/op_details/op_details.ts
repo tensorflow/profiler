@@ -3,7 +3,8 @@ import {Store} from '@ngrx/store';
 import {Node} from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
-import {getActiveOpProfileNodeState, getCurrentRun, getOpProfileRootNode, getSelectedOpNodeChainState} from 'org_xprof/frontend/app/store/selectors';
+import {getActiveOpProfileNodeState, getCurrentRun, getOpProfileRootNode, getProfilingGeneralState, getSelectedOpNodeChainState} from 'org_xprof/frontend/app/store/selectors';
+import {ProfilingGeneralState} from 'org_xprof/frontend/app/store/state';
 import {Observable, ReplaySubject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 
@@ -60,6 +61,8 @@ export class OpDetails {
   memBwType = utils.MemBwType;
   currentRun = '';
   showUtilizationWarning = false;
+  deviceType = 'TPU';
+
 
   constructor(
       private readonly store: Store<{}>,
@@ -81,11 +84,29 @@ export class OpDetails {
         .subscribe((node: Node|null) => {
           this.rootNode = node || undefined;
         });
+    this.store.select(getProfilingGeneralState)
+        .pipe(takeUntil(this.destroyed))
+        .subscribe((generalState: ProfilingGeneralState|null) => {
+          this.deviceType = (generalState && generalState.deviceType) ?
+              generalState.deviceType :
+              'TPU';
+        });
+
     this.currentRun$.subscribe(run => {
       if (run) {
         this.currentRun = run;
       }
     });
+  }
+
+  getTitleByDeviceType(titlePrefix: string, titleSuffix: string) {
+    if (this.deviceType === 'GPU') {
+      return `${titlePrefix} (per gpu)${titleSuffix}`;
+    } else if (this.deviceType === 'TPU') {
+      return `${titlePrefix} (per core)${titleSuffix}`;
+    } else {
+      return `${titlePrefix}${titleSuffix}`;
+    }
   }
 
   hasValidGraphViewerLink() {

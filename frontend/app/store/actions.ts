@@ -97,6 +97,12 @@ export const setCurrentRunAction: ActionCreatorAny = createAction(
     props<{currentRun: string}>(),
 );
 
+/** Action to set deviceType */
+export const setProfilingDeviceTypeAction: ActionCreatorAny = createAction(
+    '[App State] Set profiling device type',
+    props<{deviceType: string | null}>(),
+);
+
 /** Action to set run tools map */
 export const setRunToolsMapAction: ActionCreatorAny =
     createAction('[App State] set run - tools map state', props<RunToolsMap>());
