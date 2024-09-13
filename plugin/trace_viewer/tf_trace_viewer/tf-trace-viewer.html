@@ -796,6 +796,17 @@ dashboard would integrate trace viewer app using iframe.
       }
     },
 
+    _formatDuration: function(durationMs) {
+      const units = ['ps', 'ns', 'us', 'ms', 's'];
+      let i = 0;
+      let value = Math.round(durationMs * 1_000_000_000);  // to picoseconds
+      while (value >= 1000 && i < units.length - 1) {
+        value /= 1000;
+        i++;
+      }
+      return `${value.toFixed(3)} ${units[i]}`;
+    },
+
     _addRectTooltipNode: function() {
       const tooltipDiv = document.createElement('div');
       tooltipDiv.setAttribute('id', 'event_tooltip');
@@ -811,14 +822,18 @@ dashboard would integrate trace viewer app using iframe.
         return;
       };
       const el = document.getElementById('event_tooltip');
-      // TODO: handle event duration that's < 0.005 ms
-      const text = `${this._hoverRect.title} - [${this._hoverRect.duration.toFixed(2)} ms]`;
+      const maxTitleLength = 50;
+      let truncatedTitle = this._hoverRect.title.substring(0, maxTitleLength);
+      if (this._hoverRect.title.length > maxTitleLength) {
+        truncatedTitle += "...";
+      }
+      const text = `${truncatedTitle} [${this._formatDuration(this._hoverRect.duration)}]`;
       el.innerText = text;
       const xOffset = 10;
       el.style.left=`${x + xOffset}px`;
       el.style.top =`${y}px`;
       el.style.visibility = 'visible';
-      el.style.width = `${text.length * 6}px`;
+      el.style.width = `fit-content`;
     },
 
     _hideRectTooltip: function() {
