@@ -5,6 +5,7 @@ import {getKernelStatsDataState} from 'org_xprof/frontend/app/store/common_data_
 
 /** A Kernel Stats component. */
 @Component({
+  standalone: false,
   selector: 'kernel-stats',
   templateUrl: './kernel_stats.ng.html',
   styleUrls: ['./kernel_stats.css']

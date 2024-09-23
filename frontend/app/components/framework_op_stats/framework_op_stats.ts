@@ -17,6 +17,7 @@ const MEASURED_FLOP_RATE_ID = 'measured_flop_rate';
 
 /** A TensorFlow Stats component. */
 @Component({
+  standalone: false,
   selector: 'framework-op-stats',
   templateUrl: './framework_op_stats.ng.html',
   styleUrls: ['./framework_op_stats.css']

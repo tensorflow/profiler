@@ -11,6 +11,7 @@ import {KernelStatsModule} from './kernel_stats_module';
 
 /** A kernel stats adapter component. */
 @Component({
+  standalone: false,
   selector: 'kernel-stats-adapter',
   template: '<kernel-stats></kernel-stats>',
 })

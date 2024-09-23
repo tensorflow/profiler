@@ -9,6 +9,7 @@ import {takeUntil} from 'rxjs/operators';
 
 /** A trace viewer component. */
 @Component({
+  standalone: false,
   selector: 'trace-viewer',
   templateUrl: './trace_viewer.ng.html',
   styleUrls: ['./trace_viewer.css']

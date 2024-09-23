@@ -12,6 +12,7 @@ import {FrameworkOpStatsModule} from './framework_op_stats_module';
 
 /** An overview adapter component. */
 @Component({
+  standalone: false,
   selector: 'framework-op-stats-adapter',
   template: '<framework-op-stats></framework-op-stats>',
 })
