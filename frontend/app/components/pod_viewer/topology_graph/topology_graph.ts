@@ -46,6 +46,7 @@ const NODE_COLORS = [
 
 /** A topology graph view component. */
 @Component({
+  standalone: false,
   selector: 'topology-graph',
   templateUrl: './topology_graph.ng.html',
   styleUrls: ['./topology_graph.scss']

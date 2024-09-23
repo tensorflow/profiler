@@ -12,6 +12,7 @@ import {OverviewPageCommon} from './overview_page_common';
 
 /** An overview page component. */
 @Component({
+  standalone: false,
   selector: 'overview_page',
   templateUrl: './overview_page.ng.html',
   styleUrls: ['./overview_page.css']

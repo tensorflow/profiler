@@ -10,6 +10,7 @@ import {takeUntil} from 'rxjs/operators';
 
 /** A memory viewer component. */
 @Component({
+  standalone: false,
   selector: 'memory-viewer',
   templateUrl: './memory_viewer.ng.html',
   styleUrls: ['./memory_viewer.scss']

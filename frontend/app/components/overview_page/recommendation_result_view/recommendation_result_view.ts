@@ -19,6 +19,7 @@ const STATEMENT_INFO = [
 
 /** A recommendation result view component. */
 @Component({
+  standalone: false,
   selector: 'recommendation-result-view',
   templateUrl: './recommendation_result_view.ng.html',
   styleUrls: ['./recommendation_result_view.scss']

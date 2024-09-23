@@ -8,6 +8,7 @@ import {takeUntil} from 'rxjs/operators';
 
 /** A buffer details view component. */
 @Component({
+  standalone: false,
   selector: 'buffer-details',
   templateUrl: './buffer_details.ng.html',
   styleUrls: ['./buffer_details.scss']

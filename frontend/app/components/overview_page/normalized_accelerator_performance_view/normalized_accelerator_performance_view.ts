@@ -3,6 +3,7 @@ import {DEFAULT_SIMPLE_DATA_TABLE, type NormalizedAcceleratorPerformance} from '
 
 /** A normalized accelerator performance view component. */
 @Component({
+  standalone: false,
   selector: 'normalized-accelerator-performance-view',
   templateUrl: './normalized_accelerator_performance_view.ng.html',
   styleUrls: ['./normalized_accelerator_performance_view.scss']

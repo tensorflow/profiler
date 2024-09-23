@@ -216,6 +216,7 @@ const TPU_SUMMARY_INFO: SummaryInfoConfig[] = [
 
 /** A performance summary view component. */
 @Component({
+  standalone: false,
   selector: 'performance-summary',
   templateUrl: './performance_summary.ng.html',
   styleUrls: ['./performance_summary.scss']

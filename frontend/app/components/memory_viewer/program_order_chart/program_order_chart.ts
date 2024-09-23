@@ -6,6 +6,7 @@ import {DefaultDataProvider} from 'org_xprof/frontend/app/components/chart/defau
 
 /** A program order chart view component. */
 @Component({
+  standalone: false,
   selector: 'program-order-chart',
   templateUrl: './program_order_chart.ng.html',
   styleUrls: ['./program_order_chart.scss']

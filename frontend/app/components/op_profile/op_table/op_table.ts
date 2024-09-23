@@ -5,6 +5,7 @@ import {setActiveOpProfileNodeAction} from 'org_xprof/frontend/app/store/actions
 
 /** An op table view component. */
 @Component({
+  standalone: false,
   selector: 'op-table',
   templateUrl: './op_table.ng.html',
   styleUrls: ['./op_table.scss']

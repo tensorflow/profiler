@@ -6,6 +6,7 @@ import {updateSelectedOpNodeChainAction} from 'org_xprof/frontend/app/store/acti
 
 /** An op table entry view component. */
 @Component({
+  standalone: false,
   selector: 'op-table-entry',
   templateUrl: './op_table_entry.ng.html',
   styleUrls: ['./op_table_entry.scss']

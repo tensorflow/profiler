@@ -26,6 +26,7 @@ const TRUE_STR = 'true';
 
 /** A tf data bottleneck analysis component. */
 @Component({
+  standalone: false,
   selector: 'tf-data-bottleneck-analysis',
   templateUrl: './tf_data_bottleneck_analysis.ng.html',
   styleUrls: ['./tf_data_bottleneck_analysis.scss']

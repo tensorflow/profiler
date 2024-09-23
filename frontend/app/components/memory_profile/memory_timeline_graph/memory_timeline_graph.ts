@@ -6,6 +6,7 @@ const MAX_CHART_WIDTH = 1500;
 
 /** A Memory Timeline Graph view component. */
 @Component({
+  standalone: false,
   selector: 'memory-timeline-graph',
   templateUrl: './memory_timeline_graph.ng.html',
   styleUrls: ['./memory_timeline_graph.scss']

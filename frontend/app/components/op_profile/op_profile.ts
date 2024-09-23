@@ -12,6 +12,7 @@ import {OpProfileBase} from './op_profile_base';
 
 /** An op profile component. */
 @Component({
+  standalone: false,
   selector: 'op-profile',
   templateUrl: './op_profile.ng.html',
   styleUrls: ['./op_profile.scss']

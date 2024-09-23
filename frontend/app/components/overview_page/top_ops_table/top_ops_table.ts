@@ -6,6 +6,7 @@ const FLOP_RATE_COLUMN_INDEX = 4;
 
 /** A top ops table view component. */
 @Component({
+  standalone: false,
   selector: 'top-ops-table',
   templateUrl: './top_ops_table.ng.html',
   styleUrls: ['./top_ops_table.scss']

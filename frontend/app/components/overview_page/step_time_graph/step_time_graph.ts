@@ -43,6 +43,7 @@ const COLORS_FOR_GPU = [
 
 /** A step-time graph view component. */
 @Component({
+  standalone: false,
   selector: 'step-time-graph',
   templateUrl: './step_time_graph.ng.html',
   styleUrls: ['./step_time_graph.scss']

@@ -3,6 +3,7 @@ import {DEFAULT_SIMPLE_DATA_TABLE, type RunEnvironment} from 'org_xprof/frontend
 
 /** A run environment view component. */
 @Component({
+  standalone: false,
   selector: 'run-environment-view',
   templateUrl: './run_environment_view.ng.html',
   styleUrls: ['./run_environment_view.scss']

@@ -4,6 +4,7 @@ import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 
 /** A max heap chart view component. */
 @Component({
+  standalone: false,
   selector: 'max-heap-chart',
   templateUrl: './max_heap_chart.ng.html',
   styleUrls: ['./max_heap_chart.scss']

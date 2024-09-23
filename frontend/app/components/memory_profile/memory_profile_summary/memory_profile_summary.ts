@@ -4,6 +4,7 @@ import {humanReadableText} from 'org_xprof/frontend/app/common/utils/utils';
 
 /** A memory profile summary view component. */
 @Component({
+  standalone: false,
   selector: 'memory-profile-summary',
   templateUrl: './memory_profile_summary.ng.html',
   styleUrls: ['./memory_profile_summary.scss']

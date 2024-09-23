@@ -15,6 +15,7 @@ interface BufferSpan {
 
 /** A memory viewer component. */
 @Component({
+  standalone: false,
   selector: 'memory-viewer-main',
   templateUrl: './memory_viewer_main.ng.html',
   styleUrls: ['./memory_viewer_main.scss']

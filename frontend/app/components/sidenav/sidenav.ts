@@ -13,6 +13,7 @@ import {takeUntil} from 'rxjs/operators';
 
 /** A side navigation component. */
 @Component({
+  standalone: false,
   selector: 'sidenav',
   templateUrl: './sidenav.ng.html',
   styleUrls: ['./sidenav.scss']

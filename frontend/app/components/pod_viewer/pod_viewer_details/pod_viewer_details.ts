@@ -14,6 +14,7 @@ interface DetailInfo {
 
 /** A pod viewer details view component. */
 @Component({
+  standalone: false,
   selector: 'pod-viewer-details',
   templateUrl: './pod_viewer_details.ng.html',
   styleUrls: ['./pod_viewer_details.scss']

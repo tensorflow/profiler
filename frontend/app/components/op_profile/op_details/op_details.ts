@@ -10,6 +10,7 @@ import {takeUntil} from 'rxjs/operators';
 
 /** An op details view component. */
 @Component({
+  standalone: false,
   selector: 'op-details',
   templateUrl: './op_details.ng.html',
   styleUrls: ['./op_details.scss']

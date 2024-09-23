@@ -11,6 +11,7 @@ import {takeUntil} from 'rxjs/operators';
 
 /** A Memory Profile component. */
 @Component({
+  standalone: false,
   selector: 'memory-profile',
   templateUrl: './memory_profile.ng.html',
   styleUrls: ['./memory_profile.css']
