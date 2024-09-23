@@ -6,6 +6,7 @@ import {Component, EventEmitter, Input, OnChanges, Output, SimpleChanges} from '
  * If the value is empty, selects all the rows.
  */
 @Component({
+  standalone: false,
   selector: 'string-filter',
   templateUrl: './string_filter.ng.html',
 })

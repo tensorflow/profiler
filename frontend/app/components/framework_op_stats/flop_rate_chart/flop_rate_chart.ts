@@ -7,6 +7,7 @@ import {XyTableDataProcessor} from 'org_xprof/frontend/app/components/chart/xy_t
 
 /** A flop rate chart view component. */
 @Component({
+  standalone: false,
   selector: 'flop-rate-chart',
   templateUrl: './flop_rate_chart.ng.html',
   styleUrls: ['./flop_rate_chart.scss']

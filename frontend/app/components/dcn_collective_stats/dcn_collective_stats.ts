@@ -16,6 +16,7 @@ const DCN_COLLECTIVE_STATS_INDEX = 0;
 
 /** A Dcn Collective Stats page component. */
 @Component({
+  standalone: false,
   selector: 'dcn-collective-stats',
   templateUrl: './dcn_collective_stats.ng.html',
   styleUrls: ['./dcn_collective_stats.scss']

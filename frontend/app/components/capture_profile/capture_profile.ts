@@ -15,6 +15,7 @@ const DELAY_TIME_MS = 1000;
 
 /** A capture profile view component. */
 @Component({
+  standalone: false,
   selector: 'capture-profile',
   templateUrl: './capture_profile.ng.html',
   styleUrls: ['./capture_profile.scss']

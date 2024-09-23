@@ -3,6 +3,7 @@ import {MatDialogRef} from '@angular/material/dialog';
 
 /** A capture profile dialog component. */
 @Component({
+  standalone: false,
   selector: 'capture-profile-dialog',
   templateUrl: './capture_profile_dialog.ng.html',
   styleUrls: ['./capture_profile_dialog.scss']

@@ -12,6 +12,7 @@ import {InputPipelineCommon} from './input_pipeline_common';
 
 /** An input pipeline component. */
 @Component({
+  standalone: false,
   selector: 'input-pipeline',
   templateUrl: './input_pipeline.ng.html',
   styleUrls: ['./input_pipeline.css']

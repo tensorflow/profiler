@@ -2,6 +2,7 @@ import {Component, ElementRef, HostListener, Input, OnChanges, OnInit, SimpleCha
 
 /** A table view component. */
 @Component({
+  standalone: false,
   selector: 'table',
   templateUrl: './table.ng.html',
   styleUrls: ['./table.scss']

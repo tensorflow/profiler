@@ -31,6 +31,7 @@ const OP_NAME_COLUMN_ID = 'op_name';
 
 /** A kernel stats table view component. */
 @Component({
+  standalone: false,
   selector: 'kernel-stats-table',
   templateUrl: './kernel_stats_table.ng.html',
   styleUrls: ['./kernel_stats_table.scss']

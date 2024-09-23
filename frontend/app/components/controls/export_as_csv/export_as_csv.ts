@@ -6,6 +6,7 @@ import * as actions from 'org_xprof/frontend/app/store/actions';
  * A 'Export as CSV' button component.
  */
 @Component({
+  standalone: false,
   selector: 'export-as-csv',
   templateUrl: './export_as_csv.ng.html',
   styleUrls: ['./export_as_csv.scss']

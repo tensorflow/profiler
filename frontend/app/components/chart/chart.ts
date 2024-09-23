@@ -3,6 +3,7 @@ import {ChartClass, type ChartDataInfo, ChartType, CustomChartDataProcessor, Dat
 
 /** A common chart component. */
 @Component({
+  standalone: false,
   selector: 'chart',
   template: '',
   styles: [':host {display: block;}'],

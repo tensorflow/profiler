@@ -7,6 +7,7 @@ import {OperationsTableDataProvider} from './operations_table_data_provider';
 
 /** An operations table view component. */
 @Component({
+  standalone: false,
   selector: 'operations-table',
   templateUrl: './operations_table.ng.html',
   styleUrls: ['./operations_table.scss']

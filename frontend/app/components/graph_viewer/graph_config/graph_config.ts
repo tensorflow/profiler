@@ -5,6 +5,7 @@ import {ReplaySubject} from 'rxjs';
 
 /** A graph viewer component. */
 @Component({
+  standalone: false,
   selector: 'graph-config',
   templateUrl: './graph_config.ng.html',
   styleUrls: ['./graph_config.scss'],

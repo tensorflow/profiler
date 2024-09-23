@@ -9,6 +9,7 @@ import {Component, EventEmitter, Input, OnChanges, Output, SimpleChanges} from '
  * If all is set, it is used as a value that selects all rows.
  */
 @Component({
+  standalone: false,
   selector: 'category-filter',
   templateUrl: './category_filter.ng.html',
   styleUrls: ['./category_filter.scss']

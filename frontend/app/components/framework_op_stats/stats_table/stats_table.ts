@@ -15,6 +15,7 @@ const TABLE_COLUMN_LABEL_OPERATION = 'Operation';
 
 /** A stats table view component. */
 @Component({
+  standalone: false,
   selector: 'stats-table',
   templateUrl: './stats_table.ng.html',
   styleUrls: ['./stats_table.scss']

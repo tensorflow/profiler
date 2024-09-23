@@ -56,6 +56,7 @@ interface DeviceSideAnalysisMetrics {
 
 /** A device-side analysis detail view component. */
 @Component({
+  standalone: false,
   selector: 'device-side-analysis-detail',
   templateUrl: './device_side_analysis_detail.ng.html',
   styleUrls: ['./device_side_analysis_detail.scss']

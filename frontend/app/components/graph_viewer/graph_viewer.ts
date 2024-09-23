@@ -15,6 +15,7 @@ const GRAPH_HTML_THRESHOLD = 1000000;  // bytes
 
 /** A graph viewer component. */
 @Component({
+  standalone: false,
   selector: 'graph-viewer',
   templateUrl: './graph_viewer.ng.html',
   styleUrls: ['./graph_viewer.scss'],

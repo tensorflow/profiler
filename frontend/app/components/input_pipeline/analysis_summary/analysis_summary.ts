@@ -3,6 +3,7 @@ import {DEFAULT_SIMPLE_DATA_TABLE, type InputPipelineDeviceAnalysis} from 'org_x
 
 /** A summary of input pipeline analysis component. */
 @Component({
+  standalone: false,
   selector: 'analysis-summary',
   templateUrl: './analysis_summary.ng.html',
   styleUrls: ['./analysis_summary.scss']

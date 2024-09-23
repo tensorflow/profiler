@@ -6,6 +6,7 @@ const DATA_TABLE_OPERATION_INDEX = 0;
 
 /** A memory breakdown table view component. */
 @Component({
+  standalone: false,
   selector: 'memory-breakdown-table',
   templateUrl: './memory_breakdown_table.ng.html',
   styleUrls: ['./memory_breakdown_table.scss']

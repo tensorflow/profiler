@@ -2,6 +2,7 @@ import {Component, ElementRef, Input, OnChanges, OnInit, SimpleChanges, ViewChil
 
 /** A organization chart view component. */
 @Component({
+  standalone: false,
   selector: 'org-chart',
   templateUrl: './org_chart.ng.html',
   styleUrls: ['./org_chart.scss']

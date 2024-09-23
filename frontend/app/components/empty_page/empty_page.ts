@@ -3,6 +3,7 @@ import {Component} from '@angular/core';
 
 /** An empty page component. */
 @Component({
+  standalone: false,
   selector: 'empty-page',
   templateUrl: './empty_page.ng.html',
   styleUrls: ['./empty_page.css']

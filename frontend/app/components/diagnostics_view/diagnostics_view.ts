@@ -3,6 +3,7 @@ import {type Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnos
 
 /** An diagnostics view component. */
 @Component({
+  standalone: false,
   selector: 'diagnostics-view',
   templateUrl: './diagnostics_view.ng.html',
   styleUrls: ['./diagnostics_view.scss']

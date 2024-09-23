@@ -8,6 +8,7 @@ import {firstValueFrom} from 'rxjs';
 
 /** The root component. */
 @Component({
+  standalone: false,
   selector: 'app',
   templateUrl: './app.ng.html',
   styleUrls: ['./app.css'],

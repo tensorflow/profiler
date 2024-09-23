@@ -8,6 +8,7 @@ import {HostSideAnalysisDetailTableDataProvider} from './host_side_analysis_deta
 
 /** A host-side analysis detail view component. */
 @Component({
+  standalone: false,
   selector: 'host-side-analysis-detail',
   templateUrl: './host_side_analysis_detail.ng.html',
   styleUrls: ['./host_side_analysis_detail.scss']

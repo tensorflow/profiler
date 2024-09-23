@@ -7,6 +7,7 @@ import {takeUntil} from 'rxjs/operators';
 
 /** A main page component. */
 @Component({
+  standalone: false,
   selector: 'main-page',
   templateUrl: './main_page.ng.html',
   styleUrls: ['./main_page.scss']
