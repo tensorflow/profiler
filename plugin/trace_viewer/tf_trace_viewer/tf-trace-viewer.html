@@ -974,6 +974,8 @@ dashboard would integrate trace viewer app using iframe.
       requestURL.searchParams.set('start_time_ms', event.start);
       requestURL.searchParams.set('duration_ms', event.duration);
       requestURL.searchParams.set('unique_id',event.args['uid']);
+      // Extract hostname from process container. e.g. "mach01 /device:TPU:0 (pid3)" ==> "mach01"
+      requestURL.searchParams.set('hosts', event.parentContainer.parent.name.split(' ')[0]);
       this._isLoading = true;
       this._throbber.className = 'active';
       const fetchData = await new Promise(function(resolve, reject) {
