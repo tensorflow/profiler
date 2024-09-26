@@ -463,9 +463,13 @@ dashboard would integrate trace viewer app using iframe.
       _replaceModel: {type: Boolean, value: true},
       _hosts: {type: Array, value: []},
       _selectedHosts: {type: Array, value: []},
-      _useNewBackend: {type: Boolean, value: false},
+      _useNewBackend: {type: Boolean, value: true},
       // The rect being hovered (represents a trace event).
       _hoverRect: {type: Object, value: null},
+    },
+
+    useNewBackend: function() {
+      return this._useNewBackend && !this._isOss;
     },
 
     ready: function() {
@@ -1022,14 +1026,14 @@ dashboard would integrate trace viewer app using iframe.
       backendToggleButton.classList.add('tooltip');
       const tooltipSpan = document.createElement('span');
       tooltipSpan.classList.add('tooltiptext');
-      tooltipSpan.textContent = 'The new backend enables faster trace data processing and also full trace search.';
+      tooltipSpan.textContent = 'The new backend enables full trace search and faster trace data processing.';
       const labelDiv = document.createElement('div');
-      labelDiv.textContent = this._useNewBackend ? 'Switch to Old Backend' : 'Switch to New Backend';
+      labelDiv.textContent = this.useNewBackend() ? 'Switch to Old Backend' : 'Switch to New Backend';
       backendToggleButton.appendChild(labelDiv);
       backendToggleButton.appendChild(tooltipSpan);
       backendToggleButton.addEventListener('click', () => {
         const url = new URL(`/trace_viewer/${this._sessionId}`, window.location.href);
-        url.searchParams.set('new_backend', !this._useNewBackend);
+        url.searchParams.set('new_backend', !this.useNewBackend());
         window.open(url.toString());
       });
       Polymer.dom(this._traceViewer.rightControls).insertBefore(backendToggleButton, detailsSelector);
@@ -1201,7 +1205,7 @@ dashboard would integrate trace viewer app using iframe.
         this._createDetailFilter();
         if (!this._isOss) {
           this._createBackendToggleButton();
-          if (this._useNewBackend) {
+          if (this.useNewBackend()) {
             this._updateSearchBehavior();
           }
         }
