@@ -1024,13 +1024,13 @@ dashboard would integrate trace viewer app using iframe.
       tooltipSpan.classList.add('tooltiptext');
       tooltipSpan.textContent = 'The new backend enables faster trace data processing and also full trace search.';
       const labelDiv = document.createElement('div');
-      labelDiv.textContent = this._useNewBackend ? 'Switch to Old Backend' : 'Switch to New Backend';
+      labelDiv.textContent = this._useNewBackend === true ? 'Switch to Old Backend' : 'Switch to New Backend';
       backendToggleButton.appendChild(labelDiv);
       backendToggleButton.appendChild(tooltipSpan);
       backendToggleButton.addEventListener('click', () => {
         const url = new URL(`/trace_viewer/${this._sessionId}`, window.location.href);
         url.searchParams.set('new_backend', !this._useNewBackend);
-        window.open(url.toString());
+        window.open(url.toString(), '_top');
       });
       Polymer.dom(this._traceViewer.rightControls).insertBefore(backendToggleButton, detailsSelector);
     },
@@ -1199,12 +1199,6 @@ dashboard would integrate trace viewer app using iframe.
       if (this._isStreaming) {
         // Need to create detail filter in init since it contributes to the baseUrl building.
         this._createDetailFilter();
-        if (!this._isOss) {
-          this._createBackendToggleButton();
-          if (this._useNewBackend) {
-            this._updateSearchBehavior();
-          }
-        }
       }
       let initialRequestedRange = null;
       if (initialViewportRange) {
@@ -1235,6 +1229,12 @@ dashboard would integrate trace viewer app using iframe.
           'event_category': 'JS Dependency',
           'event_label': `trace_viewer_${this._isStreaming ? 'streaming' : 'nonstreaming'}`,
         });
+        if (!this._isOss) {
+          this._createBackendToggleButton();
+          if (this._useNewBackend) {
+            this._updateSearchBehavior();
+          }
+        }
         this._isInitialLoad = false;
         this._throbber.id = 'throbber';
       } else {
@@ -1321,6 +1321,9 @@ dashboard would integrate trace viewer app using iframe.
         const jsonData = JSON.parse(data);
         if (!this._model /* first load */) {
           this._collapseBigProcessTracks(jsonData);
+          if (!this._isOss) {
+            this._useNewBackend = jsonData['useNewBackend'];
+          }
         }
         this._updateModel(jsonData, replaceModel);
         if (!this._isOss) {
