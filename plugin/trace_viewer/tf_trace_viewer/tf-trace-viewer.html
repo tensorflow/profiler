@@ -1021,10 +1021,22 @@ dashboard would integrate trace viewer app using iframe.
       this._isLoading = false;
       this._throbber.className = 'inactive';
       const data = JSON.parse(fetchData);
-      // Overwrite the event args in the ThreadSlice.
-      const fullEvent = data.traceEvents[data.traceEvents.length - 1];
-      if (fullEvent.ph == "X") {
-        event.args = data.traceEvents[data.traceEvents.length - 1].args;
+      if (event instanceof tr.model.ThreadSlice &&
+          data.traceEvents[data.traceEvents.length - 1].ph == "X") {
+        // Overwrite the event args in the ThreadSlice.
+        const fullEvent = data.traceEvents[data.traceEvents.length - 1];
+        event.args = fullEvent.args;
+        const stackFrameName = data.stackFrames[1]?.name;
+        if (stackFrameName) {
+          event.startStackFrame =
+            new tr.model.StackFrame(/* parentFrame */ undefined, "g1",
+                                    stackFrameName.substr(2), 13);
+        }
+      } else if (event instanceof tr.model.AsyncSlice &&
+                 data.traceEvents[data.traceEvents.length - 2].ph == "b") {
+        // Overwrite the event args in the AsyncSlice.
+        const beginEvent = data.traceEvents[data.traceEvents.length - 2];
+        event.args = beginEvent.args;
         const stackFrameName = data.stackFrames[1]?.name;
         if (stackFrameName) {
           event.startStackFrame =
@@ -1032,7 +1044,7 @@ dashboard would integrate trace viewer app using iframe.
                                     stackFrameName.substr(2), 13);
         }
       } else {
-        console.log("failed to fetch event args for event: ", event.title);
+        console.log("failed to fetch event args for event: ", event);
       }
     },
 
