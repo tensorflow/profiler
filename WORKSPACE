@@ -4,21 +4,65 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "bazel_skylib",
-    sha256 = "f7be3474d42aae265405a592bb7da8e171919d74c16f082a5457840f06054728",
+    sha256 = "74d544d96f4a5bb630d465ca8bbcfe231e3594e5aae57e1edbf17a6eb3ca2506",
     urls = [
-        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.2.1/bazel-skylib-1.2.1.tar.gz",
+        "https://storage.googleapis.com/mirror.tensorflow.org/github.com/bazelbuild/bazel-skylib/releases/download/1.3.0/bazel-skylib-1.3.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.3.0/bazel-skylib-1.3.0.tar.gz",
     ],
 )
 
 load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
+
 bazel_skylib_workspace()
 
 http_archive(
-    name = "com_google_absl_py",
-    sha256 = "5b476479811ed0b8c57bc0b3f517bc379c31e2fd13e12743ba0984de0e3f254a",
-    strip_prefix = "abseil-py-127c98870edf5f03395ce9cf886266fa5f24455e",
+    name = "rules_python",
+    sha256 = "778aaeab3e6cfd56d681c89f5c10d7ad6bf8d2f1a72de9de55b23081b2d31618",
+    strip_prefix = "rules_python-0.34.0",
+    url = "https://github.com/bazelbuild/rules_python/releases/download/0.34.0/rules_python-0.34.0.tar.gz",
+)
+
+load("@rules_python//python:repositories.bzl", "py_repositories", "python_register_toolchains")
+
+py_repositories()
+
+python_register_toolchains(
+    name = "python",
+    ignore_root_user_error = True,
+    # Available versions are listed in @rules_python//python:versions.bzl.
+    # We recommend using the same version your team is already standardized on.
+    python_version = "3.10",
+)
+
+load("@python//:defs.bzl", "interpreter")
+load("@rules_python//python:pip.bzl", "pip_parse")
+
+pip_parse(
+    name = "python_deps",
+    python_interpreter_target = interpreter,
+    requirements_lock = "//:requirements_lock_3_10.txt",
+)
+
+load("@python_deps//:requirements.bzl", "install_deps")
+
+install_deps()
+
+http_archive(
+    name = "io_bazel_rules_webtesting",
+    sha256 = "f89ca8e91ac53b3c61da356c685bf03e927f23b97b086cc593db8edc088c143f",
     urls = [
-        "https://github.com/abseil/abseil-py/archive/127c98870edf5f03395ce9cf886266fa5f24455e.tar.gz",
+        # tag 0.3.1 resolves to commit afa8c4435ed8fd832046dab807ef998a26779ecb (2019-04-03 14:10:32 -0700)
+        "http://mirror.tensorflow.org/github.com/bazelbuild/rules_webtesting/releases/download/0.3.1/rules_webtesting.tar.gz",
+        "https://github.com/bazelbuild/rules_webtesting/releases/download/0.3.1/rules_webtesting.tar.gz",
+    ],
+)
+
+http_archive(
+    name = "com_google_absl_py",
+    sha256 = "a7c51b2a0aa6357a9cbb2d9437e8cd787200531867dc02565218930b6a32166e",
+    strip_prefix = "abseil-py-1.0.0",
+    urls = [
+        "https://github.com/abseil/abseil-py/archive/refs/tags/v1.0.0.tar.gz",
     ],
 )
 
@@ -34,18 +78,13 @@ http_archive(
 )
 
 http_archive(
-    name = "rules_python",
-    url = "https://github.com/bazelbuild/rules_python/releases/download/0.2.0/rules_python-0.2.0.tar.gz",
-    sha256 = "778197e26c5fbeb07ac2a2c5ae405b30f6cb7ad1f5510ea6fdac03bded96cc6f",
-)
-
-http_archive(
-    name = "io_bazel_rules_webtesting",
-    sha256 = "f89ca8e91ac53b3c61da356c685bf03e927f23b97b086cc593db8edc088c143f",
+    name = "six_archive",
+    build_file = "@com_google_absl_py//third_party:six.BUILD",
+    sha256 = "105f8d68616f8248e24bf0e9372ef04d3cc10104f1980f54d57b2ce73a5ad56a",
+    strip_prefix = "six-1.10.0",
     urls = [
-        # tag 0.3.1 resolves to commit afa8c4435ed8fd832046dab807ef998a26779ecb (2019-04-03 14:10:32 -0700)
-        "http://mirror.tensorflow.org/github.com/bazelbuild/rules_webtesting/releases/download/0.3.1/rules_webtesting.tar.gz",
-        "https://github.com/bazelbuild/rules_webtesting/releases/download/0.3.1/rules_webtesting.tar.gz",
+        "http://mirror.bazel.build/pypi.python.org/packages/source/s/six/six-1.10.0.tar.gz",
+        "https://pypi.python.org/packages/source/s/six/six-1.10.0.tar.gz",
     ],
 )
 
@@ -60,6 +99,7 @@ http_archive(
 )
 
 load("@io_bazel_rules_closure//closure:repositories.bzl", "rules_closure_dependencies")
+
 rules_closure_dependencies(
     omit_com_google_protobuf = True,
     omit_com_google_protobuf_js = True,
@@ -72,7 +112,9 @@ http_archive(
 )
 
 load("@build_bazel_rules_nodejs//:repositories.bzl", "build_bazel_rules_nodejs_dependencies")
+
 build_bazel_rules_nodejs_dependencies()
+
 load("@build_bazel_rules_nodejs//:index.bzl", "yarn_install")
 
 yarn_install(
@@ -102,48 +144,53 @@ http_archive(
 )
 
 load("@io_bazel_rules_sass//:defs.bzl", "sass_repositories")
+
 sass_repositories()
 
-http_archive(
-    name = "org_tensorflow",
-    # NOTE: when updating this, MAKE SURE to also update the protobuf_js runtime version
-    # in third_party/workspace.bzl to >= the protobuf/protoc version provided by TF.
-    sha256 = "638e541a4981f52c69da4a311815f1e7989bf1d67a41d204511966e1daed14f7",
-    strip_prefix = "tensorflow-2.1.0",
-    urls = [
-        "http://mirror.tensorflow.org/github.com/tensorflow/tensorflow/archive/v2.1.0.tar.gz",  # 2020-01-06
-        "https://github.com/tensorflow/tensorflow/archive/v2.1.0.tar.gz",
-    ],
-)
+#http_archive(
+#    name = "org_tensorflow",
+#    # NOTE: when updating this, MAKE SURE to also update the protobuf_js runtime version
+#    # in third_party/workspace.bzl to >= the protobuf/protoc version provided by TF.
+#    sha256 = "638e541a4981f52c69da4a311815f1e7989bf1d67a41d204511966e1daed14f7",
+#    strip_prefix = "tensorflow-2.1.0",
+#    urls = [
+#        "http://mirror.tensorflow.org/github.com/tensorflow/tensorflow/archive/v2.1.0.tar.gz",  # 2020-01-06
+#        "https://github.com/tensorflow/tensorflow/archive/v2.1.0.tar.gz",
+#    ],
+#)
 
 http_archive(
     name = "com_google_protobuf",
-    sha256 = "9a301cf94a8ddcb380b901e7aac852780b826595075577bb967004050c835056",
-    strip_prefix = "protobuf-3.19.6",
+    sha256 = "f66073dee0bc159157b0bd7f502d7d1ee0bc76b3c1eac9836927511bdc4b3fc1",
+    strip_prefix = "protobuf-3.21.9",
     urls = [
-        "http://mirror.tensorflow.org/github.com/protocolbuffers/protobuf/archive/v3.19.6.tar.gz",
-        "https://github.com/protocolbuffers/protobuf/archive/v3.19.6.tar.gz",  # 2022-09-29
+        "https://github.com/protocolbuffers/protobuf/archive/v3.21.9.zip",
     ],
 )
 
 load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+
 protobuf_deps()
 
+http_archive(
+    name = "io_bazel_rules_closure",
+    sha256 = "6a900831c1eb8dbfc9d6879b5820fd614d4ea1db180eb5ff8aedcb75ee747c1f",
+    strip_prefix = "rules_closure-db4683a2a1836ac8e265804ca5fa31852395185b",
+    urls = [
+        "http://mirror.tensorflow.org/github.com/bazelbuild/rules_closure/archive/db4683a2a1836ac8e265804ca5fa31852395185b.tar.gz",
+        "https://github.com/bazelbuild/rules_closure/archive/db4683a2a1836ac8e265804ca5fa31852395185b.tar.gz",  # 2020-01-15
+    ],
+)
 
 http_archive(
     name = "org_tensorflow_tensorboard",
+    patch_args = ["-p1"],
+    patches = ["//third_party:tensorboard.patch"],
     sha256 = "bcd63689364fa397f4a8740349cf281a0f58f6ff93e09f7f049dc3744623fa29",
     strip_prefix = "tensorboard-0f4573b73838decf530bc8bcac53459fd4bc02e7",
-    urls = ["https://github.com/tensorflow/tensorboard/archive/0f4573b73838decf530bc8bcac53459fd4bc02e7.tar.gz"], # 2021-03-08
+    urls = ["https://github.com/tensorflow/tensorboard/archive/0f4573b73838decf530bc8bcac53459fd4bc02e7.tar.gz"],  # 2021-03-08
 )
 
 load("@org_tensorflow_tensorboard//third_party:workspace.bzl", "tensorboard_workspace")
+
 tensorboard_workspace()
-
-load("@rules_python//python:pip.bzl", "pip_install")
-
-pip_install(
-    name = "python_deps",
-    requirements = "//:requirements.txt",
-)
-
