@@ -32,16 +32,6 @@ genrule(
     ],
 )
 
-genrule(
-    name = "memory_viewer_preprocess_proto_ts",
-    srcs = ["memory_viewer_preprocess.jsonpb_decls.d.ts.gz"],
-    outs = ["memory_viewer_preprocess.jsonpb_decls.d.ts"],
-    cmd = "gzip -d -c $(SRCS) > $(OUTS)",
-    visibility = [
-        "//frontend:__subpackages__", "//plugin:__subpackages__",
-    ],
-)
-
 ts_library(
     name = "op_metrics_proto_defs",
     srcs = [
