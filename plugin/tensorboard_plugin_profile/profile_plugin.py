@@ -25,8 +25,8 @@ import os
 import re
 import threading
 
+from etils import epath
 import six
-import tensorflow.compat.v2 as tf
 from werkzeug import wrappers
 
 from tensorboard.backend.event_processing import plugin_asset_util
@@ -36,7 +36,6 @@ from tensorflow.python.profiler import profiler_client  # pylint: disable=g-dire
 from tensorflow.python.profiler import profiler_v2 as profiler  # pylint: disable=g-direct-tensorflow-import
 from tensorboard_plugin_profile.convert import raw_to_tool_data as convert
 
-tf.enable_v2_behavior()
 
 logger = logging.getLogger('tensorboard')
 
@@ -206,7 +205,7 @@ def _get_tools(filenames, profile_run_dir):
   found = set()
   xplane_filenames = []
   for name in filenames:
-    _, tool = _parse_filename(name)
+    _, tool = _parse_filename(os.fspath(name))
     if tool == 'xplane':
       xplane_filenames.append(os.path.join(profile_run_dir, name))
       continue
@@ -518,10 +517,11 @@ class ProfilePlugin(base_plugin.TBPlugin):
     tool_pattern = make_filename('*', tool)
     filenames = []
     try:
-      filenames = tf.io.gfile.glob(os.path.join(run_dir, tool_pattern))
-    except tf.errors.OpError as e:
+      path = epath.Path(run_dir)
+      filenames = path.glob(tool_pattern)
+    except Exception as e:  # pylint: disable=broad-except
       logger.warning('Cannot read asset directory: %s, OpError %s', run_dir, e)
-    filenames = [os.path.basename(f) for f in filenames]
+    filenames = [os.fspath(os.path.basename(f)) for f in filenames]
 
     return filenames_to_hosts(filenames, tool)
 
@@ -623,8 +623,9 @@ class ProfilePlugin(base_plugin.TBPlugin):
       if host == ALL_HOSTS:
         file_pattern = make_filename('*', 'xplane')
         try:
-          asset_paths = tf.io.gfile.glob(os.path.join(run_dir, file_pattern))
-        except tf.errors.OpError as e:
+          path = epath.Path(run_dir)
+          asset_paths = path.glob(file_pattern)
+        except Exception as e:  # pylint: disable=broad-except
           logger.warning('Cannot read asset directory: %s, OpError %s', run_dir,
                          e)
           raise IOError(
@@ -648,11 +649,9 @@ class ProfilePlugin(base_plugin.TBPlugin):
 
     raw_data = None
     try:
-      with tf.io.gfile.GFile(asset_path, 'rb') as f:
-        raw_data = f.read()
-    except tf.errors.NotFoundError:
-      logger.warning('Asset path %s not found', asset_path)
-    except tf.errors.OpError as e:
+      path = epath.Path(asset_path)
+      raw_data = path.read_bytes()
+    except Exception as e:  # pylint: disable=broad-except
       logger.warning("Couldn't read asset path: %s, OpError %s", asset_path, e)
 
     if raw_data is None:
@@ -703,11 +702,15 @@ class ProfilePlugin(base_plugin.TBPlugin):
 
     if is_tpu_name:
       try:
-        tpu_cluster_resolver = tf.distribute.cluster_resolver.TPUClusterResolver(
-            service_addr)
+        import tensorflow.compat.v2 as tf  # pylint: disable=g-import-not-at-top
+
+        tf.enable_v2_behavior()
+        tpu_cluster_resolver = (
+            tf.distribute.cluster_resolver.TPUClusterResolver(service_addr)
+        )
         master_grpc_addr = tpu_cluster_resolver.get_master()
       except (ImportError, RuntimeError) as err:
-        return respond({'error': err.message}, 'application/json', code=200)
+        return respond({'error': err}, 'application/json', code=200)
       except (ValueError, TypeError):
         return respond(
             {'error': 'no TPUs with the specified names exist.'},
@@ -742,12 +745,6 @@ class ProfilePlugin(base_plugin.TBPlugin):
       return respond(
           {'result': 'Capture profile successfully. Please refresh.'},
           'application/json',
-      )
-    except tf.errors.UnavailableError:
-      return respond(
-          {'error': 'empty trace result.'},
-          'application/json',
-          code=200,
       )
     except Exception as e:  # pylint: disable=broad-except
       return respond(
@@ -798,7 +795,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
     if not tb_run_name:
       tb_run_name = '.'
     tb_run_directory = _tb_run_directory(self.logdir, tb_run_name)
-    if not tf.io.gfile.isdir(tb_run_directory):
+    if not epath.Path(tb_run_directory).is_dir():
       raise RuntimeError('No matching run directory for run %s' % run)
 
     plugin_directory = plugin_asset_util.PluginDirectory(
@@ -861,7 +858,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
     # backwards compatible with previously profile plugin behavior. Note that we
     # check if logdir is a directory to handle case where it's actually a
     # multipart directory spec, which this plugin does not support.
-    if '.' not in tb_runs and tf.io.gfile.isdir(self.logdir):
+    if '.' not in tb_runs and epath.Path(self.logdir).is_dir():
       tb_runs.append('.')
     tb_run_names_to_dirs = {
         run: _tb_run_directory(self.logdir, run) for run in tb_runs
@@ -880,17 +877,17 @@ class ProfilePlugin(base_plugin.TBPlugin):
         else:
           frontend_run = os.path.join(tb_run_name, profile_run)
         profile_run_dir = os.path.join(tb_plugin_dir, profile_run)
-        if tf.io.gfile.isdir(profile_run_dir):
+        if epath.Path(profile_run_dir).is_dir():
           self._run_to_profile_run_dir[frontend_run] = profile_run_dir
           yield frontend_run
 
   def generate_tools_of_run(self, run):
     """Generate a list of tools given a certain run."""
     profile_run_dir = self._run_to_profile_run_dir[run]
-    if tf.io.gfile.isdir(profile_run_dir):
+    if epath.Path(profile_run_dir).is_dir():
       try:
-        filenames = tf.io.gfile.listdir(profile_run_dir)
-      except tf.errors.NotFoundError as e:
+        filenames = epath.Path(profile_run_dir).iterdir()
+      except Exception as e:  # pylint: disable=broad-except
         logger.warning('Cannot read asset directory: %s, NotFoundError %s',
                        profile_run_dir, e)
         filenames = []
