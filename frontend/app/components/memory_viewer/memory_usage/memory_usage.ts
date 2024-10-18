@@ -24,6 +24,7 @@ export class MemoryUsage {
   indefiniteMemoryUsageBytes: MemoryUsageBytes;
   heapSizes: number[];
   unpaddedHeapSizes: number[];
+  hloInstructionNames: string[];
   maxHeap: HeapObject[];
   maxHeapBySize: HeapObject[];
   maxHeapByPaddingSize: HeapObject[];
@@ -55,6 +56,7 @@ export class MemoryUsage {
     this.indefiniteMemoryUsageBytes = {padded: 0, unpadded: 0};
     this.heapSizes = [];
     this.unpaddedHeapSizes = [];
+    this.hloInstructionNames = [];
     this.maxHeap = [];
     this.maxHeapBySize = [];
     this.maxHeapByPaddingSize = [];
@@ -115,6 +117,7 @@ export class MemoryUsage {
     this.peakHeapSizePosition = (preprocess.peakHeapSizePosition || 0);
     this.heapSizes = preprocess.heapSizes || [];
     this.unpaddedHeapSizes = preprocess.unpaddedHeapSizes || [];
+    this.hloInstructionNames = preprocess.hloInstructionNames || [];
     if (preprocess.logicalBufferSpans) {
       for (const [key, value] of Object.entries(
                preprocess.logicalBufferSpans)) {

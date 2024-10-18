@@ -18,6 +18,9 @@ export class ProgramOrderChart implements OnChanges, OnInit {
   /** The unpadded heap size list. */
   @Input() unpaddedHeapSizes: number[] = [];
 
+  /** The HLO instruction name corresponding to each program order point. */
+  @Input() hloInstructionNames: string[] = [];
+
   /** The peak buffer allocation information. */
   @Input() peakInfo?: BufferAllocationInfo;
 
@@ -125,14 +128,23 @@ export class ProgramOrderChart implements OnChanges, OnInit {
     for (let i = 0; i < this.heapSizes.length; i++) {
       this.maxSize = Math.max(
           this.maxSize, Math.max(this.heapSizes[i], this.unpaddedHeapSizes[i]));
-      data.push([i, this.heapSizes[i], this.unpaddedHeapSizes[i]]);
+      const tooltip = `<div>
+        Program Order: ${i}<br>Size: ${this.heapSizes[i].toFixed(1)}<br>
+        Unpadded Size: ${this.unpaddedHeapSizes[i].toFixed(1)}<br>
+        HLO instruction: ${this.hloInstructionNames[i]}
+        </div>`;
+      data.push([i,
+                this.heapSizes[i], tooltip,
+                this.unpaddedHeapSizes[i],tooltip]);
     }
     this.maxSize = Math.round(this.maxSize * 1.1);
 
     const dataTable = new google.visualization.DataTable();
     dataTable.addColumn('number', 'Schedule');
     dataTable.addColumn('number', 'Size');
+    dataTable.addColumn({type: 'string', role: 'tooltip', 'p': {'html': true}});
     dataTable.addColumn('number', 'Unpadded Size');
+    dataTable.addColumn({type: 'string', role: 'tooltip', 'p': {'html': true}});
     dataTable.addRows(data);
 
     const options: google.visualization.LineChartOptions = {
@@ -157,6 +169,7 @@ export class ProgramOrderChart implements OnChanges, OnInit {
         },
       },
       legend: {position: 'top'},
+      tooltip: {isHtml: true},
     };
 
     this.heapChartDataInfo = {

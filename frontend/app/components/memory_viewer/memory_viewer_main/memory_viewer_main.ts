@@ -50,6 +50,7 @@ export class MemoryViewerMain implements OnDestroy, OnChanges {
   selectedIndexBySize: number = -1;
   selectedIndexByPaddingSize: number = -1;
   unpaddedHeapSizes: number[] = [];
+  hloInstructionNames: string[] = [];
   hasTrace = false;
   diagnostics: Diagnostics = {info: [], warnings: [], errors: []};
 
@@ -164,6 +165,7 @@ export class MemoryViewerMain implements OnDestroy, OnChanges {
         (this.usage.hloTempFragmentation * 100.0).toFixed(2);
     this.heapSizes = this.usage.heapSizes || [];
     this.unpaddedHeapSizes = this.usage.unpaddedHeapSizes || [];
+    this.hloInstructionNames = this.usage.hloInstructionNames || [];
     this.peakInfo = {
       size: utils.bytesToMiB(this.usage.peakHeapSizeBytes),
       alloc: this.usage.peakHeapSizePosition + 1,

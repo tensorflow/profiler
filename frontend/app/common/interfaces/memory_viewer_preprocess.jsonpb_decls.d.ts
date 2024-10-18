@@ -43,6 +43,7 @@ export interface BufferAllocation {
 export interface PreprocessResult {
   heapSizes?: /* double */ number[];
   unpaddedHeapSizes?: /* double */ number[];
+  hloInstructionNames?: string[];
   maxHeap?: HeapObject[];
   maxHeapBySize?: HeapObject[];
   logicalBufferSpans?: {[key: /* int32 */ string]: BufferSpan};
