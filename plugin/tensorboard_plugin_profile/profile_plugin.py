@@ -523,7 +523,10 @@ class ProfilePlugin(base_plugin.TBPlugin):
       logger.warning('Cannot read asset directory: %s, OpError %s', run_dir, e)
     filenames = [os.path.basename(f) for f in filenames]
 
-    return filenames_to_hosts(filenames, tool)
+    return [
+        {'hostname': host, 'hasDeviceTrace': False}
+        for host in filenames_to_hosts(filenames, tool)
+    ]
 
   def host_impl(self, run, tool, request=None):
     """Returns available hosts for the run and tool in the log directory.
