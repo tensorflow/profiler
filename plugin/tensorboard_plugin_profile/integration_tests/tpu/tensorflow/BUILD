@@ -25,7 +25,7 @@ profiler_test(
 py_strict_library(
     name = "tpu_tf2_keras_xla",
     srcs = ["tpu_tf2_keras_test.py"],
-    visibility = ["//plugin:__pkg__"],
+    visibility = ["//visibility:private"],
     deps = [
         "//:expect_tensorflow_installed",
         "//plugin/tensorboard_plugin_profile/convert:raw_to_tool_data",
