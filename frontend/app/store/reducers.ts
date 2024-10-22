@@ -122,7 +122,7 @@ export const reducer: ActionReducer<AppState, Action> = createReducer(
         ),
     on(
         actions.setHostsStateAction,
-        (state: AppState, action: ActionCreatorAny) => {
+        (state: AppState, action) => {
           return {
             ...state,
             hostsState: action.hostsState,

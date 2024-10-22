@@ -2,6 +2,7 @@ import {Node} from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_d
 import {DataRequestType} from 'org_xprof/frontend/app/common/constants/enums';
 import {AllReduceOpInfo, ChannelInfo, PodStatsRecord} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {HeapObject} from 'org_xprof/frontend/app/common/interfaces/heap_object';
+import {HostMetadata} from 'org_xprof/frontend/app/common/interfaces/hosts';
 import {RunToolsMap} from 'org_xprof/frontend/app/common/interfaces/tool';
 
 /** Type for active heap object state */
@@ -90,7 +91,7 @@ export interface AppState {
   capturingProfile: CapturingProfileState;
   loadingState: LoadingState;
   toolsInfoState: ToolsInfoState;
-  hostsState: string[];
+  hostsState: HostMetadata[];
   currentTool: CurrentToolState;
   exportAsCsv: ExportAsCsvState;
   errorMessage: ErrorMessageState;
@@ -166,7 +167,7 @@ const INIT_RUN_TOOLS_MAP: RunToolsMap = {};
 const INIT_CURRENT_RUN = '';
 
 /** Initial state of hosts list */
-const INIT_HOSTS_STATE: string[] = [];
+const INIT_HOSTS_STATE: HostMetadata[] = [];
 
 /** Initial state object */
 export const INIT_APP_STATE: AppState = {
