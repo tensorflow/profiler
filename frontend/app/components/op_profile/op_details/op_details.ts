@@ -1,6 +1,8 @@
+import {PlatformLocation} from '@angular/common';
 import {Component, EventEmitter, Input, Output} from '@angular/core';
 import {Store} from '@ngrx/store';
 import {Node} from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
+import {API_PREFIX, DATA_API, PLUGIN_NAME} from 'org_xprof/frontend/app/common/constants/constants';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {getActiveOpProfileNodeState, getCurrentRun, getOpProfileRootNode, getProfilingGeneralState, getSelectedOpNodeChainState} from 'org_xprof/frontend/app/store/selectors';
@@ -63,10 +65,12 @@ export class OpDetails {
   currentRun = '';
   showUtilizationWarning = false;
   deviceType = 'TPU';
+  pathPrefix = '';
 
 
   constructor(
       private readonly store: Store<{}>,
+      platformLocation: PlatformLocation,
   ) {
     this.currentRun$ =
         this.store.select(getCurrentRun).pipe(takeUntil(this.destroyed));
@@ -98,6 +102,10 @@ export class OpDetails {
         this.currentRun = run;
       }
     });
+    if (String(platformLocation.pathname).includes(API_PREFIX + PLUGIN_NAME)) {
+      this.pathPrefix =
+          String(platformLocation.pathname).split(API_PREFIX + PLUGIN_NAME)[0];
+    }
   }
 
   getTitleByDeviceType(titlePrefix: string, titleSuffix: string) {
@@ -133,12 +141,21 @@ export class OpDetails {
 
   getGraphViewerLink() {
     if (this.isOss) {
-      const tag = 'graph_viewer';
-      const host = this.getSelectedModuleName();
-      const opName = this.getSelectedOpName();
-      return `${window.parent.location.origin}?tool=${tag}&host=${
-          host}&opName=${opName}&run=${this.currentRun}#profile`;
+      const params = new URLSearchParams();
+      params.set('run', this.currentRun);
+      params.set('tag', 'graph_viewer^');
+      params.set('host', this.getSelectedModuleName());
+      params.set('node_name', this.getSelectedOpName());
+      params.set('module_name', this.getSelectedModuleName());
+      params.set('graph_width', '3');
+      params.set('show_metadata', 'false');
+      params.set('merge_fusion', 'false');
+      params.set('format', 'html');
+      params.set('type', 'graph');
+      return `${window.origin}/${this.pathPrefix}/${DATA_API}?${
+          params.toString()}`;
     }
+
     const aggregatedBy = this.selectedOpNodeChain[0];
     if (aggregatedBy === 'by_program') {
       return `/graph_viewer/${this.sessionId}?module_name=${
