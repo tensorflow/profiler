@@ -4,6 +4,7 @@ import {Injectable} from '@angular/core';
 import {API_PREFIX, CAPTURE_PROFILE_API, DATA_API, HOSTS_API, LOCAL_URL, PLUGIN_NAME, RUN_TOOLS_API, RUNS_API} from 'org_xprof/frontend/app/common/constants/constants';
 import {CaptureProfileOptions, CaptureProfileResponse} from 'org_xprof/frontend/app/common/interfaces/capture_profile';
 import {DataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {HostMetadata} from 'org_xprof/frontend/app/common/interfaces/hosts';
 import {Observable, of} from 'rxjs';
 import {delay} from 'rxjs/operators';
 
@@ -20,7 +21,8 @@ export class DataService {
   searchParams?: URLSearchParams;
 
   constructor(
-      private readonly httpClient: HttpClient, platformLocation: PlatformLocation) {
+      private readonly httpClient: HttpClient,
+      platformLocation: PlatformLocation) {
     this.isLocalDevelopment = platformLocation.pathname === LOCAL_URL;
     if (String(platformLocation.pathname).includes(API_PREFIX + PLUGIN_NAME)) {
       this.pathPrefix =
@@ -48,12 +50,13 @@ export class DataService {
     return this.httpClient.get(this.pathPrefix + CAPTURE_PROFILE_API, {params});
   }
 
-  getHosts(run: string, tag: string) {
+  getHosts(run: string, tag: string): Observable<HostMetadata[]> {
     if (this.isLocalDevelopment) {
       return of(mockData.DATA_PLUGIN_PROFILE_HOSTS).pipe(delay(DELAY_TIME_MS));
     }
     const params = new HttpParams().set('run', run).set('tag', tag);
-    return this.httpClient.get(this.pathPrefix + HOSTS_API, {params});
+    return this.httpClient.get(this.pathPrefix + HOSTS_API, {params}) as
+        Observable<HostMetadata[]>;
   }
 
   getRuns() {

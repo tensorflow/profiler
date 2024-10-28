@@ -124,7 +124,7 @@ export class SideNav implements OnInit, OnDestroy {
         this.dataService.getHosts(this.selectedRun, this.selectedTag)
             .pipe(takeUntil(this.destroyed)));
 
-    let hosts = (response as string[]) || [];
+    let hosts = response.map(host => host.hostname) || [];
     if (hosts.length === 0) {
       hosts.push('');
     }

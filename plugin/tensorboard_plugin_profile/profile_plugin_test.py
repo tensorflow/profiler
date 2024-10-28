@@ -173,29 +173,36 @@ class ProfilePluginTest(tf.test.TestCase):
     write_empty_event_file(subdir_a)
     self.multiplexer.AddRunsFromDirectory(self.logdir)
     self.multiplexer.Reload()
+    expected_hosts_foo = [{'hostname': 'host0'}, {'hostname': 'host1'}]
+    expected_hosts_abc = [{'hostname': 'host1'}, {'hostname': 'host2'}]
+    expected_all_hosts_only = [{'hostname': 'ALL_HOSTS'}]
     hosts = self.plugin.host_impl('foo', 'trace_viewer')
-    self.assertListEqual(['host0', 'host1'], hosts)
+    self.assertListEqual(expected_hosts_foo, hosts)
     hosts_a = self.plugin.host_impl('a/foo', 'trace_viewer')
-    self.assertListEqual(['host0', 'host1'], hosts_a)
+    self.assertListEqual(expected_hosts_foo, hosts_a)
     hosts_q = self.plugin.host_impl('qux', 'framework_op_stats')
     self.assertEmpty(hosts_q)
     hosts_abc_tf_stats = self.plugin.host_impl('abc', 'framework_op_stats^')
-    self.assertListEqual(['ALL_HOSTS', 'host1', 'host2'], hosts_abc_tf_stats)
+    self.assertListEqual(
+        expected_all_hosts_only + expected_hosts_abc, hosts_abc_tf_stats
+    )
     # TraceViewer and MemoryProfile does not support all hosts.
     hosts_abc_trace_viewer = self.plugin.host_impl('abc', 'trace_viewer^')
-    self.assertListEqual(['host1', 'host2'], hosts_abc_trace_viewer)
+    self.assertListEqual(expected_hosts_abc, hosts_abc_trace_viewer)
     hosts_abc_memory_profile = self.plugin.host_impl('abc', 'memory_profile^')
-    self.assertListEqual(['host1', 'host2'], hosts_abc_memory_profile)
+    self.assertListEqual(expected_hosts_abc, hosts_abc_memory_profile)
     # OverviewPage supports all hosts only.
     hosts_abc_overview_page = self.plugin.host_impl('abc', 'overview_page^')
-    self.assertListEqual(['ALL_HOSTS'], hosts_abc_overview_page)
+    self.assertListEqual(expected_all_hosts_only, hosts_abc_overview_page)
     # PodViewer supports all hosts only.
     hosts_abc_pod_viewer = self.plugin.host_impl('abc', 'pod_viewer^')
-    self.assertListEqual(['ALL_HOSTS'], hosts_abc_pod_viewer)
+    self.assertListEqual(expected_all_hosts_only, hosts_abc_pod_viewer)
     # tf.data Bottleneck Analysis supports all hosts only.
     hosts_abc_tf_data_bottleneck_analysis = self.plugin.host_impl(
         'abc', 'tf_data_bottleneck_analysis^')
-    self.assertListEqual(['ALL_HOSTS'], hosts_abc_tf_data_bottleneck_analysis)
+    self.assertListEqual(
+        expected_all_hosts_only, hosts_abc_tf_data_bottleneck_analysis
+    )
 
   def testData(self):
     generate_testdata(self.logdir)
