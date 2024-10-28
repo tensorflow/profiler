@@ -2,7 +2,6 @@ import {createAction, props} from '@ngrx/store';
 import {Node} from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
 import {AllReduceOpInfo, ChannelInfo, PodStatsRecord} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {HeapObject} from 'org_xprof/frontend/app/common/interfaces/heap_object';
-import {HostMetadata} from 'org_xprof/frontend/app/common/interfaces/hosts';
 import {RunToolsMap} from 'org_xprof/frontend/app/common/interfaces/tool';
 
 import {DataRequest, LoadingState, ToolsInfoState} from './state';
@@ -87,9 +86,9 @@ export const setToolsInfoStateAction: ActionCreatorAny = createAction(
 );
 
 /** Action to set hosts list state */
-export const setHostsStateAction = createAction(
+export const setHostsStateAction: ActionCreatorAny = createAction(
     '[App State] Set hosts state',
-    props<{hostsState: HostMetadata[]}>(),
+    props<{hosts: string[]}>(),
 );
 
 /** Action to set current run */

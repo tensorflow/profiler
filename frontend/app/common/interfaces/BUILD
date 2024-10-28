@@ -77,7 +77,6 @@ ts_library(
         "diagnostics.ts",
         "graph_viewer.ts",
         "heap_object.ts",
-        "hosts.ts",
         "navigation_event.ts",
         "summary_info.ts",
         "tool.ts",

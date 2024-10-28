@@ -5,10 +5,7 @@ export const DATA_PLUGIN_PROFILE_RUNS = ['foo', 'empty', 'bar'];
 export const DATA_PLUGIN_PROFILE_RUN_TOOLS = ['overview_page', 'trace_viewer'];
 
 /** Mock data for hosts API */
-export const DATA_PLUGIN_PROFILE_HOSTS = [
-  {hostname: 'device', hasDeviceTrace: true},
-  {hostname: 'host', hasDeviceTrace: false}
-];
+export const DATA_PLUGIN_PROFILE_HOSTS = ['device', 'host'];
 
 /** Mock data for data API with oveview_page tag */
 export const DATA_PLUGIN_PROFILE_OVERVIEW_PAGE_DATA = [
@@ -1777,48 +1774,44 @@ export const DATA_PLUGIN_PROFILE_TF_DATA_BOTTLENECK_ANALYSIS_DATA =
             ]
           },
           {
-            'c':
-                [
-                  {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 4}, {
-                    'v': '8657233632614672692',
-                    'f':
-                        '\u003cdiv style\u003d\u0027padding: 1px;\u0027\u003e\u003cb\u003eModel\u003c/b\u003e\u003cbr/\u003e\u003cdiv style\u003d\u0027text-align: left;\u0027\u003eStart Time: 9,857,055 us\u003cbr/\u003eTotal Duration: 139,106 us\u003cbr/\u003eSelf Duration: 2 us\u003cbr/\u003e# Calls: 1\u003c/div\u003e\u003c/div\u003e'
-                  },
-                  {'v': ''}, {'v': 1}
-                ]
+            'c': [
+              {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 4}, {
+                'v': '8657233632614672692',
+                'f':
+                    '\u003cdiv style\u003d\u0027padding: 1px;\u0027\u003e\u003cb\u003eModel\u003c/b\u003e\u003cbr/\u003e\u003cdiv style\u003d\u0027text-align: left;\u0027\u003eStart Time: 9,857,055 us\u003cbr/\u003eTotal Duration: 139,106 us\u003cbr/\u003eSelf Duration: 2 us\u003cbr/\u003e# Calls: 1\u003c/div\u003e\u003c/div\u003e'
+              },
+              {'v': ''}, {'v': 1}
+            ]
           },
           {
-            'c':
-                [
-                  {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 4}, {
-                    'v': '7987410324060857182',
-                    'f':
-                        '\u003cdiv style\u003d\u0027padding: 1px;\u0027\u003e\u003cb\u003ePrefetch\u003c/b\u003e\u003cbr/\u003e\u003cdiv style\u003d\u0027text-align: left;\u0027\u003eStart Time: 9,857,061 us\u003cbr/\u003eTotal Duration: 4 us\u003cbr/\u003eSelf Duration: 4 us\u003cbr/\u003e# Calls: 1\u003c/div\u003e\u003c/div\u003e'
-                  },
-                  {'v': '1204700340925195271'}, {'v': 1}
-                ]
+            'c': [
+              {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 4}, {
+                'v': '7987410324060857182',
+                'f':
+                    '\u003cdiv style\u003d\u0027padding: 1px;\u0027\u003e\u003cb\u003ePrefetch\u003c/b\u003e\u003cbr/\u003e\u003cdiv style\u003d\u0027text-align: left;\u0027\u003eStart Time: 9,857,061 us\u003cbr/\u003eTotal Duration: 4 us\u003cbr/\u003eSelf Duration: 4 us\u003cbr/\u003e# Calls: 1\u003c/div\u003e\u003c/div\u003e'
+              },
+              {'v': '1204700340925195271'}, {'v': 1}
+            ]
           },
           {
-            'c':
-                [
-                  {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 5}, {
-                    'v': '1204700340925195271',
-                    'f':
-                        '\u003cdiv style\u003d\u0027padding: 1px;\u0027\u003e\u003cb\u003eMap\u003c/b\u003e\u003cbr/\u003e\u003cdiv style\u003d\u0027text-align: left;\u0027\u003eStart Time: 4,024,899 us\u003cbr/\u003eTotal Duration: 55,780 us\u003cbr/\u003eSelf Duration: 55,776 us\u003cbr/\u003e# Calls: 1\u003c/div\u003e\u003c/div\u003e'
-                  },
-                  {'v': '8657233632614672692'}, {'v': 2}
-                ]
+            'c': [
+              {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 5}, {
+                'v': '1204700340925195271',
+                'f':
+                    '\u003cdiv style\u003d\u0027padding: 1px;\u0027\u003e\u003cb\u003eMap\u003c/b\u003e\u003cbr/\u003e\u003cdiv style\u003d\u0027text-align: left;\u0027\u003eStart Time: 4,024,899 us\u003cbr/\u003eTotal Duration: 55,780 us\u003cbr/\u003eSelf Duration: 55,776 us\u003cbr/\u003e# Calls: 1\u003c/div\u003e\u003c/div\u003e'
+              },
+              {'v': '8657233632614672692'}, {'v': 2}
+            ]
           },
           {
-            'c':
-                [
-                  {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 5}, {
-                    'v': '7987410324060857182',
-                    'f':
-                        '\u003cdiv style\u003d\u0027padding: 1px;\u0027\u003e\u003cb\u003ePrefetch\u003c/b\u003e\u003cbr/\u003e\u003cdiv style\u003d\u0027text-align: left;\u0027\u003eStart Time: 4,024,904 us\u003cbr/\u003eTotal Duration: 4 us\u003cbr/\u003eSelf Duration: 4 us\u003cbr/\u003e# Calls: 1\u003c/div\u003e\u003c/div\u003e'
-                  },
-                  {'v': '1204700340925195271'}, {'v': 1}
-                ]
+            'c': [
+              {'v': 'oild3:25577'}, {'v': 'Host:0'}, {'v': 5}, {
+                'v': '7987410324060857182',
+                'f':
+                    '\u003cdiv style\u003d\u0027padding: 1px;\u0027\u003e\u003cb\u003ePrefetch\u003c/b\u003e\u003cbr/\u003e\u003cdiv style\u003d\u0027text-align: left;\u0027\u003eStart Time: 4,024,904 us\u003cbr/\u003eTotal Duration: 4 us\u003cbr/\u003eSelf Duration: 4 us\u003cbr/\u003e# Calls: 1\u003c/div\u003e\u003c/div\u003e'
+              },
+              {'v': '1204700340925195271'}, {'v': 1}
+            ]
           },
           {
             'c': [
