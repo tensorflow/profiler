@@ -1,8 +1,8 @@
-# Description
-# Xprof, ML Performance Toolbox (for TPU, GPU, CPU).
+load("@python//:defs.bzl", "compile_pip_requirements")
 load("@python_deps//:requirements.bzl", "requirement")
 
-package(default_visibility = [":internal"])
+# Description
+# Xprof, ML Performance Toolbox (for TPU, GPU, CPU).
 
 licenses(["notice"])
 
@@ -22,4 +22,16 @@ py_library(
     deps = [
         requirement("tensorflow"),
     ],
+)
+
+compile_pip_requirements(
+    name = "requirements",
+    extra_args = [
+        "--allow-unsafe",
+        "--build-isolation",
+        "--rebuild",
+    ],
+    generate_hashes = True,
+    requirements_in = "requirements.in",
+    requirements_txt = "requirements_lock_3_10.txt",
 )
