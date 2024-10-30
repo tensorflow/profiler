@@ -2,11 +2,11 @@
   <div *ngIf="dataFound; else emptypage">
     <main-page></main-page>
   </div>
-
-  <ng-template #emptypage>
-    <empty-page></empty-page>
-  </ng-template>
 </div>
+
+<ng-template #emptypage>
+  <empty-page></empty-page>
+</ng-template>
 
 <ng-template #progress_bar>
   <div class="progress-container" *ngIf="loading">

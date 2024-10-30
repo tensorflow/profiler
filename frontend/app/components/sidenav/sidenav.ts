@@ -28,12 +28,10 @@ export class SideNav implements OnInit, OnDestroy {
   runs: string[] = [];
   tags: string[] = [];
   hosts: string[] = [];
-  selectedRun = '';
-  selectedTag = '';
-  selectedHost = '';
+  selectedRunInternal = '';
+  selectedTagInternal = '';
+  selectedHostInternal = '';
   navigationParams: {[key: string]: string} = {};
-  // The text to display on host selector.
-  hostSelectorDisplayName = 'Hosts';
 
   constructor(
       private readonly router: Router,
@@ -51,15 +49,45 @@ export class SideNav implements OnInit, OnDestroy {
       this.runs = Object.keys(this.runToolsMap);
     });
     this.currentRun$.subscribe(run => {
-      if (run && !this.selectedRun) {
-        this.selectedRun = run;
-        this.afterUpdateRun();
+      if (run && !this.selectedRunInternal) {
+        this.selectedRunInternal = run;
       }
     });
     this.communicationService.navigationChange.subscribe(
         (navigationEvent: NavigationEvent) => {
           this.onUpdateRoute(navigationEvent);
         });
+  }
+
+  // Getter for the text to display on host selector.
+  get hostSelectorDisplayName() {
+    // For HLO tools, user selects HLO modules instead of hosts.
+    for (const hloTool of HLO_TOOLS) {
+      if (this.selectedTag.startsWith(hloTool)) {
+        return 'Modules';
+      }
+    }
+    return 'Hosts';
+  }
+
+  // Getter for valid run given url router or user selection.
+  get selectedRun() {
+    return this.runs.find(validRun => validRun === this.selectedRunInternal) ||
+        this.runs[0] || '';
+  }
+
+  // Getter for valid tag given url router or user selection.
+  get selectedTag() {
+    return this.tags.find(
+               validTag => validTag.startsWith(this.selectedTagInternal)) ||
+        this.tags[0] || '';
+  }
+
+  // Getter for valid host given url router or user selection.
+  get selectedHost() {
+    if (this.selectedHostInternal === DEFAULT_HOST) return '';
+    return this.hosts.find(host => host === this.selectedHostInternal) ||
+        this.hosts[0] || '';
   }
 
   navigateWithUrl() {
@@ -72,7 +100,7 @@ export class SideNav implements OnInit, OnDestroy {
     if (params.has('opName')) {
       navigationEvent.paramsOpName = params.get('opName') || '';
     }
-    this.communicationService.onNavigate(navigationEvent);
+    this.onUpdateRoute(navigationEvent);
   }
 
   ngOnInit() {
@@ -83,7 +111,7 @@ export class SideNav implements OnInit, OnDestroy {
     return {
       run: this.selectedRun,
       tag: this.selectedTag,
-      host: this.selectedHost === DEFAULT_HOST ? '' : this.selectedHost,
+      host: this.selectedHost,
       ...this.navigationParams,
     };
   }
@@ -94,17 +122,6 @@ export class SideNav implements OnInit, OnDestroy {
              tag[tag.length - 1] === '^')) ?
         tag.slice(0, -1) :
         tag || '';
-  }
-
-  resetTag() {
-    this.tags = [];
-    this.selectedTag = '';
-    this.updateHostSelectorDisplayName();
-  }
-
-  resetHost() {
-    this.hosts = [];
-    this.selectedHost = '';
   }
 
   async getToolsForSelectedRun() {
@@ -120,6 +137,7 @@ export class SideNav implements OnInit, OnDestroy {
   }
 
   async getHostsForSelectedTag() {
+    if (!this.selectedRun || !this.selectedTag) return [];
     const response = await firstValueFrom(
         this.dataService.getHosts(this.selectedRun, this.selectedTag)
             .pipe(takeUntil(this.destroyed)));
@@ -139,6 +157,11 @@ export class SideNav implements OnInit, OnDestroy {
     return hosts;
   }
 
+  onRunSelectionChange(run: string) {
+    this.selectedRunInternal = run;
+    this.afterUpdateRun();
+  }
+
   afterUpdateRun() {
     this.store.dispatch(setCurrentRunAction({
       currentRun: this.selectedRun,
@@ -151,33 +174,26 @@ export class SideNav implements OnInit, OnDestroy {
     if (!this.tags.length) {
       this.tags = (await this.getToolsForSelectedRun() || []) as string[];
     }
-    if (this.tags.length > 0) {
-      // Try to match the same tag when tags changes, use default if no match
-      this.selectedTag = this.tags.find(
-                             tag => tag === this.selectedTag ||
-                                 tag === this.selectedTag + '@' ||
-                                 tag === this.selectedTag + '#' ||
-                                 tag === this.selectedTag + '^' ||
-                                 tag.slice(0, -1) === this.selectedTag) ||
-          this.tags[0];
-      this.afterUpdateTag();
-    } else {
-      this.resetTag();
-      this.resetHost();
-      this.navigateTools();
-    }
+    this.afterUpdateTag();
+  }
+
+  onTagSelectionChange(tag: string) {
+    this.selectedTagInternal = tag;
+    this.afterUpdateTag();
   }
 
   afterUpdateTag() {
-    this.updateHostSelectorDisplayName();
     this.updateHosts();
   }
 
   async updateHosts() {
     this.hosts = await this.getHostsForSelectedTag();
-    this.selectedHost =
-        this.hosts.find(host => host === this.selectedHost) || this.hosts[0];
     this.afterUpdateHost();
+  }
+
+  onHostSelectionChange(host: string) {
+    this.selectedHostInternal = host;
+    this.navigateTools();
   }
 
   afterUpdateHost() {
@@ -185,6 +201,7 @@ export class SideNav implements OnInit, OnDestroy {
   }
 
   navigateTools() {
+    this.communicationService.onNavigateReady();
     const navigationEvent = this.getNavigationEvent();
     this.router.navigate([
       this.selectedTag || 'empty',
@@ -192,29 +209,11 @@ export class SideNav implements OnInit, OnDestroy {
     ]);
   }
 
-  updateHostSelectorDisplayName() {
-    // For HLO tools, user selects HLO modules instead of hosts.
-    let isHloTool = false;
-    for (const hloTool of HLO_TOOLS) {
-      if (this.selectedTag.startsWith(hloTool)) {
-        this.hostSelectorDisplayName = 'Modules';
-        isHloTool = true;
-        break;
-      }
-    }
-    if (!isHloTool) {
-      this.hostSelectorDisplayName = 'Hosts';
-    }
-  }
-
   onUpdateRoute(event: NavigationEvent) {
-    let {run = '', tag = '', host = ''} = event;
-    tag =
-        this.tags.find(validTag => validTag.includes(tag)) || this.selectedTag;
-    run =
-        this.runs.find(validRun => validRun.includes(run)) || this.selectedRun;
-    host = this.hosts.find(validHost => validHost.includes(host)) ||
-        this.selectedHost;
+    const {run = '', tag = '', host = ''} = event;
+    this.selectedRunInternal = run;
+    this.selectedTagInternal = tag;
+    this.selectedHostInternal = host;
     this.navigationParams = {
       ...this.navigationParams,
       ...event,
@@ -222,32 +221,11 @@ export class SideNav implements OnInit, OnDestroy {
     delete this.navigationParams['run'];
     delete this.navigationParams['tag'];
     delete this.navigationParams['host'];
-    let routeUpdateFrom = 0;
-    if (this.selectedRun !== run) {
-      this.selectedRun = run;
-      routeUpdateFrom = 1;
-    }
-    if (this.selectedTag !== tag) {
-      this.selectedTag = tag;
-      routeUpdateFrom = routeUpdateFrom ? routeUpdateFrom : 2;
-    }
-    if (this.selectedHost !== host) {
-      this.selectedHost = host;
-      routeUpdateFrom = routeUpdateFrom ? routeUpdateFrom : 3;
-    }
-    switch (routeUpdateFrom) {
-      case 1:
-        this.afterUpdateRun();
-        break;
-      case 2:
-        this.afterUpdateTag();
-        break;
-      case 3:
-        this.afterUpdateHost();
-        break;
-      default:
-        break;
-    }
+    this.update();
+  }
+
+  update() {
+    this.afterUpdateRun();
   }
 
   ngOnDestroy() {

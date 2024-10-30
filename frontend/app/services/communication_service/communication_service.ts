@@ -9,9 +9,14 @@ import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigati
 @Injectable({providedIn: 'root'})
 export class CommunicationService {
   @Output() readonly navigationChange = new EventEmitter();
+  @Output() readonly navigationReady = new EventEmitter();
 
   // Trigger navigation in sidenav component
   onNavigate(navigationEvent: NavigationEvent) {
     this.navigationChange.emit(navigationEvent);
+  }
+
+  onNavigateReady() {
+    this.navigationReady.emit({});
   }
 }
