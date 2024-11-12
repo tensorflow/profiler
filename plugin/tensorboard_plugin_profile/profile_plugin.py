@@ -211,7 +211,10 @@ def _get_tools(filenames: list[str], profile_run_dir: str) -> set[str]:
   found = set()
   xplane_filenames = []
   for name in filenames:
-    _, tool = _parse_filename(name)
+    if isinstance(name, str):
+      _, tool = _parse_filename(name)
+    else:
+      _, tool = _parse_filename(name.name)
     if tool == 'xplane':
       xplane_filenames.append(os.path.join(profile_run_dir, name))
       continue
