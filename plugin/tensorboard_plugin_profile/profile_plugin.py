@@ -963,6 +963,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
       tools.discard('trace_viewer#')
       tools.discard('trace_viewer^')
       tools.discard('trace_viewer')
+      tools.discard('trace_viewer^')
     if 'trace_viewer#' in tools:
       # use compressed trace
       tools.discard('trace_viewer^')
