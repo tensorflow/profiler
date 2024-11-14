@@ -74,6 +74,10 @@ export class GraphConfig implements OnDestroy, OnChanges {
     this.updateSelectedModule.emit(e.value);
   }
 
+  isNewGraphViewer() {
+    return false;
+  }
+
   ngOnDestroy() {
     // Unsubscribes all pending subscriptions.
     this.destroyed.next();

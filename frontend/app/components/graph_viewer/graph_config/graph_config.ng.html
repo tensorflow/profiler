@@ -55,12 +55,14 @@
     </mat-form-field>
 
     <mat-checkbox
+      *ngIf="!isNewGraphViewer()"
       [(ngModel)]="params.showMetadata"
       name="showMetadata"
       class="full-width"
       >Show Metadata</mat-checkbox
     >
     <mat-checkbox
+      *ngIf="!isNewGraphViewer()"
       [(ngModel)]="params.mergeFusion"
       name="mergeFusion"
       matTooltip="Hide the fusion subcomputations in the rendered graph"
