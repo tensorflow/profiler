@@ -464,6 +464,7 @@ dashboard would integrate trace viewer app using iframe.
       _hosts: {type: Array, value: []},
       _selectedHosts: {type: Array, value: []},
       _useNewBackend: {type: Boolean, value: false},
+      _useNewBackendSetInUrl: {type: Boolean, value: false},
       // The rect being hovered (represents a trace event).
       _hoverRect: {type: Object, value: null},
       _codeLink: {type: String, value: ''},
@@ -529,6 +530,7 @@ dashboard would integrate trace viewer app using iframe.
               this._selectedHosts = (traceViewerLink.searchParams.get('hosts') || '').split(',');
               if (traceViewerLink.searchParams.has('new_backend')) {
                 this._useNewBackend = traceViewerLink.searchParams.get('new_backend') === 'true';
+                this._useNewBackendSetInUrl = true;
               }
             } catch(err) {  // not fatal.
               console.log('cannot find session id');
@@ -780,6 +782,33 @@ dashboard would integrate trace viewer app using iframe.
           this._eventDetails.appendChild(traceViewerStepLinkElement);
         }
       }
+    },
+
+    _getDefaults: async function() {
+      const requestURL = new URL('/trace_viewer_defaults', window.location.href);
+      const defaults = await new Promise(function(resolve, reject) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', requestURL);
+        xhr.onload = function() {
+          var contentType = this.getResponseHeader('Content-Type');
+          if (
+            this.status !== 200 ||
+            !contentType.startsWith('application/json')
+          ) {
+            var msg = requestURL + ' could not be loaded';
+            if (contentType.startsWith('text/plain')) {
+              msg = msg + ': ' + xhr.statusText;
+            }
+            reject(msg);
+          }
+          resolve(JSON.parse(xhr.response));
+        };
+        xhr.onerror = function() {
+          reject(`Cannot fetch search result with uri ${requestURL}: ${xhr.statusText}`);
+        };
+        xhr.send();
+      });
+      this._useNewBackend = defaults["use_new_backend"];
     },
 
     _searchAndAddTraceEvents: async function(searchText) {
@@ -1069,7 +1098,8 @@ dashboard would integrate trace viewer app using iframe.
       backendToggleButton.appendChild(tooltipSpan);
       backendToggleButton.addEventListener('click', () => {
         const url = new URL(`/trace_viewer/${this._sessionId}`, window.location.href);
-        url.searchParams.set('new_backend', !this._useNewBackend);
+        this._useNewBackend = !this._useNewBackend;
+        url.searchParams.set('new_backend', this._useNewBackend);
         window.open(url.toString(), '_top');
       });
       Polymer.dom(this._traceViewer.rightControls).insertBefore(backendToggleButton, detailsSelector);
@@ -1239,6 +1269,15 @@ dashboard would integrate trace viewer app using iframe.
       if (this._isStreaming) {
         // Need to create detail filter in init since it contributes to the baseUrl building.
         this._createDetailFilter();
+        if (!this._isOss) {
+          if (!this._useNewBackendSetInUrl) {
+            await this._getDefaults();
+          }
+          this._createBackendToggleButton();
+          if (this._useNewBackend) {
+            this._updateSearchBehavior();
+          }
+        }
       }
       let initialRequestedRange = null;
       if (initialViewportRange) {
@@ -1269,12 +1308,6 @@ dashboard would integrate trace viewer app using iframe.
           'event_category': 'JS Dependency',
           'event_label': `trace_viewer_${this._isStreaming ? 'streaming' : 'nonstreaming'}`,
         });
-        if (!this._isOss) {
-          this._createBackendToggleButton();
-          if (this._useNewBackend) {
-            this._updateSearchBehavior();
-          }
-        }
         this._isInitialLoad = false;
         this._throbber.id = 'throbber';
       } else {
@@ -1362,9 +1395,6 @@ dashboard would integrate trace viewer app using iframe.
         this._codeLink = jsonData['codeLink'];
         if (!this._model /* first load */) {
           this._collapseBigProcessTracks(jsonData);
-          if (!this._isOss) {
-            this._useNewBackend = jsonData['useNewBackend'];
-          }
         }
         this._updateModel(jsonData, replaceModel);
         if (!this._isOss) {
@@ -1708,7 +1738,6 @@ dashboard would integrate trace viewer app using iframe.
         const checkbox = checkboxDivs[i].getElementsByTagName('input')[0];
         requestURL.searchParams.set(checkbox.name, checkbox.checked);
       }
-
       if (requestURL.searchParams.has('use_saved_result')) {
         if (this._dataRegenerated) {
           requestURL.searchParams.delete('use_saved_result');
@@ -1716,8 +1745,8 @@ dashboard would integrate trace viewer app using iframe.
           this._dataRegenerated = true;
         }
       }
-
       requestURL.searchParams.set('replace_model', this._replaceModel);
+      requestURL.searchParams.set('new_backend', this._useNewBackend);
       return requestURL;
     },
 
