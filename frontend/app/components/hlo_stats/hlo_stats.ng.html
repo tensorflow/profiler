@@ -1,0 +1,100 @@
+<div class="section-container">
+  <div class="row">
+    <div>
+      <div class="mat-headline">Notes</div>
+      <div class="header-content">
+        <div class="description">
+          (1) You can filter the table by HLO op category, HLO op name or Framework op name (eg. JAX op, TF op).
+        </div>
+        <div class="description">
+          (2) In the charts and table below, "IDLE" represents the portion of the total execution
+          time on device that is idle..
+        </div>
+        <div class="description">
+          (3) In the pie charts, the "Other" sector represents the sum of sectors that are too
+          small to be shown individually.
+        </div>
+      </div>
+    </div>
+    <div class="flex-space"></div>
+  </div>
+
+  <br>
+  <mat-expansion-panel
+    [expanded]="showChartSection"
+    (opened)="showChartSection = true"
+    (closed)="showChartSection = false">
+    <mat-expansion-panel-header>
+      <mat-panel-title>
+        Chart Section
+      </mat-panel-title>
+    </mat-expansion-panel-header>
+    <div class="row">
+      <div class="pie-chart">
+        <div class="mat-title">Time per HLO category</div>
+        <chart chartType="PieChart" [dataInfo]="dataInfoCategoryChart"></chart>
+      </div>
+      <div class="pie-chart">
+        <div class="mat-title">Time per HLO operation</div>
+        <chart chartType="PieChart" [dataInfo]="dataInfoOpChart"></chart>
+      </div>
+      <div class="pie-chart">
+        <div class="mat-title" matTooltip="Time spent on rematerialization in HLO or Framework Ops">Time spent on rematerialization</div>
+        <chart chartType="PieChart" [dataInfo]="dataInfoRematerializationChart"></chart>
+      </div>
+      <div class="pie-chart" *ngIf="communicationOps.size">
+        <div class="mat-title">Time per HLO by Replica Groups</div>
+        <mat-select [(value)]="selectedCommOp" (selectionChange)="updateOpReplicaGroupChart()">
+          <mat-option *ngFor="let op of communicationOps" [value]="op">
+          {{op}}
+          </mat-option>
+        </mat-select>
+        <chart chartType="PieChart" [dataInfo]="dataInfoOpReplicaGroupChart"></chart>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="pie-chart">
+        <div class="mat-title">Time spent on rematerialization per HLO category</div>
+        <chart chartType="PieChart" [dataInfo]="dataInfoRematerializationCategoryChart"></chart>
+      </div>
+      <div class="pie-chart">
+        <div class="mat-title">Time spent on outside compilation</div>
+        <chart chartType="PieChart" [dataInfo]="dataInfoOutsideCompilationChart"></chart>
+      </div>
+
+      <flop-rate-chart [data]="data" [xColumn]="flopRateChartXColumn"
+                       [yColumn]="flopRateChartYColumn" [opType]="opType">
+      </flop-rate-chart>
+    </div>
+  </mat-expansion-panel>
+</div>
+
+<div class="section-container">
+  <div class="row">
+    <category-filter [dataTable]="dataTable" column="category"
+                     all="All" (changed)="updateFilters($event)">
+    </category-filter>
+    <string-filter [dataTable]="dataTable" column="program_id"
+      [value]="programIdSelected"
+      all="All" (changed)="updateFilters($event)">
+    </string-filter>
+    <string-filter [dataTable]="dataTable" column="hlo_op_name"
+      [value]="hloOpNameSelected" [exactMatch]="true"
+      all="All" (changed)="updateFilters($event)">
+    </string-filter>
+    <string-filter [dataTable]="dataTable" column="hlo_op_expression"
+                   all="All" (changed)="updateFilters($event)">
+    </string-filter>
+    <string-filter [dataTable]="dataTable" column="tf_op_name"
+                   all="All" (changed)="updateFilters($event)">
+    </string-filter>
+  </div>
+</div>
+
+<div>
+  <chart chartType="Table"
+         class="table"
+         [dataInfo]="dataInfoForTable">
+  </chart>
+</div>

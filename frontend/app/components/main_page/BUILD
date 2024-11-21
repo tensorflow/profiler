@@ -29,6 +29,7 @@ xprof_ng_module(
         "@org_xprof//frontend/app/components/empty_page",
         "@org_xprof//frontend/app/components/framework_op_stats:framework_op_stats_adapter",
         "@org_xprof//frontend/app/components/graph_viewer",
+        "@org_xprof//frontend/app/components/hlo_stats",
         "@org_xprof//frontend/app/components/input_pipeline",
         "@org_xprof//frontend/app/components/kernel_stats:kernel_stats_adapter",
         "@org_xprof//frontend/app/components/memory_profile",

@@ -1,0 +1,35 @@
+/** CSS for an hlo stats component. */
+
+@import 'frontend/app/styles/common';
+
+:host {
+  display: block;
+}
+
+.section-container {
+  padding: 20px;
+}
+
+.header-content {
+  font-style: italic;
+  margin-top: -16px;
+}
+
+.row {
+  display: flex;
+}
+
+.flex-space {
+  flex: 1;
+}
+
+.pie-chart {
+  height: fit-content;
+  margin: 8px 8px 8px 0;
+  width: 450px;
+}
+
+.table {
+  border: 1px solid $border-color;
+  margin: 0 16px;
+}
