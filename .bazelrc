@@ -1,0 +1,9 @@
+# bazel configurations for tensorboard plugin build.
+build --repo_env=CC="/usr/bin/clang"
+build --repo_env=TF_PYTHON_VERSION=3.10
+build --experimental_repo_remote_exec
+build --cxxopt=-std=c++17
+build --host_cxxopt=-std=c++17
+build --copt=-Wno-gnu-offsetof-extensions
+build --copt=-Wno-error=array-parameter
+build --copt=-Wno-error=unused-command-line-argument

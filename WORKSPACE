@@ -58,6 +58,13 @@ http_archive(
 )
 
 http_archive(
+    name = "com_google_absl",
+    sha256 = "0ddd37f347c58d89f449dd189a645bfd97bcd85c5284404a3af27a3ca3476f39",
+    strip_prefix = "abseil-cpp-fad946221cec37175e762c399760f54b9de9a9fa",
+    url = "https://github.com/abseil/abseil-cpp/archive/fad946221cec37175e762c399760f54b9de9a9fa.tar.gz",
+)
+
+http_archive(
     name = "com_google_absl_py",
     sha256 = "a7c51b2a0aa6357a9cbb2d9437e8cd787200531867dc02565218930b6a32166e",
     strip_prefix = "abseil-py-1.0.0",
@@ -86,6 +93,12 @@ http_archive(
         "http://mirror.bazel.build/pypi.python.org/packages/source/s/six/six-1.10.0.tar.gz",
         "https://pypi.python.org/packages/source/s/six/six-1.10.0.tar.gz",
     ],
+)
+
+http_archive(
+    name = "rules_java",
+    sha256 = "c73336802d0b4882e40770666ad055212df4ea62cfa6edf9cb0f9d29828a0934",
+    url = "https://github.com/bazelbuild/rules_java/releases/download/5.3.5/rules_java-5.3.5.tar.gz",
 )
 
 http_archive(
@@ -147,18 +160,6 @@ load("@io_bazel_rules_sass//:defs.bzl", "sass_repositories")
 
 sass_repositories()
 
-#http_archive(
-#    name = "org_tensorflow",
-#    # NOTE: when updating this, MAKE SURE to also update the protobuf_js runtime version
-#    # in third_party/workspace.bzl to >= the protobuf/protoc version provided by TF.
-#    sha256 = "638e541a4981f52c69da4a311815f1e7989bf1d67a41d204511966e1daed14f7",
-#    strip_prefix = "tensorflow-2.1.0",
-#    urls = [
-#        "http://mirror.tensorflow.org/github.com/tensorflow/tensorflow/archive/v2.1.0.tar.gz",  # 2020-01-06
-#        "https://github.com/tensorflow/tensorflow/archive/v2.1.0.tar.gz",
-#    ],
-#)
-
 http_archive(
     name = "com_google_protobuf",
     sha256 = "f66073dee0bc159157b0bd7f502d7d1ee0bc76b3c1eac9836927511bdc4b3fc1",
@@ -173,14 +174,88 @@ load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
 protobuf_deps()
 
 http_archive(
-    name = "io_bazel_rules_closure",
-    sha256 = "6a900831c1eb8dbfc9d6879b5820fd614d4ea1db180eb5ff8aedcb75ee747c1f",
-    strip_prefix = "rules_closure-db4683a2a1836ac8e265804ca5fa31852395185b",
+    name = "org_tensorflow",
+    patch_args = ["-p1"],
+    patches = ["//third_party:tensorflow.patch"],
+    # NOTE: when updating this, MAKE SURE to also update the protobuf_js runtime version
+    # in third_party/workspace.bzl to >= the protobuf/protoc version provided by TF.
+    sha256 = "288f840d70639d54a087b9ba5310ffae3dbc45ede90ada168a0943cb6e43dabe",
+    strip_prefix = "tensorflow-a568daa404774cc90c3729ad7af2c9f7a0a558d2",
     urls = [
-        "http://mirror.tensorflow.org/github.com/bazelbuild/rules_closure/archive/db4683a2a1836ac8e265804ca5fa31852395185b.tar.gz",
-        "https://github.com/bazelbuild/rules_closure/archive/db4683a2a1836ac8e265804ca5fa31852395185b.tar.gz",  # 2020-01-15
+        "https://github.com/tensorflow/tensorflow/archive/a568daa404774cc90c3729ad7af2c9f7a0a558d2.zip",
     ],
 )
+
+load(
+    "@org_tensorflow//tensorflow/tools/toolchains/python:python_repo.bzl",
+    "python_repository",
+)
+
+python_repository(name = "python_version_repo")
+
+# Initialize TensorFlow's external dependencies.
+load("@org_tensorflow//tensorflow:workspace3.bzl", "tf_workspace3")
+
+tf_workspace3()
+
+load("@org_tensorflow//tensorflow:workspace2.bzl", "tf_workspace2")
+
+tf_workspace2()
+
+load("@org_tensorflow//tensorflow:workspace1.bzl", "tf_workspace1")
+
+tf_workspace1()
+
+load("@org_tensorflow//tensorflow:workspace0.bzl", "tf_workspace0")
+
+tf_workspace0()
+
+load(
+    "@local_tsl//third_party/gpus/cuda/hermetic:cuda_json_init_repository.bzl",
+    "cuda_json_init_repository",
+)
+
+cuda_json_init_repository()
+
+load(
+    "@cuda_redist_json//:distributions.bzl",
+    "CUDA_REDISTRIBUTIONS",
+    "CUDNN_REDISTRIBUTIONS",
+)
+load(
+    "@local_tsl//third_party/gpus/cuda/hermetic:cuda_redist_init_repositories.bzl",
+    "cuda_redist_init_repositories",
+    "cudnn_redist_init_repository",
+)
+
+cuda_redist_init_repositories(
+    cuda_redistributions = CUDA_REDISTRIBUTIONS,
+)
+
+cudnn_redist_init_repository(
+    cudnn_redistributions = CUDNN_REDISTRIBUTIONS,
+)
+
+load(
+    "@local_tsl//third_party/gpus/cuda/hermetic:cuda_configure.bzl",
+    "cuda_configure",
+)
+
+cuda_configure(name = "local_config_cuda")
+
+load(
+    "@local_tsl//third_party/nccl/hermetic:nccl_redist_init_repository.bzl",
+    "nccl_redist_init_repository",
+)
+
+nccl_redist_init_repository()
+
+load(
+    "@local_tsl//third_party/nccl/hermetic:nccl_configure.bzl",
+    "nccl_configure",
+)
+
+nccl_configure(name = "local_config_nccl")
 
 http_archive(
     name = "org_tensorflow_tensorboard",
