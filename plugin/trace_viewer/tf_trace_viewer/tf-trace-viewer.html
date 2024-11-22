@@ -347,6 +347,7 @@ dashboard would integrate trace viewer app using iframe.
 
   tr-ui-b-heading {
     background-color: transparent;
+    cursor: e-resize;
   }
 
   tr-ui-b-heading,
@@ -412,6 +413,9 @@ dashboard would integrate trace viewer app using iframe.
   #flow_event_filter_dropdown {
     display: none;
   }
+  canvas.drawing-container-canvas {
+    border-left: 2px dotted #08a;
+  }
 </style>
 <script src="tf-trace-viewer-helper.js"></script>
 <script>
@@ -469,6 +473,10 @@ dashboard would integrate trace viewer app using iframe.
       _hoverRect: {type: Object, value: null},
       _codeLink: {type: String, value: ''},
       _changelist: {type: String, value: ''},
+      // States tracked to allow dragging the text and canvas.
+      _canvasLeft: {type: Number, value: 0},
+      _canvasWidth: {type: Number, value: 0},
+      _canvasDrag: {type: Boolean, value: false},
     },
 
     ready: function() {
@@ -1223,6 +1231,45 @@ dashboard would integrate trace viewer app using iframe.
       }
     },
 
+    _addDragEventListeners: function() {
+      // These are all the left side panel process headers (e.g., XLA Ops, Framework Ops, etc.)
+      const processes = document.getElementsByTagName('tr-ui-b-heading');
+      for (let i = 0; i < processes.length; ++i) {
+        processes[i].addEventListener('mousedown', (e) => {
+          // Start the dragging event if the mouse is within 50px of the left side panel.
+          if (Math.abs(e.x - this._canvasLeft) < 50) {
+            this._canvasDrag = true;
+          }
+          e.stopPropagation();
+        });
+        processes[i].addEventListener('mousemove', (e) => {
+          if (this._canvasDrag) {
+            var start_x = e.x + 5;
+            var width = this._canvasWidth + this._canvasLeft - start_x;
+            const processes_ = document.getElementsByTagName('tr-ui-b-heading');
+            for (var i = 0; i < processes_.length; ++i) {
+              processes_[i].style.width = + start_x + 'px';
+            }
+            // There are 2 canvases: One displays the ruler at the top (0..30s etc.), the other
+            // displays the trace.
+            const canvases = document.getElementsByClassName('drawing-container-canvas');
+            for (var i = 0; i < canvases.length; ++i) {
+              canvases[i].style.left = start_x + 'px';
+              canvases[i].style.width = + width + 'px';
+            }
+            this._canvasLeft = start_x;
+            this._canvasWidth = width;
+          }
+          e.stopPropagation();
+        });
+        processes[i].addEventListener('mouseup', (e) => {
+          this._canvasDrag = false;
+          e.stopPropagation();
+          this._onViewportChange();
+        });
+      }
+    },
+
     // Overwrite and fine tune the inherited catapult/tracing UI
     _adjustUI: function() {
       // 1. Adjust styles of the leftControl and its children
@@ -1324,6 +1371,7 @@ dashboard would integrate trace viewer app using iframe.
       }
       this._updateModeSelectorBehavior();
       this._updateProcessHeader();
+      this._addDragEventListeners();
     },
 
     _loadNonStreamingTrace: async function() {
@@ -1785,6 +1833,8 @@ dashboard would integrate trace viewer app using iframe.
     _initViewport: function() {
       if (!this.currentViewportRange) return;
       const displayTransform = new tr.ui.TimelineDisplayTransform();
+      this._canvasWidth = this._traceViewer.trackView.modelTrackContainer_.canvas.width;
+      this._canvasLeft = this._traceViewer.trackView.modelTrackContainer_.canvas.offsetLeft;
       displayTransform.xSetWorldBounds(this.currentViewportRange.min, this.currentViewportRange.max, this._traceViewer.trackView.modelTrackContainer_.canvas.width);
       this._traceViewer.trackView.viewport.setDisplayTransformImmediately(displayTransform);
     },
