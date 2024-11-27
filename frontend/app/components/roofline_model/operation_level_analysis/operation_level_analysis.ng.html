@@ -1,0 +1,12 @@
+<div class="row">
+  <category-filter [dataTable]="dataTable" column="Include Infeed/Outfeed" (changed)="onUpdateFilters($event)" [initValue]="true"></category-filter>
+  <category-filter [dataTable]="dataTable" column="Category" (changed)="onUpdateFilters($event)" all="All"></category-filter>
+  <category-filter [dataTable]="dataTable" column="Bound by" (changed)="onUpdateFilters($event)" all="All"></category-filter>
+  <string-filter [dataTable]="dataTable" column="Operation" [value]="selectedOp" (changed)="onUpdateFilters($event)" all="All"></string-filter>
+</div>
+<div class="row">
+  <chart chartType="ScatterChart" [dataInfo]="dataInfoRooflineScatterChart"></chart>
+  <div class="flex-space"></div>
+  <chart chartType="PieChart" [dataInfo]="dataInfoCategoryPieChart"></chart>
+</div>
+<table [dataView]="dataView" [showRowNumber]="true"></table>

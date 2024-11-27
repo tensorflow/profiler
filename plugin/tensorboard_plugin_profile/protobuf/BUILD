@@ -12,6 +12,7 @@ proto_library(
     srcs = [
         "dcn_slack_analysis.proto",
         "diagnostics.proto",
+        "hlo_stats.proto",
         "input_pipeline.proto",
         "kernel_stats.proto",
         "overview_page.proto",
@@ -28,6 +29,7 @@ py_proto_library(
     srcs = [
         "dcn_slack_analysis.proto",
         "diagnostics.proto",
+        "hlo_stats.proto",
         "input_pipeline.proto",
         "kernel_stats.proto",
         "overview_page.proto",

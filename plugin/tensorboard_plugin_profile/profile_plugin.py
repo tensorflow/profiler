@@ -110,6 +110,7 @@ XPLANE_TOOLS = [
     'pod_viewer^',
     'tf_data_bottleneck_analysis^',
     'op_profile^',
+    'hlo_stats^',
 ]
 
 # XPlane generated tools that support all host mode.

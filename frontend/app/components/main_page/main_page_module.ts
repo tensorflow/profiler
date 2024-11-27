@@ -12,6 +12,8 @@ import {EmptyPageModule} from 'org_xprof/frontend/app/components/empty_page/empt
 import {FrameworkOpStatsAdapter, FrameworkOpStatsAdapterModule} from 'org_xprof/frontend/app/components/framework_op_stats/framework_op_stats_adapter';
 import {GraphViewer} from 'org_xprof/frontend/app/components/graph_viewer/graph_viewer';
 import {GraphViewerModule} from 'org_xprof/frontend/app/components/graph_viewer/graph_viewer_module';
+import {HloStats} from 'org_xprof/frontend/app/components/hlo_stats/hlo_stats';
+import {HloStatsModule} from 'org_xprof/frontend/app/components/hlo_stats/hlo_stats_module';
 import {InputPipeline} from 'org_xprof/frontend/app/components/input_pipeline/input_pipeline';
 import {InputPipelineModule} from 'org_xprof/frontend/app/components/input_pipeline/input_pipeline_module';
 import {KernelStatsAdapter, KernelStatsAdapterModule} from 'org_xprof/frontend/app/components/kernel_stats/kernel_stats_adapter';
@@ -61,6 +63,8 @@ export const routes: Routes = [
   {path: 'trace_viewer^', component: TraceViewer},
   {path: 'graph_viewer^', component: GraphViewer},
   {path: 'dcn_collective_stats^', component: DcnCollectiveStats},
+  {path: 'hlo_stats', component: HloStats},
+  {path: 'hlo_stats^', component: HloStats},
   {path: '**', component: EmptyPage},
 ];
 
@@ -87,6 +91,7 @@ export const routes: Routes = [
     TfDataBottleneckAnalysisModule,
     FrameworkOpStatsAdapterModule,
     DcnCollectiveStatsModule,
+    HloStatsModule,
     RouterModule.forRoot(routes),
   ],
   exports: [MainPage]
