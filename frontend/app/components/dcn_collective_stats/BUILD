@@ -13,6 +13,7 @@ xprof_ng_module(
         ":dcn_collective_stats_css",
         "dcn_collective_stats.ng.html",
     ],
+    # strict_templates = False,
     deps = [
         "@npm//@angular/common",
         "@npm//@angular/core",
@@ -35,6 +36,7 @@ xprof_ng_module(
 sass_binary(
     name = "dcn_collective_stats_css",
     src = "dcn_collective_stats.scss",
+    # stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

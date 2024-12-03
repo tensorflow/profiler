@@ -124,7 +124,7 @@ export class TfDataBottleneckAnalysis extends Dashboard implements OnDestroy {
         });
   }
 
-   updateView() {
+  override updateView() {
     super.updateView();
     if (!this.dataView) {
       return;

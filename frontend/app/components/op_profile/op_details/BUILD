@@ -33,6 +33,7 @@ xprof_ng_module(
 sass_binary(
     name = "op_details_css",
     src = "op_details.scss",
+    # stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",
