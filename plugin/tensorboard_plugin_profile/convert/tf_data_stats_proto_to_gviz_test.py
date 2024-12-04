@@ -161,7 +161,7 @@ class ProtoToGvizTest(tf.test.TestCase):
           expected_value = gviz_api.DataTable.CoerceValue(raw_value, value_type)
           self.assertEqual(expected_value, raw_value)
           if isinstance(expected_value, tuple):
-            # 
+            # TODO(jihochoi): Check the formatted value too.
             expected_value = expected_value[0]
 
           # Check against expected values we have set in our mock table.

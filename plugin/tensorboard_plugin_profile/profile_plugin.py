@@ -627,7 +627,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
     tqx = request.args.get('tqx')
     graph_viewer_options = self._get_graph_viewer_options(request)
     # Host param is used by HLO tools to identify the module.
-    # 
+    # TODO(profiler): Set graph_viewer_options and host parameters only when
     # neded.
     params = {
         'graph_viewer_options': graph_viewer_options,
