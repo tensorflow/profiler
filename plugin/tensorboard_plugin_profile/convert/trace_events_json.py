@@ -72,7 +72,6 @@ class TraceEventsJsonStream(object):
             tid=rid,
             name='thread_sort_index',
             args=dict(sort_index=rid))
-    # TODO(sammccall): filtering and downsampling?
     for event in self._proto.trace_events:
       yield self._event(event)
 
