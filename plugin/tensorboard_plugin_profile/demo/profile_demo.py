@@ -29,7 +29,6 @@ import os
 import shutil
 
 from absl import app
-
 import tensorflow as tf
 
 from google.protobuf import text_format

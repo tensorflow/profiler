@@ -23,7 +23,6 @@ import copy
 import json
 import os
 from unittest import mock
-
 import tensorflow.compat.v2 as tf
 
 from tensorboard.backend.event_processing import plugin_asset_util
