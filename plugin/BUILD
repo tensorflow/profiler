@@ -19,6 +19,7 @@ sh_binary(
     data = [
         "README.rst",
         "setup.py",
+        "@org_tensorflow//tensorflow/python/profiler/internal:_pywrap_profiler_plugin",
         "@org_xprof//frontend:bundle.js",
         "@org_xprof//frontend:css",
         "@org_xprof//frontend:zone.js",
@@ -30,7 +31,6 @@ sh_binary(
         "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all",
         "@org_xprof//plugin/trace_viewer:trace_viewer_index.html",
         "@org_xprof//plugin/trace_viewer:trace_viewer_index.js",
-        "@org_tensorflow//tensorflow/python/profiler/internal:_pywrap_profiler_plugin",
     ],
     tags = [
         "local",

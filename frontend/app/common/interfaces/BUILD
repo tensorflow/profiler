@@ -8,7 +8,8 @@ genrule(
     outs = ["hlo.jsonpb_decls.d.ts"],
     cmd = "gzip -d -c $(SRCS) > $(OUTS)",
     visibility = [
-        "//frontend:__subpackages__", "//plugin:__subpackages__",
+        "//frontend:__subpackages__",
+        "//plugin:__subpackages__",
     ],
 )
 
@@ -18,7 +19,8 @@ genrule(
     outs = ["xla_data.jsonpb_decls.d.ts"],
     cmd = "gzip -d -c $(SRCS) > $(OUTS)",
     visibility = [
-        "//frontend:__subpackages__", "//plugin:__subpackages__",
+        "//frontend:__subpackages__",
+        "//plugin:__subpackages__",
     ],
 )
 
@@ -28,7 +30,8 @@ genrule(
     outs = ["memory_profile.jsonpb_decls.d.ts"],
     cmd = "gzip -d -c $(SRCS) > $(OUTS)",
     visibility = [
-        "//frontend:__subpackages__", "//plugin:__subpackages__",
+        "//frontend:__subpackages__",
+        "//plugin:__subpackages__",
     ],
 )
 
