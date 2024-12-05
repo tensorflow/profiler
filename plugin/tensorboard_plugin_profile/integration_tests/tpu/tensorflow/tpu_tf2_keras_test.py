@@ -108,6 +108,7 @@ class TpuKerasTest(absltest.TestCase):
         'op_profile^',
         'memory_viewer^',
         'graph_viewer^',
+        'hlo_stats^',
     ]
     expected.sort()
     self.assertListEqual(expected, result)
