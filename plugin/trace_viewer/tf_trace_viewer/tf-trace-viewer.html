@@ -264,6 +264,15 @@ dashboard would integrate trace viewer app using iframe.
     border-radius: 50%;
     border-top: 14px solid #e6e6e6; /* control bar background color */
   }
+  #wait-msg {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-size: 20px;
+    z-index: 11;
+  }
+
   .x-axis-track {
     height: 24px;
   }
@@ -450,6 +459,7 @@ dashboard would integrate trace viewer app using iframe.
       _traceContainer: Object,
       _traceModel: Object,
       _throbber: Object,
+      _waitMessage: Object,
       _eventDetails: Object,
       _isStreaming: {type: Boolean, value: false},
       _isOss: {type: Boolean, value: false},
@@ -512,9 +522,15 @@ dashboard would integrate trace viewer app using iframe.
 
       this._throbber = document.createElement('div');
       this._throbber.id = 'throbber-initial';
+      this._waitMessage = document.createElement('div');
+      this._waitMessage.innerHTML =
+        "Loading this trace is taking longer likely because one-time trace " +
+        "ingestion is in progress. Please check back in a few minutes.";
+      this._waitMessage.id = 'wait-msg';
 
       Polymer.dom(this.root).appendChild(this._traceViewer);
       Polymer.dom(this.root).appendChild(this._throbber);
+      Polymer.dom(this.root).appendChild(this._waitMessage);
 
       this._resolution = this._resolutionFromViewerWidth(this._traceViewer.clientWidth);
       // Retrieve the URL of trace data.
@@ -1333,10 +1349,18 @@ dashboard would integrate trace viewer app using iframe.
       this._loadTrace(initialRequestedRange, /* replaceModel= */ true);
     },
 
+    // Call with `show` = true to show the "please wait" message. Call with false to hide it.
+    _showWaitMessage(show) {
+      this._waitMessage.style.display = show ? "flex" : "none";
+    },
+
     _loadTrace: async function(requestedRange, replaceModel) {
       this._replaceModel = replaceModel;
       const startTime = performance.now();
       this._throbber.className = 'active';
+      const showWaitMsgLater = tf_component_traceviewer.debounce(
+          this._showWaitMessage.bind(this), 30000);  // 30 seconds
+      showWaitMsgLater(true);
       this._isLoading = true;
       if (!this._isStreaming) {
         await this._loadNonStreamingTrace();
@@ -1345,6 +1369,8 @@ dashboard would integrate trace viewer app using iframe.
       }
       this._isLoading = false;
       this._throbber.className = 'inactive';
+      showWaitMsgLater(false);  // Necessary to cancel the timer.
+      this._showWaitMessage(false);  // Hide immediately instead of waiting 30 seconds.
       const endTime = performance.now();
       const duration = endTime - startTime;
       if(this._isInitialLoad) {
