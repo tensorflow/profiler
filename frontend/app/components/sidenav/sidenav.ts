@@ -4,7 +4,7 @@ import {Store} from '@ngrx/store';
 import {DEFAULT_HOST, HLO_TOOLS} from 'org_xprof/frontend/app/common/constants/constants';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import {RunToolsMap} from 'org_xprof/frontend/app/common/interfaces/tool';
-import {CommunicationService} from 'org_xprof/frontend/app/services/communication_service/communication_service';
+import {CommunicationService, type ToolQueryParams} from 'org_xprof/frontend/app/services/communication_service/communication_service';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
 import {setCurrentRunAction, updateRunToolsMapAction} from 'org_xprof/frontend/app/store/actions';
 import {getCurrentRun, getRunToolsMap} from 'org_xprof/frontend/app/store/selectors';
@@ -57,6 +57,14 @@ export class SideNav implements OnInit, OnDestroy {
         (navigationEvent: NavigationEvent) => {
           this.onUpdateRoute(navigationEvent);
         });
+    this.communicationService.toolQueryParamsChange.subscribe(
+        (queryParams: ToolQueryParams) => {
+          this.navigationParams = {
+            ...this.navigationParams,
+            ...queryParams,
+          };
+          this.updateUrlHistory();
+        });
   }
 
   // Getter for the text to display on host selector.
@@ -85,7 +93,6 @@ export class SideNav implements OnInit, OnDestroy {
 
   // Getter for valid host given url router or user selection.
   get selectedHost() {
-    if (this.selectedHostInternal === DEFAULT_HOST) return '';
     return this.hosts.find(host => host === this.selectedHostInternal) ||
         this.hosts[0] || '';
   }
@@ -98,7 +105,7 @@ export class SideNav implements OnInit, OnDestroy {
       host: params.get('host') || '',
     };
     if (params.has('opName')) {
-      navigationEvent.paramsOpName = params.get('opName') || '';
+      navigationEvent.opName = params.get('opName') || '';
     }
     this.onUpdateRoute(navigationEvent);
   }
@@ -200,6 +207,20 @@ export class SideNav implements OnInit, OnDestroy {
     this.navigateTools();
   }
 
+  updateUrlHistory() {
+    const toolQueryParams = Object.keys(this.navigationParams)
+                                .map(key => {
+                                  return `${key}=${this.navigationParams[key]}`;
+                                })
+                                .join('&');
+    const toolQueryParamsString =
+        toolQueryParams.length ? `&${toolQueryParams}` : '';
+    const url = `${window.parent.location.origin}?tool=${
+        this.selectedTag}&host=${this.selectedHost}&run=${this.selectedRun}${
+        toolQueryParamsString}#profile`;
+    window.parent.history.pushState({}, '', url);
+  }
+
   navigateTools() {
     this.communicationService.onNavigateReady();
     const navigationEvent = this.getNavigationEvent();
@@ -207,6 +228,7 @@ export class SideNav implements OnInit, OnDestroy {
       this.selectedTag || 'empty',
       navigationEvent,
     ]);
+    this.updateUrlHistory();
   }
 
   onUpdateRoute(event: NavigationEvent) {

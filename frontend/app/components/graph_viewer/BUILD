@@ -27,6 +27,7 @@ xprof_ng_module(
         "@org_xprof//frontend/app/components/diagnostics_view",
         "@org_xprof//frontend/app/components/graph_viewer/graph_config",
         "@org_xprof//frontend/app/pipes",
+        "@org_xprof//frontend/app/services/communication_service",
         "@org_xprof//frontend/app/services/data_service",
         "@org_xprof//frontend/app/store",
     ],

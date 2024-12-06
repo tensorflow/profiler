@@ -7,6 +7,7 @@ import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics'
 import {GraphConfigInput, GraphViewerQueryParams} from 'org_xprof/frontend/app/common/interfaces/graph_viewer';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import {GraphConfig} from 'org_xprof/frontend/app/components/graph_viewer/graph_config/graph_config';
+import {CommunicationService, type ToolQueryParams} from 'org_xprof/frontend/app/services/communication_service/communication_service';
 import {setCurrentToolStateAction} from 'org_xprof/frontend/app/store/actions';
 import {ReplaySubject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
@@ -50,6 +51,7 @@ export class GraphViewer implements OnDestroy {
   constructor(
       private readonly route: ActivatedRoute,
       private readonly store: Store<{}>,
+      private readonly communicationService: CommunicationService,
       platformLocation: PlatformLocation,
   ) {
     this.route.params.pipe(takeUntil(this.destroyed)).subscribe((params) => {
@@ -68,7 +70,7 @@ export class GraphViewer implements OnDestroy {
     this.host = event.host || '';
     // host equals to module name for graph viewer
     this.selectedModule = this.host;
-    this.opName = event.paramsOpName || this.opName;
+    this.opName = event.opName || this.opName;
     this.initialParams = this.getParams();
     this.onPlot();
   }
@@ -76,12 +78,20 @@ export class GraphViewer implements OnDestroy {
   // Function called whenever user click the search graph button
   onSearchGraph(params: Partial<GraphConfigInput>) {
     this.updateParams(params);
+    this.communicationService.onToolQueryParamsChange(
+        this.getParamsForNavigationEvent());
     this.resetPage();
     this.onPlot();
     // Reload iframe to re-inject html body
     // Compensate the effect of `clearGraphIframeHtml` in resetPage
     const iframe = document.getElementById('graph-html') as HTMLIFrameElement;
     iframe.contentWindow!.location.reload();
+  }
+
+  getParamsForNavigationEvent(): ToolQueryParams {
+    return {
+      opName: this.opName,
+    };
   }
 
   getParams(): GraphConfigInput {
