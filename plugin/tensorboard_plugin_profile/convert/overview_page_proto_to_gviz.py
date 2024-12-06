@@ -226,9 +226,50 @@ def get_recommendation_table_args(overview_page_recommendation):
   return (table_description, data, custom_properties)
 
 
+def add_inference_latency_row(
+    label, breakdown: overview_page_pb2.OverviewLatencyBreakdown
+):
+  return [
+      label,
+      breakdown.host_latency_us / 1e3,
+      breakdown.device_latency_us / 1e3,
+      breakdown.communication_latency_us / 1e3,
+      breakdown.total_latency_us / 1e3,
+  ]
+
+
+def generate_inference_latency_chart(
+    inference_latency: overview_page_pb2.OverviewInferenceLatency,
+):
+  """Creates a gviz DataTable object from an InferenceLatency proto."""
+  columns = [
+      ("percentile", "string", "Percentile"),
+      ("hostTimeMs", "number", "Host Time (ms)"),
+      ("deviceTimeMs", "number", "Device Time (ms)"),
+      ("communicationTimeMs", "number", "Host-Device Communication Time (ms)"),
+      ("totalTimeMs", "number", "Total Time (ms)"),
+  ]
+  data = []
+  if inference_latency.latency_breakdowns:
+    data.append(
+        add_inference_latency_row(
+            "Avg", inference_latency.latency_breakdowns[0]
+        )
+    )
+  for index, percentile in enumerate(inference_latency.percentile_numbers):
+    data.append(
+        add_inference_latency_row(
+            "{:.1f}".format(percentile),
+            inference_latency.latency_breakdowns[index],
+        )
+    )
+  return gviz_api.DataTable(columns, data)
+
+
 def generate_recommendation_table(overview_page_recommendation):
-  (table_description, data, custom_properties) = \
-      get_recommendation_table_args(overview_page_recommendation)
+  (table_description, data, custom_properties) = get_recommendation_table_args(
+      overview_page_recommendation
+  )
   return gviz_api.DataTable(table_description, data, custom_properties)
 
 
@@ -240,7 +281,7 @@ def generate_all_chart_tables(overview_page):
           overview_page.input_analysis),
       generate_run_environment_table(overview_page.run_environment),
       generate_recommendation_table(overview_page.recommendation),
-      "",
+      generate_inference_latency_chart(overview_page.inference_latency),
       "",
       diag.generate_diagnostics_table(overview_page.diagnostics),
   ]

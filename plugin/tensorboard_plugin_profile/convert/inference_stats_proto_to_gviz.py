@@ -63,6 +63,7 @@ def _add_request_details(
 
 def _create_request_table(
     per_model_stats: inference_stats_pb2.PerModelInferenceStats,
+    sampled_per_model_stats: inference_stats_pb2.SampledPerModelInferenceStatsProto,
     has_batching: bool,
     is_tpu: bool,
 ):
@@ -87,6 +88,17 @@ def _create_request_table(
     columns.append(("host_postprocess", "number", "Host Postprocessing"))
     columns.append(("idle_time", "number", "Idle Time"))
   data = []
+  for request_detail in sampled_per_model_stats.sampled_requests:
+    data.append(
+        _add_request_details(
+            request_detail,
+            "{:.3f}".format(request_detail.percentile),
+            "N/A",
+            has_batching,
+            is_tpu,
+            "N/A",
+        )
+    )
   for request_detail in per_model_stats.per_batch_size_aggregated_result:
     data.append(
         _add_request_details(
@@ -127,18 +139,19 @@ def _generate_batch_details(
   return [
       percentile,
       batch_id,
-      batch_detail.end_time_ps - batch_detail.start_time_ps,
+      pico_to_milli(batch_detail.end_time_ps - batch_detail.start_time_ps),
       batch_detail.padding_amount,
       batch_detail.batch_size_after_padding,
       (batch_detail.batch_size_after_padding - batch_detail.padding_amount)
       / batch_detail.batch_size_after_padding,
-      batch_detail.batch_delay_ps,
+      pico_to_milli(batch_detail.batch_delay_ps),
       throughput,
   ]
 
 
 def _generate_batch_table(
     per_model_stats: inference_stats_pb2.PerModelInferenceStats,
+    sampled_per_model_stats: inference_stats_pb2.SampledPerModelInferenceStatsProto,
     model_id_database: inference_stats_pb2.ModelIdDatabase,
     model_id: str,
 ):
@@ -176,6 +189,15 @@ def _generate_batch_table(
     )
   else:
     properties["hasBatchingParam"] = "false"
+  for batch_detail in sampled_per_model_stats.sampled_batches:
+    data.append(
+        _generate_batch_details(
+            batch_detail,
+            "{:.3f}".format(batch_detail.percentile),
+            "N/A",
+            "N/A",
+        )
+    )
   for batch_detail in per_model_stats.per_batch_size_aggregated_result:
     data.append(
         _generate_batch_details(
@@ -235,13 +257,21 @@ def _generate_per_model_inference_table(
     try:
       model_index = inference_stats.model_id_db.id_to_index[model_id]
       per_model_stats = inference_stats.inference_stats_per_model[model_index]
+      sampled_per_model_stats = inference_stats.sampled_inference_stats.sampled_inference_stats_per_model[
+          model_index
+      ]
       tables.append(
-          _create_request_table(per_model_stats, has_batching, is_tpu)
+          _create_request_table(
+              per_model_stats, sampled_per_model_stats, has_batching, is_tpu
+          )
       )
       if has_batching:
         tables.append(
             _generate_batch_table(
-                per_model_stats, inference_stats.model_id_db, model_id
+                per_model_stats,
+                sampled_per_model_stats,
+                inference_stats.model_id_db,
+                model_id,
             )
         )
       if inference_stats.tensor_pattern_db.tensor_pattern:

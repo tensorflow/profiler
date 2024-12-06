@@ -74,7 +74,9 @@ export class DataService {
     return this.httpClient.get(this.pathPrefix + RUN_TOOLS_API, {params});
   }
 
-  getData(run: string, tag: string, host: string): Observable<DataTable|null> {
+  getData(
+      run: string, tag: string, host: string,
+      parameters: Map<string, string> = new Map()): Observable<DataTable|null> {
     if (this.isLocalDevelopment) {
       if (tag.startsWith('overview_page')) {
         return of(mockData.DATA_PLUGIN_PROFILE_OVERVIEW_PAGE_DATA)
@@ -109,6 +111,9 @@ export class DataService {
     }
     const params =
         new HttpParams().set('run', run).set('tag', tag).set('host', host);
+    parameters.forEach((value, key) => {
+      params.set(key, value);
+    });
     return this.httpClient.get(this.pathPrefix + DATA_API, {params}) as
         Observable<DataTable>;
   }
