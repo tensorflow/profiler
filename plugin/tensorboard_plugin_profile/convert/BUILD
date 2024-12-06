@@ -247,12 +247,22 @@ py_library(
     deps = [
         ":dcn_collective_stats_proto_to_gviz",
         ":hlo_stats_proto_to_gviz",
+        ":inference_stats_proto_to_gviz",
         ":input_pipeline_proto_to_gviz",
         ":kernel_stats_proto_to_gviz",
         ":overview_page_proto_to_gviz",
         ":tf_data_stats_proto_to_gviz",
         ":tf_stats_proto_to_gviz",
         ":trace_events_json",
+        "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
+    ],
+)
+
+py_library(
+    name = "inference_stats_proto_to_gviz",
+    srcs = ["inference_stats_proto_to_gviz.py"],
+    deps = [
+        requirement("gviz_api"),
         "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
     ],
 )

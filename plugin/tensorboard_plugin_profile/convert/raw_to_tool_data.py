@@ -28,6 +28,7 @@ import logging
 from tensorflow.python.profiler.internal import _pywrap_profiler_plugin  # pylint: disable=g-direct-tensorflow-import
 from tensorboard_plugin_profile.convert import dcn_collective_stats_proto_to_gviz
 from tensorboard_plugin_profile.convert import hlo_stats_proto_to_gviz
+from tensorboard_plugin_profile.convert import inference_stats_proto_to_gviz
 from tensorboard_plugin_profile.convert import input_pipeline_proto_to_gviz
 from tensorboard_plugin_profile.convert import kernel_stats_proto_to_gviz
 from tensorboard_plugin_profile.convert import overview_page_proto_to_gviz
@@ -204,6 +205,10 @@ def xspace_to_tool_data(
     raw_data, success = xspace_wrapper_func(xspace_paths, tool, options)
     if success:
       data = dcn_collective_stats_proto_to_gviz.to_json(raw_data)
+  elif tool == 'inference_profile':
+    raw_data, success = xspace_wrapper_func(xspace_paths, tool)
+    if success:
+      data = inference_stats_proto_to_gviz.to_json(raw_data)
   else:
     logger.warning('%s is not a known xplane tool', tool)
   return data, content_type
