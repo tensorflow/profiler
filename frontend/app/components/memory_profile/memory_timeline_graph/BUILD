@@ -25,6 +25,7 @@ xprof_ng_module(
 sass_binary(
     name = "memory_timeline_graph_css",
     src = "memory_timeline_graph.scss",
+    # stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

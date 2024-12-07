@@ -36,6 +36,7 @@ xprof_ng_module(
 sass_binary(
     name = "sidenav_css",
     src = "sidenav.scss",
+    # stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

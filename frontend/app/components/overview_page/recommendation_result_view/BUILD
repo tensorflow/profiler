@@ -16,6 +16,7 @@ xprof_ng_module(
         ":recommendation_result_view_css",
         "recommendation_result_view.ng.html",
     ],
+    # strict_templates = False,
     deps = [
         "@npm//@angular/common",
         "@npm//@angular/core",
@@ -30,6 +31,7 @@ xprof_ng_module(
 sass_binary(
     name = "recommendation_result_view_css",
     src = "recommendation_result_view.scss",
+    # stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

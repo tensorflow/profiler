@@ -27,6 +27,7 @@ xprof_ng_module(
 sass_binary(
     name = "op_table_css",
     src = "op_table.scss",
+    # stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/components/op_profile:op_profile_common",

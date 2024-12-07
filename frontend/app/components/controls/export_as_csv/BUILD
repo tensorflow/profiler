@@ -25,6 +25,7 @@ xprof_ng_module(
 sass_binary(
     name = "export_as_csv_css",
     src = "export_as_csv.scss",
+    # stack = True,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

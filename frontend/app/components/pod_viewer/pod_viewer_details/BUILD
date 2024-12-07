@@ -29,6 +29,7 @@ xprof_ng_module(
 sass_binary(
     name = "pod_viewer_details_css",
     src = "pod_viewer_details.scss",
+    # stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

@@ -46,6 +46,7 @@ ts_library(
 sass_binary(
     name = "memory_profile_css",
     src = "memory_profile.scss",
+    # stack = False,
     sourcemap = False,
     deps = [
         ":memory_profile_common",

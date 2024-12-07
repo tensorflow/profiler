@@ -24,6 +24,7 @@ xprof_ng_module(
 sass_binary(
     name = "step_time_graph_css",
     src = "step_time_graph.scss",
+    # stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",
