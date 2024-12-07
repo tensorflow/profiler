@@ -384,3 +384,42 @@ export type DataTableUnion = SimpleDataTable|FrameworkOpStatsData|
     TfFunctionExplanationTable|TfFunctionDataTable|MetaHostOpTable|HostOpTable|
     GeneralAnalysis|InputPipelineAnalysis|InputPipelineHostAnalysis|
     RunEnvironment|RecommendationResult|RecommendationResult;
+
+/** The base interface for a property of inference latency. */
+export declare interface InferenceLatencyProperty {
+  sessionsPerSecond?: string;
+}
+
+/** The metadata property for Inference Profile. */
+export declare interface InferenceProfileMetadataProperty {
+  modelIdList?: string;
+  hasBatching?: string;
+  hasTensorPattern?: string;
+}
+
+/** The metadata for Inference Profile. */
+export declare interface InferenceProfileMetadata extends SimpleDataTable {
+  p: InferenceProfileMetadataProperty;
+}
+
+/** The data property of Inference Profile. */
+export declare interface InferenceProfileDataProperty {
+  throughput?: string;
+  averageLatencyMs?: string;
+  tableExplanation?: string;
+  hasBatchingParam?: string;
+  batchingParamNumBatchThreads?: string;
+  batchingParamMaxBatchSize?: string;
+  batchingParamBatchTimeoutMicros?: string;
+  batchingParamMaxEnqueuedBatches?: string;
+  batchingParamAllowedBatchSizes?: string;
+}
+
+/** The data of Inference Profile. */
+export declare interface InferenceProfileData extends SimpleDataTable {
+  p: InferenceProfileDataProperty;
+}
+
+/** All Inference Stats page data table type. */
+export type InferenceProfileTable =
+    |InferenceProfileMetadata|InferenceProfileData;

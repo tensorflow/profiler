@@ -1,0 +1,27 @@
+@import 'frontend/app/styles/common';
+
+:host {
+  padding: 20px;
+}
+
+.section-container {
+  margin: 20px;
+}
+
+.model-selector {
+  width: 50%;
+  min-width: 300px;
+}
+
+.row {
+  margin-top: 10px;
+}
+
+.session_text {
+  width: 100%;
+}
+
+mat-progress-bar {
+  width: 300px;
+  margin: 0 auto;
+}

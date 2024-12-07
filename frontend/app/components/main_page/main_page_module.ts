@@ -14,6 +14,8 @@ import {GraphViewer} from 'org_xprof/frontend/app/components/graph_viewer/graph_
 import {GraphViewerModule} from 'org_xprof/frontend/app/components/graph_viewer/graph_viewer_module';
 import {HloStats} from 'org_xprof/frontend/app/components/hlo_stats/hlo_stats';
 import {HloStatsModule} from 'org_xprof/frontend/app/components/hlo_stats/hlo_stats_module';
+import {InferenceProfile} from 'org_xprof/frontend/app/components/inference_profile/inference_profile';
+import {InferenceProfileModule} from 'org_xprof/frontend/app/components/inference_profile/inference_profile_module';
 import {InputPipeline} from 'org_xprof/frontend/app/components/input_pipeline/input_pipeline';
 import {InputPipelineModule} from 'org_xprof/frontend/app/components/input_pipeline/input_pipeline_module';
 import {KernelStatsAdapter, KernelStatsAdapterModule} from 'org_xprof/frontend/app/components/kernel_stats/kernel_stats_adapter';
@@ -63,6 +65,8 @@ export const routes: Routes = [
   {path: 'trace_viewer^', component: TraceViewer},
   {path: 'graph_viewer^', component: GraphViewer},
   {path: 'dcn_collective_stats^', component: DcnCollectiveStats},
+  {path: 'inference_profile^', component: InferenceProfile},
+  {path: 'inference_profile', component: InferenceProfile},
   {path: 'hlo_stats', component: HloStats},
   {path: 'hlo_stats^', component: HloStats},
   {path: '**', component: EmptyPage},
@@ -92,6 +96,7 @@ export const routes: Routes = [
     FrameworkOpStatsAdapterModule,
     DcnCollectiveStatsModule,
     HloStatsModule,
+    InferenceProfileModule,
     RouterModule.forRoot(routes),
   ],
   exports: [MainPage]
