@@ -24,6 +24,7 @@ xprof_ng_module(
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/utils",
         "@org_xprof//frontend/app/components/diagnostics_view",
+        "@org_xprof//frontend/app/components/overview_page/inference_latency_chart",
         "@org_xprof//frontend/app/components/overview_page/normalized_accelerator_performance_view",
         "@org_xprof//frontend/app/components/overview_page/performance_summary",
         "@org_xprof//frontend/app/components/overview_page/recommendation_result_view",
