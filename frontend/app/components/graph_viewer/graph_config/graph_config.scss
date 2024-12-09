@@ -24,3 +24,9 @@ mat-checkbox {
   // TODO(yinzz) remove this override once it's fixed
   color: white;
 }
+
+// copybara:strip_begin (styles not used in OSS)
+.new-graph-viewer-link {
+  background-color: orange;
+}
+// copybara:strip_end
