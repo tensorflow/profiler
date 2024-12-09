@@ -13,6 +13,7 @@ xprof_ng_module(
         ":host_side_analysis_detail_css",
         "host_side_analysis_detail.ng.html",
     ],
+    # strict_templates = False,
     deps = [
         ":host_side_analysis_detail_table_data_provider",
         "@npm//@angular/core",
@@ -40,6 +41,7 @@ xprof_ng_module(
 sass_binary(
     name = "host_side_analysis_detail_css",
     src = "host_side_analysis_detail.scss",
+    # stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

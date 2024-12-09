@@ -22,6 +22,7 @@ xprof_ng_module(
 sass_binary(
     name = "diagnostics_view_css",
     src = "diagnostics_view.scss",
+    # stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

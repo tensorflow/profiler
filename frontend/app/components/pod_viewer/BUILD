@@ -14,6 +14,7 @@ xprof_ng_module(
         ":pod_viewer_css",
         "pod_viewer.ng.html",
     ],
+    # strict_templates = False,
     deps = [
         "@npm//@angular/core",
         "@npm//@angular/router",
@@ -35,6 +36,7 @@ xprof_ng_module(
 sass_binary(
     name = "pod_viewer_css",
     src = "pod_viewer.scss",
+    # stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

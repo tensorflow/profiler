@@ -28,7 +28,7 @@ py_binary(
     python_version = "PY3",
     srcs_version = "PY2AND3",
     deps = [
-        requirement("absl-py"),
+        requirement("absl-py"),  # build_cleaner: keep; go/disable_tf2
         "//:expect_tensorflow_installed",
         "//third_party/py/google/protobuf:use_fast_cpp_protos",  # Automatically added go/proto_python_upb_flip
         "@org_tensorflow_tensorboard//tensorboard/backend/event_processing:plugin_asset_util",

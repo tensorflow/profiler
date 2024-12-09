@@ -31,6 +31,7 @@ xprof_ng_module(
         ":framework_op_stats_css",
         "framework_op_stats.ng.html",
     ],
+    # strict_templates = False,
     deps = [
         "@npm//@angular/core",
         "@npm//@ngrx/store",
@@ -58,6 +59,7 @@ xprof_ng_module(
 sass_binary(
     name = "framework_op_stats_css",
     src = "framework_op_stats.scss",
+    # stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

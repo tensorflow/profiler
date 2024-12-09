@@ -13,6 +13,7 @@ xprof_ng_module(
         ":memory_breakdown_table_css",
         "memory_breakdown_table.ng.html",
     ],
+    # strict_templates = False,
     deps = [
         "@npm//@angular/core",
         "@npm//@types/google.visualization",
@@ -28,6 +29,7 @@ xprof_ng_module(
 sass_binary(
     name = "memory_breakdown_table_css",
     src = "memory_breakdown_table.scss",
+    # stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",
