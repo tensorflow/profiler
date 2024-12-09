@@ -1359,7 +1359,7 @@ dashboard would integrate trace viewer app using iframe.
       const startTime = performance.now();
       this._throbber.className = 'active';
       const showWaitMsgLater = tf_component_traceviewer.debounce(
-          this._showWaitMessage.bind(this), 30000);  // 30 seconds
+          this._showWaitMessage.bind(this), 20000);  // 20 seconds
       showWaitMsgLater(true);
       this._isLoading = true;
       if (!this._isStreaming) {
