@@ -1,6 +1,7 @@
 import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
 import {DiagnosticsViewModule} from 'org_xprof/frontend/app/components/diagnostics_view/diagnostics_view_module';
+import {InferenceLatencyChartModule} from 'org_xprof/frontend/app/components/overview_page/inference_latency_chart/inference_latency_chart_module';
 import {NormalizedAcceleratorPerformanceViewModule} from 'org_xprof/frontend/app/components/overview_page/normalized_accelerator_performance_view/normalized_accelerator_performance_view_module';
 import {PerformanceSummaryModule} from 'org_xprof/frontend/app/components/overview_page/performance_summary/performance_summary_module';
 import {RecommendationResultViewModule} from 'org_xprof/frontend/app/components/overview_page/recommendation_result_view/recommendation_result_view_module';
@@ -22,6 +23,7 @@ import {OverviewPage} from './overview_page';
     StepTimeGraphModule,
     TopOpsTableModule,
     NormalizedAcceleratorPerformanceViewModule,
+    InferenceLatencyChartModule,
   ],
   exports: [OverviewPage]
 })
