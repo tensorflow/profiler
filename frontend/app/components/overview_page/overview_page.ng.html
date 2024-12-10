@@ -16,7 +16,9 @@
     <div class="left-column">
       <performance-summary
           [generalAnalysis]="generalAnalysis"
-          [inputPipelineAnalysis]="inputPipelineAnalysis">
+          [inputPipelineAnalysis]="inputPipelineAnalysis"
+          [inferenceLatencyData]="inferenceLatencyData"
+          [isInference]="hasInferenceLatencyData()">
       </performance-summary>
       <run-environment-view [runEnvironment]="runEnvironment">
         <div profileDetail>
@@ -31,7 +33,7 @@
     <div class="right-column">
       <step-time-graph id="step-time-graph" [inputPipelineAnalysis]="inputPipelineAnalysis" *ngIf="inputPipelineAnalysis?.rows?.length"></step-time-graph>
       <inference-latency-chart
-      [inferenceLatencyData]="inferenceLatencyData" *ngIf="inferenceLatencyData?.rows?.length">
+      [inferenceLatencyData]="inferenceLatencyData" *ngIf="hasInferenceLatencyData()">
       </inference-latency-chart>
       <recommendation-result-view [recommendationResult]="recommendationResult">
       </recommendation-result-view>
