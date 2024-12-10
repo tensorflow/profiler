@@ -31,7 +31,7 @@ import {GeneralProps, SummaryInfo, SummaryInfoConfig} from 'org_xprof/frontend/a
 /** Generic summary info, display on top of the list */
 const GENERIC_SUMMARY_INFO_BEFORE: SummaryInfoConfig[] = [
   {
-    title: 'Average Step Time',
+    title: 'Average Step Time (ms)',
     goodMetric: false,
     valueKey: 'steptime_ms_average',
     sdvKey: 'steptime_ms_standard_deviation',
