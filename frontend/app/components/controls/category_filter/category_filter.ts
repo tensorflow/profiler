@@ -19,12 +19,12 @@ export class CategoryFilter implements OnChanges {
   @Input() column: number|string = -1;
   @Input() valueSeparator = '';
   @Input() all = '';
-  @Input() initValue: number|string = '';
+  @Input() initValue: number|string|boolean = '';
 
   columnIndex = -1;
   columnLabel = '';
-  options: Array<number|string> = [];
-  value: number|string = '';
+  options: Array<number|string|boolean> = [];
+  value: number|string|boolean = '';
 
   @Output()
   changed = new EventEmitter<google.visualization.DataTableCellFilter>();
