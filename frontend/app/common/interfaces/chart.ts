@@ -67,6 +67,7 @@ export interface ChartDataProvider {
   getDataTable(): google.visualization.DataTable|null;
   getOptions(): ChartOptions|null;
   setUpdateEventListener(callback: Function): void;
+  setVisibleColumns(visibleColumns: number[]): void;
   notifyCharts(): void;
 }
 

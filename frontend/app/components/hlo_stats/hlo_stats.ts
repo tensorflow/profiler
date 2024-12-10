@@ -1,4 +1,5 @@
 import {Component, OnDestroy} from '@angular/core';
+import {FormControl} from '@angular/forms';
 import {ActivatedRoute} from '@angular/router';
 import {Store} from '@ngrx/store';
 import {OpType} from 'org_xprof/frontend/app/common/constants/enums';
@@ -93,6 +94,8 @@ export class HloStats extends Dashboard implements OnDestroy {
     },
   };
   showChartSection = true;
+  tableColumnsControl = new FormControl([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+  tableColumns: Array<{index: number; label: string}> = [];
 
   constructor(
     route: ActivatedRoute,
@@ -104,6 +107,9 @@ export class HloStats extends Dashboard implements OnDestroy {
       this.update(params as NavigationEvent);
     });
     this.store.dispatch(setCurrentToolStateAction({currentTool: this.tool}));
+    this.tableColumnsControl.valueChanges.subscribe((newValue) => {
+      this.updateTableColumns(newValue || []);
+    });
   }
 
   update(event: NavigationEvent) {
@@ -221,6 +227,26 @@ export class HloStats extends Dashboard implements OnDestroy {
     this.replicaGroupDataProvider.notifyCharts();
   }
 
+  processTableColumns(dataTable: google.visualization.DataTable) {
+    const numColumns = dataTable.getNumberOfColumns();
+    this.tableColumns = [];
+    for (let i = 0; i < numColumns; i++) {
+      this.tableColumns.push({
+        index: i,
+        label: dataTable.getColumnLabel(i),
+      });
+    }
+    this.updateTableColumns(
+        this.tableColumnsControl.value || [0, 1, 2, 3, 4, 5, 6, 7, 8],
+    );
+  }
+
+  updateTableColumns(newValue: number[]) {
+    if (newValue.length === 0) return;
+    this.dataInfoForTable.dataProvider.setVisibleColumns(newValue);
+    this.dataInfoForTable.dataProvider.notifyCharts();
+  }
+
    parseData(data: SimpleDataTable | null) {
     if (!data) return;
     // Five charts share one DataProvider. In order to prevent DataTable from
@@ -230,6 +256,7 @@ export class HloStats extends Dashboard implements OnDestroy {
     if (!dataTable) return;
 
     this.dataTable = dataTable;
+    this.processTableColumns(dataTable);
     this.updateView();
 
     const hloOpNameIndex = dataTable.getColumnIndex(OP_EXPRESSION_ID);

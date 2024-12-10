@@ -72,6 +72,14 @@
 
 <div class="section-container">
   <div class="row">
+    <div>
+      <mat-form-field *ngIf="tableColumns.length > 0" appearance="outline" class="table-columns-control">
+        <mat-label>Visible Columns</mat-label>
+        <mat-select [formControl]="tableColumnsControl" multiple>
+          <mat-option *ngFor="let column of tableColumns" [value]="column.index">{{column.label}}</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
     <category-filter [dataTable]="dataTable" column="category"
                      all="All" (changed)="updateFilters($event)">
     </category-filter>

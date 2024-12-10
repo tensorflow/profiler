@@ -17,6 +17,7 @@
 
 .row {
   display: flex;
+  align-content: center;
 }
 
 .flex-space {
@@ -32,4 +33,9 @@
 .table {
   border: 1px solid $border-color;
   margin: 0 16px;
+}
+
+.table-columns-control {
+  width: fit-content;
+  margin: 8px 8px 8px 0;
 }
