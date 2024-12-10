@@ -11,6 +11,13 @@ ts_library(
 )
 
 ts_library(
+    name = "roofline_model_constants",
+    srcs = [
+        "roofline_model_constants.ts",
+    ],
+)
+
+ts_library(
     name = "testing",
     srcs = [
         "testing.ts",
