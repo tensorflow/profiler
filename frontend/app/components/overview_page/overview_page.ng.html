@@ -16,7 +16,9 @@
     <div class="left-column">
       <performance-summary
           [generalAnalysis]="generalAnalysis"
-          [inputPipelineAnalysis]="inputPipelineAnalysis">
+          [inputPipelineAnalysis]="inputPipelineAnalysis"
+          [inferenceLatencyData]="inferenceLatencyData"
+          [isInference]="inferenceLatencyData?.rows?.length">
       </performance-summary>
       <run-environment-view [runEnvironment]="runEnvironment">
         <div profileDetail>
