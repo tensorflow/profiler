@@ -30,7 +30,6 @@ ts_library(
         "operations_table_data_provider.ts",
     ],
     deps = [
-        "@npm//@angular/core",
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/interfaces:chart",
