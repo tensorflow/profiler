@@ -43,4 +43,8 @@ export class OverviewPageCommon {
     }
     this.diagnostics = parseDiagnosticsDataTable(data[DIAGNOSTICS_INDEX]);
   }
+
+  hasInferenceLatencyData(): boolean {
+    return !!this.inferenceLatencyData?.rows?.length;
+  }
 }
