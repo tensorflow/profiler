@@ -111,6 +111,7 @@ XPLANE_TOOLS = [
     'tf_data_bottleneck_analysis^',
     'op_profile^',
     'hlo_stats^',
+    'roofline_model^',
 ]
 
 # XPlane generated tools that support all host mode.
