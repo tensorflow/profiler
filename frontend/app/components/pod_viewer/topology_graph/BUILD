@@ -13,6 +13,7 @@ xprof_ng_module(
         ":topology_graph_css",
         "topology_graph.ng.html",
     ],
+    # strict_templates = False,
     deps = [
         "@npm//@angular/common",
         "@npm//@angular/core",
@@ -34,6 +35,7 @@ xprof_ng_module(
 sass_binary(
     name = "topology_graph_css",
     src = "topology_graph.scss",
+    # stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

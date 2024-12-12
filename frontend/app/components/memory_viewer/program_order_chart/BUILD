@@ -26,6 +26,7 @@ xprof_ng_module(
 sass_binary(
     name = "program_order_chart_css",
     src = "program_order_chart.scss",
+    # stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

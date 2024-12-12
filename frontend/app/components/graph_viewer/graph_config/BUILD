@@ -34,6 +34,7 @@ xprof_ng_module(
 sass_binary(
     name = "graph_config_css",
     src = "graph_config.scss",
+    # stack = True,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

@@ -192,7 +192,7 @@ export class HloStats extends Dashboard implements OnDestroy {
     };
   }
 
-   updateView() {
+  override updateView() {
     this.dataInfoForTable = {
       ...this.dataInfoForTable,
       filters: this.getFilters(),
@@ -247,7 +247,7 @@ export class HloStats extends Dashboard implements OnDestroy {
     this.dataInfoForTable.dataProvider.notifyCharts();
   }
 
-   parseData(data: SimpleDataTable | null) {
+  override parseData(data: SimpleDataTable | null) {
     if (!data) return;
     // Five charts share one DataProvider. In order to prevent DataTable from
     // being created multiple times, it calls DataProvider function directly.

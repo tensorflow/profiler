@@ -28,6 +28,7 @@ xprof_ng_module(
 sass_binary(
     name = "buffer_details_css",
     src = "buffer_details.scss",
+    # stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

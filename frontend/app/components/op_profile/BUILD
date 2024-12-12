@@ -14,6 +14,7 @@ xprof_ng_module(
         ":op_profile_css",
         "op_profile.ng.html",
     ],
+    # strict_templates = False,
     deps = [
         ":op_profile_base",
         "@npm//@angular/core",
@@ -50,6 +51,7 @@ ts_library(
 sass_binary(
     name = "op_profile_css",
     src = "op_profile.scss",
+    # stack = False,
     sourcemap = False,
     deps = [
         ":op_profile_common",

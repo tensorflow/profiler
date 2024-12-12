@@ -13,6 +13,7 @@ xprof_ng_module(
         "string_filter.ng.html",
         "string_filter_css",
     ],
+    # strict_templates = False,
     deps = [
         "@npm//@angular/common",
         "@npm//@angular/core",
@@ -26,6 +27,7 @@ xprof_ng_module(
 sass_binary(
     name = "string_filter_css",
     src = "string_filter.scss",
+    # stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

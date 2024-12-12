@@ -27,7 +27,7 @@ export class OperationsTableDataProvider extends DefaultDataProvider {
         diffData ? new google.visualization.DataTable(diffData) : undefined;
   }
 
-   process(): google.visualization.DataTable|google.visualization.DataView|null {
+  override process(): google.visualization.DataTable|google.visualization.DataView|null {
     if (!this.dataTable ||
         (this.opExecutor !== OpExecutor.DEVICE &&
          this.opExecutor !== OpExecutor.HOST)) {
@@ -115,7 +115,7 @@ export class OperationsTableDataProvider extends DefaultDataProvider {
     return dataView;
   }
 
-   getOptions(): ChartOptions|null {
+  override getOptions(): ChartOptions|null {
     return this.options;
   }
 

@@ -13,6 +13,7 @@ xprof_ng_module(
         ":hlo_stats_css",
         "hlo_stats.ng.html",
     ],
+    # strict_templates = False,
     deps = [
         "@npm//@angular/core",
         "@npm//@angular/forms",
@@ -44,6 +45,7 @@ xprof_ng_module(
 sass_binary(
     name = "hlo_stats_css",
     src = "hlo_stats.scss",
+    # stack = True,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

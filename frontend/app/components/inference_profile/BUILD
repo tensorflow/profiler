@@ -13,6 +13,7 @@ xprof_ng_module(
         ":inference_profile_css",
         "inference_profile.ng.html",
     ],
+    # strict_templates = False,
     deps = [
         "@npm//@angular/common",
         "@npm//@angular/core",

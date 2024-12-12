@@ -35,5 +35,6 @@ xprof_ng_module(
 sass_binary(
     name = "app_css",
     src = "app.scss",
+    # stack = False,
     sourcemap = False,
 )

@@ -13,6 +13,7 @@ xprof_ng_module(
         ":kernel_stats_table_css",
         "kernel_stats_table.ng.html",
     ],
+    # strict_templates = False,
     deps = [
         "@npm//@angular/core",
         "@npm//@types/google.visualization",
@@ -26,6 +27,7 @@ xprof_ng_module(
 sass_binary(
     name = "kernel_stats_table_css",
     src = "kernel_stats_table.scss",
+    # stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

@@ -22,5 +22,6 @@ xprof_ng_module(
 sass_binary(
     name = "org_chart_css",
     src = "org_chart.scss",
+    # stack = False,
     sourcemap = False,
 )

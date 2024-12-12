@@ -14,6 +14,7 @@ xprof_ng_module(
         ":overview_page_css",
         "overview_page.ng.html",
     ],
+    # strict_templates = False,
     deps = [
         "@npm//@angular/common",
         "@npm//@angular/core",
@@ -39,6 +40,7 @@ xprof_ng_module(
 sass_binary(
     name = "overview_page_css",
     src = "overview_page.scss",
+    # stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

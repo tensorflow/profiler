@@ -36,6 +36,7 @@ xprof_ng_module(
 sass_binary(
     name = "graph_viewer_css",
     src = "graph_viewer.scss",
+    # stack = True,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

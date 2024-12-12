@@ -24,6 +24,7 @@ xprof_ng_module(
 sass_binary(
     name = "top_ops_table_css",
     src = "top_ops_table.scss",
+    # stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

@@ -25,5 +25,6 @@ xprof_ng_module(
 sass_binary(
     name = "table_css",
     src = "table.scss",
+    # stack = False,
     sourcemap = False,
 )

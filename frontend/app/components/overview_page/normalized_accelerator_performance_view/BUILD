@@ -24,6 +24,7 @@ xprof_ng_module(
 sass_binary(
     name = "normalized_accelerator_performance_view_css",
     src = "normalized_accelerator_performance_view.scss",
+    # stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

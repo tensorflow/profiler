@@ -26,5 +26,6 @@ xprof_ng_module(
 sass_binary(
     name = "category_filter_css",
     src = "category_filter.scss",
+    # stack = False,
     sourcemap = False,
 )

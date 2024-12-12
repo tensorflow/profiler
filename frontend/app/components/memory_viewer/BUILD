@@ -29,7 +29,9 @@ xprof_ng_module(
 sass_binary(
     name = "memory_viewer_css",
     src = "memory_viewer.scss",
+    # stack = False,
     sourcemap = False,
+    # strict_deps = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",
     ],

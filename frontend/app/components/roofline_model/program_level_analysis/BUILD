@@ -13,6 +13,7 @@ xprof_ng_module(
         ":program_level_analysis_css",
         "program_level_analysis.ng.html",
     ],
+    # strict_templates = False,
     deps = [
         "@npm//@angular/core",
         "@org_xprof//frontend/app/common/interfaces",
@@ -29,5 +30,6 @@ xprof_ng_module(
 sass_binary(
     name = "program_level_analysis_css",
     src = "program_level_analysis.scss",
+    # stack = True,
     sourcemap = False,
 )

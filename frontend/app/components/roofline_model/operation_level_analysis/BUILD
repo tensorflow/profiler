@@ -13,6 +13,7 @@ xprof_ng_module(
         ":operation_level_analysis_css",
         "operation_level_analysis.ng.html",
     ],
+    # strict_templates = False,
     deps = [
         "@npm//@angular/core",
         "@org_xprof//frontend/app/common/constants:roofline_model_constants",
@@ -32,5 +33,6 @@ xprof_ng_module(
 sass_binary(
     name = "operation_level_analysis_css",
     src = "operation_level_analysis.scss",
+    # stack = True,
     sourcemap = False,
 )

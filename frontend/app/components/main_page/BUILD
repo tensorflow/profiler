@@ -49,6 +49,7 @@ xprof_ng_module(
 sass_binary(
     name = "main_page_css",
     src = "main_page.scss",
+    # stack = False,
     sourcemap = False,
     deps = [
         "@org_xprof//frontend/app/styles:common",

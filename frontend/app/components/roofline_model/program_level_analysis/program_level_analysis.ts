@@ -62,7 +62,7 @@ export class ProgramLevelAnalysis
     this.updateView();
   }
 
-   parseData() {
+  override parseData() {
     // base data already preprocessed in parent component
     if (!this.rooflineModelData) {
       return;
