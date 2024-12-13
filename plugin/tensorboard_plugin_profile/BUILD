@@ -14,6 +14,7 @@ py_library(
         "//:expect_tensorflow_installed",
         "@org_pocoo_werkzeug",
         "@org_pythonhosted_six",
+	"@org_tensorflow//tensorflow/python/profiler/internal:_pywrap_profiler_plugin",
         "@org_tensorflow_tensorboard//tensorboard/backend/event_processing:plugin_asset_util",
         "@org_tensorflow_tensorboard//tensorboard/plugins:base_plugin",
         "@org_xprof//plugin/tensorboard_plugin_profile/convert:all_libs",

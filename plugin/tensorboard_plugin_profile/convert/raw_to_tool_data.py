@@ -25,7 +25,10 @@ from __future__ import print_function
 
 import logging
 
-from tensorflow.python.profiler.internal import _pywrap_profiler_plugin  # pylint: disable=g-direct-tensorflow-import
+try:
+  from tensorboard_plugin_profile.convert import _pywrap_profiler_plugin
+except:
+  from tensorflow.python.profiler.internal import _pywrap_profiler_plugin  # pylint: disable=g-direct-tensorflow-import
 from tensorboard_plugin_profile.convert import dcn_collective_stats_proto_to_gviz
 from tensorboard_plugin_profile.convert import hlo_stats_proto_to_gviz
 from tensorboard_plugin_profile.convert import inference_stats_proto_to_gviz

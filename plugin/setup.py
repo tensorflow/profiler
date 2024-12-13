@@ -54,6 +54,7 @@ setuptools.setup(
     ),
     package_data={
         'tensorboard_plugin_profile': ['static/**'],
+        '': ['_pywrap_profiler_plugin.so'],
     },
     entry_points={
         'tensorboard_plugins': [

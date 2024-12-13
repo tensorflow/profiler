@@ -31,7 +31,7 @@ python_register_toolchains(
     ignore_root_user_error = True,
     # Available versions are listed in @rules_python//python:versions.bzl.
     # We recommend using the same version your team is already standardized on.
-    python_version = "3.10",
+    python_version = "3.11",
 )
 
 load("@python//:defs.bzl", "interpreter")
@@ -161,28 +161,15 @@ load("@io_bazel_rules_sass//:defs.bzl", "sass_repositories")
 sass_repositories()
 
 http_archive(
-    name = "com_google_protobuf",
-    sha256 = "f66073dee0bc159157b0bd7f502d7d1ee0bc76b3c1eac9836927511bdc4b3fc1",
-    strip_prefix = "protobuf-3.21.9",
-    urls = [
-        "https://github.com/protocolbuffers/protobuf/archive/v3.21.9.zip",
-    ],
-)
-
-load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
-
-protobuf_deps()
-
-http_archive(
     name = "org_tensorflow",
     patch_args = ["-p1"],
     patches = ["//third_party:tensorflow.patch"],
     # NOTE: when updating this, MAKE SURE to also update the protobuf_js runtime version
     # in third_party/workspace.bzl to >= the protobuf/protoc version provided by TF.
-    sha256 = "288f840d70639d54a087b9ba5310ffae3dbc45ede90ada168a0943cb6e43dabe",
-    strip_prefix = "tensorflow-a568daa404774cc90c3729ad7af2c9f7a0a558d2",
+    sha256 = "fe5261186952ec13652e48f219048d1f5e7825d6b83c91ebee71bbc41060baba",
+    strip_prefix = "tensorflow-0c1df46af2b5010ebdeac51f9391649753d3f1d2",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/a568daa404774cc90c3729ad7af2c9f7a0a558d2.zip",
+    	"https://github.com/tensorflow/tensorflow/archive/0c1df46af2b5010ebdeac51f9391649753d3f1d2.zip"
     ],
 )
 
@@ -209,6 +196,7 @@ tf_workspace1()
 load("@org_tensorflow//tensorflow:workspace0.bzl", "tf_workspace0")
 
 tf_workspace0()
+
 
 load(
     "@local_tsl//third_party/gpus/cuda/hermetic:cuda_json_init_repository.bzl",
