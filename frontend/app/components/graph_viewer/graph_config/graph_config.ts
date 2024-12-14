@@ -1,6 +1,6 @@
 import {Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges} from '@angular/core';
 import {MatSelectChange} from '@angular/material/select';
-import {type GraphConfigInput} from 'org_xprof/frontend/app/common/interfaces/graph_viewer';
+import {type GraphConfigInput, type GraphTypeObject} from 'org_xprof/frontend/app/common/interfaces/graph_viewer';
 import {ReplaySubject} from 'rxjs';
 
 /** A graph viewer component. */
@@ -23,6 +23,7 @@ export class GraphConfig implements OnDestroy, OnChanges {
   // Temparary indicator to hide the module name selection for 1vm graph viewer
   @Input() isHloOssTool = false;
   @Input() useProgramId = false;
+  @Input() graphTypes: GraphTypeObject[] = [];
 
   inputsInited = false;
   params: GraphConfigInput = {
@@ -48,6 +49,12 @@ export class GraphConfig implements OnDestroy, OnChanges {
         !this.params.selectedModule) {
       this.params.selectedModule =
           this.params.selectedModule || changes['moduleList'].currentValue[0];
+    }
+
+    if (changes.hasOwnProperty('graphTypes') &&
+        changes['graphTypes'].currentValue.length > 0 &&
+        !this.params.graphType) {
+      this.params.graphType = this.params.graphType || this.graphTypes[0].value;
     }
   }
 
