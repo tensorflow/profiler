@@ -1,4 +1,4 @@
-import {Component, OnDestroy} from '@angular/core';
+import {Component, OnDestroy, ViewChild} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {Store} from '@ngrx/store';
 import {DEVICE_INFO, NUMERIC_DATA_FORMAT, PIE_CHART_PALETTE, ROOFLINE_STYLES, SCATTER_CHART_AXIS, SCATTER_CHART_OPTIONS,} from 'org_xprof/frontend/app/common/constants/roofline_model_constants';
@@ -9,6 +9,9 @@ import {DataService} from 'org_xprof/frontend/app/services/data_service/data_ser
 import {setCurrentToolStateAction} from 'org_xprof/frontend/app/store/actions';
 import {ReplaySubject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
+
+import {OperationLevelAnalysis} from './operation_level_analysis/operation_level_analysis';
+import {ProgramLevelAnalysis} from './program_level_analysis/program_level_analysis';
 
 interface DeviceInfoData {
   id: string;
@@ -47,6 +50,9 @@ export class RooflineModel implements OnDestroy {
 
   /** Handles on-destroy Subject, used to unsubscribe. */
   private readonly destroyed = new ReplaySubject<void>(1);
+  @ViewChild('programLevelAnalysis')
+  programLevelAnalysis?: ProgramLevelAnalysis;
+  @ViewChild('opLevelAnalysis') opLevelAnalysis?: OperationLevelAnalysis;
 
   currentRun = '';
   // Device Information section data
@@ -104,8 +110,14 @@ export class RooflineModel implements OnDestroy {
       this.dataService.searchParams?.get('roofline_op_name') || '';
   }
 
+  refreshDashboards() {
+    this.programLevelAnalysis?.resetDashboard();
+    this.opLevelAnalysis?.resetDashboard();
+  }
+
   update(event: NavigationEvent) {
     setLoadingState(true, this.store, 'Loading roofline model data');
+    this.refreshDashboards();
 
     // get tool data
     this.currentRun = event.run || '';

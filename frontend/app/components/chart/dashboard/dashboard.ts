@@ -53,4 +53,12 @@ export class Dashboard {
   getFilters(): google.visualization.DataTableCellFilter[] {
     return Array.from(this.filters.values());
   }
+
+  // Refresh on the dashboard is necessary when the dataTable changes with brand
+  // new schema.
+  resetDashboard() {
+    this.dataTable = undefined;
+    this.filters.clear();
+    this.columns = [];
+  }
 }

@@ -30,7 +30,7 @@
     </div>
   </div>
   <div class="block-content">
-    <program-level-analysis [rooflineModelData]="dataTableProgram" [viewColumns]="columnsIdxProgram" [rooflineSeriesData]="scatterDataProgram" [scatterChartOptions]="scatterChartOptionsProgram" (filterUpdated)="updateDataTableProgram($event)"></program-level-analysis>
+    <program-level-analysis #programLevelAnalysis [rooflineModelData]="dataTableProgram" [viewColumns]="columnsIdxProgram" [rooflineSeriesData]="scatterDataProgram" [scatterChartOptions]="scatterChartOptionsProgram" (filterUpdated)="updateDataTableProgram($event)"></program-level-analysis>
   </div>
 </div>
 
@@ -51,6 +51,6 @@
     </div>
   </div>
   <div class="block-content">
-    <operation-level-analysis [selectedOp]="selectedOpName" [rooflineModelData]="dataTableOp" [viewColumns]="columnsIdxOp" [rooflineSeriesData]="scatterDataOp" [scatterChartOptions]="scatterChartOptionsOp" (filterUpdated)="updateDataTableOp($event)"></operation-level-analysis>
+    <operation-level-analysis #opLevelAnalysis [selectedOp]="selectedOpName" [rooflineModelData]="dataTableOp" [viewColumns]="columnsIdxOp" [rooflineSeriesData]="scatterDataOp" [scatterChartOptions]="scatterChartOptionsOp" (filterUpdated)="updateDataTableOp($event)"></operation-level-analysis>
   </div>
 </div>
