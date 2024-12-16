@@ -45,6 +45,8 @@ find tensorboard_plugin_profile/protobuf -name \*.py -exec $sedi -e '
     s/^from plugin.tensorboard_plugin_profile/from tensorboard_plugin_profile/
   ' {} +
 
+cp ${BUILD_WORKSPACE_DIRECTORY}/bazel-bin/external/org_tensorflow/tensorflow/python/profiler/internal/_pywrap_profiler_plugin.so tensorboard_plugin_profile/convert/
+
 # Copy static files.
 cd tensorboard_plugin_profile
 mkdir -p static
