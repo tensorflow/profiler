@@ -29,6 +29,8 @@ import {OverviewPage} from 'org_xprof/frontend/app/components/overview_page/over
 import {OverviewPageModule} from 'org_xprof/frontend/app/components/overview_page/overview_page_module';
 import {PodViewer} from 'org_xprof/frontend/app/components/pod_viewer/pod_viewer';
 import {PodViewerModule} from 'org_xprof/frontend/app/components/pod_viewer/pod_viewer_module';
+import {RooflineModel} from 'org_xprof/frontend/app/components/roofline_model/roofline_model';
+import {RooflineModelModule} from 'org_xprof/frontend/app/components/roofline_model/roofline_model_module';
 import {SideNavModule} from 'org_xprof/frontend/app/components/sidenav/sidenav_module';
 import {TfDataBottleneckAnalysis} from 'org_xprof/frontend/app/components/tf_data_bottleneck_analysis/tf_data_bottleneck_analysis';
 import {TfDataBottleneckAnalysisModule} from 'org_xprof/frontend/app/components/tf_data_bottleneck_analysis/tf_data_bottleneck_analysis_module';
@@ -69,6 +71,8 @@ export const routes: Routes = [
   {path: 'inference_profile', component: InferenceProfile},
   {path: 'hlo_stats', component: HloStats},
   {path: 'hlo_stats^', component: HloStats},
+  {path: 'roofline_model', component: RooflineModel},
+  {path: 'roofline_model^', component: RooflineModel},
   {path: '**', component: EmptyPage},
 ];
 
@@ -96,6 +100,7 @@ export const routes: Routes = [
     FrameworkOpStatsAdapterModule,
     DcnCollectiveStatsModule,
     HloStatsModule,
+    RooflineModelModule,
     InferenceProfileModule,
     RouterModule.forRoot(routes),
   ],

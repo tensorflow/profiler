@@ -53,7 +53,7 @@ export const SCATTER_CHART_OPTIONS = {
     // Ticks have to be explicitly defined for scaling axis evenly.
     ticks: [0, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000],
   },
-  legend: {position: 'right'},
+  legend: {position: 'right' as google.visualization.ChartLegendPosition},
   tooltip: {isHtml: true},
   // Be mindful that series is not specified here, otherwise the shallow copy in
   // components of this object could result in overwritten series styles

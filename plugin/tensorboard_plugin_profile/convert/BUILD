@@ -97,6 +97,15 @@ py_library(
     ],
 )
 
+py_library(
+    name = "roofline_model_proto_to_gviz",
+    srcs = ["roofline_model_proto_to_gviz.py"],
+    deps = [
+        requirement("gviz_api"),
+        "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
+    ],
+)
+
 py_test(
     name = "overview_page_proto_to_gviz_test",
     size = "small",
@@ -251,6 +260,7 @@ py_library(
         ":input_pipeline_proto_to_gviz",
         ":kernel_stats_proto_to_gviz",
         ":overview_page_proto_to_gviz",
+        ":roofline_model_proto_to_gviz",
         ":tf_data_stats_proto_to_gviz",
         ":tf_stats_proto_to_gviz",
         ":trace_events_json",

@@ -82,6 +82,7 @@ ts_library(
         "heap_object.ts",
         "hosts.ts",
         "navigation_event.ts",
+        "roofline_model.ts",
         "summary_info.ts",
         "tool.ts",
         "window.ts",

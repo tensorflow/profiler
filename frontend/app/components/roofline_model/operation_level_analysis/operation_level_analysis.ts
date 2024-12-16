@@ -150,12 +150,11 @@ export class OperationLevelAnalysis
 
   updateAndDrawScatterChart() {
     if (!this.rooflineSeriesData) return;
-    this.dataInfoRooflineScatterChart = {
-      ...this.dataInfoRooflineScatterChart,
-      options: {
-        ...this.dataInfoRooflineScatterChart.options,
-        ...this.scatterChartOptions,
-      },
-    };
+    this.dataInfoRooflineScatterChart.options = Object.assign(
+        {},
+        this.dataInfoRooflineScatterChart.options,
+        this.scatterChartOptions,
+    );
+    this.dataInfoRooflineScatterChart.dataProvider.notifyCharts();
   }
 }

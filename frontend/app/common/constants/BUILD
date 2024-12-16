@@ -15,6 +15,9 @@ ts_library(
     srcs = [
         "roofline_model_constants.ts",
     ],
+    deps = [
+        "@npm//@types/google.visualization",
+    ],
 )
 
 ts_library(

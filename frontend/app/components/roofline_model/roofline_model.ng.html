@@ -1,0 +1,56 @@
+<div class="section-container">
+  <div class="block-content">
+    <div class="row">
+      <h2>Device Information</h2>
+      <div class="flex-space"></div>
+    </div>
+  </div>
+  <div class="block-content">
+    <div *ngFor="let info of deviceInfoArray" style="font-size:16px">
+      <div *ngIf="info.display"><b>{{info.label}}:</b> <span> {{info.value}} {{info.unit}} {{info.context}}</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="section-container">
+  <div class="block-content">
+    <h2>Section1: Program-Level Analysis</h2>
+  </div>
+  <div class="block-content">
+    <div class="description">
+      Note:<br>
+      (1) This section provides program-level analysis.<br>
+      (2) A tooltip with extra information will show up if you mouse over a point in the roofline chart.<br>
+      (3) You can choose whether to include infeed and outfeed ops for the analysis.<br>
+      (4) "Total" aggregates all operations throughout the entire profiling session. It includes incomplete steps.<br>
+      (5) "Total (HW)" is based on the hardware performance counters while the others are based on the XLA's cost analysis.
+      It is always calculated including infeed and outfeed ops regardless of the option.
+      The gap between "Total" and "Total (HW)" is due to hardware limitation (e.g., padding).<br>
+      (6) "Average" shows the average step information by aggregating the operations in the complete steps only.
+    </div>
+  </div>
+  <div class="block-content">
+    <program-level-analysis [rooflineModelData]="dataTableProgram" [viewColumns]="columnsIdxProgram" [rooflineSeriesData]="scatterDataProgram" [scatterChartOptions]="scatterChartOptionsProgram" (filterUpdated)="updateDataTableProgram($event)"></program-level-analysis>
+  </div>
+</div>
+
+<div class="section-container">
+  <div class="block-content">
+    <h2>Section2: Operation-Level Analysis</h2>
+  </div>
+  <div class="block-content">
+    <div class="description">
+      Note:<br>
+      (1) This section provides operation-level analysis.<br>
+      (2) A tooltip with extra information will show up if you mouse over a point in the roofline chart.<br>
+      (3) To avoid sluggishness, only the 1000 most time-consuming operations are shown.<br>
+      (4) You can choose whether to include infeed and outfeed ops for the analysis.<br>
+      (5) You can filter data by HLO category, bottleneck resource or HLO name.<br>
+      (6) "IDLE" represents the portion of the total execution time on device that is idle.<br>
+      (7) Ops with zero FLOP (e.g., data formatting ops like reshape, IDLE, etc.) do not show up in the roofline chart.<br>
+    </div>
+  </div>
+  <div class="block-content">
+    <operation-level-analysis [selectedOp]="selectedOpName" [rooflineModelData]="dataTableOp" [viewColumns]="columnsIdxOp" [rooflineSeriesData]="scatterDataOp" [scatterChartOptions]="scatterChartOptionsOp" (filterUpdated)="updateDataTableOp($event)"></operation-level-analysis>
+  </div>
+</div>
