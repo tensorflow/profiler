@@ -67,9 +67,14 @@ class ProfilePluginLoader(base_plugin.TBLoader):
       # pylint: enable=g-direct-tensorflow-import
       del tensorflow
       del profiler_client
-    except ImportError as err:
-      logger.warning('Unable to load profiler plugin. Import error: %s', err)
-      return None
+    except ImportError:
+      try:
+        from tensorboard_plugin_profile.convert import _pywrap_profiler_plugin  # pylint: disable=g-import-not-at-top
+        del _pywrap_profiler_plugin
+        logger.info('Loading profiler plugin with limited functionality')
+      except ImportError as err:
+        logger.warning('Unable to load profiler plugin. Import error: %s', err)
+        return None
 
     # pylint: disable=g-import-not-at-top
     from tensorboard_plugin_profile import profile_plugin

@@ -29,19 +29,29 @@ from typing import Any, List, TypedDict
 
 from etils import epath
 import six
-import tensorflow.compat.v2 as tf
 from werkzeug import wrappers
 
 from tensorboard.backend.event_processing import plugin_asset_util
 from tensorboard.context import RequestContext
 from tensorboard.plugins import base_plugin
-from tensorflow.python.profiler import profiler_client  # pylint: disable=g-direct-tensorflow-import
-from tensorflow.python.profiler import profiler_v2 as profiler  # pylint: disable=g-direct-tensorflow-import
 from tensorboard_plugin_profile.convert import raw_to_tool_data as convert
 
-tf.enable_v2_behavior()
-
 logger = logging.getLogger('tensorboard')
+
+try:
+  import tensorflow.compat.v2 as tf  # pylint: disable=g-import-not-at-top
+  from tensorflow.python.profiler import profiler_client  # pylint: disable=g-direct-tensorflow-import,g-import-not-at-top
+  from tensorflow.python.profiler import profiler_v2 as profiler  # pylint: disable=g-direct-tensorflow-import,g-import-not-at-top
+
+  tf.enable_v2_behavior()
+except ImportError:
+  logger.info(
+      'Disabling remote capture features as tensorflow is not available'
+  )
+  tf = None
+  profiler_client = None
+  profiler = None
+
 
 # The prefix of routes provided by this plugin.
 PLUGIN_NAME = 'profile'
@@ -238,19 +248,6 @@ def _get_tools(filenames: list[str], profile_run_dir: str) -> set[str]:
     except AttributeError:
       logger.warning('XPlane converters are available after Tensorflow 2.4')
   return tools
-
-
-def get_worker_list(
-    cluster_resolver: tf.distribute.cluster_resolver.ClusterResolver,
-) -> str:
-  """Parses TPU workers list from the cluster resolver."""
-  cluster_spec = cluster_resolver.cluster_spec()
-  task_indices = cluster_spec.task_indices('worker')
-  worker_list = [
-      cluster_spec.task_address('worker', i).replace(':8470', ':8466')
-      for i in task_indices
-  ]
-  return ','.join(worker_list)
 
 
 def respond(
@@ -724,6 +721,26 @@ class ProfilePlugin(base_plugin.TBPlugin):
 
   def capture_route_impl(self, request: wrappers.Request) -> wrappers.Response:
     """Runs the client trace for capturing profiling information."""
+
+    if not tf or not profiler or not profiler_client:
+      return respond(
+          {'error': 'TensorFlow is not installed.'},
+          'application/json',
+          code=200,
+      )
+
+    def get_worker_list(
+        cluster_resolver: tf.distribute.cluster_resolver.ClusterResolver,
+    ) -> str:
+      """Parses TPU workers list from the cluster resolver."""
+      cluster_spec = cluster_resolver.cluster_spec()
+      cluster_spec = cluster_resolver.cluster_spec()
+      task_indices = cluster_spec.task_indices('worker')
+      worker_list = [
+          cluster_spec.task_address('worker', i).replace(':8470', ':8466')
+          for i in task_indices
+      ]
+      return ','.join(worker_list)
 
     service_addr = request.args.get('service_addr')
     duration = int(request.args.get('duration', '1000'))
