@@ -1,4 +1,4 @@
-import {DEFAULT_SIMPLE_DATA_TABLE, InputPipelineDataTable, InputPipelineDeviceAnalysis, InputPipelineHostAnalysis, SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {DEFAULT_SIMPLE_DATA_TABLE, HostOpTable, InputPipelineDataTable, InputPipelineDeviceAnalysis, InputPipelineHostAnalysis, MetaHostOpTable, SimpleDataTable,} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 import {parseDiagnosticsDataTable} from 'org_xprof/frontend/app/common/utils/utils';
 
@@ -33,6 +33,35 @@ export class InputPipelineCommon {
   recommendation: SimpleDataTable|null = null;
   hasDiviceAanlysisRows = true;
   diagnostics: Diagnostics = { info: [], warnings: [], errors: [] };
+  hasHostOpTables = false;
+  metaHostOpTable: MetaHostOpTable|null = null;
+  hostOpTables: HostOpTable[] = [];
+  maxInfeedCoreTable: SimpleDataTable|null = null;
+  isTpu = false;
+
+  parseHostOpTables(data: InputPipelineDataTable[]) {
+    if (!data) return;
+    for (let i = 0; i < data.length; i++) {
+      const analysis = data[i];
+      if (!analysis || !analysis.p) continue;
+      const foundMetaHostOpTable =
+          Object.keys(analysis.p)
+              .find(
+                  (property) => property === 'num_host_op_tables',
+              );
+      if (!foundMetaHostOpTable) continue;
+      this.metaHostOpTable = analysis as MetaHostOpTable;
+      const numHostOpTables = Number(
+          this.metaHostOpTable.p?.num_host_op_tables || 0,
+      );
+      if (numHostOpTables <= 0) continue;
+      this.hasHostOpTables = true;
+      for (let k = 0; k < numHostOpTables; k++) {
+        this.hostOpTables[k] = data[i + 1 + k] as HostOpTable;
+      }
+      return;
+    }
+  }
 
   findAnalysisData(
       data: InputPipelineDataTable[], columnId: string,

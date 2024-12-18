@@ -20,13 +20,17 @@ xprof_ng_module(
         "@npm//@ngrx/store",
         "@npm//rxjs",
         "@org_xprof//frontend/app/common/angular:angular_material_divider",
+        "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/utils",
         "@org_xprof//frontend/app/components/diagnostics_view",
         "@org_xprof//frontend/app/components/input_pipeline/analysis_summary",
         "@org_xprof//frontend/app/components/input_pipeline/device_side_analysis_detail",
+        "@org_xprof//frontend/app/components/input_pipeline/host_op",
         "@org_xprof//frontend/app/components/input_pipeline/host_side_analysis_detail",
+        "@org_xprof//frontend/app/components/input_pipeline/max_infeed_detail",
         "@org_xprof//frontend/app/services/data_service",
+        "@org_xprof//frontend/app/store",
     ],
 )
 

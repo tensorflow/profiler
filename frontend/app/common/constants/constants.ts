@@ -39,6 +39,19 @@ export const KELLY_COLORS = [
 ];
 
 /**
+ * color palette for stack chart
+ */
+export const STACK_CHART_FILL_COLORS = [
+  '#00AA55',  // green
+  '#E65722',  // orange
+  '#DC2A2A',  // red
+  '#B8860B',  // yellow
+  '#B381B3',  // purple
+  '#009FD4',  // blue
+  '#545454',  // grey
+];
+
+/**
  * Empty diagnostic content
  * diagnostics is input to the <diagnostic-view> component, used by graph viewer
  */
