@@ -4,7 +4,7 @@ import {ActivatedRoute} from '@angular/router';
 import {Store} from '@ngrx/store';
 import {API_PREFIX, DATA_API, DIAGNOSTICS_DEFAULT, GRAPH_CONFIG_KEYS, PLUGIN_NAME} from 'org_xprof/frontend/app/common/constants/constants';
 import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
-import {GraphConfigInput, GraphViewerQueryParams} from 'org_xprof/frontend/app/common/interfaces/graph_viewer';
+import {GraphConfigInput, GraphTypeObject, GraphViewerQueryParams} from 'org_xprof/frontend/app/common/interfaces/graph_viewer';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import {GraphConfig} from 'org_xprof/frontend/app/components/graph_viewer/graph_config/graph_config';
 import {CommunicationService, type ToolQueryParams} from 'org_xprof/frontend/app/services/communication_service/communication_service';
@@ -47,6 +47,9 @@ export class GraphViewer implements OnDestroy {
   loadingGraphHtml = false;
   graphvizUri = '';
   pathPrefix = '';
+  graphTypes: GraphTypeObject[] = [
+    {label: 'Hlo Graph', value: 'xla'},
+  ];
 
   constructor(
       private readonly route: ActivatedRoute,
