@@ -165,6 +165,32 @@ class ProfilePluginTest(tf.test.TestCase):
     expected.update(set('b/c/' + run for run in RUN_TO_TOOLS.keys()))
     self.assertSetEqual(frozenset(all_runs), expected)
 
+  def testRuns_withoutEvents(self):
+    generate_testdata(self.logdir)
+    self.multiplexer.AddRunsFromDirectory(self.logdir)
+    self.multiplexer.Reload()
+    all_runs = list(self.plugin.generate_runs())
+    expected = set(RUN_TO_TOOLS.keys())
+    self.assertSetEqual(frozenset(all_runs), expected)
+
+  def testRuns_withNestedRuns(self):
+    subdir_date = os.path.join(self.logdir, '2024-12-19')
+    subdir_train = os.path.join(subdir_date, 'train')
+    subdir_validation = os.path.join(subdir_date, 'validation')
+    # Write the plugin directory for the subdir_date directory.
+    generate_testdata(subdir_date)
+    # Write events files for the subdir_train and subdir_validation directories.
+    write_empty_event_file(subdir_train)
+    write_empty_event_file(subdir_validation)
+    self.multiplexer.AddRunsFromDirectory(self.logdir)
+    self.multiplexer.Reload()
+    all_runs = list(self.plugin.generate_runs())
+    # Expect runs for the subdir_date because it contains the plugin directory
+    # and is the parent directory of the subdir_train and subdir_validation
+    # directories.
+    expected = set(set('2024-12-19/' + run for run in RUN_TO_TOOLS.keys()))
+    self.assertSetEqual(frozenset(all_runs), expected)
+
   def testHosts(self):
     generate_testdata(self.logdir)
     subdir_a = os.path.join(self.logdir, 'a')
