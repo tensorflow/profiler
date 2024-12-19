@@ -1659,9 +1659,12 @@ dashboard would integrate trace viewer app using iframe.
       }
 
       this._devices = {};
+      const processList = [];
       for (const pid in this._model.processes) {
         this._devices[pid] = this._model.processes[pid].name;
+        processList.push(`${this._model.processes[pid].name} (pid: ${pid})`);
       }
+      window.parent.postMessage({'type': 'processes-list','data': processList,}, '*');
     },
 
     // Updates the view based on the current model.
