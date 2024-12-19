@@ -87,7 +87,7 @@ export const setToolsInfoStateAction: ActionCreatorAny = createAction(
 );
 
 /** Action to set hosts list state */
-export const setHostsStateAction = createAction(
+export const setHostsStateAction: ActionCreatorAny = createAction(
     '[App State] Set hosts state',
     props<{hostsState: HostMetadata[]}>(),
 );
