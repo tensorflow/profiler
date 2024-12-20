@@ -28,6 +28,18 @@
         [value]="params.programId"
       />
     </mat-form-field>
+    <mat-form-field *ngIf="graphTypes.length > 0" class="full-width" id="graph-type-selector" appearance="outline">
+      <mat-label>Graph Type</mat-label>
+      <mat-select
+        name="graph-type"
+        panelClass="panel-override"
+        [(ngModel)]="params.graphType"
+      >
+        <mat-option *ngFor="let type of graphTypes" [value]="type.value">
+          {{ type.label }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
     <mat-form-field class="full-width">
       <mat-label>Op Name</mat-label>
       <input
