@@ -1,0 +1,30 @@
+# Bazel
+## Ignore all bazel-* symlinks. There is no full list since this can change
+## based on the name of the directory bazel is cloned into.
+/bazel-*
+MODULE.bazel
+MODULE.bazel.lock
+
+*.pyc
+*.so
+*.egg-info
+*.whl
+*_pb2.py
+
+.ipynb_checkpoints
+.DS_Store
+.mypy_cache/
+.pytype/
+
+.idea
+.vscode
+.envrc
+.bazelrc.user
+
+# virtualenv/venv directories
+/venv/
+/bin/
+/include/
+/lib/
+/share/
+
