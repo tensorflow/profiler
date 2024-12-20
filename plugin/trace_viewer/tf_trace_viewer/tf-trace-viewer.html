@@ -290,7 +290,9 @@ dashboard would integrate trace viewer app using iframe.
   }
   #view_console_button.right-controls-button,
   #backend_toggle_button,
-  #button.right-controls-button {
+  #button.right-controls-button,
+  #expand_all_button,
+  #collapse_all_button{
     height: 36px;
     background-color: #f8f8f8;
     border: #f8f8f8 solid 0.5px;
@@ -307,6 +309,18 @@ dashboard would integrate trace viewer app using iframe.
   #button.right-controls-button:hover {
     background-color: white;
     border: #dadce0 solid 0.5px;
+  }
+  #expand_collapse_all_text_bar {
+    height: 36px;
+    margin-left: 2px;
+    align-items: center;
+    text-align: center;
+    padding-left: 25px;
+    padding-right: 5px;
+    padding-top: 2px;
+    display: flex;
+    justify-content: center;
+    font-size: 14px;
   }
   #dialog.right-controls-dialog {
     padding:0px;
@@ -1286,6 +1300,39 @@ dashboard would integrate trace viewer app using iframe.
       }
     },
 
+    // Expand or collapse all processes thread tracks
+    _expandOrCollapseAll: function(shouldExpand) {
+      const processes = document.getElementsByClassName('process-track-base');
+      for(let i = 0; i < processes.length; ++i)
+      {
+        processes[i].expanded = shouldExpand;
+      }
+    },
+
+    _addExpandAndCollapseAllButtons: function() {
+      //Add text bar next to buttons
+      const textBar = document.createElement('div');
+      textBar.textContent = 'Processes:';
+      textBar.setAttribute('id', 'expand_collapse_all_text_bar');
+
+      var expandAllButton = document.createElement('tr-ui-b-toolbar-button');
+      expandAllButton.textContent = 'Expand All';
+
+      var collapseAllButton = document.createElement('tr-ui-b-toolbar-button');
+      collapseAllButton.textContent = 'Collapse All';
+
+      expandAllButton.setAttribute('id', 'expand_all_button');
+      collapseAllButton.setAttribute('id', 'collapse_all_button');
+
+      // Add event listener to buttons
+      expandAllButton.addEventListener('click', () => this._expandOrCollapseAll(true));
+      collapseAllButton.addEventListener('click', () => this._expandOrCollapseAll(false));
+      // Append buttons to the DOM (inside the same parent element)
+      this._traceViewer.leftControls.appendChild(textBar);
+      this._traceViewer.leftControls.appendChild(expandAllButton);
+      this._traceViewer.leftControls.appendChild(collapseAllButton);
+    },
+
     // Overwrite and fine tune the inherited catapult/tracing UI
     _adjustUI: function() {
       // 1. Adjust styles of the leftControl and its children
@@ -1294,6 +1341,9 @@ dashboard would integrate trace viewer app using iframe.
       const searchBar = document.getElementById('view_find_control');
       Polymer.dom(this._traceViewer.leftControls).appendChild(searchBar);
       const searchInput = document.getElementById('filter');
+
+      this._addExpandAndCollapseAllButtons();
+
       searchInput.placeholder = 'Find Events...';
 
       // 2. Adjust styles of the rightControl and its children
