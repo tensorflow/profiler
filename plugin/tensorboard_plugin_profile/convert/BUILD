@@ -56,6 +56,7 @@ py_library(
     deps = [
         ":diagnostics",
         requirement("gviz_api"),
+        "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
     ],
 )
 

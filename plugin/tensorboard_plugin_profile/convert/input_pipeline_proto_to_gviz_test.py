@@ -31,6 +31,7 @@ from google3.google.protobuf.any_pb2 import Any
 
 from tensorboard_plugin_profile.convert import input_pipeline_proto_to_gviz
 from tensorboard_plugin_profile.protobuf import input_pipeline_pb2
+from tensorboard_plugin_profile.protobuf import tpu_input_pipeline_pb2
 
 
 class StrEnum(str, enum.Enum):
@@ -60,6 +61,31 @@ class MockValues(StrEnum):
 -Device collectives: 13.00 ms
 -Device to device: 7.00 ms
 -Device compute: 6.00 ms"""
+  # mock values for tpu input pipeline
+  TC_COMPUTE_TIME_MS = 14.0
+  TC_INFEED_TIME_MS = 6.0
+  TC_OUTFEED_TIME_MS = 8.0
+  TC_IDLE_TIME_MS = 2.0
+  SCV0_COMPUTE_TIME_MS = 10.0
+  SCV0_INFEED_TIME_MS = 7.0
+  SCV0_OUTFEED_TIME_MS = 6.0
+  SCV0_IDLE_TIME_MS = 7.0
+  SC_COMPUTE_TIME_MS = 11.0
+  SC_INFEED_TIME_MS = 8.0
+  SC_OUTFEED_TIME_MS = 6.0
+  SC_IDLE_TIME_MS = 5.0
+  HOST_TRANSFER_MS = 12.0
+  INFEED_PERCENT_AVERAGE = 17.0
+  INFEED_PERCENT_MINIMUM = 16.0
+  INFEED_PERCENT_MAXIMUM = 18.0
+  TOOLTIP_TPU = (
+      "step {}: \nTime waiting for input data = {:.3f} ms, Step time ="
+      " {:.3f} ms".format(
+          1,
+          13.0,
+          47.0,
+      )
+  )
 
 
 class ProtoToGvizTest(tf.test.TestCase):
@@ -74,6 +100,118 @@ class ProtoToGvizTest(tf.test.TestCase):
     step_summary.minimum = 3 + base
     step_summary.maximum = 4 + base
     return step_summary
+
+  def create_mock_input_op_data(
+      self, ipa: input_pipeline_pb2.InputPipelineAnalysisResult
+  ):
+    input_time_breakdown = input_pipeline_pb2.InputTimeBreakdown()
+    input_time_breakdown.demanded_file_read_us = 1
+    input_time_breakdown.advanced_file_read_us = 2
+    input_time_breakdown.preprocessing_us = 3
+    input_time_breakdown.enqueue_us = 4
+    input_time_breakdown.unclassified_non_enqueue_us = 5
+    ipa.input_time_breakdown.CopyFrom(input_time_breakdown)
+
+    for _ in range(0, 3):
+      input_op_details = input_pipeline_pb2.InputOpDetails()
+      input_op_details.op_name = str(1)
+      input_op_details.count = 2
+      input_op_details.time_in_ms = 3
+      input_op_details.time_in_percent = 4
+      input_op_details.self_time_in_ms = 5
+      input_op_details.self_time_in_percent = 6
+      input_op_details.category = str(7)
+      ipa.input_op_details.append(input_op_details)
+
+  def create_mock_recommendation(
+      self, ipa: input_pipeline_pb2.InputPipelineAnalysisResult
+  ):
+    recommendation = input_pipeline_pb2.InputPipelineAnalysisRecommendation()
+    for ss in ["a", "b", "c", "d", "e"]:
+      recommendation.details.append(ss)
+    ipa.recommendation.CopyFrom(recommendation)
+
+  def create_mock_input_pipeline_for_tpu(self, has_legacy_sc=False):
+    ipa = input_pipeline_pb2.InputPipelineAnalysisResult()
+    ipa.hardware_type = "TPU"
+    ipa.tag = True
+    ipa.step_time_summary.CopyFrom(self.create_mock_step_summary(10))
+    ipa.input_percent_summary.CopyFrom(self.create_mock_step_summary(20))
+
+    # create mock step details for tpu
+    # Add 3 rows
+    for _ in range(0, 3):
+      step_details = tpu_input_pipeline_pb2.PerTpuStepDetails()
+      step_details.step_number = int(MockValues.STEP_NUMBER)
+      step_details.tc_compute_time_ms = float(MockValues.TC_COMPUTE_TIME_MS)
+      step_details.tc_infeed_time_ms = float(MockValues.TC_INFEED_TIME_MS)
+      step_details.tc_outfeed_time_ms = float(MockValues.TC_OUTFEED_TIME_MS)
+      step_details.tc_idle_time_ms = float(MockValues.TC_IDLE_TIME_MS)
+      step_details.scv0_compute_time_ms = float(MockValues.SCV0_COMPUTE_TIME_MS)
+      step_details.scv0_infeed_time_ms = float(MockValues.SCV0_INFEED_TIME_MS)
+      step_details.host_transfer_ms = float(MockValues.HOST_TRANSFER_MS)
+      step_details.infeed_percent_average = float(
+          MockValues.INFEED_PERCENT_AVERAGE
+      )
+      step_details.infeed_percent_minimum = float(
+          MockValues.INFEED_PERCENT_MINIMUM
+      )
+      step_details.infeed_percent_maximum = float(
+          MockValues.INFEED_PERCENT_MAXIMUM
+      )
+
+      step_details_any = Any()
+      step_details_any.Pack(step_details)
+      ipa.step_details.append(step_details_any)
+
+    self.create_mock_input_op_data(ipa)
+    self.create_mock_recommendation(ipa)
+
+    step_time_breakdown = tpu_input_pipeline_pb2.TpuStepTimeBreakdown()
+    step_time_breakdown.tc_compute_ms_summary.CopyFrom(
+        self.create_mock_step_summary(1)
+    )
+    step_time_breakdown.tc_infeed_ms_summary.CopyFrom(
+        self.create_mock_step_summary(2)
+    )
+    step_time_breakdown.tc_outfeed_ms_summary.CopyFrom(
+        self.create_mock_step_summary(3)
+    )
+    step_time_breakdown.tc_idle_ms_summary.CopyFrom(
+        self.create_mock_step_summary(4)
+    )
+    step_time_breakdown.scv0_compute_ms_summary.CopyFrom(
+        self.create_mock_step_summary(5)
+    )
+    step_time_breakdown.scv0_infeed_ms_summary.CopyFrom(
+        self.create_mock_step_summary(6)
+    )
+
+    if not has_legacy_sc:
+      sparse_core_step_summary = tpu_input_pipeline_pb2.SparseCoreStepSummary()
+      sparse_core_step_summary.sc_compute_ms_summary.CopyFrom(
+          self.create_mock_step_summary(11)
+      )
+      sparse_core_step_summary.sc_infeed_ms_summary.CopyFrom(
+          self.create_mock_step_summary(12)
+      )
+      sparse_core_step_summary.sc_outfeed_ms_summary.CopyFrom(
+          self.create_mock_step_summary(13)
+      )
+      sparse_core_step_summary.sc_idle_ms_summary.CopyFrom(
+          self.create_mock_step_summary(14)
+      )
+      sparse_core_step_summary.sc_step_time_ms_summary.CopyFrom(
+          self.create_mock_step_summary(15)
+      )
+      step_time_breakdown.sparse_core_step_summary.CopyFrom(
+          sparse_core_step_summary
+      )
+    step_time_breakdown_any = Any()
+    step_time_breakdown_any.Pack(step_time_breakdown)
+    ipa.step_time_breakdown.CopyFrom(step_time_breakdown_any)
+
+    return ipa
 
   def create_mock_input_pipeline(self):
     ipa = input_pipeline_pb2.InputPipelineAnalysisResult()
@@ -102,29 +240,8 @@ class ProtoToGvizTest(tf.test.TestCase):
       step_details_any.Pack(step_details)
       ipa.step_details.append(step_details_any)
 
-    input_time_breakdown = input_pipeline_pb2.InputTimeBreakdown()
-    input_time_breakdown.demanded_file_read_us = 1
-    input_time_breakdown.advanced_file_read_us = 2
-    input_time_breakdown.preprocessing_us = 3
-    input_time_breakdown.enqueue_us = 4
-    input_time_breakdown.unclassified_non_enqueue_us = 5
-    ipa.input_time_breakdown.CopyFrom(input_time_breakdown)
-
-    for _ in range(0, 3):
-      input_op_details = input_pipeline_pb2.InputOpDetails()
-      input_op_details.op_name = str(1)
-      input_op_details.count = 2
-      input_op_details.time_in_ms = 3
-      input_op_details.time_in_percent = 4
-      input_op_details.self_time_in_ms = 5
-      input_op_details.self_time_in_percent = 6
-      input_op_details.category = str(7)
-      ipa.input_op_details.append(input_op_details)
-
-    recommendation = input_pipeline_pb2.InputPipelineAnalysisRecommendation()
-    for ss in ["a", "b", "c", "d", "e"]:
-      recommendation.details.append(ss)
-    ipa.recommendation.CopyFrom(recommendation)
+    self.create_mock_input_op_data(ipa)
+    self.create_mock_recommendation(ipa)
 
     step_time_breakdown = input_pipeline_pb2.GenericStepTimeBreakdown()
     step_time_breakdown.unknown_time_ms_summary.CopyFrom(
@@ -221,6 +338,122 @@ class ProtoToGvizTest(tf.test.TestCase):
             self.assertEqual(expected[cc], cell_str)
           else:
             self.assertEqual(str(float(expected[cc])), cell_str)
+
+  def test_input_pipeline_step_breakdown_for_tpu(self):
+    ipa = self.create_mock_input_pipeline_for_tpu()
+    (table_description, data, custom_properties) = (
+        input_pipeline_proto_to_gviz.get_step_breakdown_table_args_for_tpu(ipa)
+    )
+    data_table = gviz_api.DataTable(table_description, data, custom_properties)
+
+    # Data is a list of 3 rows.
+    self.assertLen(data, 3)
+    self.assertEqual(3, data_table.NumberOfRows(), "Simple table has 3 rows.")
+    # Table descriptor is a list of 12 columns
+    # because has_sc_summary_legacy is true.
+    self.assertLen(table_description, 10)
+    # DataTable also has 12 columns.
+    self.assertLen(data_table.columns, 10)
+
+    csv_file = io.StringIO(data_table.ToCsv())
+    reader = csv.reader(csv_file)
+
+    expected = [
+        int(MockValues.STEP_NUMBER),
+        float(MockValues.TC_COMPUTE_TIME_MS),
+        float(MockValues.TC_INFEED_TIME_MS),
+        float(MockValues.TC_OUTFEED_TIME_MS),
+        float(MockValues.TC_IDLE_TIME_MS),
+        float(MockValues.HOST_TRANSFER_MS),
+        MockValues.TOOLTIP_TPU.value,
+        float(MockValues.INFEED_PERCENT_AVERAGE),
+        float(MockValues.INFEED_PERCENT_MINIMUM),
+        float(MockValues.INFEED_PERCENT_MAXIMUM),
+    ]
+
+    for rr, row_values in enumerate(reader):
+      if rr == 0:
+        # DataTable columns match schema defined in table_description.
+        for cc, column_header in enumerate(row_values):
+          self.assertEqual(table_description[cc][2], column_header)
+      else:
+        for cc, cell_str in enumerate(row_values):
+          raw_value = data[rr - 1][cc]
+          value_type = table_description[cc][1]
+
+          # Only number and strings are used in our DataTable schema.
+          self.assertIn(value_type, ["number", "string"])
+
+          # Encode in similar fashion as DataTable.ToCsv().
+          expected_value = gviz_api.DataTable.CoerceValue(raw_value, value_type)
+          self.assertNotIsInstance(expected_value, tuple)
+          self.assertEqual(expected_value, raw_value)
+          self.assertEqual(str(expected_value), cell_str)
+
+          # Check against expected values we have set in our mock table.
+          if isinstance(expected[cc], str):
+            self.assertEqual(expected[cc], cell_str)
+          else:
+            self.assertEqual(str(expected[cc]), cell_str)
+
+  def test_input_pipeline_step_breakdown_for_tpu_with_legacy_sc(self):
+    ipa = self.create_mock_input_pipeline_for_tpu(has_legacy_sc=True)
+    (table_description, data, custom_properties) = (
+        input_pipeline_proto_to_gviz.get_step_breakdown_table_args_for_tpu(ipa)
+    )
+    data_table = gviz_api.DataTable(table_description, data, custom_properties)
+
+    # Data is a list of 3 rows.
+    self.assertLen(data, 3)
+    self.assertEqual(3, data_table.NumberOfRows(), "Simple table has 3 rows.")
+    # Table descriptor is a list of 12 columns
+    # because has_sc_summary_legacy is true.
+    self.assertLen(table_description, 12)
+    # DataTable also has 12 columns.
+    self.assertLen(data_table.columns, 12)
+
+    csv_file = io.StringIO(data_table.ToCsv())
+    reader = csv.reader(csv_file)
+
+    expected = [
+        int(MockValues.STEP_NUMBER),
+        float(MockValues.TC_COMPUTE_TIME_MS),
+        float(MockValues.SCV0_COMPUTE_TIME_MS),
+        float(MockValues.SCV0_INFEED_TIME_MS),
+        float(MockValues.TC_INFEED_TIME_MS),
+        float(MockValues.TC_OUTFEED_TIME_MS),
+        float(MockValues.TC_IDLE_TIME_MS),
+        float(MockValues.HOST_TRANSFER_MS),
+        MockValues.TOOLTIP_TPU.value,
+        float(MockValues.INFEED_PERCENT_AVERAGE),
+        float(MockValues.INFEED_PERCENT_MINIMUM),
+        float(MockValues.INFEED_PERCENT_MAXIMUM),
+    ]
+
+    for rr, row_values in enumerate(reader):
+      if rr == 0:
+        # DataTable columns match schema defined in table_description.
+        for cc, column_header in enumerate(row_values):
+          self.assertEqual(table_description[cc][2], column_header)
+      else:
+        for cc, cell_str in enumerate(row_values):
+          raw_value = data[rr - 1][cc]
+          value_type = table_description[cc][1]
+
+          # Only number and strings are used in our DataTable schema.
+          self.assertIn(value_type, ["number", "string"])
+
+          # Encode in similar fashion as DataTable.ToCsv().
+          expected_value = gviz_api.DataTable.CoerceValue(raw_value, value_type)
+          self.assertNotIsInstance(expected_value, tuple)
+          self.assertEqual(expected_value, raw_value)
+          self.assertEqual(str(expected_value), cell_str)
+
+          # Check against expected values we have set in our mock table.
+          if isinstance(expected[cc], str):
+            self.assertEqual(expected[cc], cell_str)
+          else:
+            self.assertEqual(str(expected[cc]), cell_str)
 
 
 if __name__ == "__main__":
