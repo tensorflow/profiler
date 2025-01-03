@@ -2,6 +2,13 @@ workspace(name = "org_xprof")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
+load("//:config.bzl", "repository_configuration")
+repository_configuration(name="repository_configuration")
+
+load("@repository_configuration//:repository_config.bzl", "PROFILER_PYTHON_VERSION")
+
+print("Using Python Version = {}".format(PROFILER_PYTHON_VERSION))
+
 http_archive(
     name = "bazel_skylib",
     sha256 = "74d544d96f4a5bb630d465ca8bbcfe231e3594e5aae57e1edbf17a6eb3ca2506",
@@ -31,7 +38,7 @@ python_register_toolchains(
     ignore_root_user_error = True,
     # Available versions are listed in @rules_python//python:versions.bzl.
     # We recommend using the same version your team is already standardized on.
-    python_version = "3.11",
+    python_version = PROFILER_PYTHON_VERSION,
 )
 
 load("@python//:defs.bzl", "interpreter")
