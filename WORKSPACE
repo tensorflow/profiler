@@ -170,7 +170,7 @@ sass_repositories()
 http_archive(
     name = "org_tensorflow",
     patch_args = ["-p1"],
-    patches = ["//third_party:tensorflow.patch"],
+    patches = ["//third_party:tensorflow.patch", "//third_party:tensorflow_add_grpc_cares_darwin_arm64_support.patch"],
     # NOTE: when updating this, MAKE SURE to also update the protobuf_js runtime version
     # in third_party/workspace.bzl to >= the protobuf/protoc version provided by TF.
     sha256 = "fe5261186952ec13652e48f219048d1f5e7825d6b83c91ebee71bbc41060baba",
