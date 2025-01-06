@@ -11,8 +11,3 @@ build --copt=-w
 
 build:macos --apple_platform_type=macos
 build:macos --copt=-DGRPC_BAZEL_BUILD
-build:macos --config=no_tfrt
-build:release_macos_arm64 --config=release_macos_base
-build:release_macos_arm64 --cpu=darwin_arm64
-build:release_macos_arm64 --macos_minimum_os=12.0
-build:release_macos_arm64 --action_env MACOSX_DEPLOYMENT_TARGET=12.0

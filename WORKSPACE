@@ -1,9 +1,9 @@
 workspace(name = "org_xprof")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
 load("//:config.bzl", "repository_configuration")
-repository_configuration(name="repository_configuration")
+
+repository_configuration(name = "repository_configuration")
 
 load("@repository_configuration//:repository_config.bzl", "PROFILER_PYTHON_VERSION")
 
@@ -170,13 +170,13 @@ sass_repositories()
 http_archive(
     name = "org_tensorflow",
     patch_args = ["-p1"],
-    patches = ["//third_party:tensorflow.patch", "//third_party:tensorflow_add_grpc_cares_darwin_arm64_support.patch"],
-    # NOTE: when updating this, MAKE SURE to also update the protobuf_js runtime version
-    # in third_party/workspace.bzl to >= the protobuf/protoc version provided by TF.
-    sha256 = "fe5261186952ec13652e48f219048d1f5e7825d6b83c91ebee71bbc41060baba",
-    strip_prefix = "tensorflow-0c1df46af2b5010ebdeac51f9391649753d3f1d2",
+    patches = [
+        "//third_party:tensorflow.patch",
+        "//third_party:tensorflow_add_grpc_cares_darwin_arm64_support.patch",
+    ],
+    strip_prefix = "tensorflow-master",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/0c1df46af2b5010ebdeac51f9391649753d3f1d2.zip",
+        "https://github.com/tensorflow/tensorflow/archive/refs/heads/master.zip",
     ],
 )
 
