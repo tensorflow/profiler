@@ -47,7 +47,6 @@ export class OpProfileBase {
     this.hasMultiModules =
         !!this.profile && !!this.profile.byCategory && !!this.profile.byProgram;
     this.isByCategory = false;
-    this.childrenCount = 10;
     this.updateRoot();
     this.data.update(this.rootNode);
   }
