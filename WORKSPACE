@@ -5,7 +5,7 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("//:config.bzl", "repository_configuration")
 repository_configuration(name="repository_configuration")
 
-load("@repository_configuration//:repository_config.bzl", "PROFILER_PYTHON_VERSION")
+load("@repository_configuration//:repository_config.bzl", "PROFILER_PYTHON_VERSION", "PROFILER_REQUIREMENTS_FILE")
 
 print("Using Python Version = {}".format(PROFILER_PYTHON_VERSION))
 
@@ -47,7 +47,7 @@ load("@rules_python//python:pip.bzl", "pip_parse")
 pip_parse(
     name = "python_deps",
     python_interpreter_target = interpreter,
-    requirements_lock = "//:requirements_lock_3_10.txt",
+    requirements_lock = PROFILER_REQUIREMENTS_FILE,
 )
 
 load("@python_deps//:requirements.bzl", "install_deps")
@@ -173,10 +173,9 @@ http_archive(
     patches = ["//third_party:tensorflow.patch"],
     # NOTE: when updating this, MAKE SURE to also update the protobuf_js runtime version
     # in third_party/workspace.bzl to >= the protobuf/protoc version provided by TF.
-    sha256 = "fe5261186952ec13652e48f219048d1f5e7825d6b83c91ebee71bbc41060baba",
-    strip_prefix = "tensorflow-0c1df46af2b5010ebdeac51f9391649753d3f1d2",
+    strip_prefix = "tensorflow-master",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/0c1df46af2b5010ebdeac51f9391649753d3f1d2.zip",
+        "https://github.com/tensorflow/tensorflow/archive/refs/heads/master.zip",
     ],
 )
 
