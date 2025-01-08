@@ -20,8 +20,10 @@ fi
 
 if [ "$(uname)" = "Darwin" ]; then
   sedi="sed -i ''"
+  cpio="cpio --insecure -updL"
 else
   sedi="sed -i"
+  cpio="cpio -updL"
 fi
 
 PLUGIN_RUNFILE_DIR="${RUNFILES}/org_xprof/plugin"
@@ -36,7 +38,7 @@ cp "$PLUGIN_RUNFILE_DIR/README.rst" .
 
 # Copy plugin python files.
 cd ${PLUGIN_RUNFILE_DIR}
-find . -name '*.py' | cpio -updL $dest
+find . -name '*.py' |  $cpio $dest
 cd $dest
 chmod -R 755 .
 cp ${BUILD_WORKSPACE_DIRECTORY}/bazel-bin/plugin/tensorboard_plugin_profile/protobuf/*_pb2.py tensorboard_plugin_profile/protobuf/

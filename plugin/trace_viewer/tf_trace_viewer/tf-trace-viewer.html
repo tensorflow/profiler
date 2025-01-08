@@ -403,7 +403,21 @@ dashboard would integrate trace viewer app using iframe.
     background-image: unset;
     background-color: #cbd6e3;
   }
+
+  .process-track-drag-handle {
+    position: absolute;
+    left: 18px;
+    user-select: text;
+    flex-grow: unset;
+    cursor: text;
+  }
+  .process-track-drag-handle:hover {
+    outline: none;
+    border: none;
+  }
   .process-track-name {
+    position: absolute;
+    left: 36px;
     user-select: text;
     flex-grow: unset;
     padding-right: 36px;
@@ -1246,6 +1260,80 @@ dashboard would integrate trace viewer app using iframe.
 
     _updateProcessHeader: function() {
       const processNameEls = document.getElementsByClassName('process-track-name');
+      const processTrackHeaders = document.getElementsByClassName('process-track-header');
+
+      for (let i = 0; i < processTrackHeaders.length; ++i) {
+        // Add a draggable handle to each process track header.
+        const draggingEl = tr.ui.b.createSpan();
+        Polymer.dom(draggingEl).classList.add('process-track-drag-handle');
+        draggingEl.textContent = '☰';
+        Polymer.dom(processTrackHeaders[i]).appendChild(draggingEl);
+        draggingEl.draggable = true;
+
+        // Overwrite the click event and prevent event propogation to enable drag and drop
+        draggingEl.addEventListener('mousedown', (e) => {
+          e.stopPropagation();
+        });
+        draggingEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+        });
+        draggingEl.addEventListener('mousemove', (e) => {
+          e.stopPropagation();
+        });
+
+        // Reduce opacity while dragging
+        draggingEl.addEventListener('dragstart', (e) => {
+          processTrackHeaders[i].style.opacity = 0.5; // Reduce opacity while dragging
+        });
+
+        // Reorder the process track when dragging ends while restoring the opacity
+        draggingEl.addEventListener('dragend', (e) => {
+          processTrackHeaders[i].style.opacity = 1; // Restore opacity after dragging ends
+
+          const draggedProcessTrack = processTrackHeaders[i].parentNode;
+
+          // Extract the target process track from the dragged to position
+          let targetProcessTrack = document.elementFromPoint(event.clientX, event.clientY);
+          while(targetProcessTrack && !targetProcessTrack.classList.contains('process-track-base'))
+          {
+            targetProcessTrack = targetProcessTrack.parentNode;
+          }
+
+          // List of parent process-track-base elements
+          const modelTrack = draggedProcessTrack.parentNode;
+          const processTrackList = Array.from(modelTrack.children);
+
+          // Find the index of the dragged item and the target item for drag/drop logic
+          const fromIndex = processTrackList.indexOf(draggedProcessTrack);
+          const toIndex = processTrackList.indexOf(targetProcessTrack);
+
+          if(fromIndex == toIndex) return;
+
+          //remove dragged item from list
+          const children = Array.from(draggedProcessTrack.childNodes);
+          modelTrack.removeChild(draggedProcessTrack);
+          // Reorder the dragged item by moving it to its new position
+          if (fromIndex > toIndex) {
+            modelTrack.insertBefore(draggedProcessTrack, targetProcessTrack);
+          } else {
+            modelTrack.insertBefore(draggedProcessTrack, targetProcessTrack.nextSibling);
+          }
+          // Reattach all the child nodes to the item
+          children.forEach(child => {
+            draggedProcessTrack.appendChild(child);
+          });
+
+          // Reset the expanded state of the process tracks to prevent some UI jank
+          // When moving a process track, the location of the child thread tracks doesn't match
+          // Unexpanding and reexpanding fixes this issue: https://screenshot.googleplex.com/32iyVqNAag98pkj
+          for(let i = 0; i < modelTrack.children.length; ++i)
+          {
+            const isExpanded = modelTrack.children[i].expanded;
+            modelTrack.children[i].expanded = false;
+            modelTrack.children[i].expanded = isExpanded;
+          }
+        });
+      }
 
       // Overwrite the click event with noop and prevent event propogatin to enable text selection.
       for (let i = 0; i < processNameEls.length; ++i) {
