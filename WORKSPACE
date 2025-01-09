@@ -5,7 +5,7 @@ load("//:config.bzl", "repository_configuration")
 
 repository_configuration(name = "repository_configuration")
 
-load("@repository_configuration//:repository_config.bzl", "PROFILER_PYTHON_VERSION")
+load("@repository_configuration//:repository_config.bzl", "PROFILER_PYTHON_VERSION", "PROFILER_REQUIREMENTS_FILE")
 
 print("Using Python Version = {}".format(PROFILER_PYTHON_VERSION))
 
@@ -47,7 +47,7 @@ load("@rules_python//python:pip.bzl", "pip_parse")
 pip_parse(
     name = "python_deps",
     python_interpreter_target = interpreter,
-    requirements_lock = "//:requirements_lock_3_10.txt",
+    requirements_lock = PROFILER_REQUIREMENTS_FILE,
 )
 
 load("@python_deps//:requirements.bzl", "install_deps")

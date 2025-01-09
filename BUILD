@@ -1,5 +1,6 @@
 load("@python//:defs.bzl", "compile_pip_requirements")
 load("@python_deps//:requirements.bzl", "requirement")
+load("@repository_configuration//:repository_config.bzl", "PROFILER_REQUIREMENTS_FILE")
 
 # Description
 # Xprof, ML Performance Toolbox (for TPU, GPU, CPU).
@@ -33,5 +34,5 @@ compile_pip_requirements(
     ],
     generate_hashes = True,
     requirements_in = "requirements.in",
-    requirements_txt = "requirements_lock_3_10.txt",
+    requirements_txt = PROFILER_REQUIREMENTS_FILE,
 )
