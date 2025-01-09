@@ -386,6 +386,10 @@ dashboard would integrate trace viewer app using iframe.
     background-image: unset;
     background-color: rgb(243, 245, 247);
   }
+  .dragging {
+    opacity : 0.5;
+    border : 2px solid red;
+  }
   .process-track-header:hover{
     cursor: pointer;
   }
@@ -409,7 +413,7 @@ dashboard would integrate trace viewer app using iframe.
     left: 18px;
     user-select: text;
     flex-grow: unset;
-    cursor: text;
+    cursor: grab;
   }
   .process-track-drag-handle:hover {
     outline: none;
@@ -1258,10 +1262,12 @@ dashboard would integrate trace viewer app using iframe.
       }
     },
 
+    _draggedProcessTrack: null,
     _updateProcessHeader: function() {
       const processNameEls = document.getElementsByClassName('process-track-name');
       const processTrackHeaders = document.getElementsByClassName('process-track-header');
 
+      // Enable drag & drop for processTracks
       for (let i = 0; i < processTrackHeaders.length; ++i) {
         // Add a draggable handle to each process track header.
         const draggingEl = tr.ui.b.createSpan();
@@ -1281,51 +1287,51 @@ dashboard would integrate trace viewer app using iframe.
           e.stopPropagation();
         });
 
-        // Reduce opacity while dragging
         draggingEl.addEventListener('dragstart', (e) => {
-          processTrackHeaders[i].style.opacity = 0.5; // Reduce opacity while dragging
+          e.dataTransfer.effectAllowed = 'move'; // Present the drag and drop icon correctly
+          this._draggedProcessTrack = e.currentTarget.parentNode.parentNode;
+          this._draggedProcessTrack.classList.add('dragging');
         });
 
-        // Reorder the process track when dragging ends while restoring the opacity
         draggingEl.addEventListener('dragend', (e) => {
-          processTrackHeaders[i].style.opacity = 1; // Restore opacity after dragging ends
+          this._draggedProcessTrack.classList.remove('dragging');
+          this._draggedProcessTrack = null;
+        });
 
-          const draggedProcessTrack = processTrackHeaders[i].parentNode;
+        // Move the dragged process track as it's dragged over other processes
+        const dropTargetHeader = processTrackHeaders[i];
+        dropTargetHeader.addEventListener('dragover', (e) => {
+          // Default behavior involves dragging the icon back to its previous position, so we
+          // prevent that behavior.
+          e.preventDefault();
+          const dropTarget = dropTargetHeader.parentNode;
+          const modelTrack = this._draggedProcessTrack?.parentNode;
+          const getProcessTrackIndex = (processTrack) => {
+              const processTrackList = Array.from(modelTrack.children);
+              return processTrackList.indexOf(processTrack);
+          };
 
-          // Extract the target process track from the dragged to position
-          let targetProcessTrack = document.elementFromPoint(event.clientX, event.clientY);
-          while(targetProcessTrack && !targetProcessTrack.classList.contains('process-track-base'))
+          const fromIndex = getProcessTrackIndex(this._draggedProcessTrack);
+          const toIndex = getProcessTrackIndex(dropTarget);
+
+          if(fromIndex === -1 || toIndex === -1 || fromIndex === toIndex)
           {
-            targetProcessTrack = targetProcessTrack.parentNode;
+            return;
           }
 
-          // List of parent process-track-base elements
-          const modelTrack = draggedProcessTrack.parentNode;
-          const processTrackList = Array.from(modelTrack.children);
+          const children = Array.from(this._draggedProcessTrack.childNodes);
+          modelTrack.removeChild(this._draggedProcessTrack);
 
-          // Find the index of the dragged item and the target item for drag/drop logic
-          const fromIndex = processTrackList.indexOf(draggedProcessTrack);
-          const toIndex = processTrackList.indexOf(targetProcessTrack);
-
-          if(fromIndex == toIndex) return;
-
-          //remove dragged item from list
-          const children = Array.from(draggedProcessTrack.childNodes);
-          modelTrack.removeChild(draggedProcessTrack);
-          // Reorder the dragged item by moving it to its new position
-          if (fromIndex > toIndex) {
-            modelTrack.insertBefore(draggedProcessTrack, targetProcessTrack);
-          } else {
-            modelTrack.insertBefore(draggedProcessTrack, targetProcessTrack.nextSibling);
-          }
-          // Reattach all the child nodes to the item
           children.forEach(child => {
-            draggedProcessTrack.appendChild(child);
+            this._draggedProcessTrack.appendChild(child);
           });
 
-          // Reset the expanded state of the process tracks to prevent some UI jank
-          // When moving a process track, the location of the child thread tracks doesn't match
-          // Unexpanding and reexpanding fixes this issue: https://screenshot.googleplex.com/32iyVqNAag98pkj
+          if (fromIndex > toIndex) {
+            modelTrack.insertBefore(this._draggedProcessTrack, dropTarget);
+          } else {
+            modelTrack.insertBefore(this._draggedProcessTrack, dropTarget.nextSibling);
+          }
+
           for(let i = 0; i < modelTrack.children.length; ++i)
           {
             const isExpanded = modelTrack.children[i].expanded;
@@ -1335,7 +1341,7 @@ dashboard would integrate trace viewer app using iframe.
         });
       }
 
-      // Overwrite the click event with noop and prevent event propogatin to enable text selection.
+      // Enable text selection for processTracks: overwrite the click event with noop and prevent event propogatin.
       for (let i = 0; i < processNameEls.length; ++i) {
         processNameEls[i].addEventListener('mousedown', (e) => {
           e.stopPropagation();
