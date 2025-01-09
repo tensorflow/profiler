@@ -3,6 +3,7 @@ import * as memoryProfileProto from 'org_xprof/frontend/app/common/interfaces/me
 import * as memoryViewerPreprocess from 'org_xprof/frontend/app/common/interfaces/memory_viewer_preprocess.jsonpb_decls';
 import * as opProfileProto from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
 import * as diagnosticsProto from 'org_xprof/frontend/app/common/interfaces/diagnostics';
+import {RooflineModelData} from 'org_xprof/frontend/app/common/interfaces/roofline_model';
 
 /** Constant of empty data in SimpleDataTable typing */
 export const DEFAULT_SIMPLE_DATA_TABLE = {
@@ -423,3 +424,13 @@ export declare interface InferenceProfileData extends SimpleDataTable {
 /** All Inference Stats page data table type. */
 export type InferenceProfileTable =
     |InferenceProfileMetadata|InferenceProfileData;
+
+/* tslint:enable */
+
+/**
+ * The internal tool's response data type
+ * yet to be open sourced
+ */
+export type XprofDataTable =
+    |DataTable|InferenceProfileTable[]
+    |RooflineModelData[];
