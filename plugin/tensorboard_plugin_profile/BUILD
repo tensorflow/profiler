@@ -11,7 +11,6 @@ py_library(
     srcs = ["profile_plugin.py"],
     srcs_version = "PY2AND3",
     deps = [
-        "//:expect_tensorflow_installed",
         "@org_pocoo_werkzeug",
         "@org_pythonhosted_six",
         "@org_tensorflow//tensorflow/python/profiler/internal:_pywrap_profiler_plugin",
