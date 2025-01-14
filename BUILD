@@ -14,6 +14,17 @@ exports_files([
     "rollup.config.js",
 ])
 
+py_library(
+    name = "expect_tensorflow_installed",
+    # This is a dummy rule used as a tensorflow dependency in open-source.
+    # We expect tensorflow to already be installed on the system, e.g. via
+    # `pip install tensorflow`
+    visibility = ["//visibility:public"],
+    deps = [
+        requirement("tensorflow"),
+    ],
+)
+
 compile_pip_requirements(
     name = "requirements",
     extra_args = [

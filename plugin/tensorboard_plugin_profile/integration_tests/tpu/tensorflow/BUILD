@@ -12,6 +12,7 @@ profiler_test(
         "v4",
     ],
     deps = [
+        "//:expect_tensorflow_installed",
         "//plugin/tensorboard_plugin_profile/convert:raw_to_tool_data",
         "//plugin/tensorboard_plugin_profile/integration_tests:tf_mnist",
         "//plugin/tensorboard_plugin_profile/integration_tests:tf_profiler_session",
@@ -26,6 +27,7 @@ py_strict_library(
     srcs = ["tpu_tf2_keras_test.py"],
     visibility = ["//plugin:__pkg__"],
     deps = [
+        "//:expect_tensorflow_installed",
         "//plugin/tensorboard_plugin_profile/convert:raw_to_tool_data",
         "//plugin/tensorboard_plugin_profile/integration_tests:tf_mnist",
         "//plugin/tensorboard_plugin_profile/integration_tests:tf_profiler_session",
