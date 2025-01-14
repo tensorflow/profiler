@@ -20,9 +20,6 @@ py_library(
     # We expect tensorflow to already be installed on the system, e.g. via
     # `pip install tensorflow`
     visibility = ["//visibility:public"],
-    deps = [
-        requirement("tensorflow"),
-    ],
 )
 
 compile_pip_requirements(
