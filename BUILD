@@ -9,6 +9,8 @@ licenses(["notice"])
 
 exports_files(["LICENSE"])  # Needed for internal repo.
 
+exports_files(["README.md"])  # Needed for pip package description
+
 exports_files([
     "tsconfig.json",
     "rollup.config.js",
