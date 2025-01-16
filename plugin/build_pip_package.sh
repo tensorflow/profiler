@@ -15,7 +15,16 @@
 
 set -e
 if [ -z "${RUNFILES}" ]; then
-  RUNFILES="$(CDPATH= cd -- "$0.runfiles" && pwd)"
+  if [ "$(uname)" = "MSYS_NT-10.0-20348" ]; then
+    runfiles_dir="$(cygpath "$0")"
+    RUNFILES="$(CDPATH= cd -- "$runfiles_dir.runfiles" && pwd)"
+    build_workspace="$(cygpath "$BUILD_WORKSPACE_DIRECTORY")"
+    dest="/c/tmp/profile-pip"
+  else
+    RUNFILES="$(CDPATH= cd -- "$0.runfiles" && pwd)"
+    build_workspace="$BUILD_WORKSPACE_DIRECTORY"
+    dest="/tmp/profile-pip"
+  fi
 fi
 
 if [ "$(uname)" = "Darwin" ]; then
@@ -29,7 +38,6 @@ fi
 PLUGIN_RUNFILE_DIR="${RUNFILES}/org_xprof/plugin"
 FRONTEND_RUNFILE_DIR="${RUNFILES}/org_xprof/frontend"
 
-dest="/tmp/profile-pip"
 mkdir -p "$dest"
 cd "$dest"
 
@@ -41,13 +49,13 @@ cd ${PLUGIN_RUNFILE_DIR}
 find . -name '*.py' |  $cpio $dest
 cd $dest
 chmod -R 755 .
-cp ${BUILD_WORKSPACE_DIRECTORY}/bazel-bin/plugin/tensorboard_plugin_profile/protobuf/*_pb2.py tensorboard_plugin_profile/protobuf/
+cp ${build_workspace}/bazel-bin/plugin/tensorboard_plugin_profile/protobuf/*_pb2.py tensorboard_plugin_profile/protobuf/
 
 find tensorboard_plugin_profile/protobuf -name \*.py -exec $sedi -e '
     s/^from plugin.tensorboard_plugin_profile/from tensorboard_plugin_profile/
   ' {} +
 
-cp ${BUILD_WORKSPACE_DIRECTORY}/bazel-bin/external/org_tensorflow/tensorflow/python/profiler/internal/_pywrap_profiler_plugin.so tensorboard_plugin_profile/convert/
+cp ${build_workspace}/bazel-bin/external/org_tensorflow/tensorflow/python/profiler/internal/_pywrap_profiler_plugin.so tensorboard_plugin_profile/convert/
 
 # Copy static files.
 cd tensorboard_plugin_profile
