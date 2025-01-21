@@ -13,30 +13,43 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -x
 set -e
+copy="cp"
 if [ -z "${RUNFILES}" ]; then
   if [ "$(uname)" = "MSYS_NT-10.0-20348" ]; then
-    runfiles_dir="$(cygpath "$0")"
-    RUNFILES="$(CDPATH= cd -- "$runfiles_dir.runfiles" && pwd)"
     build_workspace="$(cygpath "$BUILD_WORKSPACE_DIRECTORY")"
+    ls -l "${build_workspace}"
+    ls -l "${build_workspace}/bazel-out/"
+    echo "bazel-out: ${build_workspace}/bazel-out"
+    ls -l "${build_workspace}/bazel-out/x64_windows-fastbuild/"
+    runfiles_dir="${build_workspace}/bazel-out/x64_windows-fastbuild/"
+    RUNFILES="$(CDPATH= cd -- "$0.exe.runfiles" && pwd)"
+
     dest="/c/tmp/profile-pip"
+    PLUGIN_RUNFILE_DIR="${RUNFILES}/org_xprof/plugin"
+    FRONTEND_RUNFILE_DIR="${RUNFILES}/org_xprof/frontend"
+    ls -l "${PLUGIN_RUNFILE_DIR}"
+    ls -l "${FRONTEND_RUNFILE_DIR}"
   else
     RUNFILES="$(CDPATH= cd -- "$0.runfiles" && pwd)"
     build_workspace="$BUILD_WORKSPACE_DIRECTORY"
     dest="/tmp/profile-pip"
+    PLUGIN_RUNFILE_DIR="${RUNFILES}/org_xprof/plugin"
+    FRONTEND_RUNFILE_DIR="${RUNFILES}/org_xprof/frontend"
   fi
 fi
 
 if [ "$(uname)" = "Darwin" ]; then
   sedi="sed -i ''"
   cpio="cpio --insecure -updL"
+  copy="gcp"
 else
   sedi="sed -i"
   cpio="cpio -updL"
 fi
 
-PLUGIN_RUNFILE_DIR="${RUNFILES}/org_xprof/plugin"
-FRONTEND_RUNFILE_DIR="${RUNFILES}/org_xprof/frontend"
+
 ROOT_RUNFILE_DIR="${RUNFILES}/org_xprof/"
 
 mkdir -p "$dest"
@@ -47,10 +60,10 @@ cp "$ROOT_RUNFILE_DIR/README.md" README.md
 
 # Copy plugin python files.
 cd ${PLUGIN_RUNFILE_DIR}
-find . -name '*.py' |  $cpio $dest
+find . -name '*.py' -exec ${copy} --parents -rpv {} $dest \;
 cd $dest
 chmod -R 755 .
-cp ${build_workspace}/bazel-bin/plugin/tensorboard_plugin_profile/protobuf/*_pb2.py tensorboard_plugin_profile/protobuf/
+cp ${build_workspace}/bazel-bin/plugin/tensorboard_plugin_profile/protobuf/*_pb2.py tensorboard_plugin_profile/protobuf/ || echo "Files already exist"
 
 find tensorboard_plugin_profile/protobuf -name \*.py -exec $sedi -e '
     s/^from plugin.tensorboard_plugin_profile/from tensorboard_plugin_profile/
