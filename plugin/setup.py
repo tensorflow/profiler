@@ -35,7 +35,7 @@ REQUIRED_PACKAGES = [
 
 
 def get_readme():
-  with open('README.rst') as f:
+  with open('README.md') as f:
     return f.read()
 
 
@@ -44,6 +44,7 @@ setuptools.setup(
     version=VERSION,
     description='Profile Tensorboard Plugin',
     long_description=get_readme(),
+    long_description_content_type='text/markdown',
     author='Google Inc.',
     author_email='packages@tensorflow.org',
     url='https://github.com/tensorflow/profiler',
@@ -80,5 +81,5 @@ setuptools.setup(
         'Topic :: Software Development :: Libraries',
     ],
     license='Apache 2.0',
-    keywords='tensorflow tensorboard xprof profile plugin',
+    keywords='jax pytorch xla tensorflow tensorboard xprof profile plugin',
 )

@@ -17,8 +17,8 @@ sh_binary(
     name = "build_pip_package",
     srcs = ["build_pip_package.sh"],
     data = [
-        "README.rst",
         "setup.py",
+        "//:README.md",
         "@org_tensorflow//tensorflow/python/profiler/internal:_pywrap_profiler_plugin",
         "@org_xprof//frontend:bundle.js",
         "@org_xprof//frontend:css",

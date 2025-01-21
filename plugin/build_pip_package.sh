@@ -37,12 +37,13 @@ fi
 
 PLUGIN_RUNFILE_DIR="${RUNFILES}/org_xprof/plugin"
 FRONTEND_RUNFILE_DIR="${RUNFILES}/org_xprof/frontend"
+ROOT_RUNFILE_DIR="${RUNFILES}/org_xprof/"
 
 mkdir -p "$dest"
 cd "$dest"
 
-# Copy all necessary files for setup.
-cp "$PLUGIN_RUNFILE_DIR/README.rst" .
+# Copy root README for pip package
+cp "$ROOT_RUNFILE_DIR/README.md" README.md
 
 # Copy plugin python files.
 cd ${PLUGIN_RUNFILE_DIR}
