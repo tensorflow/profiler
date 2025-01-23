@@ -14,17 +14,13 @@ export type ToolQueryParams = NavigationEvent;
  */
 @Injectable({providedIn: 'root'})
 export class CommunicationService {
-  @Output() readonly navigationChange = new EventEmitter();
   @Output() readonly navigationReady = new EventEmitter();
   @Output() readonly toolQueryParamsChange = new EventEmitter();
 
-  // Trigger navigation in sidenav component
-  onNavigate(navigationEvent: NavigationEvent) {
-    this.navigationChange.emit(navigationEvent);
-  }
-
-  onNavigateReady() {
-    this.navigationReady.emit({});
+  // Show a navigating status when populating navigation chains
+  // eg. tools for selected run
+  onNavigateReady(navigationEvent: NavigationEvent) {
+    this.navigationReady.emit(navigationEvent);
   }
 
   onToolQueryParamsChange(queryParams: ToolQueryParams) {

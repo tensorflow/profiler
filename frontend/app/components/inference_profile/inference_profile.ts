@@ -132,12 +132,6 @@ export class InferenceProfile implements OnDestroy {
         i++;
       }
     }
-    console.log('allRequestTables', this.allRequestTables);
-    console.log('allRequestProperties', this.allRequestProperties);
-    console.log('allBatchTables', this.allBatchTables);
-    console.log('allBatchProperties', this.allBatchProperties);
-    console.log('allTensorPatternTables', this.allTensorPatternTables);
-    console.log('allTensorPatternProperties', this.allTensorPatternProperties);
 
     return true;
   }

@@ -5,4 +5,6 @@ export declare interface NavigationEvent {
   host?: string;
   // Graph Viewer crosslink params
   opName?: string;
+  // Navigation controlling params
+  firstLoad?: boolean;
 }

@@ -1,5 +1,6 @@
 import {Component, OnDestroy} from '@angular/core';
 import {Store} from '@ngrx/store';
+import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import {CommunicationService} from 'org_xprof/frontend/app/services/communication_service/communication_service';
 import {getLoadingState} from 'org_xprof/frontend/app/store/selectors';
 import {LoadingState} from 'org_xprof/frontend/app/store/state';
@@ -32,9 +33,20 @@ export class MainPage implements OnDestroy {
           this.loading = loadingState.loading;
           this.loadingMessage = loadingState.message;
         });
-    this.communicationService.navigationReady.subscribe(() => {
-      this.navigationReady = true;
-    });
+    this.communicationService.navigationReady.subscribe(
+        (navigationEvent: NavigationEvent) => {
+          this.navigationReady = true;
+          // TODO(fe-unification): Remove this constraint once the sidepanel
+          // content of the 3 tools are moved out from sidenav with consolidated
+          // templates.
+          const toolsWithSideNav =
+              ['op_profile', 'memory_viewer', 'pod_viewer'];
+          this.isSideNavOpen =
+              (navigationEvent.firstLoad ||
+               toolsWithSideNav
+                       .filter(tool => navigationEvent?.tag?.startsWith(tool))
+                       .length > 0);
+        });
   }
 
   ngOnDestroy() {

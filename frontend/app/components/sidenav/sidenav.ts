@@ -31,7 +31,7 @@ export class SideNav implements OnInit, OnDestroy {
   selectedRunInternal = '';
   selectedTagInternal = '';
   selectedHostInternal = '';
-  navigationParams: {[key: string]: string} = {};
+  navigationParams: {[key: string]: string|boolean} = {};
 
   constructor(
       private readonly router: Router,
@@ -53,10 +53,6 @@ export class SideNav implements OnInit, OnDestroy {
         this.selectedRunInternal = run;
       }
     });
-    this.communicationService.navigationChange.subscribe(
-        (navigationEvent: NavigationEvent) => {
-          this.onUpdateRoute(navigationEvent);
-        });
     this.communicationService.toolQueryParamsChange.subscribe(
         (queryParams: ToolQueryParams) => {
           this.navigationParams = {
@@ -97,17 +93,25 @@ export class SideNav implements OnInit, OnDestroy {
         this.hosts[0] || '';
   }
 
+  // Initial page load with url params
   navigateWithUrl() {
     const params = new URLSearchParams(window.parent.location.search);
-    const navigationEvent: NavigationEvent = {
-      run: params.get('run') || '',
-      tag: params.get('tool') || '',
-      host: params.get('host') || '',
-    };
-    if (params.has('opName')) {
-      navigationEvent.opName = params.get('opName') || '';
+    const run = params.get('run') || '';
+    const tag = params.get('tool') || '';
+    const host = params.get('host') || '';
+    const opName = params.get('opName') || '';
+    this.navigationParams['firstLoad'] = true;
+    if (opName) {
+      this.navigationParams['opName'] = opName;
     }
-    this.onUpdateRoute(navigationEvent);
+    if (this.selectedRunInternal === run && this.selectedTagInternal === tag &&
+        this.selectedHostInternal === host) {
+      return;
+    }
+    this.selectedRunInternal = run;
+    this.selectedTagInternal = tag;
+    this.selectedHostInternal = host;
+    this.update();
   }
 
   ngOnInit() {
@@ -222,28 +226,14 @@ export class SideNav implements OnInit, OnDestroy {
   }
 
   navigateTools() {
-    this.communicationService.onNavigateReady();
     const navigationEvent = this.getNavigationEvent();
+    this.communicationService.onNavigateReady(navigationEvent);
     this.router.navigate([
       this.selectedTag || 'empty',
       navigationEvent,
     ]);
+    delete this.navigationParams['firstLoad'];
     this.updateUrlHistory();
-  }
-
-  onUpdateRoute(event: NavigationEvent) {
-    const {run = '', tag = '', host = ''} = event;
-    this.selectedRunInternal = run;
-    this.selectedTagInternal = tag;
-    this.selectedHostInternal = host;
-    this.navigationParams = {
-      ...this.navigationParams,
-      ...event,
-    };
-    delete this.navigationParams['run'];
-    delete this.navigationParams['tag'];
-    delete this.navigationParams['host'];
-    this.update();
   }
 
   update() {
