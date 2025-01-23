@@ -474,6 +474,26 @@ def get_recommendation_table_args(ipa):
   return (table_description, data, None)
 
 
+def generate_max_infeed_core_table(ipa):
+  """Creates a table that reports the name of the TPU core that has the maximum infeed time at each step."""
+  table_description = [
+      ("index", "string", "Index"),
+  ]
+  step_number_row = ["Step Number"]
+  core_name_row = ["Core Name"]
+  for idx, raw_step_details in enumerate(ipa.step_details):
+    table_description.append((str(idx), "string", str(idx)))
+    step_details = tpu_input_pipeline_pb2.PerTpuStepDetails()
+    if not raw_step_details.Unpack(step_details):
+      continue
+    step_number_row.append(step_details.step_number)
+    core_name_row.append(step_details.max_infeed_time_core_name)
+
+  return gviz_api.DataTable(
+      table_description, (step_number_row, core_name_row), None
+  )
+
+
 def generate_step_breakdown_table_for_tpu(ipa):
   table_description, data, custom_properties = (
       get_step_breakdown_table_args_for_tpu(ipa)
@@ -502,14 +522,14 @@ def generate_recommendation_table(ipa):
 def generate_all_chart_tables(ipa):
   """Generates a list of gviz tables from InputPipelineAnalysisResult."""
 
-  step_breakdown_table = (
-      generate_step_breakdown_table(ipa)
-      if ipa.tag
-      else generate_step_breakdown_table_for_tpu(ipa)
-  )
+  tables = []
+  if ipa.tag:
+    tables.append(generate_step_breakdown_table_for_tpu(ipa))
+    tables.append(generate_max_infeed_core_table(ipa))
+  else:
+    tables.append(generate_step_breakdown_table(ipa))
 
-  return [
-      step_breakdown_table,
+  return tables + [
       generate_input_op_table(ipa),
       generate_recommendation_table(ipa),
       diag.generate_diagnostics_table(ipa.diagnostics),

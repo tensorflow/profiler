@@ -455,6 +455,35 @@ class ProtoToGvizTest(tf.test.TestCase):
           else:
             self.assertEqual(str(expected[cc]), cell_str)
 
+  def test_generate_max_infeed_core_table(self):
+    ipa = input_pipeline_pb2.InputPipelineAnalysisResult()
+    ipa.hardware_type = "TPU"
+    ipa.tag = True
+    for step_number in range(0, 3):
+      step_details = tpu_input_pipeline_pb2.PerTpuStepDetails()
+      step_details.step_number = step_number
+      step_details.max_infeed_time_core_name = "core_name"
+      step_details_any = Any()
+      step_details_any.Pack(step_details)
+      ipa.step_details.append(step_details_any)
+    data_table = input_pipeline_proto_to_gviz.generate_max_infeed_core_table(
+        ipa
+    )
+    self.assertEqual(2, data_table.NumberOfRows())
+    for row in csv.reader(io.StringIO(data_table.ToCsv())):
+      self.assertIn(row[0], ["Index", "Step Number", "Core Name"])
+      if row[0] == "Index":
+        # Process column headers.
+        for idx, col in enumerate(row[1:]):
+          self.assertEqual(col, str(idx))
+      elif row[0] == "Step Number":
+        for idx, step_number in enumerate(row[1:]):
+          self.assertEqual(step_number, str(idx))
+      else:
+        self.assertEqual(row[0], "Core Name")
+        for core_name in row[1:]:
+          self.assertEqual(core_name, "core_name")
+
 
 if __name__ == "__main__":
   tf.test.main()
