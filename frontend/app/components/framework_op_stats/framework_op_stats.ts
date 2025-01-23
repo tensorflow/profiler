@@ -166,10 +166,10 @@ export class FrameworkOpStats {
     this.dataProvider.notifyCharts();
 
     if (this.selectedData && this.selectedData.p) {
-      this.architecture = this.selectedData.p.architecture_type || '';
-      this.task = this.selectedData.p.task_type || '';
-      this.devicePprofLink = this.selectedData.p.device_tf_pprof_link || '';
-      this.hostPprofLink = this.selectedData.p.host_tf_pprof_link || '';
+      this.architecture = this.selectedData.p['architecture_type'] || '';
+      this.task = this.selectedData.p['task_type'] || '';
+      this.devicePprofLink = this.selectedData.p['device_tf_pprof_link'] || '';
+      this.hostPprofLink = this.selectedData.p['host_tf_pprof_link'] || '';
     }
     this.hasDeviceData = false;
     if (this.selectedData && this.selectedData.rows) {

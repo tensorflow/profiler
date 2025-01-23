@@ -85,11 +85,11 @@ export class HostSideAnalysisDetail implements OnInit, OnChanges {
     const kUsPerMs = 1000.0;
     const p = hostAnalysis.p || {};
     const unclassifiedNonEnqueueMs =
-        Number(p.unclassified_nonequeue_us) / kUsPerMs;
-    const demandedFileReadMs = Number(p.demanded_file_read_us) / kUsPerMs;
-    const advancedFileReadMs = Number(p.advanced_file_read_us) / kUsPerMs;
-    const preprocessingMs = Number(p.preprocessing_us) / kUsPerMs;
-    const enqueueMs = Number(p.enqueue_us) / kUsPerMs;
+        Number(p['unclassified_nonequeue_us']) / kUsPerMs;
+    const demandedFileReadMs = Number(p['demanded_file_read_us']) / kUsPerMs;
+    const advancedFileReadMs = Number(p['advanced_file_read_us']) / kUsPerMs;
+    const preprocessingMs = Number(p['preprocessing_us']) / kUsPerMs;
+    const enqueueMs = Number(p['enqueue_us']) / kUsPerMs;
 
     const data = [
       [

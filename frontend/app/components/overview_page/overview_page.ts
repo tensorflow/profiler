@@ -1,7 +1,7 @@
 import {Component, OnDestroy} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {Store} from '@ngrx/store';
-import {OverviewPageDataTuple, RunEnvironmentProperty} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {OverviewPageDataTuple} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
 import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
@@ -61,9 +61,9 @@ export class OverviewPage extends OverviewPageCommon implements OnDestroy {
   }
 
   parseRunEnvironmentDetail() {
-    const runEnvironmentProp: RunEnvironmentProperty =
+    const runEnvironmentProp: Record<string, string> =
         (this.runEnvironment || {}).p || {};
-    this.profileStartTime = runEnvironmentProp.profile_start_time || '';
+    this.profileStartTime = runEnvironmentProp['profile_start_time'] || '';
   }
 
   ngOnDestroy() {

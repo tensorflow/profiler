@@ -17,26 +17,26 @@ export class NormalizedAcceleratorPerformanceView {
     data.p = data.p || {};
 
     this.backgroundInfos = [];
-    this.backgroundInfos.push(data.p.background_link_0 || '');
-    this.backgroundInfos.push(data.p.background_link_1 || '');
+    this.backgroundInfos.push(data.p['background_link_0'] || '');
+    this.backgroundInfos.push(data.p['background_link_1'] || '');
     this.backgroundInfos = this.backgroundInfos.filter(info => !!info);
 
     this.totalNapsInfos = [];
-    this.totalNapsInfos.push(data.p.total_naps_line_0 || '');
-    this.totalNapsInfos.push(data.p.total_naps_line_1 || '');
-    this.totalNapsInfos.push(data.p.total_naps_line_2 || '');
+    this.totalNapsInfos.push(data.p['total_naps_line_0'] || '');
+    this.totalNapsInfos.push(data.p['total_naps_line_1'] || '');
+    this.totalNapsInfos.push(data.p['total_naps_line_2'] || '');
     this.totalNapsInfos = this.totalNapsInfos.filter(info => !!info);
 
     this.computeCostInfos = [];
-    this.computeCostInfos.push(data.p.training_cost_line_0 || '');
-    this.computeCostInfos.push(data.p.training_cost_line_1 || '');
+    this.computeCostInfos.push(data.p['training_cost_line_0'] || '');
+    this.computeCostInfos.push(data.p['training_cost_line_1'] || '');
     this.computeCostInfos = this.computeCostInfos.filter(info => !!info);
 
     this.computeProductivityInfos = [];
     this.computeProductivityInfos.push(
-        data.p.training_productivity_line_0 || '');
+        data.p['training_productivity_line_0'] || '');
     this.computeProductivityInfos.push(
-        data.p.training_productivity_line_1 || '');
+        data.p['training_productivity_line_1'] || '');
     this.computeProductivityInfos =
         this.computeProductivityInfos.filter(info => !!info);
   }

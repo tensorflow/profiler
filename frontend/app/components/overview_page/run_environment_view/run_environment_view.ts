@@ -14,9 +14,9 @@ export class RunEnvironmentView {
   set runEnvironment(data: RunEnvironment|null) {
     data = data || DEFAULT_SIMPLE_DATA_TABLE;
     data.p = data.p || {};
-    this.deviceCoreCount = data.p.device_core_count || '';
-    this.deviceType = data.p.device_type || '';
-    this.hostCount = data.p.host_count || '';
+    this.deviceCoreCount = data.p['device_core_count'] || '';
+    this.deviceType = data.p['device_type'] || '';
+    this.hostCount = data.p['host_count'] || '';
   }
 
   title = 'Run Environment';

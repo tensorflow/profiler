@@ -31,31 +31,7 @@ export class RecommendationResultView extends RecommendationResultViewCommon {
 
   getRecommendationResultProp(id: string, defaultValue: string = ''): string {
     const props = (this.recommendationResult || {}).p || {};
-
-    switch (id) {
-      case 'bottleneck':
-        return props.bottleneck || defaultValue;
-      case 'outside_compilation_statement_html':
-        return props.outside_compilation_statement_html || defaultValue;
-      case 'eager_statement_html':
-        return props.eager_statement_html || defaultValue;
-      case 'tf_function_statement_html':
-        return props.tf_function_statement_html || defaultValue;
-      case 'statement':
-        return props.statement || defaultValue;
-      case 'device_collectives_statement':
-        return props.device_collectives_statement || defaultValue;
-      case 'kernel_launch_statement':
-        return props.kernel_launch_statement || defaultValue;
-      case 'all_other_statement':
-        return props.all_other_statement || defaultValue;
-      case 'precision_statement':
-        return props.precision_statement || defaultValue;
-      default:
-        break;
-    }
-
-    return defaultValue;
+    return props[id] || defaultValue;
   }
 
   override parseStatements() {

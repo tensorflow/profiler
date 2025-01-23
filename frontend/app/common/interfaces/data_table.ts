@@ -83,89 +83,28 @@ export declare interface TopOpsColumn {
   tcUtilization: number;
 }
 
-/* tslint:disable enforce-name-casing */
-/** The base interface for a property of run environment. */
-export declare interface RunEnvironmentProperty {
-  error_message?: string;
-  host_count?: string;
-  device_core_count?: string;
-  device_type?: string;
-  is_training?: string;
-  tpu_core_count?: string;
-  profile_start_time?: string;
-}
-/* tslint:enable */
-
 /** The base interface for a run environment. */
 export declare interface RunEnvironment extends SimpleDataTable {
-  p?: RunEnvironmentProperty;
+  p?: Record<string, string>; /* Run environment property */
 }
-
-/* tslint:disable enforce-name-casing */
-/** The base interface for a property of recommendation result. */
-declare interface RecommendationResultProperty {
-  bottleneck?: string;
-  statement?: string;
-  tf_function_statement_html?: string;
-  eager_statement_html?: string;
-  outside_compilation_statement_html?: string;
-  all_other_bottleneck?: string;
-  all_other_statement?: string;
-  kernel_launch_bottleneck?: string;
-  kernel_launch_statement?: string;
-  device_collectives_bottleneck?: string;
-  device_collectives_statement?: string;
-  precision_statement?: string;
-}
-/* tslint:enable */
 
 /** The base interface for a recommendation result. */
 export declare interface RecommendationResult extends SimpleDataTable {
-  p?: RecommendationResultProperty;
+  p?: Record<string, string>; /* Recommendation result property */
 }
-
-/* tslint:disable enforce-name-casing */
-/** The base interface for a property of normalized accelerator performance. */
-declare interface NormalizedAcceleratorPerformanceProperty {
-  background_link_0?: string;
-  background_link_1?: string;
-  inference_cost_line_0?: string;
-  inference_cost_line_1?: string;
-  inference_productivity_line_0?: string;
-  inference_productivity_line_1?: string;
-  total_naps_line_0?: string;
-  total_naps_line_1?: string;
-  total_naps_line_2?: string;
-  training_cost_line_0?: string;
-  training_cost_line_1?: string;
-  training_productivity_line_0?: string;
-  training_productivity_line_1?: string;
-}
-/* tslint:enable */
 
 /** The base interface for a normalized accelerator performance. */
 export declare interface NormalizedAcceleratorPerformance extends
     SimpleDataTable {
-  p?: NormalizedAcceleratorPerformanceProperty;
+  p?: Record<string, string>/* Normalized accelerator performance property */;
 }
 
 /** The data table type for an input pipeline device-side analysis. */
 export type InputPipelineDeviceAnalysis = InputPipelineAnalysis;
 
-/* tslint:disable enforce-name-casing */
-/** The base interface for a property of input pipeline host-side anaysis. */
-declare interface InputPipelineHostAnalysisProperty {
-  advanced_file_read_us?: string;
-  demanded_file_read_us?: string;
-  enqueue_us?: string;
-  preprocessing_us?: string;
-  unclassified_nonequeue_us?: string;
-}
-/* tslint:enable */
-
 /** The base interface for an input pipeline host-side analysis. */
 export declare interface InputPipelineHostAnalysis extends SimpleDataTable {
-  p?: InputPipelineHostAnalysisProperty;
+  p?: Record<string, string>/* Input pipeline host analysis property */;
 }
 
 /** The base interface for a host ops table column. */
@@ -179,19 +118,9 @@ export interface HostOpsColumn {
   category: number;
 }
 
-/* tslint:disable enforce-name-casing */
-/** The base interface for a property of tensorflow stats. */
-declare interface FrameworkOpStatsProperty {
-  architecture_type?: string;
-  device_tf_pprof_link?: string;
-  host_tf_pprof_link?: string;
-  task_type?: string;
-}
-/* tslint:enable */
-
 /** The base interface for a tensorflow stats. */
 export declare interface FrameworkOpStatsData extends SimpleDataTable {
-  p?: FrameworkOpStatsProperty;
+  p?: Record<string, string>/* Framework op stats property */;
 }
 
 /** The base interface for a replica group. */
