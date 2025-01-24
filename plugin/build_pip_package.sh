@@ -19,18 +19,12 @@ copy="cp"
 if [ -z "${RUNFILES}" ]; then
   if [ "$(uname)" = "MSYS_NT-10.0-20348" ]; then
     build_workspace="$(cygpath "$BUILD_WORKSPACE_DIRECTORY")"
-    ls -l "${build_workspace}"
-    ls -l "${build_workspace}/bazel-out/"
-    echo "bazel-out: ${build_workspace}/bazel-out"
-    ls -l "${build_workspace}/bazel-out/x64_windows-fastbuild/"
     runfiles_dir="${build_workspace}/bazel-out/x64_windows-fastbuild/"
     RUNFILES="$(CDPATH= cd -- "$0.exe.runfiles" && pwd)"
 
     dest="/c/tmp/profile-pip"
     PLUGIN_RUNFILE_DIR="${RUNFILES}/org_xprof/plugin"
     FRONTEND_RUNFILE_DIR="${RUNFILES}/org_xprof/frontend"
-    ls -l "${PLUGIN_RUNFILE_DIR}"
-    ls -l "${FRONTEND_RUNFILE_DIR}"
   else
     RUNFILES="$(CDPATH= cd -- "$0.runfiles" && pwd)"
     build_workspace="$BUILD_WORKSPACE_DIRECTORY"
@@ -41,12 +35,7 @@ if [ -z "${RUNFILES}" ]; then
 fi
 
 if [ "$(uname)" = "Darwin" ]; then
-  sedi="sed -i ''"
-  cpio="cpio --insecure -updL"
   copy="gcp"
-else
-  sedi="sed -i"
-  cpio="cpio -updL"
 fi
 
 
@@ -60,14 +49,16 @@ cp "$ROOT_RUNFILE_DIR/README.md" README.md
 
 # Copy plugin python files.
 cd ${PLUGIN_RUNFILE_DIR}
-find . -name '*.py' -exec ${copy} --parents -rpv {} $dest \;
+find . -name '*.py' -exec ${copy} --parents -Lrpv {} $dest \;
 cd $dest
 chmod -R 755 .
 cp ${build_workspace}/bazel-bin/plugin/tensorboard_plugin_profile/protobuf/*_pb2.py tensorboard_plugin_profile/protobuf/ || echo "Files already exist"
 
-find tensorboard_plugin_profile/protobuf -name \*.py -exec $sedi -e '
+find tensorboard_plugin_profile/protobuf -name \*.py -exec sed -i.bak -e '
     s/^from plugin.tensorboard_plugin_profile/from tensorboard_plugin_profile/
   ' {} +
+
+find . -name "*.bak" -exec rm {} \;
 
 cp ${build_workspace}/bazel-bin/external/org_tensorflow/tensorflow/python/profiler/internal/_pywrap_profiler_plugin.so tensorboard_plugin_profile/convert/
 
