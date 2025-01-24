@@ -543,7 +543,8 @@ dashboard would integrate trace viewer app using iframe.
           this._traceViewer.brushingStateController.findFocusChangedTo.bind(
               this._traceViewer.brushingStateController);
       this._traceViewer.brushingStateController.findFocusChangedTo =
-          (currentFocus) => {
+          async (currentFocus) => {
+            await this.onSelectionChange(currentFocus);
             superFindFocusChangedTo(currentFocus);
             this._traceViewer.trackView.zoomToSelection();
           };
