@@ -1154,7 +1154,7 @@ dashboard would integrate trace viewer app using iframe.
       backendToggleButton.appendChild(labelDiv);
       backendToggleButton.appendChild(tooltipSpan);
       backendToggleButton.addEventListener('click', () => {
-        const url = new URL(`/trace_viewer/${this._sessionId}`, window.location.href);
+        const url = new URL(window.parent.location.href);
         this._useNewBackend = !this._useNewBackend;
         url.searchParams.set('new_backend', this._useNewBackend);
         window.open(url.toString(), '_top');
