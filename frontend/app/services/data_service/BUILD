@@ -17,3 +17,20 @@ xprof_ng_module(
         "@org_xprof//frontend/app/common/interfaces",
     ],
 )
+
+xprof_ng_module(
+    name = "data_service_interface",
+    srcs = [
+        "data_service_interface.ts",
+        "mock_interface_data.ts",
+    ],
+    deps = [
+        "//third_party/javascript/safevalues/dom",
+        "@npm//@angular/common",
+        "@npm//@angular/core",
+        "@npm//rxjs",
+        "@org_xprof//frontend/app/common/angular:angular_common_http",
+        "@org_xprof//frontend/app/common/constants",
+        "@org_xprof//frontend/app/common/interfaces",
+    ],
+)

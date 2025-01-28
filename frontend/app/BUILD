@@ -28,6 +28,7 @@ xprof_ng_module(
         "@org_xprof//frontend/app/pipes",
         "@org_xprof//frontend/app/services/data_dispatcher",
         "@org_xprof//frontend/app/services/data_service",
+        "@org_xprof//frontend/app/services/data_service:data_service_interface",
         "@org_xprof//frontend/app/store",
     ],
 )
