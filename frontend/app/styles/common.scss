@@ -9,6 +9,70 @@ $dark-theme-card-title-background-color: #3f51b5;
 $dark-theme-card-title-focus-background-color: #7885cb;
 $dark-theme-card-title-color: #fff;
 
+.goog-tooltip {
+  z-index: 10;
+}
+
+.mat-mdc-tooltip {
+  font-size: 12px;
+}
+
+.google-visualization-table-type-number {
+  text-align: center;
+}
+
+.hidden-content trace-viewer {
+  display: none;
+}
+
+//TODO(jonahweaver): Remove tool specific styles from common.scss to tool specific stylesheet.
+op-profile .ops-control .mat-mdc-form-field {
+  /* stylelint-disable-next-line declaration-no-important -- legacy code */
+  text-align: center !important;
+}
+
+// Styles for overlay components needs to be global.
+//
+// Reference: https://material.angular.io/guide/customizing-component-styles#styling-overlay-components
+// Some OS hides scrollbars while not in use. Always show scrollbar if the
+// overlay has a scroll feature.
+.panel-override::-webkit-scrollbar {
+  -webkit-appearance: none;
+  width: 7px;
+}
+
+.panel-override::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+.google-chart-table-header-cell {
+  word-wrap: break-word;
+  background-color: #fff;
+  /* stylelint-disable-next-line declaration-no-important -- legacy code */
+  border-top: none !important;
+  /* stylelint-disable-next-line declaration-no-important -- legacy code */
+  border-left: none !important;
+  /* stylelint-disable-next-line declaration-no-important -- legacy code */
+  border-right: none !important;
+}
+
+.google-chart-table-table-cell {
+  word-break: break-all;
+  color: black;
+  /* stylelint-disable-next-line declaration-no-important -- legacy code */
+  border-top: none !important;
+  /* stylelint-disable-next-line declaration-no-important -- legacy code */
+  border-left: none !important;
+  /* stylelint-disable-next-line declaration-no-important -- legacy code */
+  border-right: none !important;
+}
+
+overview top-ops-table .mat-expansion-panel-body {
+  padding: 0;
+}
+
 .horizontal-center {
   text-align: center;
 }
@@ -87,6 +151,7 @@ mat-progress-bar {
 }
 
 @mixin overview-card {
+  /* stylelint-disable-next-line declaration-no-important -- legacy code */
   box-shadow: none !important;
   margin: 8px;
   @media screen and (max-width: 1140px) {
@@ -137,6 +202,7 @@ mat-progress-bar {
 }
 
 @mixin detail-card {
+  /* stylelint-disable-next-line declaration-no-important -- legacy code */
   box-shadow: none !important;
   border-top: 1px solid #eee;
   border-radius: 0;
