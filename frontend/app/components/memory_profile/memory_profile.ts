@@ -1,10 +1,10 @@
-import {Component, OnDestroy} from '@angular/core';
+import {Component, Inject, OnDestroy} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {Store} from '@ngrx/store';
 import {MemoryProfileProto} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import {MemoryProfileBase} from 'org_xprof/frontend/app/components/memory_profile/memory_profile_base';
-import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
+import {type DataServiceInterface, DataServiceInterfaceToken} from 'org_xprof/frontend/app/services/consolidated_data_service/data_service_interface';
 import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
 import {ReplaySubject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
@@ -25,8 +25,9 @@ export class MemoryProfile extends MemoryProfileBase implements OnDestroy {
   host = '';
 
   constructor(
-      route: ActivatedRoute, private readonly dataService: DataService,
-      private readonly store: Store<{}>) {
+      route: ActivatedRoute,
+      @Inject(DataServiceInterfaceToken) private readonly dataService:
+          DataServiceInterface, private readonly store: Store<{}>) {
     super();
     route.params.pipe(takeUntil(this.destroyed)).subscribe((params) => {
       this.update(params as NavigationEvent);
@@ -45,7 +46,7 @@ export class MemoryProfile extends MemoryProfileBase implements OnDestroy {
       }
     }));
 
-    this.dataService.getData(this.run, this.tag, this.host)
+    this.dataService.getData(this.tag, this.run, this.host)
         .pipe(takeUntil(this.destroyed))
         .subscribe(data => {
           this.store.dispatch(setLoadingStateAction({
