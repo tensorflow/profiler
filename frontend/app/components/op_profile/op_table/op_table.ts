@@ -23,6 +23,8 @@ export class OpTable implements OnDestroy {
   /** The number of children nodes to be shown. */
   @Input() childrenCount: number = 10;
 
+  @Input() searchFilterString = '';
+
   selectedNode?: Node;
 
   constructor(private readonly store: Store<{}>) {}
