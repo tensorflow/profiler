@@ -870,6 +870,7 @@ dashboard would integrate trace viewer app using iframe.
 
     _searchAndAddTraceEvents: async function(searchText) {
       if (this._isLoading) return;
+      this._previousSearchText = this._currentSearchText;
       const requestURL = this._buildBaseURL();
       requestURL.searchParams.set('replace_model', 'false');
       requestURL.searchParams.set('resolution', 0);
@@ -1061,22 +1062,45 @@ dashboard would integrate trace viewer app using iframe.
       modeSelector?.addEventListener('recthover', this._onHoverRect.bind(this));
     },
 
+    _timer: null,
+    _previousSearchText : '',
+    _currentSearchText : '',
+
+    _callSearchLater: function(controller, handler) {
+      clearTimeout(this._timer);
+      this._timer = setTimeout(() => {
+        this._callSearchNow(controller, handler);
+      }, 1000); // 1 second
+    },
+
+    _callSearchNow: function(controller, handler) {
+      clearTimeout(this._timer);
+      this._currentSearchText = controller.$.filter.value;
+      if(this._currentSearchText.length == 0 ||
+          this._previousSearchText == this._currentSearchText) return;
+
+      // Do server side search.
+      this._searchAndAddTraceEvents(this._currentSearchText);
+      // Update the highlight and hint after search is done (more events appended).
+      handler.apply(controller);
+    },
+
+    // Change the behavior of the search box to always fetch full trace
+    // search results from the backend before executing frontend search logic.
+    // This is done by either doing full search on enter key press, or
+    // debouncing the search logic to only execute after a 1 second delay.
     _updateSearchBehavior: function() {
       const findController = document.querySelector('tr-ui-find-control');
-      const originalFilterKeyDown = findController.filterKeyDown;
-      const originalFilterTextChange = findController.filterTextChanged;
+      const originalSearchBarKeyDown = findController.filterKeyDown;
+      const originalSearchBarTextChange = findController.filterTextChanged;
       let lastFilterText = '';
       findController.filterKeyDown = async (keyEvent) => {
-        currentFilterText = findController.$.filter.value;
-        if (keyEvent.keyCode === 13 && currentFilterText != lastFilterText) {
-          lastFilterText = currentFilterText;
-          // Do server side search.
-          await this._searchAndAddTraceEvents(currentFilterText);
-          // Update the highlight and hint after search is done (more events appended).
-          originalFilterTextChange.apply(findController);
-        } else {
-          originalFilterKeyDown.apply(findController, [keyEvent]);
+        if (keyEvent.keyCode === 13) {
+          this._callSearchNow(findController, originalSearchBarTextChange);
         }
+      };
+      findController.filterTextChanged = async (keyEvent) => {
+        this._callSearchLater(findController, originalSearchBarTextChange);
       };
     },
 
