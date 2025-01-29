@@ -9,7 +9,7 @@ xprof_ng_module(
     name = "recommendation_result_view",
     srcs = [
         "recommendation_result_view.ts",
-        "recommendation_result_view_common.ts",
+        "recommendation_result_view_interfaces.ts",
         "recommendation_result_view_module.ts",
     ],
     assets = [
