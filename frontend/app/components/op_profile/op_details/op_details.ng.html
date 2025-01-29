@@ -25,6 +25,20 @@
             </button>
           </a>
         </div>
+        <div class="info" id="graph-viewer-link" [hidden]="isOss || !isCustomCall">
+          <a [href]="getCustomCallTextLink()" target="_blank" style="text-decoration:none;">
+            <button
+              mat-stroked-button
+              extended
+              type="button"
+              color="primary"
+              appearance="fill"
+              aria-label="go to custom call text"
+              i18n-aria-label="A button to corresponding custom call text page">
+             > Custom Call Text
+            </button>
+          </a>
+        </div>
         <div class="info" [hidden]="!avgTimeMs">
           <div class="title">Total Time Avg:</div>
           <code class="expression">{{avgTimeMs}}</code>

@@ -64,6 +64,9 @@ export class OpDetails {
   showUtilizationWarning = false;
   deviceType = 'TPU';
 
+  get isCustomCall() {
+    return this.node?.xla?.category === 'custom-call';
+  }
 
   constructor(
       private readonly store: Store<{}>,
@@ -148,6 +151,12 @@ export class OpDetails {
           this.getSelectedModuleName()}&node_name=${this.getSelectedOpName()}`;
     }
     return '';
+  }
+
+  getCustomCallTextLink() {
+    return `/graph_viewer.json?session_id=${this.sessionId}&module_name=${
+        this.getSelectedModuleName()}&node_name=${
+        this.getSelectedOpName()}&type=custom_call`;
   }
 
   dimensionColor(dimension?: Node.XLAInstruction.LayoutAnalysis.Dimension):
