@@ -4,11 +4,13 @@
 
 :host {
   display: block;
+  padding-top: 10px;
 }
 
 .container {
   display: flex;
   flex-wrap: wrap;
+  align-items: start;
   width: 100%;
 }
 
@@ -40,4 +42,12 @@
   .right-column {
     width: 100%;
   }
+}
+
+.key-label {
+  font-weight: 500;
+}
+
+.value-label {
+  word-break: break-all;
 }

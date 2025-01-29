@@ -44,7 +44,12 @@ export class OverviewPageCommon {
     this.diagnostics = parseDiagnosticsDataTable(data[DIAGNOSTICS_INDEX]);
   }
 
-  hasInferenceLatencyData(): boolean {
+  get hasInferenceLatencyData(): boolean {
+    // Assumption: is inference session if hasInferenceLatencyData is not empty
     return !!this.inferenceLatencyData?.rows?.length;
+  }
+
+  get hasStepTimeGraphData(): boolean {
+    return !!this.inputPipelineAnalysis?.rows?.length;
   }
 }
