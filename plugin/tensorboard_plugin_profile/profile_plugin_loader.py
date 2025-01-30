@@ -19,9 +19,15 @@ from __future__ import division
 from __future__ import print_function
 
 import argparse
+from collections import defaultdict
 import logging
+import socket
+import sys
 
-from tensorboard.plugins import base_plugin
+try:
+  from tensorboard.plugins import base_plugin
+except ImportError:
+  from tensorboard_plugin_profile.tb_free import base_plugin
 
 logger = logging.getLogger('tensorboard-plugin-profile')
 
@@ -81,3 +87,52 @@ class ProfilePluginLoader(base_plugin.TBLoader):
     # pylint: enable=g-import-not-at-top
 
     return profile_plugin.ProfilePlugin(context)
+
+
+def _get_wildcard_address(port):
+    """Returns a wildcard address for the port in question.
+
+    This will attempt to follow the best practice of calling
+    getaddrinfo() with a null host and AI_PASSIVE to request a
+    server-side socket wildcard address. If that succeeds, this
+    returns the first IPv6 address found, or if none, then returns
+    the first IPv4 address. If that fails, then this returns the
+    hardcoded address "::" if socket.has_ipv6 is True, else
+    "0.0.0.0".
+    """
+    fallback_address = "::" if socket.has_ipv6 else "0.0.0.0"
+    if hasattr(socket, "AI_PASSIVE"):
+        try:
+            addrinfos = socket.getaddrinfo(
+                None,
+                port,
+                socket.AF_UNSPEC,
+                socket.SOCK_STREAM,
+                socket.IPPROTO_TCP,
+                socket.AI_PASSIVE,
+            )
+        except socket.gaierror as e:
+            return fallback_address
+        addrs_by_family = defaultdict(list)
+        for family, _, _, _, sockaddr in addrinfos:
+            # Format of the "sockaddr" socket address varies by address family,
+            # but [0] is always the IP address portion.
+            addrs_by_family[family].append(sockaddr[0])
+        if hasattr(socket, "AF_INET6") and addrs_by_family[socket.AF_INET6]:
+            return addrs_by_family[socket.AF_INET6][0]
+        if hasattr(socket, "AF_INET") and addrs_by_family[socket.AF_INET]:
+            return addrs_by_family[socket.AF_INET][0]
+    return fallback_address
+
+from tensorboard_plugin_profile import profile_plugin
+from tensorboard_plugin_profile.tb_free.context import DataProvider, TBContext
+
+def main():
+    if len(sys.argv) < 2:
+        print("Need logdir")
+        return -1
+    logdir = sys.argv[1]
+    context = TBContext(logdir, DataProvider(logdir), TBContext.Flags(False))
+    loader = ProfilePluginLoader()
+    plugin = loader.load(context)
+    profile_plugin.run_server(plugin, _get_wildcard_address(8080), 8080)

@@ -18,6 +18,7 @@ py_library(
         "@org_tensorflow_tensorboard//tensorboard/backend/event_processing:plugin_asset_util",
         "@org_tensorflow_tensorboard//tensorboard/plugins:base_plugin",
         "@org_xprof//plugin/tensorboard_plugin_profile/convert:all_libs",
+        "@org_xprof//plugin/tensorboard_plugin_profile/tb_free:all_libs",
         "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
     ],
 )
