@@ -21,7 +21,10 @@ from __future__ import print_function
 import argparse
 import logging
 
-from tensorboard.plugins import base_plugin
+try:
+  from tensorboard.plugins import base_plugin
+except ImportError:
+  from tensorboard_plugin_profile.tb_free import base_plugin
 
 logger = logging.getLogger('tensorboard-plugin-profile')
 
