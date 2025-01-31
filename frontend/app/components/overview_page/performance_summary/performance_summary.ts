@@ -235,44 +235,42 @@ export class PerformanceSummary implements OnChanges, OnInit {
   @Input() inferenceLatencyData?: GeneralAnalysis;
 
   title = 'Performance Summary';
-  isTpu = true;
-  generalProps: GeneralProps = {};
-  inputPipelineProps: GeneralProps = {};
-  inferenceLatencyProps: GeneralProps = {};
   summaryInfoCombined: SummaryInfo[] = [];
-  remarkText = '';
-  remarkColor = '';
+
+  get isTpu() {
+    return this.inputPipelineProps['hardware_type'] === 'TPU';
+  }
+
+  get generalProps() {
+    return (this.generalAnalysis || {}).p as GeneralProps || {};
+  }
+
+  get inputPipelineProps() {
+    return (this.inputPipelineAnalysis || {}).p as GeneralProps || {};
+  }
+
+  get inferenceLatencyProps() {
+    return (this.inferenceLatencyData || {}).p as GeneralProps || {};
+  }
+
+  get remarkText() {
+    return this.generalProps['remark_text'] || '';
+  }
+
+  get remarkColor() {
+    return this.generalProps['remark_color'] || '';
+  }
 
   ngOnInit() {
-    this.inputPipelineProps =
-        (this.inputPipelineAnalysis || {}).p as GeneralProps || {};
-    this.isTpu = this.inputPipelineProps['hardware_type'] === 'TPU';
-    this.generalProps = (this.generalAnalysis || {}).p as GeneralProps || {};
-    this.inferenceLatencyProps = (this.inferenceLatencyData || {}).p || {};
-    this.remarkText = this.generalProps['remark_text'] || '';
-    this.remarkColor = this.generalProps['remark_color'] || '';
     this.parseSummaryData();
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    if (changes['inputPipelineAnalysis'] && this.inputPipelineAnalysis) {
-      this.inputPipelineProps =
-          (this.inputPipelineAnalysis || {}).p as GeneralProps || {};
-      this.isTpu = this.inputPipelineProps['hardware_type'] === 'TPU';
-    }
-    if (changes['generalAnalysis'] && this.generalAnalysis) {
-      this.generalProps = (this.generalAnalysis || {}).p as GeneralProps || {};
-      this.remarkText = this.generalProps['remark_text'] || '';
-      this.remarkColor = this.generalProps['remark_color'] || '';
-    }
-    if (changes['inferenceLatencyData'] && this.inferenceLatencyData) {
-      this.inferenceLatencyProps =
-          (this.inferenceLatencyData || {}).p as GeneralProps || {};
-    }
     this.parseSummaryData();
   }
 
   parseSummaryData() {
+    this.summaryInfoCombined = [];
     this.parseDataFromConfig(
         GENERIC_SUMMARY_INFO_BEFORE, this.inputPipelineProps,
         this.summaryInfoCombined, 1);
