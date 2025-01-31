@@ -398,3 +398,17 @@ export function addDataToDataInfo(dataInfo: ChartDataInfo, data: any) {
     data: isOneOfDataTableUnion ? (data as DataTableUnion) : null,
   };
 }
+
+/**
+ * Returns the string value of a column in a gviz.DataTableRow
+ */
+export function getStringColumnValue(
+    row: google.visualization.DataObjectCell[],
+    columnIndex: number,
+    ): string {
+  row = row || [];
+  if (columnIndex < 0 || columnIndex >= row.length) {
+    return '';
+  }
+  return String((row[columnIndex] || {}).v || '');
+}

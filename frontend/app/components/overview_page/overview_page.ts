@@ -1,10 +1,9 @@
 import {Component, OnDestroy} from '@angular/core';
-import {ActivatedRoute} from '@angular/router';
+import {ActivatedRoute, Params} from '@angular/router';
 import {Store} from '@ngrx/store';
 import {OverviewPageDataTuple} from 'org_xprof/frontend/app/common/interfaces/data_table';
-import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
+import {setLoadingState} from 'org_xprof/frontend/app/common/utils/utils';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
-import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
 import {ReplaySubject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 
@@ -15,55 +14,40 @@ import {OverviewPageCommon} from './overview_page_common';
   standalone: false,
   selector: 'overview_page',
   templateUrl: './overview_page.ng.html',
-  styleUrls: ['./overview_page.css']
 })
 export class OverviewPage extends OverviewPageCommon implements OnDestroy {
+  run = '';
+  tag = '';
+  host = '';
   /** Handles on-destroy Subject, used to unsubscribe. */
   private readonly destroyed = new ReplaySubject<void>(1);
-
-  profileStartTime = '';
 
   constructor(
       route: ActivatedRoute, private readonly dataService: DataService,
       private readonly store: Store<{}>) {
     super();
     route.params.pipe(takeUntil(this.destroyed)).subscribe((params) => {
-      this.update(params as NavigationEvent);
+      this.processQuery(params);
+      this.update();
     });
   }
 
-  update(event: NavigationEvent) {
-    const run = event.run || '';
-    const tag = event.tag || 'overview_page';
-    const host = event.host || '';
-
-    this.store.dispatch(setLoadingStateAction({
-      loadingState: {
-        loading: true,
-        message: 'Loading data',
-      }
-    }));
-
-    this.dataService.getData(run, tag, host)
-        .pipe(takeUntil(this.destroyed))
-        .subscribe((data) => {
-          this.store.dispatch(setLoadingStateAction({
-            loadingState: {
-              loading: false,
-              message: '',
-            }
-          }));
-
-          /** Transfer data to Overview Page DataTable type */
-          this.parseOverviewPageData((data || []) as OverviewPageDataTuple);
-          this.parseRunEnvironmentDetail();
-        });
+  processQuery(params: Params) {
+    this.host = params['host'];
+    this.run = params['run'];
+    this.tag = params['tag'] || 'overview_page';
   }
 
-  parseRunEnvironmentDetail() {
-    const runEnvironmentProp: Record<string, string> =
-        (this.runEnvironment || {}).p || {};
-    this.profileStartTime = runEnvironmentProp['profile_start_time'] || '';
+  update() {
+    setLoadingState(true, this.store, 'Loading overview data');
+
+    this.dataService.getData(this.run, this.tag, this.host)
+        .pipe(takeUntil(this.destroyed))
+        .subscribe((data) => {
+          setLoadingState(false, this.store);
+          /** Transfer data to Overview Page DataTable type */
+          this.parseOverviewPageData((data || []) as OverviewPageDataTuple);
+        });
   }
 
   ngOnDestroy() {

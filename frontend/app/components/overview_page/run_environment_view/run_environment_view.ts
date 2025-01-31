@@ -1,5 +1,5 @@
 import {Component, Input} from '@angular/core';
-import {DEFAULT_SIMPLE_DATA_TABLE, type RunEnvironment} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {type RunEnvironment} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 /** A run environment view component. */
 @Component({
@@ -12,15 +12,23 @@ export class RunEnvironmentView {
   /** The run environment data. */
   @Input()
   set runEnvironment(data: RunEnvironment|null) {
-    data = data || DEFAULT_SIMPLE_DATA_TABLE;
-    data.p = data.p || {};
-    this.deviceCoreCount = data.p['device_core_count'] || '';
-    this.deviceType = data.p['device_type'] || '';
-    this.hostCount = data.p['host_count'] || '';
+    this.deviceCoreCount = this.getProperty('device_core_count', data);
+    this.deviceType = this.getProperty('device_type', data);
+    this.hostCount = this.getProperty('host_count', data);
+    this.isTraining = this.getProperty('is_training', data);
+    this.profileStartTime = this.getProperty('profile_start_time', data);
+    this.profileDurationMs = this.getProperty('profile_duration_ms', data);
   }
 
   title = 'Run Environment';
   deviceCoreCount = '';
   deviceType = '';
   hostCount = '';
+  isTraining = '';
+  profileStartTime = '';
+  profileDurationMs = '';
+
+  getProperty(propertyKey: string, data: RunEnvironment|null) {
+    return data?.p?.[propertyKey] || '';
+  }
 }

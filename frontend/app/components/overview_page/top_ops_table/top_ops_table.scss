@@ -2,15 +2,16 @@
 
 @import 'frontend/app/styles/common';
 
+:host {
+  @include border-bottom-gray;
+  @include border-right-gray;
+}
+
 :host:not(.dark-theme) {
   mat-expansion-panel {
     @include overview-card;
     margin: 0;
   }
-}
-
-mat-expansion-panel-header {
-  margin: 8px 8px 0;
 }
 
 mat-panel-title {

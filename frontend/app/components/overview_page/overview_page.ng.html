@@ -1,53 +1,13 @@
-<!--
-  The Overview Page is a view within the tf-profile-dashboard.
-  It is the first page that users would look at in order to understand
-  the overall performance of their TPU workloads. The page is divided into the left and right section:
-  Left section:
-    (1) Performance summary
-    (2) Run environment
-  Right section:
-    (1) Step-time graph for training / inference
-    (2) Top 10 TensorFlow Operations executed on TPU
-    (3) Recommendation for next steps
--->
-
-<div>
-  <diagnostics-view [diagnostics]="diagnostics"></diagnostics-view>
-  <div class="container">
-    <div class="left-column">
-      <performance-summary
-          [isInference]="hasInferenceLatencyData"
-          [generalAnalysis]="generalAnalysis"
-          [inputPipelineAnalysis]="inputPipelineAnalysis"
-          [inferenceLatencyData]="inferenceLatencyData">
-      </performance-summary>
-      <run-environment-view [runEnvironment]="runEnvironment">
-        <div profileDetail>
-          <p [hidden]="!profileStartTime">
-            <span class="key-label">Profile start time (local)</span>:
-            <span>{{profileStartTime}}</span>
-          </p>
-        </div>
-      </run-environment-view>
-    </div>
-
-    <div class="right-column">
-      <step-time-graph
-        *ngIf="hasStepTimeGraphData"
-        id="step-time-graph"
-        [inputPipelineAnalysis]="inputPipelineAnalysis">
-      </step-time-graph>
-      <inference-latency-chart
-        *ngIf="hasInferenceLatencyData"
-        [inferenceLatencyData]="inferenceLatencyData">
-      </inference-latency-chart>
-      <top-ops-table
-        [initiallyExpanded]="false"
-        [generalAnalysis]="generalAnalysis"
-        [inputPipelineAnalysis]="inputPipelineAnalysis">
-      </top-ops-table>
-      <recommendation-result-view [recommendationResult]="recommendationResult">
-      </recommendation-result-view>
-    </div>
-  </div>
-</div>
+<overview-page-base
+  [diagnostics]="diagnostics"
+  [generalAnalysis]="generalAnalysis"
+  [inputPipelineAnalysis]="inputPipelineAnalysis"
+  [recommendationResult]="recommendationResult"
+  [runEnvironment]="runEnvironment"
+  [inferenceLatencyData]="inferenceLatencyData"
+  >
+  <recommendation-result-view
+    recommendationResultView
+    [recommendationResult]="recommendationResult">
+  </recommendation-result-view>
+</overview-page-base>

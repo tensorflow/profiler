@@ -1,5 +1,5 @@
 import {AfterViewInit, Component, ElementRef, HostListener, Input, OnChanges, SimpleChanges, ViewChild} from '@angular/core';
-
+import {STACK_CHART_FILL_COLORS} from 'org_xprof/frontend/app/common/constants/constants';
 import {type InputPipelineAnalysis} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 const MAX_CHART_WIDTH = 800;
@@ -23,11 +23,6 @@ const COLUMN_IDS_FOR_GPU = [
   'compileTimeMs',
   'otherTimeMs',
   'tooltip',
-];
-const COLORS_FOR_TPU = [
-  'green',
-  'crimson',
-  'blue',
 ];
 const COLORS_FOR_GPU = [
   '#4b7b4b',
@@ -56,7 +51,7 @@ export class StepTimeGraph implements AfterViewInit, OnChanges {
   @Input() columnIds = COLUMN_IDS_FOR_TPU;
 
   /** The default column colors. */
-  @Input() columnColors = COLORS_FOR_TPU;
+  @Input() columnColors = STACK_CHART_FILL_COLORS;
 
   @ViewChild('chart', {static: false}) chartRef!: ElementRef;
 

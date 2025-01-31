@@ -4,6 +4,36 @@ load("//defs:defs.bzl", "xprof_ng_module")
 package(default_visibility = ["//frontend:internal"])
 
 xprof_ng_module(
+    name = "overview_page_base",
+    srcs = [
+        "overview_page_base_module.ts",
+    ],
+    assets = [
+        ":overview_page_css",
+        "overview_page_base.ng.html",
+    ],
+    # strict_templates = False,
+    deps = [
+        "@npm//@angular/common",
+        "@npm//@angular/core",
+        "@npm//@ngrx/store",
+        "@npm//@types/google.visualization",
+        "@npm//rxjs",
+        "@org_xprof//frontend/app/common/interfaces",
+        "@org_xprof//frontend/app/common/utils",
+        "@org_xprof//frontend/app/components/diagnostics_view",
+        "@org_xprof//frontend/app/components/overview_page/inference_latency_chart",
+        "@org_xprof//frontend/app/components/overview_page/normalized_accelerator_performance_view",
+        "@org_xprof//frontend/app/components/overview_page/performance_summary",
+        "@org_xprof//frontend/app/components/overview_page/run_environment_view",
+        "@org_xprof//frontend/app/components/overview_page/step_time_graph",
+        "@org_xprof//frontend/app/components/overview_page/top_ops_table",
+        "@org_xprof//frontend/app/services/data_service",
+        "@org_xprof//frontend/app/store",
+    ],
+)
+
+xprof_ng_module(
     name = "overview_page",
     srcs = [
         "overview_page.ts",
@@ -16,6 +46,7 @@ xprof_ng_module(
     ],
     # strict_templates = False,
     deps = [
+        ":overview_page_base",
         "@npm//@angular/common",
         "@npm//@angular/core",
         "@npm//@angular/router",
@@ -24,14 +55,7 @@ xprof_ng_module(
         "@npm//rxjs",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/utils",
-        "@org_xprof//frontend/app/components/diagnostics_view",
-        "@org_xprof//frontend/app/components/overview_page/inference_latency_chart",
-        "@org_xprof//frontend/app/components/overview_page/normalized_accelerator_performance_view",
-        "@org_xprof//frontend/app/components/overview_page/performance_summary",
         "@org_xprof//frontend/app/components/overview_page/recommendation_result_view",
-        "@org_xprof//frontend/app/components/overview_page/run_environment_view",
-        "@org_xprof//frontend/app/components/overview_page/step_time_graph",
-        "@org_xprof//frontend/app/components/overview_page/top_ops_table",
         "@org_xprof//frontend/app/services/data_service",
         "@org_xprof//frontend/app/store",
     ],
