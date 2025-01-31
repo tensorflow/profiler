@@ -62,7 +62,7 @@ const KNOWN_TOOLS = [
   'memory_viewer',
   'op_profile',
   'pod_viewer',
-  'tensorflow_stats',
+  'framework_op_stats',
   'trace_viewer',
   'tf_data_bottleneck_analysis',
 ];
@@ -317,18 +317,19 @@ export function scrollBottomOfSidenav() {
 }
 
 /**
- * Returns a string with an anchor tag.
+ * Returns a string with an anchor tag in oss.
  */
-export function addAnchorTag(value: string = ''): string {
-  return '<a>' + value + '</a>';
+export function addAnchorTag(value = '', run = ''): string {
+  return `<a href="/?tool=${value}&run=${run}#profile" target="_blank">${
+      value}</a>`;
 }
 
 /**
  * Returns a string with the known tool name changed to an anchor tag.
  */
-export function convertKnownToolToAnchorTag(value: string = ''): string {
+export function convertKnownToolToAnchorTag(value = '', run = ''): string {
   KNOWN_TOOLS.forEach(tool => {
-    value = value.replace(new RegExp(tool, 'g'), addAnchorTag(tool));
+    value = value.replace(new RegExp(tool, 'g'), addAnchorTag(tool, run));
   });
   return value;
 }
