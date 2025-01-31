@@ -23,7 +23,7 @@ const OP_EXPRESSION_ID = 'hlo_op_expression';
 const SELF_TIME_ID = 'total_self_time';
 const HLO_REMAT_ID = 'hlo_rematerialization';
 const OUTSIDE_COMPILATION_ID = 'outside_compilation';
-const MEASURED_FLOP_RATE_ID = 'measured_flop_rate';
+const MEASURED_FLOP_RATE_ID = 'model_flop_rate';
 
 /** A Hlo Stats component. */
 @Component({
@@ -150,7 +150,8 @@ export class HloStats extends Dashboard implements OnDestroy {
       data.cols?.findIndex((col) => col.id === OP_EXPRESSION_ID) ?? -1;
     const hloOpNameColumnIdx =
       data.cols?.findIndex((col) => col.id === OP_NAME_ID) ?? -1;
-    if (programIdColumnIdx === -1 || hloOpExpressionColumnIdx === -1) {
+    if (programIdColumnIdx === -1 || hloOpExpressionColumnIdx === -1 ||
+        hloOpNameColumnIdx === -1) {
       return data;
     }
 
