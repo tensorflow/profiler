@@ -4,7 +4,7 @@ import {Store} from '@ngrx/store';
 import {MemoryProfileProto} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import {MemoryProfileBase} from 'org_xprof/frontend/app/components/memory_profile/memory_profile_base';
-import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
+import {DataServiceInterface} from 'org_xprof/frontend/app/services/data_service/data_service_interface';
 import {setLoadingStateAction} from 'org_xprof/frontend/app/store/actions';
 import {ReplaySubject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
@@ -25,7 +25,7 @@ export class MemoryProfile extends MemoryProfileBase implements OnDestroy {
   host = '';
 
   constructor(
-      route: ActivatedRoute, private readonly dataService: DataService,
+      route: ActivatedRoute, private readonly dataService: DataServiceInterface,
       private readonly store: Store<{}>) {
     super();
     route.params.pipe(takeUntil(this.destroyed)).subscribe((params) => {
