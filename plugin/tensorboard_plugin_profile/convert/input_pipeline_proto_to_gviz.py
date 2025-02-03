@@ -104,7 +104,10 @@ def get_step_breakdown_table_args_for_tpu(ipa):
   data = []
   for step_details in ipa.step_details:
     details = tpu_input_pipeline_pb2.PerTpuStepDetails()
-    step_details.Unpack(details)
+    if not step_details.Unpack(details):
+      warnings.warn("Could not unpack to PerTpuStepDetails")
+      continue
+
     tooltip = (
         "step {}: \nTime waiting for input data = {:.3f} ms, Step time ="
         " {:.3f} ms".format(
@@ -501,11 +504,18 @@ def generate_step_breakdown_table_for_tpu(ipa):
   return gviz_api.DataTable(table_description, data, custom_properties)
 
 
-def generate_step_breakdown_table(ipa):
+def generate_step_breakdown_table_for_generic(ipa):
   (table_description, data, custom_properties) = get_step_breakdown_table_args(
       ipa
   )
   return gviz_api.DataTable(table_description, data, custom_properties)
+
+
+def generate_step_breakdown_table(ipa):
+  if ipa.tag:
+    return generate_step_breakdown_table_for_tpu(ipa)
+  else:
+    return generate_step_breakdown_table_for_generic(ipa)
 
 
 def generate_input_op_table(ipa):
@@ -521,15 +531,12 @@ def generate_recommendation_table(ipa):
 
 def generate_all_chart_tables(ipa):
   """Generates a list of gviz tables from InputPipelineAnalysisResult."""
-
   tables = []
   if ipa.tag:
-    tables.append(generate_step_breakdown_table_for_tpu(ipa))
     tables.append(generate_max_infeed_core_table(ipa))
-  else:
-    tables.append(generate_step_breakdown_table(ipa))
 
   return tables + [
+      generate_step_breakdown_table(ipa),
       generate_input_op_table(ipa),
       generate_recommendation_table(ipa),
       diag.generate_diagnostics_table(ipa.diagnostics),
