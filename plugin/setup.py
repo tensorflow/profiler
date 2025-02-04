@@ -33,7 +33,7 @@ REQUIRED_PACKAGES = [
     'etils[epath] >= 1.0.0',
     'cheroot >= 10.0.1',
     'universal_pathlib >= 0.2.6',
-    'fsspec[s3,gcs] >= 2025.2.0',
+    'fsspec[s3,gcs] >= 2024.10.0',
 ]
 
 

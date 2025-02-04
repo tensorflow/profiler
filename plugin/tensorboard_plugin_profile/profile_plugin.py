@@ -26,13 +26,12 @@ import os
 import re
 import threading
 from typing import Any, List, TypedDict
-from urllib.parse import urlparse
 
 from cheroot.wsgi import Server
 
 from etils import epath
 import six
-from werkzeug import wrappers, serving
+from werkzeug import wrappers
 
 from tensorboard_plugin_profile.convert import raw_to_tool_data as convert
 
