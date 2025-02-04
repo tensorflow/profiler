@@ -25,8 +25,6 @@ py_binary(
         "data/profile_demo.pod_viewer.json",
         "data/profile_demo.tensorflow_stats.pb",
     ],
-    python_version = "PY3",
-    srcs_version = "PY2AND3",
     deps = [
         requirement("absl-py"),  # build_cleaner: keep; go/disable_tf2
         "//:expect_tensorflow_installed",

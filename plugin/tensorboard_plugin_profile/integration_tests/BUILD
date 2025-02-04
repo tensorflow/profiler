@@ -10,7 +10,6 @@ package(
 pytype_strict_library(
     name = "tf_mnist",
     srcs = ["tf_mnist.py"],
-    srcs_version = "PY2AND3",
     visibility = visibility,
     deps = [],
 )
@@ -18,7 +17,6 @@ pytype_strict_library(
 pytype_strict_library(
     name = "tf_profiler_session",
     srcs = ["tf_profiler_session.py"],
-    srcs_version = "PY2AND3",
     visibility = visibility,
     deps = [],
 )
