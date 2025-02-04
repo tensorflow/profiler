@@ -1,21 +1,9 @@
-import {Component} from '@angular/core';
-import {Store} from '@ngrx/store';
-import {DEFAULT_SIMPLE_DATA_TABLE} from 'org_xprof/frontend/app/common/interfaces/data_table';
-import {addAnchorTag, convertKnownToolToAnchorTag} from 'org_xprof/frontend/app/common/utils/utils';
-import {setCurrentToolStateAction} from 'org_xprof/frontend/app/store/actions';
+import {Component, Input, OnChanges, SimpleChanges} from '@angular/core';
+import {type RecommendationResult} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {convertKnownToolToAnchorTag} from 'org_xprof/frontend/app/common/utils/utils';
 
-import {RecommendationResultViewCommon} from './recommendation_result_view_common';
+import {StatementData, StatementInfo, TipInfo} from './recommendation_result_view_interfaces';
 
-const STATEMENT_INFO = [
-  {id: 'outside_compilation_statement_html'},
-  {id: 'eager_statement_html'},
-  {id: 'tf_function_statement_html'},
-  {id: 'statement'},
-  {id: 'device_collectives_statement'},
-  {id: 'kernel_launch_statement'},
-  {id: 'all_other_statement'},
-  {id: 'precision_statement'},
-];
 
 /** A recommendation result view component. */
 @Component({
@@ -24,91 +12,109 @@ const STATEMENT_INFO = [
   templateUrl: './recommendation_result_view.ng.html',
   styleUrls: ['./recommendation_result_view.scss']
 })
-export class RecommendationResultView extends RecommendationResultViewCommon {
-  constructor(private readonly store: Store<{}>) {
-    super();
+export class RecommendationResultView implements OnChanges {
+  /** The recommendation result data. */
+  @Input() recommendationResult?: RecommendationResult;
+  /** The statement info guiding the statement prasing from the result. */
+  @Input() statementInfo: StatementInfo[] = [];
+  /** The variable indicating whether this is an inference. */
+  @Input() isInference = false;
+  /** The variable indicating whether this is an 3P build. */
+  @Input() isOss = false;
+
+  title = 'Recommendation for Next Step';
+  statements: StatementData[] = [];
+  tipInfoArray: TipInfo[] = [];
+
+  ngOnChanges(changes: SimpleChanges) {
+    this.parseStatements();
+    this.parseTips();
   }
 
-  getRecommendationResultProp(id: string, defaultValue: string = ''): string {
-    const props = (this.recommendationResult || {}).p || {};
+  getRecommendationResultProp(id: string, defaultValue = ''): string {
+    const props =
+        ((this.recommendationResult || {}).p || {}) as Record<string, string>;
     return props[id] || defaultValue;
   }
 
-  override parseStatements() {
+  parseStatements() {
     this.statements = [];
-    STATEMENT_INFO.forEach(info => {
+    if (this.isInference) {
+      return;
+    }
+
+    this.statementInfo.forEach((info) => {
       const prop = this.getRecommendationResultProp(info.id);
       if (prop) {
-        this.statements.push({value: prop});
+        const statement: StatementData = {
+          value: prop,
+        };
+        if (info.color) {
+          statement.color = info.color;
+        }
+        this.statements.push(statement);
       }
     });
   }
 
-  override parseTips() {
-    const data = this.recommendationResult || DEFAULT_SIMPLE_DATA_TABLE;
-    const hostTips: string[] = [];
-    const deviceTips: string[] = [];
-    const documentationTips: string[] = [];
-    const faqTips: string[] = [];
-    data.rows = data.rows || [];
-    data.rows.forEach(row => {
-      if (row.c && row.c[0] && row.c[0].v && row.c[1] && row.c[1].v) {
-        switch (row.c[0].v) {
-          case 'host':
-            hostTips.push(convertKnownToolToAnchorTag(String(row.c[1].v)));
-            break;
-          case 'device':
-            deviceTips.push(convertKnownToolToAnchorTag(String(row.c[1].v)));
-            break;
-          case 'doc':
-            documentationTips.push(String(row.c[1].v));
-            break;
-          case 'faq':
-            faqTips.push(String(row.c[1].v));
-            break;
-          default:
-            break;
+  parseTips() {
+    const tipInfoMap: {[tipType: string]: {title: string; tips: string[]}} = {};
+    const rows = this.recommendationResult?.rows || [];
+    if (rows.length === 0) {
+      return;
+    }
+    rows.forEach((row: google.visualization.DataObjectRow) => {
+      const tipType = String(row.c?.[0]?.v);
+      const tipString = String(row.c?.[1]?.v);
+      if (tipType && tipString) {
+        const title = String(row.c?.[2]?.v);
+        const queryParams = new URLSearchParams(window.parent.location.search);
+        const run = queryParams.get('run') || '';
+        const tip = this.isOss ? convertKnownToolToAnchorTag(tipString, run) :
+                                 tipString;
+        if (tipInfoMap[tipType]) {
+          tipInfoMap[tipType].tips.push(tip);
+        } else {
+          tipInfoMap[tipType] = {title, tips: [tip]};
         }
       }
     });
-    const bottleneck = this.getRecommendationResultProp('bottleneck');
-    if (bottleneck === 'device') {
-      hostTips.length = 0;
-    } else if (bottleneck === 'host') {
-      deviceTips.length = 0;
-    }
 
-    const tipInfoArray = [
-      {
-        title: 'Tool troubleshooting / FAQ',
-        tips: faqTips,
-      },
-      {
-        title: 'Next tools to use for reducing the input time',
-        tips: hostTips,
-        useClickCallback: true,
-      },
-      {
-        title: 'Next tools to use for reducing the Device time',
-        tips: deviceTips,
-        useClickCallback: true,
-      },
-      {
-        title: 'Other useful resources',
-        tips: documentationTips,
-      },
-    ];
-    this.tipInfoArray = tipInfoArray.filter(tipInfo => tipInfo.tips.length > 0);
-  }
+    const inferenceTipStyle: {[key: string]: string} = {
+      'color': 'navy',
+      'font-weight': 'bolder',
+    };
+    this.tipInfoArray = Object.entries(tipInfoMap).map(([tipType, tipInfo]) => {
+      const info: TipInfo = {
+        tipType,
+        title: tipInfo.title,
+        tips: tipInfo.tips,
+      };
+      if (tipType === 'inference') {
+        info.style = inferenceTipStyle;
+      }
+      return info;
+    });
 
-  override onTipsClick(event: Event) {
-    if (!event || !event.target ||
-        (event.target as HTMLElement).tagName !== 'A') {
-      return;
+    // Filter out tips given bottleneck.
+    const nonBottleneckTipTypes =
+        this.getRecommendationResultProp('non_bottleneck_tip_types').split(',');
+    if (nonBottleneckTipTypes.length > 0) {
+      this.tipInfoArray = this.tipInfoArray.filter(
+          (tipInfo) => !nonBottleneckTipTypes.includes(tipInfo.tipType));
     }
-    const tool = (event.target as HTMLElement).innerText;
-    if (convertKnownToolToAnchorTag(tool) === addAnchorTag(tool)) {
-      this.store.dispatch(setCurrentToolStateAction({currentTool: tool}));
+    // Order the recommendations by tip type.
+    // - Keep and move inference tips to the top for inference run.
+    // - Move doc tips to the bottom.
+    const inferenceTips =
+        this.tipInfoArray.filter((tipInfo) => tipInfo.tipType === 'inference');
+    const docTips =
+        this.tipInfoArray.filter((tipInfo) => tipInfo.tipType === 'doc');
+    this.tipInfoArray = this.tipInfoArray.filter(
+        (tipInfo) => !['inference', 'doc'].includes(tipInfo.tipType));
+    this.tipInfoArray = [...this.tipInfoArray, ...docTips];
+    if (this.isInference) {
+      this.tipInfoArray = [...inferenceTips, ...this.tipInfoArray];
     }
   }
 }

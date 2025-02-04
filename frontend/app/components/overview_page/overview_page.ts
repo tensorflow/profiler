@@ -9,6 +9,17 @@ import {takeUntil} from 'rxjs/operators';
 
 import {OverviewPageCommon} from './overview_page_common';
 
+const RECOMMENDATION_STATEMENT_INFO = [
+  {id: 'outside_compilation_statement_html'},
+  {id: 'eager_statement_html'},
+  {id: 'tf_function_statement_html'},
+  {id: 'statement'},
+  {id: 'device_collectives_statement'},
+  {id: 'kernel_launch_statement'},
+  {id: 'all_other_statement'},
+  {id: 'precision_statement'},
+];
+
 /** An overview page component. */
 @Component({
   standalone: false,
@@ -19,6 +30,7 @@ export class OverviewPage extends OverviewPageCommon implements OnDestroy {
   run = '';
   tag = '';
   host = '';
+  recommendationStatementInfo = RECOMMENDATION_STATEMENT_INFO;
   /** Handles on-destroy Subject, used to unsubscribe. */
   private readonly destroyed = new ReplaySubject<void>(1);
 

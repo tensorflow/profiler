@@ -78,15 +78,26 @@ class ProtoToGvizTest(tf.test.TestCase):
     )
 
     MockTip = collections.namedtuple(  # pylint: disable=invalid-name
-        "MockTip", [
+        "MockTip",
+        [
             "tip_type",
             "link",
-        ])
-
+            "description",
+        ],
+    )
+    tip_description_map = {
+        "faq": "Tool troubleshooting / FAQ",
+        "host": "Next steps for reducing the Host time",
+        "device": "Next steps for reducing the Device time",
+        "doc": "Other useful resources",
+        "inference": "Recommendations for inference run",
+    }
     ProtoToGvizTest.mock_tips = []
     for tip in ["faq", "host", "device", "doc"]:
       for idx in range(0, 3):
-        ProtoToGvizTest.mock_tips.append(MockTip(tip, tip + "_link" + str(idx)))
+        ProtoToGvizTest.mock_tips.append(
+            MockTip(tip, tip + "_link" + str(idx), tip_description_map[tip])
+        )
 
   # Checks that DataTable columns match schema defined in table_description.
   def check_header_row(self, data, table_description, row_values):
@@ -290,7 +301,7 @@ class ProtoToGvizTest(tf.test.TestCase):
                      "Empty table should have 0 rows.")
     # Check the number of Overview Page Recommendation data table columns.
     # One for tip_type, and one for link
-    self.assertLen(data_table.columns, 2)
+    self.assertLen(data_table.columns, 3)
 
   def test_recommendation_simple(self):
     recommendation = self.create_mock_recommendation()
@@ -305,8 +316,8 @@ class ProtoToGvizTest(tf.test.TestCase):
         list(self.mock_tips), data_table.NumberOfRows(),
         "Simple table has 12 rows.")
     # Check the number of columns in table descriptor and data table.
-    self.assertLen(table_description, 2)
-    self.assertLen(data_table.columns, 2)
+    self.assertLen(table_description, 3)
+    self.assertLen(data_table.columns, 3)
 
     # Check data against mock values.
     for idx, row in enumerate(data):

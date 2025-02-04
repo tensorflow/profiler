@@ -180,23 +180,32 @@ def get_recommendation_table_args(overview_page_recommendation):
   table_description = [
       ("tip_type", "string", "tip_type"),
       ("link", "string", "link"),
+      ("description", "string", "description"),
   ]
 
   data = []
   for faq_tip in overview_page_recommendation.faq_tips:
-    data.append(["faq", faq_tip.link])
+    data.append(["faq", faq_tip.link, "Tool troubleshooting / FAQ"])
 
   for host_tip in overview_page_recommendation.host_tips:
-    data.append(["host", host_tip.link])
+    data.append([
+        "host",
+        host_tip.link,
+        "Next steps for reducing the Host time",
+    ])
 
   for device_tip in overview_page_recommendation.device_tips:
-    data.append(["device", device_tip.link])
+    data.append(
+        ["device", device_tip.link, "Next steps for reducing the Device time"]
+    )
 
   for doc_tip in overview_page_recommendation.documentation_tips:
-    data.append(["doc", doc_tip.link])
+    data.append(["doc", doc_tip.link, "Other useful resources"])
 
   for inference_tip in overview_page_recommendation.inference_tips:
-    data.append(["inference", inference_tip.link])
+    data.append(
+        ["inference", inference_tip.link, "Recommendations for inference run"]
+    )
 
   bottleneck = overview_page_recommendation.bottleneck
   statement = overview_page_recommendation.statement
@@ -222,6 +231,11 @@ def get_recommendation_table_args(overview_page_recommendation):
       "all_other_statement": all_other_statement,
       "precision_statement": precision_statement,
   }
+
+  # Prop used for data filtering in the frontend.
+  if bottleneck in ["host", "device"]:
+    non_bottleneck_tip_type = "device" if bottleneck == "host" else "host"
+    custom_properties["non_bottleneck_tip_types"] = non_bottleneck_tip_type
 
   return (table_description, data, custom_properties)
 
