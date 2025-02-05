@@ -127,12 +127,19 @@ def _get_wildcard_address(port):
 from tensorboard_plugin_profile import profile_plugin
 from tensorboard_plugin_profile.tb_free.context import DataProvider, TBContext
 
+
+def launch_server(logdir, port):
+  context = TBContext(logdir, DataProvider(logdir), TBContext.Flags(False))
+  loader = ProfilePluginLoader()
+  plugin = loader.load(context)
+  print("Starting xprof server with logdir {logdir} on port {port}")
+  profile_plugin.run_server(plugin, _get_wildcard_address(port), port)
+
+
 def main():
     if len(sys.argv) < 2:
         print("Need logdir")
         return -1
     logdir = sys.argv[1]
-    context = TBContext(logdir, DataProvider(logdir), TBContext.Flags(False))
-    loader = ProfilePluginLoader()
-    plugin = loader.load(context)
-    profile_plugin.run_server(plugin, _get_wildcard_address(8080), 8080)
+    port = 8791 if len(sys.argv < 3) else int(sys.argv[2])
+    launch_server(logdir, port)
