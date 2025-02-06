@@ -53,6 +53,19 @@ py_test(
     ],
 )
 
+py_test(
+    name = "profile_plugin_test_without_tf",
+    srcs = ["profile_plugin_test.py"],
+    python_version = "PY3",
+    srcs_version = "PY2AND3",
+    deps = [
+        ":profile_plugin",
+        ":profile_plugin_test_utils",
+        requirement("absl-py"),
+        "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
+    ],
+)
+
 py_library(
     name = "profile_plugin_loader",
     srcs = ["profile_plugin_loader.py"],

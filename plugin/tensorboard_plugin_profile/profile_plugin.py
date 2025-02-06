@@ -46,10 +46,6 @@ except ImportError:
   from tensorboard_plugin_profile.tb_free import base_plugin
   from tensorboard_plugin_profile.tb_free import plugin_asset_util
 
-  # from .tb_free.context import RequestContext
-  # from .tb_free import base_plugin
-  # from .tb_free import plugin_asset_util
-
 try:
   import tensorflow.compat.v2 as tf  # pylint: disable=g-import-not-at-top
   from tensorflow.python.profiler import profiler_client  # pylint: disable=g-direct-tensorflow-import,g-import-not-at-top
@@ -82,6 +78,7 @@ RUNS_ROUTE = '/runs'
 RUN_TOOLS_ROUTE = '/run_tools'
 HOSTS_ROUTE = '/hosts'
 CAPTURE_ROUTE = '/capture_profile'
+LOCAL_ROUTE = '/local'
 
 # Suffixes of "^, #, @" symbols represent different input data formats for the
 # same tool.
@@ -470,6 +467,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
         HOSTS_ROUTE: self.hosts_route,
         DATA_ROUTE: self.data_route,
         CAPTURE_ROUTE: self.capture_route,
+        LOCAL_ROUTE: self.default_handler
     }
 
   # pytype: disable=wrong-arg-types

@@ -132,7 +132,7 @@ def launch_server(logdir, port):
   context = TBContext(logdir, DataProvider(logdir), TBContext.Flags(False))
   loader = ProfilePluginLoader()
   plugin = loader.load(context)
-  print("Starting xprof server with logdir {logdir} on port {port}")
+  print(f"Starting xprof server with logdir {logdir} on port {port}")
   profile_plugin.run_server(plugin, _get_wildcard_address(port), port)
 
 

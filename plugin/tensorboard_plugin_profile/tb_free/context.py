@@ -12,42 +12,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""A standalone version of Tensorboard's context and utils
-"""
+"""A standalone version of Tensorboard's context and utils"""
 
 import re
 import os
 import logging
 import collections
+from typing import Any, Generator
 from upath import UPath
 
 logger = logging.getLogger('tensorboard')
 
 class RequestContext():
+  """Overload of tensorboard/context.py:RequestContext"""
   def __init__(self):
     pass
 
-class TBContext():
-  class Flags():
-    def __init__(self, master_tpu_unsecure_channel):
-      self.master_tpu_unsecure_channel = master_tpu_unsecure_channel
-
-  def __init__(self, logdir, data_provider, flags):
-    self.logdir = logdir
-    self.data_provider = data_provider
-    self.flags = flags
-
-
-def IsCloudPath(path):
+def IsCloudPath(path: UPath) -> bool:
   """Checks whether a given path is Cloud filesystem path."""
   return path.protocol and path.protocol not in ["file", "local"]
 
 _ESCAPE_GLOB_CHARACTERS_REGEX = re.compile("([*?[])")
-def _EscapeGlobCharacters(path):
+def _EscapeGlobCharacters(path: str) -> str:
     drive, path = os.path.splitdrive(path)
     return "%s%s" % (drive, _ESCAPE_GLOB_CHARACTERS_REGEX.sub(r"[\1]", path))
 
-def ListRecursivelyViaGlobbing(top):
+def ListRecursivelyViaGlobbing(top: UPath) -> Generator[tuple[str, str], None, None]:
+    """Recursively lists all files with the directory.
+    
+    Based off of tensorboard/backend/event_processing/io_wrapper.py:ListRecursivelyViaGlobbing"""
     current_glob_string = _EscapeGlobCharacters(top)
     level = 0
 
@@ -81,14 +74,14 @@ def ListRecursivelyViaGlobbing(top):
         current_glob_string = os.path.join(current_glob_string, "*")
         level += 1
 
-def ListRecursivelyViaWalking(top):
+def ListRecursivelyViaWalking(top: UPath) -> Generator[tuple[str, str], None, None]:
   for dir_path, _, filenames in os.walk(top.path):
     yield (
       dir_path,
       (os.path.join(dir_path, filename) for filename in filenames),
     )
 
-def IsTensorFlowEventsFile(path):
+def IsTensorFlowEventsFile(path: str):
     if not path:
         raise ValueError("Path must be a nonempty string")
     return "tfevents" in os.path.basename(path)
@@ -98,9 +91,11 @@ class Run():
       self.run_name = path
 
 class DataProvider():
-  def __init__(self, logdir):
+  """https://github.com/tensorflow/tensorboard/blob/a7178f4f622a786463d23ef645e0f16f6ea7a1cb/tensorboard/data/provider.py#L26"""
+  def __init__(self, logdir=''):
     self._paths = {}
-    self.AddRunsFromDirectory(logdir)
+    if logdir:
+      self.AddRunsFromDirectory(logdir)
 
   def list_runs(self, ctx, experiment_id):
     return self._paths.values()
@@ -110,7 +105,7 @@ class DataProvider():
     self._paths[name] = Run(name)
     return self
       
-  def AddRunsFromDirectory(self, path, name=None):
+  def AddRunsFromDirectory(self, path: str, name: str = None):
     path = UPath(path).expanduser()
     logger.info("Starting AddRunsFromDirectory: %s", path)
     for subdir in GetLogdirSubdirectories(path):
@@ -120,8 +115,14 @@ class DataProvider():
       self.AddRun(subdir, name=subname)
     logger.info("Done with AddRunsFromDirectory: %s", path)
     return self
+  
+  def Reload(self):
+     pass
 
-def GetLogdirSubdirectories(path):
+def GetLogdirSubdirectories(path: UPath):
+  """Obtains all subdirectories with events files.
+  
+  Based off of tensorboard/backend/event_processing/io_wrapper.py. """
   if not path.exists():
     # No directory to traverse.
     return ()
@@ -152,3 +153,8 @@ def GetLogdirSubdirectories(path):
       for (subdir, files) in traversal_method(path)
       if any(IsTensorFlowEventsFile(f) for f in files)
     )
+
+class MultiplexerDataProvider():
+   def __init__(self, multiplexer, logdir):
+      self.multiplexer = multiplexer
+      self.logdir = logdir

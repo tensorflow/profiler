@@ -23,8 +23,8 @@ export class DataService {
   constructor(
       private readonly httpClient: HttpClient,
       platformLocation: PlatformLocation) {
-    // this.isLocalDevelopment = platformLocation.pathname === LOCAL_URL;
-    this.isLocalDevelopment = false;
+    this.isLocalDevelopment = platformLocation.pathname === LOCAL_URL;
+    // this.isLocalDevelopment = false;
     if (String(platformLocation.pathname).includes(API_PREFIX + PLUGIN_NAME)) {
       this.pathPrefix =
           String(platformLocation.pathname).split(API_PREFIX + PLUGIN_NAME)[0];

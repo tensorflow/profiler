@@ -1,12 +1,9 @@
-# Description:
-#   Converter from protobuf to gviz/json formats.
-
 load("@rules_python//python:defs.bzl", "py_library")
 
-visibility = ["//plugin:internal"]
-
+# Description:
+#   A collection of classes to bypass Tensorboard dependencies.
 package(
-    default_visibility = visibility,
+    default_visibility = ["//plugin:internal"],
     licenses = ["notice"],  # Apache 2.0
 )
 
