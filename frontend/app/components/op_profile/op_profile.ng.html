@@ -66,6 +66,23 @@
               (change)="updateChildrenCount($event.target.value)" />
       </mat-form-field>
     </div>
+    <div class="control">
+      <mat-form-field class="full-width">
+        <mat-label>Op Name</mat-label>
+        <input
+          matInput
+          matTooltip="Op name to filter by."
+          aria-label="op-name"
+          required
+          autocomplete="off"
+          type="text"
+          name="Search Bar"
+          [value]="searchFilterString"
+          (keyup)="updateSearchFilter($event.target.value)"
+          placeholder="Search for ops.."
+        />
+      </mat-form-field>
+    </div>
   </div>
 </div>
 
@@ -73,5 +90,6 @@
   [rootNode]="rootNode"
   [byWasted]="byWasted"
   [showP90]="showP90"
-  [childrenCount]="childrenCount">
+  [childrenCount]="childrenCount"
+  [searchFilterString]="searchFilterString">
 </op-table>
