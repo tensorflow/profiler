@@ -413,3 +413,18 @@ export function getStringColumnValue(
   }
   return String((row[columnIndex] || {}).v || '');
 }
+
+/**
+ * Format the duration in picoseconds to a string with proper unit.
+ * durationPs: duration in picoseconds
+ * dp: number of decimal places to display, default is 2
+ */
+export function formatDurationPs(durationPs: number, dp = 2) {
+  const units = ['ps', 'ns', 'us', 'ms', 's'];
+  let i = 0;
+  while (durationPs >= 1000 && i < units.length - 1) {
+    durationPs /= 1000;
+    i++;
+  }
+  return `${durationPs.toFixed(dp)} ${units[i]}`;
+}

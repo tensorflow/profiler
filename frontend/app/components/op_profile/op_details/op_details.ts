@@ -52,7 +52,7 @@ export class OpDetails {
   provenance: string = '';
   rawTimeMs = '';
   occurrences = 0;
-  avgTimeMs = '';
+  avgTime = '';
   fused: boolean = false;
   hasCategory: boolean = false;
   hasLayout: boolean = false;
@@ -273,10 +273,9 @@ export class OpDetails {
     this.occurrences = this.node.metrics?.occurrences || 0;
 
     if (this.node.metrics && this.node.metrics.avgTimePs) {
-      this.avgTimeMs = utils.humanReadableText(
-          this.node.metrics.avgTimePs / 1e9, {si: true, dp: 2, suffix: ' ms'});
+      this.avgTime = utils.formatDurationPs(this.node.metrics.avgTimePs);
     } else {
-      this.avgTimeMs = '';
+      this.avgTime = '';
     }
 
     this.fused = !!this.node.xla && !this.node.metrics;
