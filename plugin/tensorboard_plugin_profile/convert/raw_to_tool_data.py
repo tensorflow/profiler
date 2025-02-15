@@ -26,7 +26,6 @@ from __future__ import print_function
 import logging
 
 from tensorboard_plugin_profile.convert import dcn_collective_stats_proto_to_gviz
-from tensorboard_plugin_profile.convert import hlo_stats_proto_to_gviz
 from tensorboard_plugin_profile.convert import inference_stats_proto_to_gviz
 from tensorboard_plugin_profile.convert import input_pipeline_proto_to_gviz
 from tensorboard_plugin_profile.convert import kernel_stats_proto_to_gviz
@@ -178,9 +177,9 @@ def xspace_to_tool_data(
     if success:
       data = raw_data
   elif tool == 'hlo_stats':
-    raw_data, success = xspace_wrapper_func(xspace_paths, tool)
+    json_data, success = xspace_wrapper_func(xspace_paths, tool)
     if success:
-      data = hlo_stats_proto_to_gviz.to_json(raw_data)
+      data = json_data
   elif tool == 'roofline_model':
     raw_data, success = xspace_wrapper_func(xspace_paths, tool)
     if success:

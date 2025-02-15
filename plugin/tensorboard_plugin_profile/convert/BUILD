@@ -82,15 +82,6 @@ py_library(
 )
 
 py_library(
-    name = "hlo_stats_proto_to_gviz",
-    srcs = ["hlo_stats_proto_to_gviz.py"],
-    deps = [
-        requirement("gviz_api"),
-        "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
-    ],
-)
-
-py_library(
     name = "roofline_model_proto_to_gviz",
     srcs = ["roofline_model_proto_to_gviz.py"],
     deps = [
@@ -230,7 +221,6 @@ py_library(
     visibility = visibility,
     deps = [
         ":dcn_collective_stats_proto_to_gviz",
-        ":hlo_stats_proto_to_gviz",
         ":inference_stats_proto_to_gviz",
         ":input_pipeline_proto_to_gviz",
         ":kernel_stats_proto_to_gviz",
