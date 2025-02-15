@@ -27,16 +27,24 @@ import re
 import threading
 from typing import Any, List, TypedDict
 
+from cheroot.wsgi import Server
+
 from etils import epath
 import six
 from werkzeug import wrappers
 
-from tensorboard.backend.event_processing import plugin_asset_util
-from tensorboard.context import RequestContext
-from tensorboard.plugins import base_plugin
 from tensorboard_plugin_profile.convert import raw_to_tool_data as convert
 
 logger = logging.getLogger('tensorboard')
+
+try:
+  from tensorboard.backend.event_processing import plugin_asset_util
+  from tensorboard.context import RequestContext
+  from tensorboard.plugins import base_plugin
+except ImportError:
+  from tensorboard_plugin_profile.tb_free.context import RequestContext
+  from tensorboard_plugin_profile.tb_free import base_plugin
+  from tensorboard_plugin_profile.tb_free import plugin_asset_util
 
 try:
   import tensorflow.compat.v2 as tf  # pylint: disable=g-import-not-at-top
@@ -56,6 +64,7 @@ except ImportError:
 # The prefix of routes provided by this plugin.
 PLUGIN_NAME = 'profile'
 
+BASE_ROUTE = '/'
 INDEX_JS_ROUTE = '/index.js'
 INDEX_HTML_ROUTE = '/index.html'
 BUNDLE_JS_ROUTE = '/bundle.js'
@@ -69,6 +78,7 @@ RUNS_ROUTE = '/runs'
 RUN_TOOLS_ROUTE = '/run_tools'
 HOSTS_ROUTE = '/hosts'
 CAPTURE_ROUTE = '/capture_profile'
+LOCAL_ROUTE = '/local'
 
 # Suffixes of "^, #, @" symbols represent different input data formats for the
 # same tool.
@@ -443,6 +453,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
       self,
   ) -> dict[str, Callable[[wrappers.Request], wrappers.Response]]:
     return {
+        BASE_ROUTE: self.default_handler,
         INDEX_JS_ROUTE: self.static_file_route,
         INDEX_HTML_ROUTE: self.static_file_route,
         BUNDLE_JS_ROUTE: self.static_file_route,
@@ -456,7 +467,14 @@ class ProfilePlugin(base_plugin.TBPlugin):
         HOSTS_ROUTE: self.hosts_route,
         DATA_ROUTE: self.data_route,
         CAPTURE_ROUTE: self.capture_route,
+        LOCAL_ROUTE: self.default_handler
     }
+
+  # pytype: disable=wrong-arg-types
+  @wrappers.Request.application
+  def default_handler(self, request: wrappers.Request) -> wrappers.Response:
+      contents = self._read_static_file_impl("index.html")
+      return respond(contents, "text/html")
 
   def frontend_metadata(self) -> base_plugin.FrontendMetadata:
     return base_plugin.FrontendMetadata(es_module_path='/index.js')
@@ -659,7 +677,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
         file_pattern = make_filename('*', 'xplane')
         try:
           path = epath.Path(run_dir)
-          asset_paths = path.glob(file_pattern)
+          asset_paths = list(path.glob(file_pattern))
         except OSError as e:
           logger.warning('Cannot read asset directory: %s, OpError %s', run_dir,
                          e)
@@ -1004,3 +1022,33 @@ class ProfilePlugin(base_plugin.TBPlugin):
     # Return sorted list of tools with 'overview_page' at the front.
     op = frozenset(['overview_page@', 'overview_page', 'overview_page^'])
     return list(tools.intersection(op)) + sorted(tools.difference(op))
+
+def make_wsgi_app(plugin):
+    """Create a WSGI application for the plugin."""
+
+    apps = plugin.get_plugin_apps()
+
+    _PREFIX='/data/plugin/profile'
+    def application(environ, start_response):
+        path = environ['PATH_INFO']
+        if path.startswith(_PREFIX):
+          path = path[len(_PREFIX):]
+        if path != "/" and path.endswith("/"):
+          path = path[:-1]
+        handler = apps.get(path, plugin.default_handler)
+        return handler(environ, start_response)
+
+    return application
+
+
+def run_server(plugin, host, port):
+    """Starts a Cheroot server for the plugin."""
+
+    app = make_wsgi_app(plugin)
+
+    server = Server((host, port), app)
+
+    try:
+        server.start()
+    except KeyboardInterrupt:
+        server.stop()

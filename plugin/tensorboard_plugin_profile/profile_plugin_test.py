@@ -19,14 +19,23 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import atexit
 import copy
+import inspect
 import json
+import logging
 import os
-from unittest import mock
-import tensorflow.compat.v2 as tf
+import shutil
+import tempfile
+from unittest import mock, TestCase
 
-from tensorboard.backend.event_processing import plugin_asset_util
-from tensorboard.backend.event_processing import plugin_event_multiplexer
+# try:
+#   from tensorboard.backend.event_processing import plugin_asset_util
+#   from tensorboard.backend.event_processing.plugin_event_multiplexer import EventMultiplexer
+# except ImportError:
+from tensorboard_plugin_profile.tb_free.context import DataProvider as EventMultiplexer
+from tensorboard_plugin_profile.tb_free import plugin_asset_util
+
 from tensorboard_plugin_profile import profile_plugin
 from tensorboard_plugin_profile import profile_plugin_test_utils as utils
 from tensorboard_plugin_profile.protobuf import trace_events_pb2
@@ -91,16 +100,44 @@ def generate_testdata(logdir):
 
 
 def write_empty_event_file(logdir):
-  w = tf.summary.create_file_writer(logdir, filename_suffix=EVENT_FILE_SUFFIX)
-  w.close()
+  os.makedirs(logdir, exist_ok=True)
+  with open(os.path.join(logdir, "events.out.tfevents.profile-empty"), 'w+') as f:
+    f.write("dummy")
 
+class ProfilePluginTest(TestCase):
+  def __init__(self, methodname):
+    super().__init__(methodname)
+    self._temp_dir = None
 
-class ProfilePluginTest(tf.test.TestCase):
+  def get_temp_dir(self):
+      """Return a temporary directory for tests to use."""
+      if not self._temp_dir:
+          if os.environ.get('TEST_TMPDIR'):
+              temp_dir = tempfile.mkdtemp(prefix=os.environ['TEST_TMPDIR'])
+          else:
+              frame = inspect.stack()[-1]
+              filename = frame.filename
+              base_filename = os.path.basename(filename)
+              temp_dir_prefix = os.path.join(tempfile.gettempdir(), base_filename.rstrip('.py'))
+              temp_dir = tempfile.mkdtemp(prefix=temp_dir_prefix)
+
+          def delete_temp_dir(dirname=temp_dir):
+              try:
+                  shutil.rmtree(dirname)  # Use shutil.rmtree for recursive delete
+              except Exception as e:  # Catch a broader exception
+                  logging.error('Error removing %s: %s', dirname, e)
+
+          atexit.register(delete_temp_dir)
+
+          self._temp_dir = temp_dir
+
+      return self._temp_dir
+
 
   def setUp(self):
     super(ProfilePluginTest, self).setUp()
     self.logdir = self.get_temp_dir()
-    self.multiplexer = plugin_event_multiplexer.EventMultiplexer()
+    self.multiplexer = EventMultiplexer()
     self.multiplexer.AddRunsFromDirectory(self.logdir)
     self.plugin = utils.create_profile_plugin(self.logdir, self.multiplexer)
 
@@ -129,12 +166,12 @@ class ProfilePluginTest(tf.test.TestCase):
 
     self.assertListEqual(
         list(self.plugin.generate_tools_of_run('foo')), RUN_TO_TOOLS['foo'])
-    self.assertEmpty(list(self.plugin.generate_tools_of_run('bar')))
+    self.assertFalse(list(self.plugin.generate_tools_of_run('bar')))
     self.assertListEqual(
         list(self.plugin.generate_tools_of_run('baz')), RUN_TO_TOOLS['baz'])
     self.assertListEqual(
         list(self.plugin.generate_tools_of_run('qux')), RUN_TO_TOOLS['qux'])
-    self.assertEmpty(list(self.plugin.generate_tools_of_run('empty')))
+    self.assertFalse(list(self.plugin.generate_tools_of_run('empty')))
 
   def testRuns_logdirWithEventFIle(self):
     write_empty_event_file(self.logdir)
@@ -206,7 +243,7 @@ class ProfilePluginTest(tf.test.TestCase):
     hosts_a = self.plugin.host_impl('a/foo', 'trace_viewer')
     self.assertListEqual(expected_hosts_foo, hosts_a)
     hosts_q = self.plugin.host_impl('qux', 'framework_op_stats')
-    self.assertEmpty(hosts_q)
+    self.assertFalse(hosts_q)
     hosts_abc_tf_stats = self.plugin.host_impl('abc', 'framework_op_stats^')
     self.assertListEqual(
         expected_all_hosts_only + expected_hosts_abc, hosts_abc_tf_stats
