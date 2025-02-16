@@ -6,6 +6,8 @@ import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
 import {EmptyPageModule} from 'org_xprof/frontend/app/components/empty_page/empty_page_module';
 import {MainPageModule} from 'org_xprof/frontend/app/components/main_page/main_page_module';
 import {PipesModule} from 'org_xprof/frontend/app/pipes/pipes_module';
+import {ConsolidatedDataService} from 'org_xprof/frontend/app/services/consolidated_data_service/data_service';
+import {DataServiceInterfaceToken} from 'org_xprof/frontend/app/services/consolidated_data_service/data_service_interface';
 import {DataDispatcher} from 'org_xprof/frontend/app/services/data_dispatcher/data_dispatcher';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
 import {RootStoreModule} from 'org_xprof/frontend/app/store/store_module';
@@ -28,6 +30,7 @@ import {App} from './app';
   providers: [
     DataDispatcher,
     DataService,
+    {provide: DataServiceInterfaceToken, useClass: ConsolidatedDataService},
   ],
   bootstrap: [App],
 })

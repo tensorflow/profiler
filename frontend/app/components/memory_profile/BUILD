@@ -28,7 +28,7 @@ xprof_ng_module(
         "@org_xprof//frontend/app/components/memory_profile/memory_breakdown_table",
         "@org_xprof//frontend/app/components/memory_profile/memory_profile_summary",
         "@org_xprof//frontend/app/components/memory_profile/memory_timeline_graph",
-        "@org_xprof//frontend/app/services/data_service",
+        "@org_xprof//frontend/app/services/consolidated_data_service:data_service_interface",
         "@org_xprof//frontend/app/store",
     ],
 )
