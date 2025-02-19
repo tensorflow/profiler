@@ -52,10 +52,13 @@ setuptools.setup(
     + setuptools.find_namespace_packages(
         include=['tensorboard_plugin_profile.*'],
         exclude=['tensorboard_plugin_profile.static'],
+    )
+    + setuptools.find_namespace_packages(
+        include=['mlprofiler.*'],
     ),
     package_data={
         'tensorboard_plugin_profile': ['static/**'],
-        '': ['_pywrap_profiler_plugin.so'],
+        'mlprofiler': ['_pywrap_profiler_plugin.so'],
     },
     entry_points={
         'tensorboard_plugins': [
