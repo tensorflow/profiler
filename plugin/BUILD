@@ -33,7 +33,6 @@ sh_binary(
         "@org_xprof//plugin/trace_viewer:trace_viewer_index.js",
     ],
     tags = [
-        "local",
         "manual",
     ],
 )
