@@ -17,14 +17,20 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+import unittest
 
+from absl.testing import absltest
 from werkzeug import Request
 
-from tensorboard.backend.event_processing import data_provider
-from tensorboard.backend.event_processing import plugin_event_multiplexer
-from tensorboard.plugins import base_plugin
+# try:
+#   from tensorboard.backend.event_processing.data_provider import MultiplexerDataProvider
+#   from tensorboard.backend.event_processing.plugin_event_multiplexer import EventMultiplexer
+#   from tensorboard.plugins import base_plugin
+# except ImportError:
+from tensorboard_plugin_profile.tb_free import base_plugin
+from tensorboard_plugin_profile.tb_free.context import DataProvider as EventMultiplexer
+from tensorboard_plugin_profile.tb_free.context import MultiplexerDataProvider
 from tensorboard_plugin_profile import profile_plugin
-
 
 class _FakeFlags(object):
 
@@ -47,13 +53,13 @@ def create_profile_plugin(logdir,
     An instance of ProfilePlugin.
   """
   if not multiplexer:
-    multiplexer = plugin_event_multiplexer.EventMultiplexer()
+    multiplexer = EventMultiplexer()
     multiplexer.AddRunsFromDirectory(logdir)
 
   context = base_plugin.TBContext(
       logdir=logdir,
       multiplexer=multiplexer,
-      data_provider=data_provider.MultiplexerDataProvider(multiplexer, logdir),
+      data_provider=MultiplexerDataProvider(multiplexer, logdir),
       flags=_FakeFlags(logdir, master_tpu_unsecure_channel))
   return profile_plugin.ProfilePlugin(context)
 
@@ -74,3 +80,19 @@ def make_data_request(run, tool, host=None):
   if host:
     req.args['host'] = host
   return req
+
+
+class XprofTestLoader(absltest.TestLoader):
+  suiteClass = unittest.TestSuite
+
+  def getTestCaseNames(self, testCaseClass):
+    names = super().getTestCaseNames(testCaseClass)
+    # if _TEST_TARGETS.value:
+    #   pattern = re.compile(_TEST_TARGETS.value)
+    #   names = [name for name in names
+    #            if pattern.search(f"{testCaseClass.__name__}.{name}")]
+    # if _EXCLUDE_TEST_TARGETS.value:
+    #   pattern = re.compile(_EXCLUDE_TEST_TARGETS.value)
+    #   names = [name for name in names
+    #            if not pattern.search(f"{testCaseClass.__name__}.{name}")]
+    return names
