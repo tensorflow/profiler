@@ -50,7 +50,7 @@ To profile on a **single GPU** system, the following NVIDIA software must be ins
    $ sudo apt-get install libcupti-dev
    ```
 
-To profile a system with **multiple GPUs**, see this [guide](docs/profile_multi_gpu.md) for details.
+To profile a system with **multiple GPUs**, see this [guide](https://github.com/tensorflow/profiler/blob/master/docs/profile_multi_gpu.md) for details.
 
 To profile multi-worker GPU configurations, profile individual workers independently.
 
