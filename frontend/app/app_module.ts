@@ -8,6 +8,8 @@ import {MainPageModule} from 'org_xprof/frontend/app/components/main_page/main_p
 import {PipesModule} from 'org_xprof/frontend/app/pipes/pipes_module';
 import {DataDispatcher} from 'org_xprof/frontend/app/services/data_dispatcher/data_dispatcher';
 import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
+import {DATA_SERVICE_INTERFACE_TOKEN} from 'org_xprof/frontend/app/services/data_service_v2/data_service_v2_interface';
+import {DataServiceV2} from 'org_xprof/frontend/app/services/data_service_v2/data_service_v2';
 import {RootStoreModule} from 'org_xprof/frontend/app/store/store_module';
 
 import {App} from './app';
@@ -28,6 +30,7 @@ import {App} from './app';
   providers: [
     DataDispatcher,
     DataService,
+    {provide: DATA_SERVICE_INTERFACE_TOKEN, useClass: DataServiceV2},
   ],
   bootstrap: [App],
 })
