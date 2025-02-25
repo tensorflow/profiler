@@ -229,6 +229,7 @@ py_library(
         ":tf_data_stats_proto_to_gviz",
         ":tf_stats_proto_to_gviz",
         ":trace_events_json",
+        "@org_xprof//plugin/mlprofiler/pywrap:_pywrap_profiler_plugin",
         "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py_pb2",
     ],
 )

@@ -50,6 +50,8 @@ cp "$ROOT_RUNFILE_DIR/README.md" README.md
 # Copy plugin python files.
 cd ${PLUGIN_RUNFILE_DIR}
 find . -name '*.py' -exec ${copy} --parents -Lrpv {} $dest \;
+find . -name '*.pyi' -exec ${copy} --parents -Lrpv {} $dest \;
+find . -name '*.so' -exec ${copy} --parents -Lrpv {} $dest \;
 cd $dest
 chmod -R 755 .
 cp ${build_workspace}/bazel-bin/plugin/tensorboard_plugin_profile/protobuf/*_pb2.py tensorboard_plugin_profile/protobuf/ || echo "Files already exist"
