@@ -1,0 +1,11 @@
+--- a/tensorflow/core/profiler/protobuf/BUILD
++++ b/tensorflow/core/profiler/protobuf/BUILD
+@@ -33,7 +33,7 @@
+     protodeps = [
+         "@local_tsl//tsl/profiler/protobuf:xplane_proto",
+     ],
+-    visibility = [":friends"],
++    visibility = ["//visibility:public"],
+     exports = [
+         "@local_tsl//tsl/profiler/protobuf:xplane_proto",
+     ],

@@ -25,6 +25,7 @@ from __future__ import print_function
 
 import logging
 
+from mlprofiler.pywrap import _pywrap_profiler_plugin
 from tensorboard_plugin_profile.convert import dcn_collective_stats_proto_to_gviz
 from tensorboard_plugin_profile.convert import inference_stats_proto_to_gviz
 from tensorboard_plugin_profile.convert import input_pipeline_proto_to_gviz
@@ -35,11 +36,6 @@ from tensorboard_plugin_profile.convert import tf_data_stats_proto_to_gviz
 from tensorboard_plugin_profile.convert import tf_stats_proto_to_gviz
 from tensorboard_plugin_profile.convert import trace_events_json
 from tensorboard_plugin_profile.protobuf import trace_events_pb2
-
-try:
-  from tensorboard_plugin_profile.convert import _pywrap_profiler_plugin  # pylint: disable=g-import-not-at-top
-except ImportError:
-  from tensorflow.python.profiler.internal import _pywrap_profiler_plugin  # pylint: disable=g-direct-tensorflow-import, g-import-not-at-top
 
 
 logger = logging.getLogger('tensorboard')
@@ -52,8 +48,9 @@ def process_raw_trace(raw_trace):
   return ''.join(trace_events_json.TraceEventsJsonStream(trace))
 
 
-def xspace_to_tools_data_from_byte_string(xspace_byte_list, filenames, tool,
-                                          params):
+def xspace_to_tools_data_from_byte_string(
+    xspace_byte_list, filenames, tool, params
+):
   """Helper function for getting an XSpace tool from a bytes string.
 
   Args:
@@ -65,14 +62,18 @@ def xspace_to_tools_data_from_byte_string(xspace_byte_list, filenames, tool,
   Returns:
     Returns a string of tool data.
   """
-# pylint:disable=dangerous-default-value
+
+  # pylint:disable=dangerous-default-value
   def xspace_wrapper_func(xspace_arg, tool_arg, params={}):
     return _pywrap_profiler_plugin.xspace_to_tools_data_from_byte_string(
-        xspace_arg, filenames, tool_arg, params)
-# pylint:enable=dangerous-default-value
+        xspace_arg, filenames, tool_arg, params
+    )
 
-  return xspace_to_tool_data(xspace_byte_list, tool, params,
-                             xspace_wrapper_func)
+  # pylint:enable=dangerous-default-value
+
+  return xspace_to_tool_data(
+      xspace_byte_list, tool, params, xspace_wrapper_func
+  )
 
 
 def xspace_to_tool_names(xspace_paths):
@@ -85,7 +86,8 @@ def xspace_to_tool_names(xspace_paths):
     Returns a list of tool names.
   """
   raw_data, success = _pywrap_profiler_plugin.xspace_to_tools_data(
-      xspace_paths, 'tool_names')
+      xspace_paths, 'tool_names'
+  )
   if success:
     return [tool + '^' for tool in raw_data.decode().split(',')]
   return []
@@ -95,7 +97,8 @@ def xspace_to_tool_data(
     xspace_paths,
     tool,
     params,
-    xspace_wrapper_func=_pywrap_profiler_plugin.xspace_to_tools_data):
+    xspace_wrapper_func=_pywrap_profiler_plugin.xspace_to_tools_data,
+):
   """Converts XSpace to tool data string.
 
   Args:
