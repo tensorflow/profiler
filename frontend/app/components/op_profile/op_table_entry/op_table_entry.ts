@@ -33,6 +33,9 @@ export class OpTableEntry implements OnChanges {
   /** The number of children nodes to be shown. */
   @Input() childrenCount = 10;
 
+  // Filters out nodes that don't have descendants that match the filter.
+  @Input() searchFilterString = '';
+
   /** The event when the mouse enter or leave. */
   @Output() readonly hover = new EventEmitter<Node|null>();
 
@@ -123,11 +126,29 @@ export class OpTableEntry implements OnChanges {
     return this.childrenCount;
   }
 
+  private matchesSearchFilter(node: Node): boolean {
+    if (!node || !node.name || node.children?.length === 0) {
+      return false;
+    }
+    if (this.searchFilterString.length === 0) {
+      return true;
+    }
+    if (node.name &&
+        node.name.toLowerCase().includes(this.searchFilterString)) {
+      return true;
+    }
+    return (node.children ?? [])
+        .some((child) => this.matchesSearchFilter(child));
+  }
+
   private getChildren(): Node[] {
     if (!this.node || !this.node.children || !this.rootNode) {
       return [];
     }
-    let children: Node[]  = this.node.children.slice();
+    let children: Node[] =
+        (this.node.children.slice())
+            .filter(
+                (child) => this.level !== 0 || this.matchesSearchFilter(child));
     if (this.byWasted && this.rootNode) {
       children.sort(
           (a, b) => {

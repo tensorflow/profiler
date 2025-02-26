@@ -15,6 +15,7 @@ export class OpProfileBase {
   showP90 = false;
   childrenCount = 10;
   deviceType = 'TPU';
+  searchFilterString = '';
 
   private updateRoot() {
     if (!this.profile) {
@@ -74,5 +75,11 @@ export class OpProfileBase {
 
   updateShowP90() {
     this.showP90 = !this.showP90;
+  }
+
+  updateSearchFilter(value: string) {
+    this.searchFilterString = value.toLowerCase() ?? '';
+    this.updateRoot();
+    this.data.update(this.rootNode);
   }
 }
