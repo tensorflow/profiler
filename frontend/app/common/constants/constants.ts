@@ -1,5 +1,5 @@
 /** URL when running locally */
-export const LOCAL_URL = '/';
+export const LOCAL_URL = '/local';
 
 /** Plugin name */
 export const PLUGIN_NAME = 'profile';
