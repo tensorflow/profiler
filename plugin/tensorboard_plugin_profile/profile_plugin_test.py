@@ -33,7 +33,7 @@ from tensorboard_plugin_profile.protobuf import trace_events_pb2
 
 RUN_TO_TOOLS = {
     'foo': ['trace_viewer'],
-    'bar': ['unsupported'],
+    'bar': ['unsupportsed'],
     'baz': ['overview_page', 'op_profile', 'trace_viewer'],
     'qux': ['overview_page@', 'input_pipeline_analyzer@', 'trace_viewer'],
     'abc': ['xplane'],
@@ -207,24 +207,24 @@ class ProfilePluginTest(tf.test.TestCase):
     self.assertListEqual(expected_hosts_foo, hosts_a)
     hosts_q = self.plugin.host_impl('qux', 'framework_op_stats')
     self.assertEmpty(hosts_q)
-    hosts_abc_tf_stats = self.plugin.host_impl('abc', 'framework_op_stats^')
+    hosts_abc_tf_stats = self.plugin.host_impl('abc', 'framework_op_stats')
     self.assertListEqual(
         expected_all_hosts_only + expected_hosts_abc, hosts_abc_tf_stats
     )
     # TraceViewer and MemoryProfile does not support all hosts.
-    hosts_abc_trace_viewer = self.plugin.host_impl('abc', 'trace_viewer^')
+    hosts_abc_trace_viewer = self.plugin.host_impl('abc', 'trace_viewer')
     self.assertListEqual(expected_hosts_abc, hosts_abc_trace_viewer)
-    hosts_abc_memory_profile = self.plugin.host_impl('abc', 'memory_profile^')
+    hosts_abc_memory_profile = self.plugin.host_impl('abc', 'memory_profile')
     self.assertListEqual(expected_hosts_abc, hosts_abc_memory_profile)
     # OverviewPage supports all hosts only.
-    hosts_abc_overview_page = self.plugin.host_impl('abc', 'overview_page^')
+    hosts_abc_overview_page = self.plugin.host_impl('abc', 'overview_page')
     self.assertListEqual(expected_all_hosts_only, hosts_abc_overview_page)
     # PodViewer supports all hosts only.
-    hosts_abc_pod_viewer = self.plugin.host_impl('abc', 'pod_viewer^')
+    hosts_abc_pod_viewer = self.plugin.host_impl('abc', 'pod_viewer')
     self.assertListEqual(expected_all_hosts_only, hosts_abc_pod_viewer)
     # tf.data Bottleneck Analysis supports all hosts only.
     hosts_abc_tf_data_bottleneck_analysis = self.plugin.host_impl(
-        'abc', 'tf_data_bottleneck_analysis^')
+        'abc', 'tf_data_bottleneck_analysis')
     self.assertListEqual(
         expected_all_hosts_only, hosts_abc_tf_data_bottleneck_analysis
     )

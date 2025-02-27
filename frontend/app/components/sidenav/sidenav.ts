@@ -129,8 +129,7 @@ export class SideNav implements OnInit, OnDestroy {
 
   getDisplayTagName(tag: string): string {
     return (tag && tag.length &&
-            (tag[tag.length - 1] === '@' || tag[tag.length - 1] === '#' ||
-             tag[tag.length - 1] === '^')) ?
+            (tag[tag.length - 1] === '@')) ?
         tag.slice(0, -1) :
         tag || '';
   }

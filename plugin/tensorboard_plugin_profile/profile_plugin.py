@@ -77,21 +77,8 @@ CAPTURE_ROUTE = '/capture_profile'
 # 3) '@': data generate from proto, or tracetable for streaming trace viewer.
 # 4) no suffix: data is in json format, ready to feed to frontend.
 TOOLS = {
-    'trace_viewer': 'trace',
-    'trace_viewer#': 'trace.json.gz',
-    'op_profile': 'op_profile.json',
-    'input_pipeline_analyzer': 'input_pipeline.json',
-    'input_pipeline_analyzer@': 'input_pipeline.pb',
-    'overview_page': 'overview_page.json',
-    'overview_page@': 'overview_page.pb',
-    'memory_viewer': 'memory_viewer.json',
-    'pod_viewer': 'pod_viewer.json',
-    'framework_op_stats': 'tensorflow_stats.pb',
-    'kernel_stats': 'kernel_stats.pb',
-    'memory_profile#': 'memory_profile.json.gz',
     'xplane': 'xplane.pb',
     'hlo_proto': 'hlo_proto.pb',
-    'tf_data_bottleneck_analysis': 'tf_data_bottleneck_analysis.json',
 }
 
 ALL_HOSTS = 'ALL_HOSTS'
@@ -103,49 +90,44 @@ _EXTENSION_TO_TOOL = {extension: tool for tool, extension in TOOLS.items()}
 _FILENAME_RE = re.compile(r'(?:(.*)\.)?(' +
                           '|'.join(TOOLS.values()).replace('.', r'\.') + r')')
 
-# Tools that consume raw data.
-RAW_DATA_TOOLS = frozenset(
-    tool for tool, extension in TOOLS.items()
-    if extension.endswith('.json') or extension.endswith('.json.gz'))
-
 # Tools that can be generated from xplane end with ^.
 XPLANE_TOOLS = [
-    'trace_viewer^',  # non-streaming before TF 2.13
-    'trace_viewer@^',  # streaming since TF 2.14
-    'overview_page^',
-    'input_pipeline_analyzer^',
-    'framework_op_stats^',
-    'kernel_stats^',
-    'memory_profile^',
-    'pod_viewer^',
-    'tf_data_bottleneck_analysis^',
-    'op_profile^',
-    'hlo_stats^',
-    'roofline_model^',
+    'trace_viewer',  # non-streaming before TF 2.13
+    'trace_viewer@',  # streaming since TF 2.14
+    'overview_page',
+    'input_pipeline_analyzer',
+    'framework_op_stats',
+    'kernel_stats',
+    'memory_profile',
+    'pod_viewer',
+    'tf_data_bottleneck_analysis',
+    'op_profile',
+    'hlo_stats',
+    'roofline_model',
 ]
 
 # XPlane generated tools that support all host mode.
 XPLANE_TOOLS_ALL_HOSTS_SUPPORTED = frozenset([
-    'input_pipeline_analyzer^',
-    'framework_op_stats^',
-    'kernel_stats^',
-    'overview_page^',
-    'pod_viewer^',
-    'tf_data_bottleneck_analysis^',
-    'dcn_collective_stats^',
+    'input_pipeline_analyzer',
+    'framework_op_stats',
+    'kernel_stats',
+    'overview_page',
+    'pod_viewer',
+    'tf_data_bottleneck_analysis',
+    'dcn_collective_stats',
 ])
 
 # XPlane generated tools that only support all host mode.
 XPLANE_TOOLS_ALL_HOSTS_ONLY = frozenset(
-    ['overview_page^', 'pod_viewer^', 'tf_data_bottleneck_analysis^'])
+    ['overview_page', 'pod_viewer', 'tf_data_bottleneck_analysis'])
 
 
 def use_xplane(tool: str) -> bool:
-  return tool[-1] == '^'
+  return tool in XPLANE_TOOLS
 
 
 # HLO generated tools.
-HLO_TOOLS = frozenset(['graph_viewer^', 'memory_viewer^'])
+HLO_TOOLS = frozenset(['graph_viewer', 'memory_viewer'])
 
 
 def use_hlo(tool: str) -> bool:
@@ -231,7 +213,7 @@ def _get_tools(filenames: list[str], profile_run_dir: str) -> set[str]:
       continue
     elif tool:
       tools.add(tool)
-      if tool[-1] in ('@', '#'):
+      if tool[-1] in ('@'):
         found.add(tool[:-1])
       else:
         found.add(tool)
@@ -378,31 +360,6 @@ def filenames_to_hosts(filenames: list[str], tool: str) -> list[str]:
     elif tool in XPLANE_TOOLS_ALL_HOSTS_SUPPORTED:
       hosts.add(ALL_HOSTS)
   return sorted(hosts)
-
-
-def get_data_content_encoding(
-    raw_data: Any, tool: str, params: dict[str, Any]
-) -> tuple[Any, str, str | None]:
-  """Converts raw tool proto into the correct tool data.
-
-  Args:
-    raw_data: bytes representing raw data from the tool.
-    tool: string of tool name.
-    params: user input parameters
-
-  Returns:
-    The converted data and the content encoding of the data and content type for
-    the response.
-  """
-  data, content_type, content_encoding = None, 'application/json', None
-  if tool in RAW_DATA_TOOLS:
-    data = raw_data
-    if tool[-1] == '#':
-      content_encoding = 'gzip'
-  else:
-    data = convert.tool_proto_to_tool_data(raw_data, tool, params)
-
-  return data, content_type, content_encoding
 
 
 class ProfilePlugin(base_plugin.TBPlugin):
@@ -637,12 +594,12 @@ class ProfilePlugin(base_plugin.TBPlugin):
     if tool not in TOOLS and not use_xplane(tool):
       return None, content_type, None
 
-    if tool == 'memory_viewer^' and request.args.get(
+    if tool == 'memory_viewer' and request.args.get(
         'view_memory_allocation_timeline'
     ):
       params['view_memory_allocation_timeline'] = True
 
-    if tool == 'trace_viewer@^':
+    if tool == 'trace_viewer@':
       options = {}
       options['resolution'] = request.args.get('resolution', 8000)
       if request.args.get('start_time_ms') is not None:
@@ -653,46 +610,34 @@ class ProfilePlugin(base_plugin.TBPlugin):
 
     asset_path = os.path.join(run_dir, make_filename(host, tool))
 
-    data, content_encoding = None, None
-    if use_xplane(tool):
-      if host == ALL_HOSTS:
-        file_pattern = make_filename('*', 'xplane')
-        try:
-          path = epath.Path(run_dir)
-          asset_paths = path.glob(file_pattern)
-        except OSError as e:
-          logger.warning('Cannot read asset directory: %s, OpError %s', run_dir,
-                         e)
-          raise IOError(
-              'Cannot read asset directory: %s, OpError %s' % (run_dir, e)
-          ) from e
-      else:
-        asset_paths = [asset_path]
-
+    _, content_encoding = None, None
+    if host == ALL_HOSTS:
+      file_pattern = make_filename('*', 'xplane')
       try:
-        data, content_type = convert.xspace_to_tool_data(
-            asset_paths, tool, params)
-      except AttributeError as e:
-        logger.warning('XPlane converters are available after Tensorflow 2.4')
-        raise AttributeError(
-            'XPlane converters are available after Tensorflow 2.4'
+        path = epath.Path(run_dir)
+        asset_paths = path.glob(file_pattern)
+      except OSError as e:
+        logger.warning(
+            'Cannot read asset directory: %s, OpError %s', run_dir, e
+        )
+        raise IOError(
+            'Cannot read asset directory: %s, OpError %s' % (run_dir, e)
         ) from e
-      except ValueError as e:
-        logger.warning('XPlane convert to tool data failed as %s', e)
-        raise e
-      return data, content_type, content_encoding
+    else:
+      asset_paths = [asset_path]
 
-    raw_data = None
     try:
-      path = epath.Path(asset_path)
-      raw_data = path.read_bytes()
-    except OSError as e:
-      logger.warning("Couldn't read asset path: %s, Error: %s", asset_path, e)
-
-    if raw_data is None:
-      return None, content_type, None
-
-    return get_data_content_encoding(raw_data, tool, params)
+      data, content_type = convert.xspace_to_tool_data(
+          asset_paths, tool, params)
+    except AttributeError as e:
+      logger.warning('XPlane converters are available after Tensorflow 2.4')
+      raise AttributeError(
+          'XPlane converters are available after Tensorflow 2.4'
+      ) from e
+    except ValueError as e:
+      logger.warning('XPlane convert to tool data failed as %s', e)
+      raise e
+    return data, content_type, content_encoding
 
   # pytype: disable=wrong-arg-types
   @wrappers.Request.application
@@ -705,7 +650,6 @@ class ProfilePlugin(base_plugin.TBPlugin):
       if data is None:
         return respond('No Data', 'text/plain', code=404)
       return respond(data, content_type, content_encoding=content_encoding)
-    # Data fetch error handler
     except AttributeError as e:
       return respond(str(e), 'text/plain', code=500)
     except ValueError as e:
@@ -733,7 +677,6 @@ class ProfilePlugin(base_plugin.TBPlugin):
         cluster_resolver: tf.distribute.cluster_resolver.ClusterResolver,
     ) -> str:
       """Parses TPU workers list from the cluster resolver."""
-      cluster_spec = cluster_resolver.cluster_spec()
       cluster_spec = cluster_resolver.cluster_spec()
       task_indices = cluster_spec.task_indices('worker')
       worker_list = [

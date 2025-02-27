@@ -87,7 +87,7 @@ def xspace_to_tool_names(xspace_paths):
   raw_data, success = _pywrap_profiler_plugin.xspace_to_tools_data(
       xspace_paths, 'tool_names')
   if success:
-    return [tool + '^' for tool in raw_data.decode().split(',')]
+    return [tool for tool in raw_data.decode().split(',')]
   return []
 
 
@@ -108,8 +108,6 @@ def xspace_to_tool_data(
   Returns:
     Returns a string of tool data and the content type for the response.
   """
-  assert tool[-1] == '^'
-  tool = tool[:-1]  # xplane tool name ends with '^'
   data = None
   content_type = 'application/json'
   # tqx: gViz output format
@@ -222,37 +220,3 @@ def xspace_to_tool_data(
     logger.warning('%s is not a known xplane tool', tool)
   return data, content_type
 
-
-def tool_proto_to_tool_data(tool_proto, tool, params):
-  """Converts the serialized tool proto to tool data string.
-
-  Args:
-    tool_proto: A serialized tool proto string.
-    tool: A string of tool name.
-    params: user input parameters.
-
-  Returns:
-    Returns a string of tool data.
-  """
-  data = ''
-  # tqx: gViz output format
-  tqx = params.get('tqx', '')
-  if tool == 'trace_viewer':
-    data = process_raw_trace(tool_proto)
-  elif tool == 'framework_op_stats':
-    if tqx == 'out:csv;':
-      data = tf_stats_proto_to_gviz.to_csv(tool_proto)
-    else:
-      data = tf_stats_proto_to_gviz.to_json(tool_proto)
-  elif tool == 'overview_page@':
-    data = overview_page_proto_to_gviz.to_json(tool_proto)
-  elif tool == 'input_pipeline_analyzer@':
-    data = input_pipeline_proto_to_gviz.to_json(tool_proto)
-  elif tool == 'kernel_stats':
-    if tqx == 'out:csv;':
-      data = kernel_stats_proto_to_gviz.to_csv(tool_proto)
-    else:
-      data = kernel_stats_proto_to_gviz.to_json(tool_proto)
-  else:
-    logger.warning('%s is not a known tool', tool)
-  return data
