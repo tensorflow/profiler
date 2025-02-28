@@ -12,7 +12,7 @@
       </div>
       <div class="info-content">
         <div class="info" id="graph-viewer-link" [hidden]="!hasValidGraphViewerLink()">
-          <a [href]="getGraphViewerLink()" target="_blank" style="text-decoration:none;">
+          <a [href]="getGraphViewerLinkWrapper()" target="_blank" style="text-decoration:none;">
             <button
               mat-stroked-button
               extended
@@ -25,7 +25,7 @@
             </button>
           </a>
         </div>
-        <div class="info" id="graph-viewer-link" [hidden]="isOss || !isCustomCall">
+        <div class="info" id="custom-call-text-link" [hidden]="isOss || !isCustomCall">
           <a [href]="getCustomCallTextLink()" target="_blank" style="text-decoration:none;">
             <button
               mat-stroked-button
@@ -152,8 +152,9 @@
           <div class="title"> Hardware Computation Size:</div>
           <code class="expression">{{computationPrimitiveSize}}</code>
         </div>
-        <div class="warning" [hidden]="!showUtilizationWarning">
-          <p>Utilization may have been capped at 100% as accurate bandwidth could not be determined.</p><p [hidden]="isOss">See <a href="https://b.corp.google.com/issues/329965643">b/329965643</a></p>
+        <div selector="[utilWarning]" class="warning" [hidden]="!showUtilizationWarning">
+          <p>Utilization may have been capped at 100% as accurate bandwidth could not be determined.</p>
+          <ng-content select="[utilWarningBug]"></ng-content>
         </div>
       </div>
     </mat-card-content>

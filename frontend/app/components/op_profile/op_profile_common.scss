@@ -2,6 +2,16 @@
 
 @import 'frontend/app/styles/common';
 
+mat-sidenav-container {
+  background-color: #fff;
+}
+
+mat-sidenav {
+  background: transparent;
+  width: 340px;
+  @include border-right-gray;
+}
+
 .container {
   padding: 20px;
 }

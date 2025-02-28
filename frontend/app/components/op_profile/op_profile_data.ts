@@ -1,6 +1,13 @@
 import {Node} from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 
+/** An op profile summary data interface. */
+export interface OpProfileSummary {
+  name: string;
+  value: string;
+  color: string;
+}
+
 /** An op profile data class. */
 export class OpProfileData {
   bwColors: string[] =
@@ -11,7 +18,6 @@ export class OpProfileData {
       Array.from<string>({length: utils.MemBwType.MEM_BW_TYPE_MAX + 1})
           .fill('');
   flopsUtilizationPercent?: string;
-  memBwType = utils.MemBwType;
 
   update(node?: Node) {
     if (node) {

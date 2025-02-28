@@ -1,8 +1,9 @@
-import {Component, EventEmitter, Input, Output} from '@angular/core';
+import {Component, EventEmitter, inject, Input, Output} from '@angular/core';
 import {Store} from '@ngrx/store';
 import {Node} from 'org_xprof/frontend/app/common/interfaces/op_profile.jsonpb_decls';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
+import {DATA_SERVICE_INTERFACE_TOKEN} from 'org_xprof/frontend/app/services/data_service_v2/data_service_v2_interface';
 import {getActiveOpProfileNodeState, getCurrentRun, getOpProfileRootNode, getProfilingGeneralState, getSelectedOpNodeChainState} from 'org_xprof/frontend/app/store/selectors';
 import {ProfilingGeneralState} from 'org_xprof/frontend/app/store/state';
 import {Observable, ReplaySubject} from 'rxjs';
@@ -18,6 +19,7 @@ import {takeUntil} from 'rxjs/operators';
 export class OpDetails {
   /** Handles on-destroy Subject, used to unsubscribe. */
   private readonly destroyed = new ReplaySubject<void>(1);
+  private readonly dataService = inject(DATA_SERVICE_INTERFACE_TOKEN);
 
   /** When updating app route to other tools through crosslink */
   @Output() readonly updateRoute = new EventEmitter<NavigationEvent>();
@@ -134,23 +136,14 @@ export class OpDetails {
                                            this.moduleList[0];
   }
 
-  getGraphViewerLink() {
-    if (this.isOss) {
-      const tag = 'graph_viewer';
-      const host = this.getSelectedModuleName();
-      const opName = this.getSelectedOpName();
-      return `${window.parent.location.origin}?tool=${tag}&host=${
-          host}&opName=${opName}&run=${this.currentRun}#profile`;
-    }
-    const aggregatedBy = this.selectedOpNodeChain[0];
-    if (aggregatedBy === 'by_program') {
-      return `/graph_viewer/${this.sessionId}?module_name=${
-          this.getSelectedModuleName()}&node_name=${this.getSelectedOpName()}`;
-    } else if (aggregatedBy === 'by_category') {
-      return `/graph_viewer/${this.sessionId}?module_name=${
-          this.getSelectedModuleName()}&node_name=${this.getSelectedOpName()}`;
-    }
-    return '';
+  getGraphViewerLinkWrapper() {
+    const moduleName = this.getSelectedModuleName();
+    const opName = this.getSelectedOpName();
+    return this.dataService.getGraphViewerLink(
+        this.sessionId,
+        moduleName,
+        opName,
+    );
   }
 
   getCustomCallTextLink() {

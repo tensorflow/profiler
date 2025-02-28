@@ -3,6 +3,8 @@ import {HttpClient, HttpParams} from '@angular/common/http';
 import {Injectable} from '@angular/core';
 import {API_PREFIX, DATA_API, LOCAL_URL, PLUGIN_NAME} from 'org_xprof/frontend/app/common/constants/constants';
 import {DataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import * as utils from 'org_xprof/frontend/app/common/utils/utils';
+import {OpProfileData, OpProfileSummary} from 'org_xprof/frontend/app/components/op_profile/op_profile_data';
 import {DataServiceV2Interface} from 'org_xprof/frontend/app/services/data_service_v2/data_service_v2_interface';
 import {Observable} from 'rxjs';
 
@@ -36,5 +38,22 @@ export class DataServiceV2 implements DataServiceV2Interface {
     });
     return this.httpClient.get(this.pathPrefix + DATA_API, {params}) as
         Observable<DataTable>;
+  }
+
+  getGraphViewerLink(sessionId: string, moduleName: string, opName: string) {
+    if (!moduleName || !opName) return '';
+    return `${window.parent.location.origin}?tool=graph_viewer&host=${
+        moduleName}&opName=${opName}&run=${sessionId}#profile`;
+  }
+
+  getOpProfileSummary(data: OpProfileData): OpProfileSummary[] {
+    return [
+      {
+        name: 'Hbm',
+        value: data?.bandwidthUtilizationPercents
+                   ?.[utils.MemBwType.MEM_BW_TYPE_HBM_RW],
+        color: data?.bwColors?.[utils.MemBwType.MEM_BW_TYPE_HBM_RW],
+      },
+    ];
   }
 }

@@ -15,6 +15,8 @@ xprof_ng_module(
         "@org_xprof//frontend/app/common/angular:angular_common_http",
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/interfaces",
+        "@org_xprof//frontend/app/common/utils",
+        "@org_xprof//frontend/app/components/op_profile:op_profile_data",
         "@org_xprof//frontend/app/services/data_service:mock_data",
     ],
 )
@@ -28,5 +30,6 @@ xprof_ng_module(
         "@npm//@angular/core",
         "@npm//rxjs",
         "@org_xprof//frontend/app/common/interfaces",
+        "@org_xprof//frontend/app/components/op_profile:op_profile_data",
     ],
 )

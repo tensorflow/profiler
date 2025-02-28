@@ -4,6 +4,7 @@
 
 import {InjectionToken} from '@angular/core';
 import {DataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {OpProfileData, OpProfileSummary} from 'org_xprof/frontend/app/components/op_profile/op_profile_data';
 import {Observable} from 'rxjs';
 
 /** The data service class that calls API and return response. */
@@ -15,6 +16,11 @@ export interface DataServiceV2Interface {
       parameters?: Map<string, string>,
       ignoreError?: boolean,
       ): Observable<DataTable|null>;
+
+  getGraphViewerLink(sessionId: string, moduleName: string, opName: string):
+      string;
+
+  getOpProfileSummary(data: OpProfileData): OpProfileSummary[];
 }
 
 /** Injection token for the data service interface. */
