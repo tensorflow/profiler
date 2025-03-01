@@ -29,12 +29,12 @@ export class DataServiceV2 implements DataServiceV2Interface {
   getData(
       sessionId: string, tool: string, host: string,
       parameters: Map<string, string> = new Map()): Observable<DataTable|null> {
-    const params = new HttpParams()
-                       .set('run', sessionId)
-                       .set('tag', tool)
-                       .set('host', host);
+    let params = new HttpParams()
+                     .set('run', sessionId)
+                     .set('tag', tool)
+                     .set('host', host);
     parameters.forEach((value, key) => {
-      params.set(key, value);
+      params = params.set(key, value);
     });
     return this.httpClient.get(this.pathPrefix + DATA_API, {params}) as
         Observable<DataTable>;
