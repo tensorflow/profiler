@@ -8,6 +8,8 @@ declare global {
   interface Window {
     TENSORBOARD_ENV?: TensorBoardEnv;
     google?: any;
+    gtag: Function;
+    hljs?: {configure: Function; highlightAll: Function;};
   }
 }
 
