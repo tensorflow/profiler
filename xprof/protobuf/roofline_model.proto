@@ -4,7 +4,7 @@ syntax = "proto2";
 
 package tensorflow.profiler.roofline_model;
 
-import "plugin/tensorboard_plugin_profile/protobuf/diagnostics.proto";
+import "xprof/protobuf/diagnostics.proto";
 
 // The record type which describes the scope this record captures.
 enum RecordType {

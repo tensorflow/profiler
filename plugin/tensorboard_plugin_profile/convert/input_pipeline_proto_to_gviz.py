@@ -27,8 +27,8 @@ import warnings
 import gviz_api
 
 from tensorboard_plugin_profile.convert import diagnostics as diag
-from tensorboard_plugin_profile.protobuf import input_pipeline_pb2
-from tensorboard_plugin_profile.protobuf import tpu_input_pipeline_pb2
+from xprof.protobuf import input_pipeline_pb2
+from xprof.protobuf import tpu_input_pipeline_pb2
 
 
 def compute_time_ms(details: tpu_input_pipeline_pb2.PerTpuStepDetails):

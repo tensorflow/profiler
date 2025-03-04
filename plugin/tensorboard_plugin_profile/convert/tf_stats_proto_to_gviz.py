@@ -24,7 +24,7 @@ from __future__ import print_function
 
 import gviz_api
 
-from tensorboard_plugin_profile.protobuf import tf_stats_pb2
+from xprof.protobuf import tf_stats_pb2
 
 
 def get_chart_table_args(stats_table, device_type):

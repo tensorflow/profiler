@@ -26,7 +26,7 @@ import sys
 
 import gviz_api
 
-from tensorboard_plugin_profile.protobuf import dcn_slack_analysis_pb2
+from xprof.protobuf import dcn_slack_analysis_pb2
 
 _BYTES_TO_GIGABITS_CONVERSION_FACTOR = 8e-9
 _MICRO_TO_SECONDS_CONVERSION_FACTOR = 1e-6

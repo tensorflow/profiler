@@ -24,7 +24,7 @@ from __future__ import print_function
 
 import gviz_api
 
-from tensorboard_plugin_profile.protobuf import roofline_model_pb2
+from xprof.protobuf import roofline_model_pb2
 
 
 def get_step_string(record_type, step_num):

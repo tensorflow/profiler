@@ -27,7 +27,7 @@ import gviz_api
 import tensorflow as tf
 
 from tensorboard_plugin_profile.convert import overview_page_proto_to_gviz
-from tensorboard_plugin_profile.protobuf import overview_page_pb2
+from xprof.protobuf import overview_page_pb2
 
 
 class ProtoToGvizTest(tf.test.TestCase):
