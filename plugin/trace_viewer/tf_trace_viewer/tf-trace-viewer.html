@@ -631,7 +631,6 @@ dashboard would integrate trace viewer app using iframe.
     },
 
     _sessionId: string = '',
-    _selectedDeviceIds: null,
     _devices: null,
 
 
@@ -1812,13 +1811,6 @@ dashboard would integrate trace viewer app using iframe.
         delete jsonData['details'];
       }
 
-      if (jsonData['selected_device_ids']) {
-        this._selectedDeviceIds = jsonData['selected_device_ids'];
-        delete jsonData['selected_device_ids'];
-      } else {
-        this._selectedDeviceIds = null;
-      }
-
       jsonData.traceEvents = this._filterKnownTraceEvents(jsonData.traceEvents || []);
       if (jsonData.traceEvents.length > 0) {
         var opt = new tr.importer.ImportOptions();
@@ -1946,29 +1938,6 @@ dashboard would integrate trace viewer app using iframe.
         requestURL.searchParams.set('hosts', this._selectedHosts.join(','));
       } else {
         requestURL.searchParams.set('hosts', 'none');
-      }
-    },
-
-    // TODO: cleanup query params, as both selected_device_ids and trace_filter_config can act on process filering.
-    // This function is no longer invoked.
-    _updateProcessesSelectionToBaseUrl: function(requestURL) {
-      // Populate query parameter "selected_device_ids".
-      const dropdown = Polymer.dom(document.getElementById("process_filter_dropdown"));
-      const selectedDeviceIds = [];
-      // Checkbox nodes start at index 3 since the first 3 nodes are the "All", "None" and "Load" button.
-      for (let i = 3; i < dropdown.childNodes.length; ++i) {
-        const checkbox = dropdown.childNodes[i].getElementsByTagName('input')[0];
-        if (checkbox.checked) {
-          const label = dropdown.childNodes[i].getElementsByTagName('label')[0];
-          const pid = label.innerText.match(/pid (\d+)/)[1];
-          selectedDeviceIds.push(pid)
-        }
-      }
-
-      // Only send "selected_device_ids" query param when Process Filter Dropdown is populated
-      // with a list of devices (pids) checkboxes.
-      if (dropdown.childNodes.length > 2) {
-        requestURL.searchParams.set('selected_device_ids', selectedDeviceIds.join(','));
       }
     },
 
