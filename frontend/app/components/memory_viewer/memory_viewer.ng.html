@@ -3,3 +3,6 @@
     [currentRun]="currentRun"
     [currentHost]="currentHost"
 ></memory-viewer-main>
+<memory-viewer-control
+    (changed)="update($event)"
+></memory-viewer-control>
