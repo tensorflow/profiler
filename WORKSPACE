@@ -4,9 +4,7 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("//:config.bzl", "repository_configuration")
 
 repository_configuration(name = "repository_configuration")
-
 load("@repository_configuration//:repository_config.bzl", "PROFILER_PYTHON_VERSION", "PROFILER_REQUIREMENTS_FILE")
-
 print("Using Python Version = {}".format(PROFILER_PYTHON_VERSION))
 
 http_archive(
@@ -218,7 +216,14 @@ load("@org_tensorflow//tensorflow:workspace0.bzl", "tf_workspace0")
 tf_workspace0()
 
 load(
-    "@local_tsl//third_party/gpus/cuda/hermetic:cuda_json_init_repository.bzl",
+    "@local_xla//third_party/py:python_wheel.bzl",
+    "python_wheel_version_suffix_repository",
+)
+
+python_wheel_version_suffix_repository(name = "tf_wheel_version_suffix")
+
+load(
+    "@local_xla//third_party/gpus/cuda/hermetic:cuda_json_init_repository.bzl",
     "cuda_json_init_repository",
 )
 
@@ -230,7 +235,7 @@ load(
     "CUDNN_REDISTRIBUTIONS",
 )
 load(
-    "@local_tsl//third_party/gpus/cuda/hermetic:cuda_redist_init_repositories.bzl",
+    "@local_xla//third_party/gpus/cuda/hermetic:cuda_redist_init_repositories.bzl",
     "cuda_redist_init_repositories",
     "cudnn_redist_init_repository",
 )
@@ -244,21 +249,21 @@ cudnn_redist_init_repository(
 )
 
 load(
-    "@local_tsl//third_party/gpus/cuda/hermetic:cuda_configure.bzl",
+    "@local_xla//third_party/gpus/cuda/hermetic:cuda_configure.bzl",
     "cuda_configure",
 )
 
 cuda_configure(name = "local_config_cuda")
 
 load(
-    "@local_tsl//third_party/nccl/hermetic:nccl_redist_init_repository.bzl",
+    "@local_xla//third_party/nccl/hermetic:nccl_redist_init_repository.bzl",
     "nccl_redist_init_repository",
 )
 
 nccl_redist_init_repository()
 
 load(
-    "@local_tsl//third_party/nccl/hermetic:nccl_configure.bzl",
+    "@local_xla//third_party/nccl/hermetic:nccl_configure.bzl",
     "nccl_configure",
 )
 
