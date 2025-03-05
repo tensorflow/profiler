@@ -39,10 +39,14 @@ export class MemoryViewer implements OnDestroy {
         message: 'Loading data',
       }
     }));
+    let params = new Map<string, string>();
+    console.log('event.memorySpaceColor', event.memorySpaceColor);
+    params = params.set('memory_space', event.memorySpaceColor || '0');
 
     this.dataService
         .getData(
-            event.run || '', event.tag || 'memory_viewer', event.host || '')
+            event.run || this.currentRun, event.tag || 'memory_viewer^',
+            event.host || this.currentHost, params)
         .pipe(takeUntil(this.destroyed))
         .subscribe(data => {
           this.store.dispatch(setLoadingStateAction({
@@ -54,8 +58,8 @@ export class MemoryViewer implements OnDestroy {
           if (!data) return;
           this.memoryViewerPreprocessResult =
               data as MemoryViewerPreprocessResult | null;
-          this.currentRun = event.run || '';
-          this.currentHost = event.host || '';
+          this.currentRun = event.run || this.currentRun;
+          this.currentHost = event.host || this.currentHost;
         });
   }
 
