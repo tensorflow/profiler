@@ -21,10 +21,11 @@ xprof_ng_module(
         "@npm//@angular/router",
         "@npm//@ngrx/store",
         "@npm//rxjs",
+        "@org_xprof//frontend/app/common/classes",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/utils",
         "@org_xprof//frontend/app/components/op_profile/op_details",
-        "@org_xprof//frontend/app/services/data_service",
+        "@org_xprof//frontend/app/services/data_service_v2:data_service_v2_interface",
         "@org_xprof//frontend/app/store",
     ],
 )
