@@ -222,12 +222,6 @@ class ProfilePluginTest(tf.test.TestCase):
     # PodViewer supports all hosts only.
     hosts_abc_pod_viewer = self.plugin.host_impl('abc', 'pod_viewer^')
     self.assertListEqual(expected_all_hosts_only, hosts_abc_pod_viewer)
-    # tf.data Bottleneck Analysis supports all hosts only.
-    hosts_abc_tf_data_bottleneck_analysis = self.plugin.host_impl(
-        'abc', 'tf_data_bottleneck_analysis^')
-    self.assertListEqual(
-        expected_all_hosts_only, hosts_abc_tf_data_bottleneck_analysis
-    )
 
   def testData(self):
     generate_testdata(self.logdir)

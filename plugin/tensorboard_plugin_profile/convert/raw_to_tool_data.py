@@ -31,7 +31,6 @@ from tensorboard_plugin_profile.convert import input_pipeline_proto_to_gviz
 from tensorboard_plugin_profile.convert import kernel_stats_proto_to_gviz
 from tensorboard_plugin_profile.convert import overview_page_proto_to_gviz
 from tensorboard_plugin_profile.convert import roofline_model_proto_to_gviz
-from tensorboard_plugin_profile.convert import tf_data_stats_proto_to_gviz
 from tensorboard_plugin_profile.convert import tf_stats_proto_to_gviz
 from tensorboard_plugin_profile.convert import trace_events_json
 from tensorboard_plugin_profile.protobuf import trace_events_pb2
@@ -168,10 +167,6 @@ def xspace_to_tool_data(
     raw_data, success = xspace_wrapper_func(xspace_paths, tool)
     if success:
       data = raw_data
-  elif tool == 'tf_data_bottleneck_analysis':
-    raw_data, success = xspace_wrapper_func(xspace_paths, tool)
-    if success:
-      data = tf_data_stats_proto_to_gviz.to_json(raw_data)
   elif tool == 'op_profile':
     raw_data, success = xspace_wrapper_func(xspace_paths, tool)
     if success:

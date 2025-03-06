@@ -104,7 +104,6 @@ class TpuKerasTest(absltest.TestCase):
         'framework_op_stats^',
         'memory_profile^',
         'pod_viewer^',
-        'tf_data_bottleneck_analysis^',
         'op_profile^',
         'memory_viewer^',
         'graph_viewer^',

@@ -91,7 +91,6 @@ TOOLS = {
     'memory_profile#': 'memory_profile.json.gz',
     'xplane': 'xplane.pb',
     'hlo_proto': 'hlo_proto.pb',
-    'tf_data_bottleneck_analysis': 'tf_data_bottleneck_analysis.json',
 }
 
 ALL_HOSTS = 'ALL_HOSTS'
@@ -118,7 +117,6 @@ XPLANE_TOOLS = [
     'kernel_stats^',
     'memory_profile^',
     'pod_viewer^',
-    'tf_data_bottleneck_analysis^',
     'op_profile^',
     'hlo_stats^',
     'roofline_model^',
@@ -131,13 +129,12 @@ XPLANE_TOOLS_ALL_HOSTS_SUPPORTED = frozenset([
     'kernel_stats^',
     'overview_page^',
     'pod_viewer^',
-    'tf_data_bottleneck_analysis^',
     'dcn_collective_stats^',
 ])
 
 # XPlane generated tools that only support all host mode.
 XPLANE_TOOLS_ALL_HOSTS_ONLY = frozenset(
-    ['overview_page^', 'pod_viewer^', 'tf_data_bottleneck_analysis^'])
+    ['overview_page^', 'pod_viewer^'])
 
 
 def use_xplane(tool: str) -> bool:

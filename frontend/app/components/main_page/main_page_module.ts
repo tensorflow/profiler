@@ -5,8 +5,6 @@ import {MatProgressBarModule} from '@angular/material/progress-bar';
 import {MatSidenavModule} from '@angular/material/sidenav';
 import {MatToolbarModule} from '@angular/material/toolbar';
 import {RouterModule, Routes} from '@angular/router';
-import {DcnCollectiveStats} from 'org_xprof/frontend/app/components/dcn_collective_stats/dcn_collective_stats';
-import {DcnCollectiveStatsModule} from 'org_xprof/frontend/app/components/dcn_collective_stats/dcn_collective_stats_module';
 import {EmptyPage} from 'org_xprof/frontend/app/components/empty_page/empty_page';
 import {EmptyPageModule} from 'org_xprof/frontend/app/components/empty_page/empty_page_module';
 import {FrameworkOpStatsAdapter, FrameworkOpStatsAdapterModule} from 'org_xprof/frontend/app/components/framework_op_stats/framework_op_stats_adapter';
@@ -32,8 +30,6 @@ import {PodViewerModule} from 'org_xprof/frontend/app/components/pod_viewer/pod_
 import {RooflineModel} from 'org_xprof/frontend/app/components/roofline_model/roofline_model';
 import {RooflineModelModule} from 'org_xprof/frontend/app/components/roofline_model/roofline_model_module';
 import {SideNavModule} from 'org_xprof/frontend/app/components/sidenav/sidenav_module';
-import {TfDataBottleneckAnalysis} from 'org_xprof/frontend/app/components/tf_data_bottleneck_analysis/tf_data_bottleneck_analysis';
-import {TfDataBottleneckAnalysisModule} from 'org_xprof/frontend/app/components/tf_data_bottleneck_analysis/tf_data_bottleneck_analysis_module';
 import {TraceViewer} from 'org_xprof/frontend/app/components/trace_viewer/trace_viewer';
 import {TraceViewerModule} from 'org_xprof/frontend/app/components/trace_viewer/trace_viewer_module';
 
@@ -58,7 +54,6 @@ export const routes: Routes = [
   {path: 'op_profile^', component: OpProfile},
   {path: 'pod_viewer', component: PodViewer},
   {path: 'pod_viewer^', component: PodViewer},
-  {path: 'tf_data_bottleneck_analysis^', component: TfDataBottleneckAnalysis},
   {path: 'framework_op_stats', component: FrameworkOpStatsAdapter},
   {path: 'framework_op_stats^', component: FrameworkOpStatsAdapter},
   {path: 'trace_viewer', component: TraceViewer},
@@ -66,7 +61,6 @@ export const routes: Routes = [
   {path: 'trace_viewer@^', component: TraceViewer},
   {path: 'trace_viewer^', component: TraceViewer},
   {path: 'graph_viewer^', component: GraphViewer},
-  {path: 'dcn_collective_stats^', component: DcnCollectiveStats},
   {path: 'inference_profile^', component: InferenceProfile},
   {path: 'inference_profile', component: InferenceProfile},
   {path: 'hlo_stats', component: HloStats},
@@ -96,9 +90,7 @@ export const routes: Routes = [
     OpProfileModule,
     PodViewerModule,
     GraphViewerModule,
-    TfDataBottleneckAnalysisModule,
     FrameworkOpStatsAdapterModule,
-    DcnCollectiveStatsModule,
     HloStatsModule,
     RooflineModelModule,
     InferenceProfileModule,
