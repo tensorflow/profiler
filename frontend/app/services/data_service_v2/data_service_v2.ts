@@ -1,7 +1,7 @@
 import {PlatformLocation} from '@angular/common';
 import {HttpClient, HttpParams} from '@angular/common/http';
 import {Injectable} from '@angular/core';
-import {API_PREFIX, DATA_API, LOCAL_URL, PLUGIN_NAME} from 'org_xprof/frontend/app/common/constants/constants';
+import {API_PREFIX, DATA_API, HOSTS_API, LOCAL_URL, PLUGIN_NAME} from 'org_xprof/frontend/app/common/constants/constants';
 import {DataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {OpProfileData, OpProfileSummary} from 'org_xprof/frontend/app/components/op_profile/op_profile_data';
@@ -55,5 +55,13 @@ export class DataServiceV2 implements DataServiceV2Interface {
         color: data?.bwColors?.[utils.MemBwType.MEM_BW_TYPE_HBM_RW],
       },
     ];
+  }
+
+  // TODO(jonahweaver): Create specific endpoint for module list instead of host
+  // list.
+  getModuleList(sessionId: string, tool: string): Observable<string> {
+    const params = new HttpParams().set('run', sessionId).set('tag', tool);
+    return this.httpClient.get(this.pathPrefix + HOSTS_API, {params}) as
+        Observable<string>;
   }
 }
