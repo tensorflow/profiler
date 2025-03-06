@@ -25,10 +25,11 @@ xprof_ng_module(
         "@org_xprof//frontend/app/common/angular:angular_material_progress_bar",
         "@org_xprof//frontend/app/common/angular:angular_material_select",
         "@org_xprof//frontend/app/common/angular:angular_material_sidenav",
+        "@org_xprof//frontend/app/common/classes",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/utils",
         "@org_xprof//frontend/app/components/chart/table",
-        "@org_xprof//frontend/app/services/data_service",
+        "@org_xprof//frontend/app/services/data_service_v2:data_service_v2_interface",
         "@org_xprof//frontend/app/store",
     ],
 )

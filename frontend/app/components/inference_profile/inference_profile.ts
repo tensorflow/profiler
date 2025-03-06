@@ -1,10 +1,11 @@
-import {Component, OnDestroy} from '@angular/core';
+import {Component, inject, OnDestroy} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {Store} from '@ngrx/store';
-import {InferenceProfileData, InferenceProfileDataProperty, InferenceProfileMetadata, InferenceProfileTable,} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {Throbber} from 'org_xprof/frontend/app/common/classes/throbber';
+import {InferenceProfileData, InferenceProfileDataProperty, InferenceProfileMetadata, InferenceProfileMetadataProperty, InferenceProfileTable,} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import {setLoadingState} from 'org_xprof/frontend/app/common/utils/utils';
-import {DataService} from 'org_xprof/frontend/app/services/data_service/data_service';
+import {DATA_SERVICE_INTERFACE_TOKEN} from 'org_xprof/frontend/app/services/data_service_v2/data_service_v2_interface';
 import {setCurrentToolStateAction} from 'org_xprof/frontend/app/store/actions';
 import {ReplaySubject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
@@ -17,12 +18,13 @@ import {takeUntil} from 'rxjs/operators';
   styleUrls: ['./inference_profile.css'],
 })
 export class InferenceProfile implements OnDestroy {
-  readonly tool = 'inference_profile';
-  run = '';
-  tag = '';
+  tool = 'inference_profile';
+  sessionId = '';
   host = '';
   /** Handles on-destroy Subject, used to unsubscribe. */
   private readonly destroyed = new ReplaySubject<void>(1);
+  private readonly throbber = new Throbber(this.tool);
+  private readonly dataService = inject(DATA_SERVICE_INTERFACE_TOKEN);
 
   // All the model IDs and data.
   hasBatching: boolean = false;
@@ -52,16 +54,16 @@ export class InferenceProfile implements OnDestroy {
   batchPercentileIndex = 0;
 
   constructor(
-    route: ActivatedRoute,
-    private readonly dataService: DataService,
-    private readonly store: Store<{}>,
+      route: ActivatedRoute,
+      private readonly store: Store<{}>,
   ) {
     route.params.pipe(takeUntil(this.destroyed)).subscribe((params) => {
       if (params as NavigationEvent) {
-        this.run = (params as NavigationEvent).run || '';
-        this.tag = (params as NavigationEvent).tag || 'inference_profile';
+        this.sessionId = (params as NavigationEvent).run || '';
+        this.tool = (params as NavigationEvent).tag || 'inference_profile';
         this.host = (params as NavigationEvent).host || '';
       }
+      this.sessionId = (params || {})['sessionId'] || this.sessionId;
       this.update();
     });
     this.store.dispatch(setCurrentToolStateAction({currentTool: this.tool}));
@@ -69,7 +71,8 @@ export class InferenceProfile implements OnDestroy {
 
   parseMetadata(metadataOrNull: InferenceProfileTable) {
     if (!metadataOrNull) return false;
-    const metadata = (metadataOrNull as InferenceProfileMetadata).p;
+    const metadata = (metadataOrNull as InferenceProfileMetadata).p as
+        InferenceProfileMetadataProperty;
     this.hasBatching = metadata.hasBatching === 'true';
     this.hasTensorPattern = metadata.hasTensorPattern === 'true';
 
@@ -97,11 +100,13 @@ export class InferenceProfile implements OnDestroy {
     // for tensor pattern results.
     if (!data || data.length <= 1) return false;
     if (!this.parseMetadata(data[0])) return false;
+
     // Check the number of inference tables is correct, and parse table data.
     let expectedNum = 1 + this.allModelIds.length;
     if (this.hasBatching) expectedNum += this.allModelIds.length;
     if (this.hasTensorPattern) expectedNum += this.allModelIds.length;
     if (data.length !== expectedNum) return false;
+
     for (let i = 1; i < data.length; ) {
       const requestData = data[i] as InferenceProfileData;
       this.allRequestTables.push(
@@ -183,6 +188,7 @@ export class InferenceProfile implements OnDestroy {
   update() {
     if (this.isInitialLoad) {
       setLoadingState(true, this.store, 'Loading inference profile data');
+      this.throbber.start();
     }
     // Clear the old data from previous update().
     this.allRequestTables = [];
@@ -190,8 +196,8 @@ export class InferenceProfile implements OnDestroy {
 
     this.dataService
         .getData(
-            this.run,
-            this.tag,
+            this.sessionId,
+            this.tool,
             this.host,
             new Map([
               [
@@ -207,6 +213,7 @@ export class InferenceProfile implements OnDestroy {
         .pipe(takeUntil(this.destroyed))
         .subscribe((data) => {
           if (this.isInitialLoad) {
+            this.throbber.stop();
             setLoadingState(false, this.store);
             this.isInitialLoad = false;
           }
