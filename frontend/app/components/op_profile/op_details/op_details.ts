@@ -50,6 +50,7 @@ export class OpDetails {
   bwColors: string[] =
       Array.from<string>({length: utils.MemBwType.MEM_BW_TYPE_MAX + 1})
           .fill('');
+  programId = '';
   expression: string = '';
   provenance: string = '';
   rawTimeMs = '';
@@ -115,41 +116,33 @@ export class OpDetails {
     }
   }
 
-  hasValidGraphViewerLink() {
-    const aggregatedBy = this.selectedOpNodeChain[0];
-    if (aggregatedBy === 'by_category' && this.moduleList.length > 1) {
-      return false;
-    }
-    // Condition for both 'by_program' and 'by_category'
-    return this.selectedOpNodeChain.length >= 2 && this.expression;
-  }
-
   // expression format assumption: '%<op_name> = ...'
-  getSelectedOpName() {
+  get selectedOpName() {
     return this.expression.split('=')[0].trim().slice(1);
   }
 
-  getSelectedModuleName() {
+  get selectedModuleName() {
     const aggregatedBy = this.selectedOpNodeChain[0];
     // 'by_program' or 'by_category'
-    return aggregatedBy === 'by_program' ? this.selectedOpNodeChain[1] :
-                                           this.moduleList[0];
+    return aggregatedBy === 'by_program' ? this.selectedOpNodeChain[1] : '';
   }
 
-  getGraphViewerLinkWrapper() {
-    const moduleName = this.getSelectedModuleName();
-    const opName = this.getSelectedOpName();
-    return this.dataService.getGraphViewerLink(
-        this.sessionId,
-        moduleName,
-        opName,
-    );
+  get graphViewerLink() {
+    if (this.selectedModuleName) {
+      return this.dataService.getGraphViewerLink(
+          this.sessionId, this.selectedModuleName, this.selectedOpName, '');
+    }
+    if (this.programId) {
+      return this.dataService.getGraphViewerLink(
+          this.sessionId, '', this.selectedOpName, this.programId);
+    }
+    return '';
   }
 
   getCustomCallTextLink() {
     return `/graph_viewer.json?session_id=${this.sessionId}&module_name=${
-        this.getSelectedModuleName()}&node_name=${
-        this.getSelectedOpName()}&type=custom_call`;
+        this.selectedModuleName}&node_name=${
+        this.selectedOpName}&type=custom_call`;
   }
 
   dimensionColor(dimension?: Node.XLAInstruction.LayoutAnalysis.Dimension):
@@ -245,17 +238,9 @@ export class OpDetails {
       }
     }
 
-    if (this.node.xla && this.node.xla.expression) {
-      this.expression = this.node.xla.expression;
-    } else {
-      this.expression = '';
-    }
-
-    if (this.node.xla && this.node.xla.provenance) {
-      this.provenance = this.node.xla.provenance;
-    } else {
-      this.provenance = '';
-    }
+    this.programId = this.node.xla?.programId || '';
+    this.expression = this.node.xla?.expression || '';
+    this.provenance = this.node.xla?.provenance || '';
 
     if (this.node.metrics && this.node.metrics.rawTime) {
       this.rawTimeMs = utils.humanReadableText(

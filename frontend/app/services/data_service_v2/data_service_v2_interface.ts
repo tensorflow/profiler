@@ -17,8 +17,12 @@ export interface DataServiceV2Interface {
       ignoreError?: boolean,
       ): Observable<DataTable|null>;
 
-  getGraphViewerLink(sessionId: string, moduleName: string, opName: string):
-      string;
+  getGraphViewerLink(
+      sessionId: string,
+      moduleName: string,
+      opName: string,
+      programId: string,
+      ): string;
 
   getOpProfileSummary(data: OpProfileData): OpProfileSummary[];
 }

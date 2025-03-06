@@ -40,10 +40,14 @@ export class DataServiceV2 implements DataServiceV2Interface {
         Observable<DataTable>;
   }
 
-  getGraphViewerLink(sessionId: string, moduleName: string, opName: string) {
-    if (!moduleName || !opName) return '';
-    return `${window.parent.location.origin}?tool=graph_viewer&host=${
-        moduleName}&opName=${opName}&run=${sessionId}#profile`;
+  // Get graph with program id and op name is not implemented yet.
+  getGraphViewerLink(
+      sessionId: string, moduleName: string, opName: string, programId = '') {
+    if (moduleName && opName) {
+      return `${window.parent.location.origin}?tool=graph_viewer&host=${
+          moduleName}&opName=${opName}&run=${sessionId}#profile`;
+    }
+    return '';
   }
 
   getOpProfileSummary(data: OpProfileData): OpProfileSummary[] {

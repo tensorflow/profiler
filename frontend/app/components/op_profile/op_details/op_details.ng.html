@@ -11,8 +11,8 @@
         </div>
       </div>
       <div class="info-content">
-        <div class="info" id="graph-viewer-link" [hidden]="!hasValidGraphViewerLink()">
-          <a [href]="getGraphViewerLinkWrapper()" target="_blank" style="text-decoration:none;">
+        <div class="info" id="graph-viewer-link" [hidden]="!graphViewerLink">
+          <a [href]="graphViewerLink" target="_blank" style="text-decoration:none;">
             <button
               mat-stroked-button
               extended
