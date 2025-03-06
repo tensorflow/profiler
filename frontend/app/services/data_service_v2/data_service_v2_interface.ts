@@ -20,8 +20,12 @@ export interface DataServiceV2Interface {
   // Returns a string of comma separated module names.
   getModuleList(sessionId: string): Observable<string>;
 
-  getGraphViewerLink(sessionId: string, moduleName: string, opName: string):
-      string;
+  getGraphViewerLink(
+      sessionId: string,
+      moduleName: string,
+      opName: string,
+      programId: string,
+      ): string;
 
   getOpProfileSummary(data: OpProfileData): OpProfileSummary[];
 }
