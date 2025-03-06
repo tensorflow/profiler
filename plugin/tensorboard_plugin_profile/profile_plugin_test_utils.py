@@ -14,16 +14,17 @@
 # ==============================================================================
 """Testing utilities for the Profile plugin."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+import werkzeug
 
-from werkzeug import Request
-
-from tensorboard.backend.event_processing import data_provider
-from tensorboard.backend.event_processing import plugin_event_multiplexer
-from tensorboard.plugins import base_plugin
 from tensorboard_plugin_profile import profile_plugin
+try:
+  from tensorboard.backend.event_processing import data_provider  # pylint: disable=g-import-not-at-top
+  from tensorboard.backend.event_processing import plugin_event_multiplexer as context  # pylint: disable=g-import-not-at-top
+  from tensorboard.plugins import base_plugin  # pylint: disable=g-import-not-at-top
+except ImportError:
+  from tensorboard_plugin_profile.tb_free import base_plugin  # pylint: disable=g-import-not-at-top
+  from tensorboard_plugin_profile.tb_free import context  # pylint: disable=g-import-not-at-top
+  from tensorboard_plugin_profile.tb_free import data_provider  # pylint: disable=g-import-not-at-top
 
 
 class _FakeFlags(object):
@@ -47,15 +48,16 @@ def create_profile_plugin(logdir,
     An instance of ProfilePlugin.
   """
   if not multiplexer:
-    multiplexer = plugin_event_multiplexer.EventMultiplexer()
+    multiplexer = context.EventMultiplexer()
     multiplexer.AddRunsFromDirectory(logdir)
 
-  context = base_plugin.TBContext(
+  ctx = base_plugin.TBContext(
       logdir=logdir,
       multiplexer=multiplexer,
       data_provider=data_provider.MultiplexerDataProvider(multiplexer, logdir),
-      flags=_FakeFlags(logdir, master_tpu_unsecure_channel))
-  return profile_plugin.ProfilePlugin(context)
+      flags=_FakeFlags(logdir, master_tpu_unsecure_channel),
+  )
+  return profile_plugin.ProfilePlugin(ctx)
 
 
 def make_data_request(run, tool, host=None):
@@ -69,7 +71,7 @@ def make_data_request(run, tool, host=None):
   Returns:
     A werkzeug.Request to pass to ProfilePlugin.data_impl.
   """
-  req = Request({})
+  req = werkzeug.Request({})
   req.args = {'run': run, 'tag': tool}
   if host:
     req.args['host'] = host

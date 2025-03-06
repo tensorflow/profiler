@@ -31,10 +31,16 @@ from etils import epath
 import six
 from werkzeug import wrappers
 
-from tensorboard.backend.event_processing import plugin_asset_util
-from tensorboard.context import RequestContext
-from tensorboard.plugins import base_plugin
 from tensorboard_plugin_profile.convert import raw_to_tool_data as convert
+
+try:
+  from tensorboard.backend.event_processing import plugin_asset_util  # pylint: disable=g-import-not-at-top
+  from tensorboard import context  # pylint: disable=g-import-not-at-top
+  from tensorboard.plugins import base_plugin  # pylint: disable=g-import-not-at-top
+except ImportError:
+  from tensorboard_plugin_profile.tb_free import context  # pylint: disable=g-import-not-at-top
+  from tensorboard_plugin_profile.tb_free import base_plugin  # pylint: disable=g-import-not-at-top
+  from tensorboard_plugin_profile.tb_free import plugin_asset_util  # pylint: disable=g-import-not-at-top
 
 logger = logging.getLogger('tensorboard')
 
@@ -56,6 +62,7 @@ except ImportError:
 # The prefix of routes provided by this plugin.
 PLUGIN_NAME = 'profile'
 
+BASE_ROUTE = '/'
 INDEX_JS_ROUTE = '/index.js'
 INDEX_HTML_ROUTE = '/index.html'
 BUNDLE_JS_ROUTE = '/bundle.js'
@@ -69,6 +76,7 @@ RUNS_ROUTE = '/runs'
 RUN_TOOLS_ROUTE = '/run_tools'
 HOSTS_ROUTE = '/hosts'
 CAPTURE_ROUTE = '/capture_profile'
+LOCAL_ROUTE = '/local'
 
 # Suffixes of "^, #, @" symbols represent different input data formats for the
 # same tool.
@@ -391,7 +399,7 @@ def get_data_content_encoding(
     The converted data and the content encoding of the data and content type for
     the response.
   """
-  data, content_type, content_encoding = None, 'application/json', None
+  _, content_type, content_encoding = None, 'application/json', None
   if tool in RAW_DATA_TOOLS:
     data = raw_data
     if tool[-1] == '#':
@@ -407,16 +415,16 @@ class ProfilePlugin(base_plugin.TBPlugin):
 
   plugin_name = PLUGIN_NAME
 
-  def __init__(self, context):
+  def __init__(self, ctx):
     """Constructs a profiler plugin for TensorBoard.
 
     This plugin adds handlers for performance-related frontends.
     Args:
-      context: A base_plugin.TBContext instance.
+      ctx: A base_plugin.TBContext instance.
     """
-    self.logdir = context.logdir
-    self.data_provider = context.data_provider
-    self.master_tpu_unsecure_channel = context.flags.master_tpu_unsecure_channel
+    self.logdir = ctx.logdir
+    self.data_provider = ctx.data_provider
+    self.master_tpu_unsecure_channel = ctx.flags.master_tpu_unsecure_channel
 
     # Whether the plugin is active. This is an expensive computation, so we
     # compute this asynchronously and cache positive results indefinitely.
@@ -425,6 +433,9 @@ class ProfilePlugin(base_plugin.TBPlugin):
     self._is_active_lock = threading.Lock()
     # Cache to map profile run name to corresponding tensorboard dir name
     self._run_to_profile_run_dir = {}
+
+  def get_active_lock(self) -> threading.Lock:
+    return self._is_active_lock
 
   def is_active(self) -> bool:
     """Whether this plugin is active and has any profile data to show.
@@ -440,6 +451,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
       self,
   ) -> dict[str, Callable[[wrappers.Request], wrappers.Response]]:
     return {
+        BASE_ROUTE: self.default_handler,
         INDEX_JS_ROUTE: self.static_file_route,
         INDEX_HTML_ROUTE: self.static_file_route,
         BUNDLE_JS_ROUTE: self.static_file_route,
@@ -453,9 +465,16 @@ class ProfilePlugin(base_plugin.TBPlugin):
         HOSTS_ROUTE: self.hosts_route,
         DATA_ROUTE: self.data_route,
         CAPTURE_ROUTE: self.capture_route,
+        LOCAL_ROUTE: self.default_handler
     }
 
-  def frontend_metadata(self) -> base_plugin.FrontendMetadata:
+  # pytype: disable=wrong-arg-types
+  @wrappers.Request.application
+  def default_handler(self, _: wrappers.Request) -> wrappers.Response:
+    contents = self._read_static_file_impl('index.html')
+    return respond(contents, 'text/html')
+
+  def frontend_metadata(self):
     return base_plugin.FrontendMetadata(es_module_path='/index.js')
 
   def _read_static_file_impl(self, filename: str) -> bytes:
@@ -505,12 +524,12 @@ class ProfilePlugin(base_plugin.TBPlugin):
     runs = self.runs_imp(request)
     return respond(runs, 'application/json')
 
-  def runs_imp(self, request: wrappers.Request | None = None) -> list[str]:
+  def runs_imp(self, _: wrappers.Request | None = None) -> list[str]:
     """Returns a list all runs for the profile plugin.
 
     Args:
-      request: Optional; werkzeug request used for grabbing ctx and experiment
-        id for other host implementations
+      _: Optional; werkzeug request used for grabbing ctx and experiment id for
+        other host implementations
     """
     return sorted(list(self.generate_runs()), reverse=True)
 
@@ -523,13 +542,13 @@ class ProfilePlugin(base_plugin.TBPlugin):
     return respond(run_tools, 'application/json')
 
   def run_tools_imp(
-      self, run, request: wrappers.Request | None = None
+      self, run, _: wrappers.Request | None = None
   ) -> list[str]:
     """Returns a list of tools given a single run.
 
     Args:
-      run: the frontend run name, item is list returned by runs_imp
-      request: Optional; werkzeug request used for grabbing ctx and experiment
+      run: The frontend run name, item is list returned by runs_imp
+      _: Optional; werkzeug request used for grabbing ctx and experiment
         id for other host implementations
     """
     return list(self.generate_tools_of_run(run))
@@ -552,7 +571,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
     return [{'hostname': host} for host in filenames_to_hosts(filenames, tool)]
 
   def host_impl(
-      self, run: str, tool: str, request: wrappers.Request | None = None
+      self, run: str, tool: str, _: wrappers.Request | None = None
   ) -> List[HostMetadata]:
     """Returns available hosts and their metadata for the run and tool in the log directory.
 
@@ -583,8 +602,8 @@ class ProfilePlugin(base_plugin.TBPlugin):
     Args:
       run: the frontend run name, e.g., 'run1' or 'run2' for the example above.
       tool: the requested tool, e.g., 'trace_viewer' for the example above.
-      request: Optional; werkzeug request used for grabbing ctx and experiment
-        id for other host implementations
+      _: Optional; werkzeug request used for grabbing ctx and experiment
+        id for other host implementations.
 
     Returns:
       A list of host names, e.g.:
@@ -650,13 +669,13 @@ class ProfilePlugin(base_plugin.TBPlugin):
 
     asset_path = os.path.join(run_dir, make_filename(host, tool))
 
-    data, content_encoding = None, None
+    content_encoding = None
     if use_xplane(tool):
       if host == ALL_HOSTS:
         file_pattern = make_filename('*', 'xplane')
         try:
           path = epath.Path(run_dir)
-          asset_paths = path.glob(file_pattern)
+          asset_paths = list(path.glob(file_pattern))
         except OSError as e:
           logger.warning('Cannot read asset directory: %s, OpError %s', run_dir,
                          e)
@@ -730,7 +749,6 @@ class ProfilePlugin(base_plugin.TBPlugin):
         cluster_resolver: tf.distribute.cluster_resolver.ClusterResolver,
     ) -> str:
       """Parses TPU workers list from the cluster resolver."""
-      cluster_spec = cluster_resolver.cluster_spec()
       cluster_spec = cluster_resolver.cluster_spec()
       task_indices = cluster_spec.task_indices('worker')
       worker_list = [
@@ -910,7 +928,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
     """
 
     # Create a background context; we may not be in a request.
-    ctx = RequestContext()
+    ctx = context.RequestContext()
     tb_runs = set()
     for run in self.data_provider.list_runs(ctx, experiment_id=''):
       tb_runs.add(run.run_name)
