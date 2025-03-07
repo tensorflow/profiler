@@ -184,6 +184,8 @@ http_archive(
     patches = [
         "//third_party:tensorflow.patch",
         "//third_party:tensorflow_add_grpc_cares_darwin_arm64_support.patch",
+        "//third_party:tensorflow_public_visibility.patch",  # TODO(matthurd): Remove after tf migration.
+        "//third_party:tensorflow_public_visibility_2.patch",  # TODO(matthurd): Remove after tf migration.
     ],
     strip_prefix = "tensorflow-master",
     urls = [
