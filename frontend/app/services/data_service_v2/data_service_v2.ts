@@ -1,7 +1,7 @@
 import {PlatformLocation} from '@angular/common';
 import {HttpClient, HttpParams} from '@angular/common/http';
 import {Injectable} from '@angular/core';
-import {API_PREFIX, DATA_API, LOCAL_URL, PLUGIN_NAME} from 'org_xprof/frontend/app/common/constants/constants';
+import {API_PREFIX, DATA_API, HLO_MODULE_LIST_API, LOCAL_URL, PLUGIN_NAME} from 'org_xprof/frontend/app/common/constants/constants';
 import {DataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 import * as utils from 'org_xprof/frontend/app/common/utils/utils';
 import {OpProfileData, OpProfileSummary} from 'org_xprof/frontend/app/components/op_profile/op_profile_data';
@@ -38,6 +38,12 @@ export class DataServiceV2 implements DataServiceV2Interface {
     });
     return this.httpClient.get(this.pathPrefix + DATA_API, {params}) as
         Observable<DataTable>;
+  }
+
+  getModuleList(sessionId: string): Observable<string> {
+    return this.httpClient.get(this.pathPrefix + HLO_MODULE_LIST_API, {
+      params: new HttpParams().set('run', sessionId)
+    }) as Observable<string>;
   }
 
   getGraphViewerLink(sessionId: string, moduleName: string, opName: string) {

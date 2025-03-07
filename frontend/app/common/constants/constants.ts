@@ -19,6 +19,9 @@ export const HOSTS_API = API_PREFIX + PLUGIN_NAME + '/hosts';
 /** Data API */
 export const DATA_API = API_PREFIX + PLUGIN_NAME + '/data';
 
+/** HLO Module List API */
+export const HLO_MODULE_LIST_API = API_PREFIX + PLUGIN_NAME + '/module_list';
+
 /** Capture Profile API */
 export const CAPTURE_PROFILE_API =
     API_PREFIX + PLUGIN_NAME + '/capture_profile';

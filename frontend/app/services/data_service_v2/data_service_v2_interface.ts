@@ -17,6 +17,9 @@ export interface DataServiceV2Interface {
       ignoreError?: boolean,
       ): Observable<DataTable|null>;
 
+  // Returns a string of comma separated module names.
+  getModuleList(sessionId: string): Observable<string>;
+
   getGraphViewerLink(sessionId: string, moduleName: string, opName: string):
       string;
 

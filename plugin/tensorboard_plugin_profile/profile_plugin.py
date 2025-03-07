@@ -68,6 +68,7 @@ DATA_ROUTE = '/data'
 RUNS_ROUTE = '/runs'
 RUN_TOOLS_ROUTE = '/run_tools'
 HOSTS_ROUTE = '/hosts'
+HLO_MODULE_LIST_ROUTE = '/module_list'
 CAPTURE_ROUTE = '/capture_profile'
 
 # Suffixes of "^, #, @" symbols represent different input data formats for the
@@ -452,6 +453,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
         RUN_TOOLS_ROUTE: self.run_tools_route,
         HOSTS_ROUTE: self.hosts_route,
         DATA_ROUTE: self.data_route,
+        HLO_MODULE_LIST_ROUTE: self.hlo_module_list_route,
         CAPTURE_ROUTE: self.capture_route,
     }
 
@@ -556,10 +558,6 @@ class ProfilePlugin(base_plugin.TBPlugin):
   ) -> List[HostMetadata]:
     """Returns available hosts and their metadata for the run and tool in the log directory.
 
-    For HLO tools like memory_viewer and graph_viewer, this functions returns
-    the module names for the run and tool instead of host names, because these
-    tools are based on HLO protos.
-
     In the plugin log directory, each directory contains profile data for a
     single run (identified by the directory name), and files in the run
     directory contains data for different tools and hosts. The file that
@@ -588,11 +586,13 @@ class ProfilePlugin(base_plugin.TBPlugin):
 
     Returns:
       A list of host names, e.g.:
-        host_impl(run1, trace_viewer) --> [{"hostname": "host1", {"hostname":
+        host_impl(run1, trace_viewer) --> [{"hostname": "host1"}, {"hostname":
         "host2"}]
-        host_impl(run1, memory_viewer) --> [{"hostname": "module1", {"hostname":
+        host_impl(run1, memory_viewer) --> [{"hostname": "module1"},
+        {"hostname":
         "module2"}]
     """
+
     run_dir = self._run_dir(run)
     return self._run_host_impl(run, run_dir, tool)
 
@@ -602,8 +602,23 @@ class ProfilePlugin(base_plugin.TBPlugin):
     # pytype: enable=wrong-arg-types
     run = request.args.get('run')
     tool = request.args.get('tag')
+    # TODO(b/382737556) Migrate to the hlo_module_list_route instead.
+    if (tool in HLO_TOOLS):
+      module_list = [
+          {'hostname': module_name}
+          for module_name in self.hlo_module_list_impl(request).split(',')
+      ]
+      return respond(module_list, 'application/json')
     hosts = self.host_impl(run, tool, request)
     return respond(hosts, 'application/json')
+
+  # pytype: disable=wrong-arg-types
+  @wrappers.Request.application
+  def hlo_module_list_route(
+      self, request: wrappers.Request
+  ) -> wrappers.Response:
+    module_names_str = self.hlo_module_list_impl(request)
+    return respond(module_names_str, 'application/text')
 
   def data_impl(
       self, request: wrappers.Request
@@ -690,6 +705,31 @@ class ProfilePlugin(base_plugin.TBPlugin):
       return None, content_type, None
 
     return get_data_content_encoding(raw_data, tool, params)
+
+  def hlo_module_list_impl(
+      self, request: wrappers.Request
+  ) -> str:
+    """Returns a string of HLO module names concatened by comma for the given run."""
+    run = request.args.get('run')
+    run_dir = self._run_dir(run)
+    module_list = []
+    if not run_dir:
+      logger.warning('Cannot find asset directory for: %s', run)
+      return ''
+    tool_pattern = '*.hlo_proto.pb'
+    filenames = []
+    try:
+      path = epath.Path(run_dir)
+      filenames = path.glob(tool_pattern)
+    except OSError as e:
+      logger.warning('Cannot read asset directory: %s, OpError %s', run_dir, e)
+    filenames = [os.fspath(os.path.basename(f)) for f in filenames]
+    for filename in filenames:
+      module_name, _ = _parse_filename(filename)
+      if module_name:
+        module_list.append(module_name)
+    module_names_str = ','.join(module_list)
+    return module_names_str
 
   # pytype: disable=wrong-arg-types
   @wrappers.Request.application
