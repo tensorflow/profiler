@@ -5,35 +5,24 @@
         XLA Modules ({{ moduleList.length }})
       </div>
     </div>
-    <mat-form-field class="full-width" *ngIf="!isHloOssTool && !useProgramId" id="xla-module-list-selector" appearance="outline">
+    <mat-form-field class="full-width" *ngIf="!isHloOssTool" id="xla-module-list-selector" appearance="outline">
       <mat-select
         name="selectedModule"
         panelClass="panel-override"
-        [(ngModel)]="params.selectedModule"
+        [(ngModel)]="selectedModule"
         (selectionChange)="onModuleSelectionChange($event)"
       >
-        <mat-option *ngFor="let module of getModuleList()" [value]="module">
+        <mat-option *ngFor="let module of moduleListOptions" [value]="module">
           {{ module }}
         </mat-option>
       </mat-select>
-    </mat-form-field>
-    <mat-form-field class="full-width" *ngIf="useProgramId">
-      <mat-label>XLA Program Id</mat-label>
-      <input
-        matInput
-        aria-label="program-id"
-        autocomplete="off"
-        name="programId"
-        [disabled]="true"
-        [value]="params.programId"
-      />
     </mat-form-field>
     <mat-form-field *ngIf="graphTypes.length > 0" class="full-width" id="graph-type-selector" appearance="outline">
       <mat-label>Graph Type</mat-label>
       <mat-select
         name="graph-type"
         panelClass="panel-override"
-        [(ngModel)]="params.graphType"
+        [(ngModel)]="graphType"
       >
         <mat-option *ngFor="let type of graphTypes" [value]="type.value">
           {{ type.label }}
@@ -48,7 +37,7 @@
         aria-label="op-name"
         required
         autocomplete="off"
-        [(ngModel)]="params.opName"
+        [(ngModel)]="opName"
         name="opName"
       />
     </mat-form-field>
@@ -61,21 +50,21 @@
         type="number"
         min="1"
         step="1"
-        [(ngModel)]="params.graphWidth"
+        [(ngModel)]="graphWidth"
         name="graphWidth"
       />
     </mat-form-field>
 
     <mat-checkbox
       *ngIf="!isNewGraphViewer()"
-      [(ngModel)]="params.showMetadata"
+      [(ngModel)]="showMetadata"
       name="showMetadata"
       class="full-width"
       >Show Metadata</mat-checkbox
     >
     <mat-checkbox
       *ngIf="!isNewGraphViewer()"
-      [(ngModel)]="params.mergeFusion"
+      [(ngModel)]="mergeFusion"
       name="mergeFusion"
       matTooltip="Hide the fusion subcomputations in the rendered graph"
       class="full-width"

@@ -22,39 +22,57 @@ export class GraphConfig implements OnDestroy, OnChanges {
   @Input() moduleList: string[] = [];
   // Temparary indicator to hide the module name selection for 1vm graph viewer
   @Input() isHloOssTool = false;
-  @Input() useProgramId = false;
   @Input() graphTypes: GraphTypeObject[] = [];
 
-  inputsInited = false;
-  params: GraphConfigInput = {
-    selectedModule: '',
-    opName: '',
-    graphWidth: 3,
-    showMetadata: false,
-    mergeFusion: false,
-  };
+  selectedModule =
+      this.initialInputs?.selectedModule || this.moduleList[0] || '';
+  opName = this.initialInputs?.opName || '';
+  graphWidth = this.initialInputs?.graphWidth || 3;
+  showMetadata = this.initialInputs?.showMetadata || false;
+  mergeFusion = this.initialInputs?.mergeFusion || false;
+  programId = this.initialInputs?.programId || '';
+  graphType = this.graphTypes.length ? this.graphTypes[0].value : '';
+
+  get params() {
+    const params: GraphConfigInput = {
+      selectedModule: this.selectedModule,
+      opName: this.opName,
+      graphWidth: this.graphWidth,
+      showMetadata: this.showMetadata,
+      mergeFusion: this.mergeFusion,
+    };
+    if (this.programId) {
+      params.programId = this.programId;
+    }
+    if (this.graphType) {
+      params.graphType = this.graphType;
+    }
+    return params;
+  }
 
   ngOnChanges(changes: SimpleChanges) {
     // Initiate the first time loading (read from url query parameters)
     // or, update params given refreshed initialInputs (for graph navigating)
     if (changes.hasOwnProperty('initialInputs') &&
         Object.entries(changes['initialInputs'].currentValue || {}).length) {
-      this.params = {...this.initialInputs as GraphConfigInput};
-      this.inputsInited = true;
+      this.selectedModule = this.initialInputs?.selectedModule || '';
+      this.opName = this.initialInputs?.opName || '';
+      this.graphWidth = this.initialInputs?.graphWidth || 3;
+      this.showMetadata = this.initialInputs?.showMetadata || false;
+      this.mergeFusion = this.initialInputs?.mergeFusion || false;
+      this.programId = this.initialInputs?.programId || '';
     }
 
     // Update default module name once moduleList is updated
     if (changes.hasOwnProperty('moduleList') &&
         changes['moduleList'].currentValue.length > 0 &&
         !this.params.selectedModule) {
-      this.params.selectedModule =
-          this.params.selectedModule || changes['moduleList'].currentValue[0];
+      this.selectedModule = changes['moduleList'].currentValue[0];
     }
 
     if (changes.hasOwnProperty('graphTypes') &&
-        changes['graphTypes'].currentValue.length > 0 &&
-        !this.params.graphType) {
-      this.params.graphType = this.params.graphType || this.graphTypes[0].value;
+        changes['graphTypes'].currentValue.length > 0 && !this.graphType) {
+      this.graphType = this.graphTypes[0].value;
     }
   }
 
@@ -62,7 +80,7 @@ export class GraphConfig implements OnDestroy, OnChanges {
     return this.params.opName && this.params.selectedModule;
   }
 
-  getModuleList() {
+  get moduleListOptions() {
     if (this.moduleList.length > 0) {
       return this.moduleList;
     } else if (this.params.selectedModule) {
