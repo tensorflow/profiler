@@ -21,7 +21,10 @@ from __future__ import print_function
 import argparse
 import logging
 
-from tensorboard.plugins import base_plugin
+try:
+  from tensorboard.plugins import base_plugin  # pylint: disable=g-import-not-at-top
+except ImportError:
+  from tensorboard_plugin_profile.tb_free import base_plugin  # pylint: disable=g-import-not-at-top
 
 logger = logging.getLogger('tensorboard-plugin-profile')
 
