@@ -30,7 +30,7 @@ message KernelReport {
   string op_name = 12;
   // Number of occurrences.
   uint32 occurrences = 13;
-  // Occupancy pct.
+  // Occupancy percentage.
   float occupancy_pct = 14;
 }
 
