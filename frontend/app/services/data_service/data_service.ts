@@ -107,10 +107,11 @@ export class DataService {
       }
     }
     const params =
-        new HttpParams().set('run', run).set('tag', tag).set('host', host);
-    parameters.forEach((value, key) => {
-      params.set(key, value);
-    });
+        new HttpParams()
+            .set('run', run)
+            .set('tag', tag)
+            .set('host', host)
+            .set('memory_space', parameters.get('memory_space') || '0');
     return this.httpClient.get(this.pathPrefix + DATA_API, {params}) as
         Observable<DataTable>;
   }

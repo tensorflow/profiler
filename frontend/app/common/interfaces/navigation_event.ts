@@ -9,4 +9,6 @@ export declare interface NavigationEvent {
   opName?: string;
   // Navigation controlling params
   firstLoad?: boolean;
+  moduleName?: string;
+  memorySpaceColor?: string;
 }
