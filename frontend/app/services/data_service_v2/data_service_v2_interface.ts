@@ -10,8 +10,8 @@ import {Observable} from 'rxjs';
 /** The data service class that calls API and return response. */
 export interface DataServiceV2Interface {
   getData(
-      tool: string,
       sessionId: string,
+      tool: string,
       host?: string,
       parameters?: Map<string, string>,
       ignoreError?: boolean,
