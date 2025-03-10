@@ -1,5 +1,5 @@
 import {Component, OnDestroy, OnInit} from '@angular/core';
-import {Router} from '@angular/router';
+import {ActivatedRouteSnapshot, Router} from '@angular/router';
 import {Store} from '@ngrx/store';
 import {DEFAULT_HOST, HLO_TOOLS} from 'org_xprof/frontend/app/common/constants/constants';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
@@ -93,11 +93,32 @@ export class SideNav implements OnInit, OnDestroy {
         this.hosts[0] || '';
   }
 
-  // Initial page load with url params
+  // https://github.com/angular/angular/issues/11023#issuecomment-752228784
+  mergeRouteParams(): Map<string, string> {
+    const params = new Map<string, string>();  // Initialize as a Map
+    const stack: ActivatedRouteSnapshot[] =
+        [this.router.routerState.snapshot.root];
+    while (stack.length > 0) {
+      const route = stack.pop();
+      if (!route) continue;
+      for (const key in route.params) {  // Iterate through route.params
+        if (route.params.hasOwnProperty(
+                key)) {  // Important: Check for own properties
+          params.set(key, route.params[key]);
+        }
+      }
+      stack.push(...route.children);
+    }
+
+    return params;
+  }
+
   navigateWithUrl() {
-    const params = new URLSearchParams(window.parent.location.search);
+    const params = !!window.parent.location.search ?
+        new URLSearchParams(window.parent.location.search) :
+        this.mergeRouteParams();
     const run = params.get('run') || '';
-    const tag = params.get('tool') || '';
+    const tag = params.get('tool') || params.get('tag') || '';
     const host = params.get('host') || '';
     const opName = params.get('opName') || '';
     this.navigationParams['firstLoad'] = true;
