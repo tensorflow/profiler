@@ -8,14 +8,14 @@ diff --git a/tensorflow/workspace2.bzl b/tensorflow/workspace2.bzl
 index 9e15c75c183..7307ae74674 100644
 --- a/tensorflow/workspace2.bzl
 +++ b/tensorflow/workspace2.bzl
-@@ -434,6 +434,7 @@ def _tf_repositories():
+@@ -451,6 +451,7 @@ def _tf_repositories():
          patch_file = [
              "//third_party/grpc:generate_cc_env_fix.patch",
              "//third_party/grpc:register_go_toolchain.patch",
 +            "//third_party/grpc:add_cares_darwin_arm64_support.patch",
          ],
          system_link_files = {
-             "//third_party/systemlibs:BUILD": "bazel/BUILD",
+             "//third_party/systemlibs:BUILD.bazel": "bazel/BUILD",
 diff --git a/third_party/grpc/add_cares_darwin_arm64_support.patch b/third_party/grpc/add_cares_darwin_arm64_support.patch
 new file mode 100644
 index 00000000000..d9bda267722
