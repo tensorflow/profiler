@@ -1065,23 +1065,23 @@ dashboard would integrate trace viewer app using iframe.
     _previousSearchText : '',
     _currentSearchText : '',
 
-    _callSearchLater: function(controller, handler) {
+    _callSearchLater: function(controller, handler, args) {
       clearTimeout(this._timer);
       this._timer = setTimeout(() => {
-        this._callSearchNow(controller, handler);
+        this._callSearchNow(controller, handler, args);
       }, 1000); // 1 second
     },
 
-    _callSearchNow: function(controller, handler) {
+    _callSearchNow: async function(controller, handler, args) {
       clearTimeout(this._timer);
       this._currentSearchText = controller.$.filter.value;
       if(this._currentSearchText.length == 0 ||
           this._previousSearchText == this._currentSearchText) return;
 
       // Do server side search.
-      this._searchAndAddTraceEvents(this._currentSearchText);
+      await this._searchAndAddTraceEvents(this._currentSearchText);
       // Update the highlight and hint after search is done (more events appended).
-      handler.apply(controller);
+      handler.apply(controller, args);
     },
 
     // Change the behavior of the search box to always fetch full trace
@@ -1093,13 +1093,13 @@ dashboard would integrate trace viewer app using iframe.
       const originalSearchBarKeyDown = findController.filterKeyDown;
       const originalSearchBarTextChange = findController.filterTextChanged;
       let lastFilterText = '';
-      findController.filterKeyDown = async (keyEvent) => {
+      findController.filterKeyDown = (keyEvent) => {
         if (keyEvent.keyCode === 13) {
-          this._callSearchNow(findController, originalSearchBarTextChange);
+          this._callSearchNow(findController, originalSearchBarTextChange, [keyEvent]);
         }
       };
-      findController.filterTextChanged = async (keyEvent) => {
-        this._callSearchLater(findController, originalSearchBarTextChange);
+      findController.filterTextChanged = (keyEvent) => {
+        this._callSearchLater(findController, originalSearchBarTextChange, []);
       };
     },
 
