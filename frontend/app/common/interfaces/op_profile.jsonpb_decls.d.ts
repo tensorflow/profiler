@@ -27,6 +27,7 @@ export namespace Node {
     category?: string;
     layout?: Node.XLAInstruction.LayoutAnalysis;
     computationPrimitiveSize?: /* uint32 */ number;
+    programId?: /* uint64 */ string;
   }
   export namespace XLAInstruction {
     export interface LayoutAnalysis {
