@@ -1112,7 +1112,14 @@ dashboard would integrate trace viewer app using iframe.
       requestURL.searchParams.set('duration_ms', event.duration);
       requestURL.searchParams.set('unique_id',event.args['uid']);
       // Extract hostname from process container. e.g. "mach01 /device:TPU:0 (pid3)" ==> "mach01"
-      requestURL.searchParams.set('hosts', event.parentContainer.parent.name.split(' ')[0]);
+      // Use prefix to make hostname with space work.
+      const hostnamePrefix = event.parentContainer.parent.name.split(' ')[0];
+      const hostname = this._selectedHosts.find(host => host.startsWith(hostnamePrefix));
+      if (!hostname) {
+        console.error('No matching hostname found when fetching event args for: ', event);
+        return;
+      }
+      requestURL.searchParams.set('hosts', hostname);
       this._isLoading = true;
       this._throbber.className = 'active';
       const fetchData = await new Promise(function(resolve, reject) {
