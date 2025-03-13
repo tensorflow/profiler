@@ -35,7 +35,7 @@ export class TraceViewer implements OnDestroy {
   }
 
   update(event: NavigationEvent) {
-    const isStreaming = (event.tag === 'trace_viewer@^');
+    const isStreaming = (event.tag === 'trace_viewer@');
     const params = new HttpParams()
                        .set('run', event.run!)
                        .set('tag', event.tag!)
