@@ -24,8 +24,8 @@ limitations under the License.
 #include "absl/strings/match.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
-#include "tensorflow/core/profiler/protobuf/trace_events.pb.h"
-#include "tensorflow/core/profiler/protobuf/trace_events_raw.pb.h"
+#include "plugin/tensorboard_plugin_profile/protobuf/trace_events.pb.h"
+#include "plugin/tensorboard_plugin_profile/protobuf/trace_events_raw.pb.h"
 
 namespace tensorflow {
 namespace profiler {
