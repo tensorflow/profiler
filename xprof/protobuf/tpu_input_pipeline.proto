@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package tensorflow.profiler;
 
-import "plugin/tensorboard_plugin_profile/protobuf/input_pipeline.proto";
+import "xprof/protobuf/input_pipeline.proto";
 
 // Per-step details on TPU.
 // Next ID: 26
