@@ -30,8 +30,8 @@ from google3.google.protobuf.any_pb2 import Any
 # pylint: enable=g-importing-member
 
 from tensorboard_plugin_profile.convert import input_pipeline_proto_to_gviz
-from tensorboard_plugin_profile.protobuf import input_pipeline_pb2
-from tensorboard_plugin_profile.protobuf import tpu_input_pipeline_pb2
+from xprof.protobuf import input_pipeline_pb2
+from xprof.protobuf import tpu_input_pipeline_pb2
 
 
 class StrEnum(str, enum.Enum):

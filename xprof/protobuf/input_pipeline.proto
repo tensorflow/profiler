@@ -3,7 +3,7 @@ syntax = "proto3";
 package tensorflow.profiler;
 
 import "google/protobuf/any.proto";
-import "plugin/tensorboard_plugin_profile/protobuf/diagnostics.proto";
+import "xprof/protobuf/diagnostics.proto";
 
 // Generic hardware bottleneck.
 message BottleneckAnalysis {

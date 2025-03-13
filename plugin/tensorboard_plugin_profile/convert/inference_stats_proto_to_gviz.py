@@ -24,7 +24,7 @@ from __future__ import print_function
 
 import gviz_api
 
-from tensorboard_plugin_profile.protobuf import inference_stats_pb2
+from xprof.protobuf import inference_stats_pb2
 
 
 def pico_to_milli(ps: float) -> float:
