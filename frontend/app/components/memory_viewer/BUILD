@@ -20,6 +20,7 @@ xprof_ng_module(
         "@npm//rxjs",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/components/memory_viewer/memory_usage",
+        "@org_xprof//frontend/app/components/memory_viewer/memory_viewer_control",
         "@org_xprof//frontend/app/components/memory_viewer/memory_viewer_main",
         "@org_xprof//frontend/app/services/data_service",
         "@org_xprof//frontend/app/store",
