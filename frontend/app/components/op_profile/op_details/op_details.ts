@@ -28,8 +28,6 @@ export class OpDetails {
   @Input() sessionId = '';
   /** the list of modules */
   @Input() moduleList: string[] = [];
-  /** If the op-detail component is used in OSS tool or not */
-  @Input() isOss = false;
 
   currentRun$: Observable<string>;
 
@@ -66,10 +64,6 @@ export class OpDetails {
   currentRun = '';
   showUtilizationWarning = false;
   deviceType = 'TPU';
-
-  get isCustomCall() {
-    return this.node?.xla?.category === 'custom-call';
-  }
 
   constructor(
       private readonly store: Store<{}>,
@@ -139,10 +133,13 @@ export class OpDetails {
     return '';
   }
 
+  get isValidCustomCall() {
+    return this.getCustomCallTextLink() !== '';
+  }
+
   getCustomCallTextLink() {
-    return `/graph_viewer.json?session_id=${this.sessionId}&module_name=${
-        this.selectedModuleName}&node_name=${
-        this.selectedOpName}&type=custom_call`;
+    return this.dataService.getCustomCallTextLink(
+        this.sessionId, this.selectedModuleName, this.selectedOpName);
   }
 
   dimensionColor(dimension?: Node.XLAInstruction.LayoutAnalysis.Dimension):

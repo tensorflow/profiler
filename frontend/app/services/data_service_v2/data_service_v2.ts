@@ -42,7 +42,8 @@ export class DataServiceV2 implements DataServiceV2Interface {
 
   getModuleList(sessionId: string): Observable<string> {
     return this.httpClient.get(this.pathPrefix + HLO_MODULE_LIST_API, {
-      params: new HttpParams().set('run', sessionId)
+      params: new HttpParams().set('run', sessionId),
+      responseType: 'text',
     }) as Observable<string>;
   }
 
@@ -65,5 +66,9 @@ export class DataServiceV2 implements DataServiceV2Interface {
         color: data?.bwColors?.[utils.MemBwType.MEM_BW_TYPE_HBM_RW],
       },
     ];
+  }
+
+  getCustomCallTextLink(sessionId: string, moduleName: string, opName: string) {
+    return '';
   }
 }

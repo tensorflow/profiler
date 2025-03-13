@@ -25,7 +25,7 @@
             </button>
           </a>
         </div>
-        <div class="info" id="custom-call-text-link" [hidden]="isOss || !isCustomCall">
+        <div class="info" id="custom-call-text-link" [hidden]="!isValidCustomCall">
           <a [href]="getCustomCallTextLink()" target="_blank" style="text-decoration:none;">
             <button
               mat-stroked-button
