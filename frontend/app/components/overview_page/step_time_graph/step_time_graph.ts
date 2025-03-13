@@ -3,6 +3,7 @@ import {STACK_CHART_FILL_COLORS} from 'org_xprof/frontend/app/common/constants/c
 import {type InputPipelineAnalysis} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 const MAX_CHART_WIDTH = 800;
+// TODO(b/402769998) Fix columnIds given hardware and platform types.
 const COLUMN_IDS_FOR_TPU = [
   'stepnum',
   'stepTimeMs',
@@ -88,7 +89,7 @@ export class StepTimeGraph implements AfterViewInit, OnChanges {
 
     const dataTable =
         new google.visualization.DataTable(this.inputPipelineAnalysis);
-    let columnsIds = this.columnIds;
+    let columnsIds = this.columnIds || COLUMN_IDS_FOR_TPU;
     let colors = this.columnColors;
     this.height = 300;
     this.inputPipelineAnalysis.p = this.inputPipelineAnalysis.p || {};
