@@ -29,7 +29,7 @@ from tensorboard.backend.event_processing import plugin_asset_util
 from tensorboard.backend.event_processing import plugin_event_multiplexer
 from tensorboard_plugin_profile import profile_plugin
 from tensorboard_plugin_profile import profile_plugin_test_utils as utils
-from tensorboard_plugin_profile.protobuf import trace_events_pb2
+from xprof.protobuf import trace_events_pb2
 
 RUN_TO_TOOLS = {
     'foo': ['trace_viewer'],
