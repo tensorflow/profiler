@@ -22,7 +22,7 @@ from __future__ import print_function
 import tensorflow as tf
 
 from tensorboard_plugin_profile.convert import diagnostics
-from tensorboard_plugin_profile.protobuf import diagnostics_pb2
+from xprof.protobuf import diagnostics_pb2
 
 
 class DiagnosticsTest(tf.test.TestCase):
