@@ -28,9 +28,11 @@ py_binary(
     deps = [
         requirement("absl-py"),  # build_cleaner: keep; go/disable_tf2
         "//:expect_tensorflow_installed",
+        "//net/proto2/python/public",
+        "//third_party/py/absl:app",
         "//third_party/py/google/protobuf:use_fast_cpp_protos",  # Automatically added go/proto_python_upb_flip
         "@org_tensorflow_tensorboard//tensorboard/backend/event_processing:plugin_asset_util",
         "@org_xprof//plugin/tensorboard_plugin_profile:profile_plugin",
-        "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:protos_all_py",
+        "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:trace_events_proto_py",
     ],
 )

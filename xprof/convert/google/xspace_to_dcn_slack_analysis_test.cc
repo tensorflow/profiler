@@ -12,14 +12,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
-#include "tensorflow/core/profiler/convert/xspace_to_dcn_slack_analysis.h"
+#include "xprof/convert/xspace_to_dcn_slack_analysis.h"
 
 #include <cstdint>
 #include <memory>
 #include <string>
 
 #include "testing/base/public/gmock.h"
-#include "testing/base/public/gunit.h"
+#include "<gtest/gtest.h>"
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/match.h"
 #include "xla/hlo/ir/hlo_opcode.h"
@@ -29,10 +29,10 @@ limitations under the License.
 #include "xla/tsl/profiler/utils/xplane_builder.h"
 #include "xla/tsl/profiler/utils/xplane_schema.h"
 #include "xla/tsl/profiler/utils/xplane_visitor.h"
+#include "tsl/profiler/protobuf/xplane.pb.h"
 #include "plugin/tensorboard_plugin_profile/protobuf/dcn_collective_info.pb.h"
 #include "plugin/tensorboard_plugin_profile/protobuf/dcn_slack_analysis.pb.h"
-#include "tensorflow/core/profiler/utils/hlo_proto_map.h"
-#include "tsl/profiler/protobuf/xplane.pb.h"
+#include "xprof/utils/hlo_proto_map.h"
 
 namespace tensorflow {
 namespace profiler {

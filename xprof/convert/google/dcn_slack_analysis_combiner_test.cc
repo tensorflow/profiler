@@ -12,11 +12,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
-#include "tensorflow/core/profiler/convert/dcn_slack_analysis_combiner.h"
+#include "xprof/convert/dcn_slack_analysis_combiner.h"
 
 #include "net/proto2/contrib/parse_proto/parse_text_proto.h"
 #include "testing/base/public/gmock.h"
-#include "testing/base/public/gunit.h"
+#include "<gtest/gtest.h>"
 #include "plugin/tensorboard_plugin_profile/protobuf/dcn_slack_analysis.pb.h"
 
 namespace tensorflow {
