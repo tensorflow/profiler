@@ -28,7 +28,7 @@ import gviz_api
 import tensorflow as tf
 
 from tensorboard_plugin_profile.convert import dcn_collective_stats_proto_to_gviz
-from tensorboard_plugin_profile.protobuf import dcn_slack_analysis_pb2
+from xprof.protobuf import dcn_slack_analysis_pb2
 
 
 class StrEnum(str, enum.Enum):

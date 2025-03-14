@@ -27,7 +27,7 @@ import gviz_api
 
 from tensorboard_plugin_profile.convert import diagnostics as diag
 from tensorboard_plugin_profile.convert import input_pipeline_proto_to_gviz
-from tensorboard_plugin_profile.protobuf import overview_page_pb2
+from xprof.protobuf import overview_page_pb2
 
 
 def get_run_environment_table_args(run_environment):
