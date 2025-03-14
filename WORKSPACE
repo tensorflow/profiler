@@ -4,7 +4,9 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("//:config.bzl", "repository_configuration")
 
 repository_configuration(name = "repository_configuration")
+
 load("@repository_configuration//:repository_config.bzl", "PROFILER_PYTHON_VERSION", "PROFILER_REQUIREMENTS_FILE")
+
 print("Using Python Version = {}".format(PROFILER_PYTHON_VERSION))
 
 http_archive(
@@ -185,9 +187,9 @@ http_archive(
         "//third_party:tensorflow.patch",
         "//third_party:tensorflow_add_grpc_cares_darwin_arm64_support.patch",
     ],
-    strip_prefix = "tensorflow-master",
+    strip_prefix = "tensorflow-b3bb6efb54c60ea676f13ff44a77cde044510e10",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/refs/heads/master.zip",
+        "https://github.com/tensorflow/tensorflow/archive/b3bb6efb54c60ea676f13ff44a77cde044510e10.zip",  # TODO(matthurd) Un-pin this once protos are moved.
     ],
 )
 

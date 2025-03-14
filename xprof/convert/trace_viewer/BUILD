@@ -2,6 +2,7 @@ load("@org_tensorflow//tensorflow:tensorflow.bzl", "tf_cc_test")
 load("@org_tensorflow//tensorflow/core/platform:rules_cc.bzl", "cc_library")
 
 package(
+    # copybara:uncomment default_applicable_licenses = ["@org_tensorflow//tensorflow:license"],
     default_visibility = [
         "//perftools/gputools/profiler/collector:__pkg__",
         "@org_tensorflow//tensorflow/core/profiler:internal",
@@ -13,7 +14,7 @@ cc_library(
     name = "trace_events_filter_interface",
     hdrs = ["trace_events_filter_interface.h"],
     deps = [
-        "@org_tensorflow//tensorflow/core/profiler/protobuf:trace_events_proto_cc",
+        "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:trace_events_proto_cc",
     ],
 )
 
@@ -28,7 +29,7 @@ cc_library(
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/types:optional",
         "@local_xla//xla/tsl/profiler/utils:timespan",
-        "@org_tensorflow//tensorflow/core/profiler/protobuf:trace_events_proto_cc",
+        "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:trace_events_proto_cc",
     ],
 )
 
@@ -40,7 +41,7 @@ tf_cc_test(
         "@local_xla//xla/tsl/profiler/utils:timespan",
         "@org_tensorflow//tensorflow/core:test",
         "@org_tensorflow//tensorflow/core:test_main",
-        "@org_tensorflow//tensorflow/core/profiler/protobuf:trace_events_proto_cc",
+        "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:trace_events_proto_cc",
     ],
 )
 
@@ -51,7 +52,7 @@ cc_library(
     deps = [
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:optional",
-        "@org_tensorflow//tensorflow/core/profiler/protobuf:trace_events_proto_cc",
+        "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:trace_events_proto_cc",
     ],
 )
 
@@ -74,9 +75,9 @@ cc_library(
         "@local_tsl//tsl/profiler/lib:context_types_hdrs",
         "@local_xla//xla/tsl/profiler/utils:timespan",
         "@org_tensorflow//tensorflow/core/profiler/lib:context_types",
-        "@org_tensorflow//tensorflow/core/profiler/protobuf:task_proto_cc",
-        "@org_tensorflow//tensorflow/core/profiler/protobuf:trace_events_proto_cc",
-        "@org_tensorflow//tensorflow/core/profiler/protobuf:trace_events_raw_proto_cc",
+        "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:task_proto_cc",
+        "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:trace_events_proto_cc",
+        "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:trace_events_raw_proto_cc",
     ],
 )
 
@@ -85,7 +86,7 @@ cc_library(
     hdrs = ["trace_event_arguments_builder.h"],
     deps = [
         "@com_google_absl//absl/strings",
-        "@org_tensorflow//tensorflow/core/profiler/protobuf:trace_events_raw_proto_cc",
+        "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:trace_events_raw_proto_cc",
     ],
 )
 
@@ -98,7 +99,7 @@ cc_library(
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/strings:string_view",
         "@local_xla//xla/tsl/profiler/utils:timespan",
-        "@org_tensorflow//tensorflow/core/profiler/protobuf:trace_events_proto_cc",
+        "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:trace_events_proto_cc",
     ],
 )
 
@@ -126,8 +127,8 @@ cc_library(
         "@local_xla//xla/tsl/profiler/utils:timespan",
         "@org_tensorflow//tensorflow/core:lib",
         "@org_tensorflow//tensorflow/core/profiler/lib:context_types_hdrs",
-        "@org_tensorflow//tensorflow/core/profiler/protobuf:task_proto_cc",
-        "@org_tensorflow//tensorflow/core/profiler/protobuf:trace_events_proto_cc",
-        "@org_tensorflow//tensorflow/core/profiler/protobuf:trace_events_raw_proto_cc",
+        "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:task_proto_cc",
+        "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:trace_events_proto_cc",
+        "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:trace_events_raw_proto_cc",
     ],
 )
