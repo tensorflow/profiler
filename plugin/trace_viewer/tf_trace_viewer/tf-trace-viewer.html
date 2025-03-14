@@ -1764,6 +1764,9 @@ dashboard would integrate trace viewer app using iframe.
         if (!jsonData['returnedEventsSize']) {
           this._displayOverlay('Trace Viewer', 'No trace events data returned.');
         }
+        if (jsonData['showCounterMessage'].length > 0) {
+          this._displayOverlay('Counters: ', jsonData['showCounterMessage']);
+        }
         this._dirty = true;
         this._model = new tr.Model();
         this._loadedTraceEvents = new Set();
