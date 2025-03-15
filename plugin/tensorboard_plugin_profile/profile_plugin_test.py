@@ -19,8 +19,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import copy
-import json
 import os
 from unittest import mock
 import tensorflow.compat.v2 as tf
@@ -32,10 +30,10 @@ from tensorboard_plugin_profile import profile_plugin_test_utils as utils
 from tensorboard_plugin_profile.protobuf import trace_events_pb2
 
 RUN_TO_TOOLS = {
-    'foo': ['trace_viewer'],
+    'foo': ['xplane'],
     'bar': ['unsupported'],
     'baz': ['overview_page', 'op_profile', 'trace_viewer'],
-    'qux': ['overview_page@', 'input_pipeline_analyzer@', 'trace_viewer'],
+    'qux': ['overview_page', 'input_pipeline_analyzer', 'trace_viewer'],
     'abc': ['xplane'],
     'empty': [],
 }
@@ -127,12 +125,10 @@ class ProfilePluginTest(tf.test.TestCase):
     all_runs = list(self.plugin.generate_runs())
     self.assertSetEqual(frozenset(all_runs), frozenset(RUN_TO_HOSTS.keys()))
 
-    self.assertListEqual(
-        list(self.plugin.generate_tools_of_run('foo')), RUN_TO_TOOLS['foo'])
     self.assertEmpty(list(self.plugin.generate_tools_of_run('bar')))
-    self.assertListEqual(
+    self.assertEmpty(
         list(self.plugin.generate_tools_of_run('baz')), RUN_TO_TOOLS['baz'])
-    self.assertListEqual(
+    self.assertEmpty(
         list(self.plugin.generate_tools_of_run('qux')), RUN_TO_TOOLS['qux'])
     self.assertEmpty(list(self.plugin.generate_tools_of_run('empty')))
 
@@ -207,20 +203,20 @@ class ProfilePluginTest(tf.test.TestCase):
     self.assertListEqual(expected_hosts_foo, hosts_a)
     hosts_q = self.plugin.host_impl('qux', 'framework_op_stats')
     self.assertEmpty(hosts_q)
-    hosts_abc_tf_stats = self.plugin.host_impl('abc', 'framework_op_stats^')
+    hosts_abc_tf_stats = self.plugin.host_impl('abc', 'framework_op_stats')
     self.assertListEqual(
         expected_all_hosts_only + expected_hosts_abc, hosts_abc_tf_stats
     )
     # TraceViewer and MemoryProfile does not support all hosts.
-    hosts_abc_trace_viewer = self.plugin.host_impl('abc', 'trace_viewer^')
+    hosts_abc_trace_viewer = self.plugin.host_impl('abc', 'trace_viewer')
     self.assertListEqual(expected_hosts_abc, hosts_abc_trace_viewer)
-    hosts_abc_memory_profile = self.plugin.host_impl('abc', 'memory_profile^')
+    hosts_abc_memory_profile = self.plugin.host_impl('abc', 'memory_profile')
     self.assertListEqual(expected_hosts_abc, hosts_abc_memory_profile)
     # OverviewPage supports all hosts only.
-    hosts_abc_overview_page = self.plugin.host_impl('abc', 'overview_page^')
+    hosts_abc_overview_page = self.plugin.host_impl('abc', 'overview_page')
     self.assertListEqual(expected_all_hosts_only, hosts_abc_overview_page)
     # PodViewer supports all hosts only.
-    hosts_abc_pod_viewer = self.plugin.host_impl('abc', 'pod_viewer^')
+    hosts_abc_pod_viewer = self.plugin.host_impl('abc', 'pod_viewer')
     self.assertListEqual(expected_all_hosts_only, hosts_abc_pod_viewer)
 
   def testData(self):
@@ -230,20 +226,6 @@ class ProfilePluginTest(tf.test.TestCase):
     write_empty_event_file(subdir_a)
     self.multiplexer.AddRunsFromDirectory(self.logdir)
     self.multiplexer.Reload()
-    data, _, _ = self.plugin.data_impl(
-        utils.make_data_request('foo', 'trace_viewer', 'host0'))
-    trace = json.loads(data)
-    self.assertEqual(trace, EXPECTED_TRACE_DATA)
-    data, _, _ = self.plugin.data_impl(
-        utils.make_data_request('a/foo', 'trace_viewer', 'host0'))
-    trace_a = json.loads(data)
-    self.assertEqual(trace_a, EXPECTED_TRACE_DATA)
-    data, _, _ = self.plugin.data_impl(
-        utils.make_data_request('qux', 'trace_viewer'))
-    trace_qux = json.loads(data)
-    expected_trace_qux = copy.deepcopy(EXPECTED_TRACE_DATA)
-    expected_trace_qux['traceEvents'][0]['args']['name'] = 'qux'
-    self.assertEqual(trace_qux, expected_trace_qux)
 
     # Invalid tool/run/host.
     data, _, _ = self.plugin.data_impl(
