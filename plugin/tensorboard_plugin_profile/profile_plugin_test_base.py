@@ -15,21 +15,35 @@
 # ==============================================================================
 """Tests for the Profile plugin."""
 
+# pylint: disable=missing-function-docstring
+
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import atexit
 import copy
+import inspect
 import json
+import logging
 import os
-from unittest import mock
-import tensorflow.compat.v2 as tf
+import shutil
+import tempfile
+import unittest
 
-from tensorboard.backend.event_processing import plugin_asset_util
-from tensorboard.backend.event_processing import plugin_event_multiplexer
+from absl.testing import absltest
+
 from tensorboard_plugin_profile import profile_plugin
 from tensorboard_plugin_profile import profile_plugin_test_utils as utils
 from tensorboard_plugin_profile.protobuf import trace_events_pb2
+
+try:
+  from tensorboard.backend.event_processing import plugin_event_multiplexer  # pylint: disable=g-import-not-at-top
+  from tensorboard.backend.event_processing import plugin_asset_util  # pylint: disable=g-import-not-at-top,line-too-long
+except ImportError:
+  from tensorboard_plugin_profile.standalone import plugin_event_multiplexer  # pylint: disable=g-import-not-at-top
+  from tensorboard_plugin_profile.standalone import plugin_asset_util  # pylint: disable=g-import-not-at-top
 
 RUN_TO_TOOLS = {
     'foo': ['trace_viewer'],
@@ -65,92 +79,129 @@ EXPECTED_TRACE_DATA = dict(
 EVENT_FILE_SUFFIX = '.profile-empty'
 
 
-def generate_testdata(logdir):
-  plugin_logdir = plugin_asset_util.PluginDirectory(
-      logdir, profile_plugin.ProfilePlugin.plugin_name)
-  os.makedirs(plugin_logdir)
-  for run in RUN_TO_TOOLS:
-    run_dir = os.path.join(plugin_logdir, run)
-    os.mkdir(run_dir)
-    for tool in RUN_TO_TOOLS[run]:
-      if tool not in profile_plugin.TOOLS:
-        continue
-      for host in RUN_TO_HOSTS[run]:
-        filename = profile_plugin.make_filename(host, tool)
-        tool_file = os.path.join(run_dir, filename)
-        if tool == 'trace_viewer':
-          trace = trace_events_pb2.Trace()
-          trace.devices[0].name = run
-          data = trace.SerializeToString()
-        else:
-          data = tool.encode('utf-8')
-        with open(tool_file, 'wb') as f:
-          f.write(data)
-  with open(os.path.join(plugin_logdir, 'noise'), 'w') as f:
-    f.write('Not a dir, not a run.')
-
-
 def write_empty_event_file(logdir):
-  w = tf.summary.create_file_writer(logdir, filename_suffix=EVENT_FILE_SUFFIX)
-  w.close()
+  os.makedirs(logdir, exist_ok=True)
+  open(os.path.join(logdir, 'events.out.tfevents.profile-empty'), 'a').close()
 
 
-class ProfilePluginTest(tf.test.TestCase):
+class BaseProfilePluginTest(absltest.TestCase):
+  """Base class for testing the Profile plugin."""
+
+  def __init__(self, methodname):
+    super().__init__(methodname)
+    self._temp_dir = None
+    self.multiplexer: plugin_event_multiplexer.EventMultiplexer = None
+    self.plugin: profile_plugin.ProfilePlugin = None
+
+  def generate_testdata(self, logdir):
+    """Generates test data in the given log directory."""
+    plugin_logdir = plugin_asset_util.PluginDirectory(
+        logdir, profile_plugin.ProfilePlugin.plugin_name
+    )
+    os.makedirs(plugin_logdir)
+    for run in RUN_TO_TOOLS:
+      run_dir = os.path.join(plugin_logdir, run)
+      os.mkdir(run_dir)
+      for tool in RUN_TO_TOOLS[run]:
+        if tool not in profile_plugin.TOOLS:
+          continue
+        for host in RUN_TO_HOSTS[run]:
+          filename = profile_plugin.make_filename(host, tool)
+          tool_file = os.path.join(run_dir, filename)
+          if tool == 'trace_viewer':
+            trace = trace_events_pb2.Trace()
+            trace.devices[0].name = run
+            data = trace.SerializeToString()
+          else:
+            data = tool.encode('utf-8')
+          with open(tool_file, 'wb') as f:
+            f.write(data)
+    with open(os.path.join(plugin_logdir, 'noise'), 'w') as f:
+      f.write('Not a dir, not a run.')
 
   def setUp(self):
-    super(ProfilePluginTest, self).setUp()
+    super().setUp()
     self.logdir = self.get_temp_dir()
-    self.multiplexer = plugin_event_multiplexer.EventMultiplexer()
-    self.multiplexer.AddRunsFromDirectory(self.logdir)
-    self.plugin = utils.create_profile_plugin(self.logdir, self.multiplexer)
 
+  def get_temp_dir(self):
+    """Return a temporary directory for tests to use."""
+    if not self._temp_dir:
+      if os.environ.get('TEST_TMPDIR'):
+        temp_dir = tempfile.mkdtemp(prefix=os.environ['TEST_TMPDIR'])
+      else:
+        frame = inspect.stack()[-1]
+        filename = frame.filename
+        base_filename = os.path.basename(filename)
+        temp_dir_prefix = os.path.join(
+            tempfile.gettempdir(), base_filename.removesuffix('.py')
+        )
+        temp_dir = tempfile.mkdtemp(prefix=temp_dir_prefix)
+
+      def delete_temp_dir(dirname=temp_dir):
+        try:
+          shutil.rmtree(dirname)
+        except OSError as e:
+          logging.error('Error removing %s: %s', dirname, e)
+
+      atexit.register(delete_temp_dir)
+
+      self._temp_dir = temp_dir
+
+    return self._temp_dir
+
+  def _set_up_side_effect(self):  # pylint: disable=g-unreachable-test-method
     # Fail if we call PluginDirectory with a non-normalized logdir path, since
     # that won't work on GCS, as a regression test for b/235606632.
     original_plugin_directory = plugin_asset_util.PluginDirectory
-    plugin_directory_patcher = mock.patch.object(plugin_asset_util,
-                                                 'PluginDirectory')
+    plugin_directory_patcher = unittest.mock.patch.object(
+        plugin_asset_util, 'PluginDirectory'
+    )
     mock_plugin_directory = plugin_directory_patcher.start()
     self.addCleanup(plugin_directory_patcher.stop)
 
     def plugin_directory_spy(logdir, plugin_name):
       if os.path.normpath(logdir) != logdir:
         self.fail(
-            'PluginDirectory called with a non-normalized logdir path: %r' %
-            logdir)
+            'PluginDirectory called with a non-normalized logdir path: %r'
+            % logdir
+        )
       return original_plugin_directory(logdir, plugin_name)
 
     mock_plugin_directory.side_effect = plugin_directory_spy
 
-  def testRuns_logdirWithoutEventFile(self):
-    generate_testdata(self.logdir)
+  def test_runs_logdir_without_event_file(self):
+    self.generate_testdata(self.logdir)
     self.multiplexer.Reload()
     all_runs = list(self.plugin.generate_runs())
     self.assertSetEqual(frozenset(all_runs), frozenset(RUN_TO_HOSTS.keys()))
 
     self.assertListEqual(
-        list(self.plugin.generate_tools_of_run('foo')), RUN_TO_TOOLS['foo'])
+        list(self.plugin.generate_tools_of_run('foo')), RUN_TO_TOOLS['foo']
+    )
     self.assertEmpty(list(self.plugin.generate_tools_of_run('bar')))
     self.assertListEqual(
-        list(self.plugin.generate_tools_of_run('baz')), RUN_TO_TOOLS['baz'])
+        list(self.plugin.generate_tools_of_run('baz')), RUN_TO_TOOLS['baz']
+    )
     self.assertListEqual(
-        list(self.plugin.generate_tools_of_run('qux')), RUN_TO_TOOLS['qux'])
+        list(self.plugin.generate_tools_of_run('qux')), RUN_TO_TOOLS['qux']
+    )
     self.assertEmpty(list(self.plugin.generate_tools_of_run('empty')))
 
-  def testRuns_logdirWithEventFIle(self):
+  def test_runs_logdir_with_event_file(self):
     write_empty_event_file(self.logdir)
-    generate_testdata(self.logdir)
+    self.generate_testdata(self.logdir)
     self.multiplexer.Reload()
     all_runs = self.plugin.generate_runs()
     self.assertSetEqual(frozenset(all_runs), frozenset(RUN_TO_HOSTS.keys()))
 
-  def testRuns_withSubdirectories(self):
+  def test_runs_with_subdirectories(self):
     subdir_a = os.path.join(self.logdir, 'a')
     subdir_b = os.path.join(self.logdir, 'b')
     subdir_b_c = os.path.join(subdir_b, 'c')
-    generate_testdata(self.logdir)
-    generate_testdata(subdir_a)
-    generate_testdata(subdir_b)
-    generate_testdata(subdir_b_c)
+    self.generate_testdata(self.logdir)
+    self.generate_testdata(subdir_a)
+    self.generate_testdata(subdir_b)
+    self.generate_testdata(subdir_b_c)
     write_empty_event_file(self.logdir)
     write_empty_event_file(subdir_a)
     # Skip writing an event file for subdir_b
@@ -165,20 +216,20 @@ class ProfilePluginTest(tf.test.TestCase):
     expected.update(set('b/c/' + run for run in RUN_TO_TOOLS.keys()))
     self.assertSetEqual(frozenset(all_runs), expected)
 
-  def testRuns_withoutEvents(self):
-    generate_testdata(self.logdir)
+  def test_runs_without_events(self):
+    self.generate_testdata(self.logdir)
     self.multiplexer.AddRunsFromDirectory(self.logdir)
     self.multiplexer.Reload()
     all_runs = list(self.plugin.generate_runs())
     expected = set(RUN_TO_TOOLS.keys())
     self.assertSetEqual(frozenset(all_runs), expected)
 
-  def testRuns_withNestedRuns(self):
+  def test_runs_with_nested_runs(self):
     subdir_date = os.path.join(self.logdir, '2024-12-19')
     subdir_train = os.path.join(subdir_date, 'train')
     subdir_validation = os.path.join(subdir_date, 'validation')
     # Write the plugin directory for the subdir_date directory.
-    generate_testdata(subdir_date)
+    self.generate_testdata(subdir_date)
     # Write events files for the subdir_train and subdir_validation directories.
     write_empty_event_file(subdir_train)
     write_empty_event_file(subdir_validation)
@@ -191,10 +242,10 @@ class ProfilePluginTest(tf.test.TestCase):
     expected = set(set('2024-12-19/' + run for run in RUN_TO_TOOLS.keys()))
     self.assertSetEqual(frozenset(all_runs), expected)
 
-  def testHosts(self):
-    generate_testdata(self.logdir)
+  def test_hosts(self):
+    self.generate_testdata(self.logdir)
     subdir_a = os.path.join(self.logdir, 'a')
-    generate_testdata(subdir_a)
+    self.generate_testdata(subdir_a)
     write_empty_event_file(subdir_a)
     self.multiplexer.AddRunsFromDirectory(self.logdir)
     self.multiplexer.Reload()
@@ -222,24 +273,34 @@ class ProfilePluginTest(tf.test.TestCase):
     # PodViewer supports all hosts only.
     hosts_abc_pod_viewer = self.plugin.host_impl('abc', 'pod_viewer^')
     self.assertListEqual(expected_all_hosts_only, hosts_abc_pod_viewer)
+    # tf.data Bottleneck Analysis supports all hosts only.
+    hosts_abc_tf_data_bottleneck_analysis = self.plugin.host_impl(
+        'abc', 'tf_data_bottleneck_analysis^'
+    )
+    self.assertListEqual(
+        expected_all_hosts_only, hosts_abc_tf_data_bottleneck_analysis
+    )
 
-  def testData(self):
-    generate_testdata(self.logdir)
+  def test_data(self):
+    self.generate_testdata(self.logdir)
     subdir_a = os.path.join(self.logdir, 'a')
-    generate_testdata(subdir_a)
+    self.generate_testdata(subdir_a)
     write_empty_event_file(subdir_a)
     self.multiplexer.AddRunsFromDirectory(self.logdir)
     self.multiplexer.Reload()
     data, _, _ = self.plugin.data_impl(
-        utils.make_data_request('foo', 'trace_viewer', 'host0'))
+        utils.make_data_request('foo', 'trace_viewer', 'host0')
+    )
     trace = json.loads(data)
     self.assertEqual(trace, EXPECTED_TRACE_DATA)
     data, _, _ = self.plugin.data_impl(
-        utils.make_data_request('a/foo', 'trace_viewer', 'host0'))
+        utils.make_data_request('a/foo', 'trace_viewer', 'host0')
+    )
     trace_a = json.loads(data)
     self.assertEqual(trace_a, EXPECTED_TRACE_DATA)
     data, _, _ = self.plugin.data_impl(
-        utils.make_data_request('qux', 'trace_viewer'))
+        utils.make_data_request('qux', 'trace_viewer')
+    )
     trace_qux = json.loads(data)
     expected_trace_qux = copy.deepcopy(EXPECTED_TRACE_DATA)
     expected_trace_qux['traceEvents'][0]['args']['name'] = 'qux'
@@ -247,31 +308,38 @@ class ProfilePluginTest(tf.test.TestCase):
 
     # Invalid tool/run/host.
     data, _, _ = self.plugin.data_impl(
-        utils.make_data_request('foo', 'nonono', 'host0'))
+        utils.make_data_request('foo', 'nonono', 'host0')
+    )
     self.assertIsNone(data)
     data, _, _ = self.plugin.data_impl(
-        utils.make_data_request('foo', 'trace_viewer', ''))
+        utils.make_data_request('foo', 'trace_viewer', '')
+    )
     self.assertIsNone(data)
     data, _, _ = self.plugin.data_impl(
-        utils.make_data_request('bar', 'unsupported', 'host1'))
+        utils.make_data_request('bar', 'unsupported', 'host1')
+    )
     self.assertIsNone(data)
     data, _, _ = self.plugin.data_impl(
-        utils.make_data_request('bar', 'trace_viewer', 'host0'))
+        utils.make_data_request('bar', 'trace_viewer', 'host0')
+    )
     self.assertIsNone(data)
     data, _, _ = self.plugin.data_impl(
-        utils.make_data_request('qux', 'trace_viewer', 'host'))
+        utils.make_data_request('qux', 'trace_viewer', 'host')
+    )
     self.assertIsNone(data)
     data, _, _ = self.plugin.data_impl(
-        utils.make_data_request('empty', 'trace_viewer', ''))
+        utils.make_data_request('empty', 'trace_viewer', '')
+    )
     self.assertIsNone(data)
     data, _, _ = self.plugin.data_impl(
-        utils.make_data_request('a', 'trace_viewer', ''))
+        utils.make_data_request('a', 'trace_viewer', '')
+    )
     self.assertIsNone(data)
 
-  def testActive(self):
+  def test_active(self):
 
     def wait_for_thread():
-      with self.plugin._is_active_lock:
+      with self.plugin.get_active_lock():
         pass
 
     # Launch thread to check if active.
@@ -280,7 +348,7 @@ class ProfilePluginTest(tf.test.TestCase):
     # Should be false since there's no data yet.
     self.assertFalse(self.plugin.is_active())
     wait_for_thread()
-    generate_testdata(self.logdir)
+    self.generate_testdata(self.logdir)
     self.multiplexer.Reload()
     # Launch a new thread to check if active.
     self.plugin.is_active()
@@ -288,10 +356,10 @@ class ProfilePluginTest(tf.test.TestCase):
     # Now that there's data, this should be active.
     self.assertTrue(self.plugin.is_active())
 
-  def testActive_subdirectoryOnly(self):
+  def test_active_subdirectory_only(self):
 
     def wait_for_thread():
-      with self.plugin._is_active_lock:
+      with self.plugin.get_active_lock():
         pass
 
     # Launch thread to check if active.
@@ -301,7 +369,7 @@ class ProfilePluginTest(tf.test.TestCase):
     self.assertFalse(self.plugin.is_active())
     wait_for_thread()
     subdir_a = os.path.join(self.logdir, 'a')
-    generate_testdata(subdir_a)
+    self.generate_testdata(subdir_a)
     write_empty_event_file(subdir_a)
     self.multiplexer.AddRunsFromDirectory(self.logdir)
     self.multiplexer.Reload()
@@ -313,4 +381,4 @@ class ProfilePluginTest(tf.test.TestCase):
 
 
 if __name__ == '__main__':
-  tf.test.main()
+  absltest.main()

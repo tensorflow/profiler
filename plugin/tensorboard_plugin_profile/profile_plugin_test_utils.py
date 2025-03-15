@@ -14,16 +14,17 @@
 # ==============================================================================
 """Testing utilities for the Profile plugin."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+import werkzeug
 
-from werkzeug import Request
-
-from tensorboard.backend.event_processing import data_provider
-from tensorboard.backend.event_processing import plugin_event_multiplexer
-from tensorboard.plugins import base_plugin
 from tensorboard_plugin_profile import profile_plugin
+try:
+  from tensorboard.backend.event_processing import data_provider  # pylint: disable=g-import-not-at-top
+  from tensorboard.backend.event_processing import plugin_event_multiplexer  # pylint: disable=g-import-not-at-top
+  from tensorboard.plugins import base_plugin  # pylint: disable=g-import-not-at-top
+except ImportError:
+  from tensorboard_plugin_profile.standalone import base_plugin  # pylint: disable=g-import-not-at-top
+  from tensorboard_plugin_profile.standalone import plugin_event_multiplexer  # pylint: disable=g-import-not-at-top
+  from tensorboard_plugin_profile.standalone import data_provider  # pylint: disable=g-import-not-at-top
 
 
 class _FakeFlags(object):
@@ -69,7 +70,7 @@ def make_data_request(run, tool, host=None):
   Returns:
     A werkzeug.Request to pass to ProfilePlugin.data_impl.
   """
-  req = Request({})
+  req = werkzeug.Request({})
   req.args = {'run': run, 'tag': tool}
   if host:
     req.args['host'] = host
