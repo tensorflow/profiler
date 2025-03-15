@@ -18,6 +18,8 @@ export declare interface GraphViewerQueryParams {
   merge_fusion: boolean;
   program_id?: string;
   graph_type?: string;
+  symbol_id?: string;
+  symbol_type?: string;
 }
 
 /** The interface for graph type object for selection */
