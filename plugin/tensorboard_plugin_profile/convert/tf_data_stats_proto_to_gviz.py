@@ -24,7 +24,7 @@ from __future__ import print_function
 
 import gviz_api
 
-from tensorboard_plugin_profile.protobuf import tf_data_stats_pb2
+from xprof.protobuf import tf_data_stats_pb2
 
 
 def format_iterator_stat(iterator_metadata, iterator_stat):

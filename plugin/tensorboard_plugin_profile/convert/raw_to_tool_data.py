@@ -33,7 +33,7 @@ from tensorboard_plugin_profile.convert import overview_page_proto_to_gviz
 from tensorboard_plugin_profile.convert import roofline_model_proto_to_gviz
 from tensorboard_plugin_profile.convert import tf_stats_proto_to_gviz
 from tensorboard_plugin_profile.convert import trace_events_json
-from tensorboard_plugin_profile.protobuf import trace_events_pb2
+from xprof.protobuf import trace_events_pb2
 
 try:
   from tensorboard_plugin_profile.convert import _pywrap_profiler_plugin  # pylint: disable=g-import-not-at-top
