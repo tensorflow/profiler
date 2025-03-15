@@ -1,11 +1,13 @@
+// LINT: LEGACY_NAMES
+
 syntax = "proto3";
 
 package tensorflow.profiler;
 
 import "google/protobuf/any.proto";
-import "plugin/tensorboard_plugin_profile/protobuf/diagnostics.proto";
-import "plugin/tensorboard_plugin_profile/protobuf/input_pipeline.proto";
-import "plugin/tensorboard_plugin_profile/protobuf/power_metrics.proto";
+import "xprof/protobuf/diagnostics.proto";
+import "xprof/protobuf/input_pipeline.proto";
+import "xprof/protobuf/power_metrics.proto";
 
 // Overview result for a TensorFlow Op.
 message OverviewTfOp {
@@ -252,7 +254,7 @@ message OverviewInferenceLatency {
 
   // Inference sessions per second aggregated over all hosts. There can be
   // multiple queries batched in one session.
-  double sessions_per_second = 5;
+  optional double sessions_per_second = 5;
 }
 
 message OverviewPage {

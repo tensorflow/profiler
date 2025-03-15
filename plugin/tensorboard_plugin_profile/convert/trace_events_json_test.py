@@ -24,7 +24,7 @@ import tensorflow as tf
 
 from google.protobuf import text_format
 from tensorboard_plugin_profile.convert import trace_events_json
-from tensorboard_plugin_profile.protobuf import trace_events_pb2
+from xprof.protobuf import trace_events_pb2
 
 
 class TraceEventsJsonStreamTest(tf.test.TestCase):
