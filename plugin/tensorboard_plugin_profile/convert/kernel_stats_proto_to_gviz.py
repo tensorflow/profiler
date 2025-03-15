@@ -24,7 +24,7 @@ from __future__ import print_function
 
 import gviz_api
 
-from tensorboard_plugin_profile.protobuf import kernel_stats_pb2
+from xprof.protobuf import kernel_stats_pb2
 
 
 def get_kernel_reports_table_args(kernel_reports):

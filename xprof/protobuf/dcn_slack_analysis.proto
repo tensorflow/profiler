@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package tensorboard_plugin_profile;
+package tensorflow.profiler;
 
 message OpInstance {
   uint64 start_time_ps = 1;
