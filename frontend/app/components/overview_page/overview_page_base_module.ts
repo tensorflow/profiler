@@ -27,7 +27,6 @@ export class OverviewPageBase {
   @Input() recommendationResult: RecommendationResult|null = null;
   @Input() runEnvironment: RunEnvironment|null = null;
   @Input() inferenceLatencyData: SimpleDataTable|null = null;
-  @Input() stepTimeGraphColumnIds: string[]|null = null;
 
   get hasInferenceLatencyData(): boolean {
     // Assumption: is inference session if hasInferenceLatencyData is not empty
