@@ -81,11 +81,13 @@ def get_step_breakdown_table_args_for_tpu(ipa):
       ("stepnum", "number", "stepnum"),
       ("tcComputeTimeMs", "number", "TensorCore compute (in ms)"),
   ]
+  step_time_graph_column_ids = ["stepnum", "tcComputeTimeMs"]
   if has_legacy_sc_summary:
     table_description += [
         ("scv0ComputeTimeMs", "number", "SparseCoreV0 compute (in ms)"),
         ("scv0InfeedTimeMs", "number", "SparseCoreV0 input (in ms)"),
     ]
+    step_time_graph_column_ids.extend(["scv0ComputeTimeMs", "scv0InfeedTimeMs"])
   table_description += [
       ("tcInfeedTimeMs", "number", "TensorCore input (in ms)"),
       ("tcOutfeedTimeMs", "number", "TensorCore output (in ms)"),
@@ -100,6 +102,13 @@ def get_step_breakdown_table_args_for_tpu(ipa):
       ("infeedPercentMin", "number", "Infeed percent min"),
       ("infeedPercentMax", "number", "Infeed percent max"),
   ]
+  step_time_graph_column_ids.extend([
+      "tcInfeedTimeMs",
+      "tcOutfeedTimeMs",
+      "tcIdleTimeMs",
+      "hostTransferTimeMs",
+      "tooltip",
+  ])
 
   data = []
   for step_details in ipa.step_details:
@@ -149,6 +158,7 @@ def get_step_breakdown_table_args_for_tpu(ipa):
       ),
       "infeed_percent_minimum": "{:.1f}".format(input_percent_summary.minimum),
       "infeed_percent_maximum": "{:.1f}".format(input_percent_summary.maximum),
+      "step_time_graph_column_ids": ",".join(step_time_graph_column_ids),
   }
 
   # Add TPU step time breakdown to table properties
@@ -372,6 +382,7 @@ def get_step_breakdown_table_args(ipa):
       "steptime_ms_minimum": steptime_ms_minimum,
       "steptime_ms_maximum": steptime_ms_maximum,
       # Step time breakdown
+      "step_time_graph_column_ids": [t[0] for t in table_description],
       "device_compute_time_ms_avg": device_compute_time_ms_avg,
       "device_compute_time_ms_sdv": device_compute_time_ms_sdv,
       "device_to_device_time_ms_avg": device_to_device_time_ms_avg,

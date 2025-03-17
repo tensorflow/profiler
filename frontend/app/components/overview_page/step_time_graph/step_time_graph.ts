@@ -3,28 +3,6 @@ import {STACK_CHART_FILL_COLORS} from 'org_xprof/frontend/app/common/constants/c
 import {type InputPipelineAnalysis} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 const MAX_CHART_WIDTH = 800;
-// TODO(b/402769998) Fix columnIds given hardware and platform types.
-const COLUMN_IDS_FOR_TPU = [
-  'stepnum',
-  'stepTimeMs',
-  'computeTimeMs',
-  'inputTimeMs',
-  'idleTimeMs',
-  'tooltip',
-];
-const COLUMN_IDS_FOR_GPU = [
-  'stepnum',
-  'deviceComputeTimeMs',
-  'deviceToDeviceTimeMs',
-  'deviceCollectivesTimeMs',
-  'hostComputeTimeMs',
-  'kernelLaunchTimeMs',
-  'infeedTimeMs',
-  'outfeedTimeMs',
-  'compileTimeMs',
-  'otherTimeMs',
-  'tooltip',
-];
 const COLORS_FOR_GPU = [
   '#4b7b4b',
   '#8d6708',
@@ -47,9 +25,6 @@ const COLORS_FOR_GPU = [
 export class StepTimeGraph implements AfterViewInit, OnChanges {
   /** The input pipeline analyis data. */
   @Input() inputPipelineAnalysis: InputPipelineAnalysis|null = null;
-
-  /** The default column ids. */
-  @Input() columnIds = COLUMN_IDS_FOR_TPU;
 
   /** The default column colors. */
   @Input() columnColors = STACK_CHART_FILL_COLORS;
@@ -89,12 +64,12 @@ export class StepTimeGraph implements AfterViewInit, OnChanges {
 
     const dataTable =
         new google.visualization.DataTable(this.inputPipelineAnalysis);
-    let columnsIds = this.columnIds || COLUMN_IDS_FOR_TPU;
+    const columnsIds =
+        dataTable.getTableProperty('step_time_graph_column_ids').split(',');
     let colors = this.columnColors;
     this.height = 300;
     this.inputPipelineAnalysis.p = this.inputPipelineAnalysis.p || {};
     if ((this.inputPipelineAnalysis.p['hardware_type'] || 'TPU') !== 'TPU') {
-      columnsIds = COLUMN_IDS_FOR_GPU;
       colors = COLORS_FOR_GPU;
       this.height = 400;
     }
