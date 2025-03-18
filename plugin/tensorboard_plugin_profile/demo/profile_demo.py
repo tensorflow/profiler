@@ -32,7 +32,7 @@ from google.protobuf import text_format
 from tensorboard.backend.event_processing import plugin_asset_util
 from tensorboard_plugin_profile import profile_plugin
 from tensorboard_plugin_profile.demo import profile_demo_data
-from tensorboard_plugin_profile.protobuf import trace_events_pb2
+from xprof.protobuf import trace_events_pb2
 
 # Directory into which to write tensorboard data.
 LOGDIR = '/tmp/profile_demo'
