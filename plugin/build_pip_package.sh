@@ -52,7 +52,7 @@ cd ${PLUGIN_RUNFILE_DIR}
 find . -name '*.py' -exec ${copy} --parents -Lrpv {} $dest \;
 cd $dest
 chmod -R 755 .
-cp ${build_workspace}/bazel-bin/plugin/tensorboard_plugin_profile/protobuf/*_pb2.py tensorboard_plugin_profile/protobuf/ || echo "Files already exist"
+cp ${BUILD_WORKSPACE_DIRECTORY}/bazel-bin/xprof/protobuf/*_pb2.py tensorboard_plugin_profile/protobuf/
 
 find tensorboard_plugin_profile/protobuf -name \*.py -exec sed -i.bak -e '
     s/^from plugin.tensorboard_plugin_profile/from tensorboard_plugin_profile/
