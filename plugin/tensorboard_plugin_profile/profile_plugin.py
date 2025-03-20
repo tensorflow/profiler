@@ -671,7 +671,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
         file_pattern = make_filename('*', 'xplane')
         try:
           path = epath.Path(run_dir)
-          asset_paths = path.glob(file_pattern)
+          asset_paths = list(path.glob(file_pattern))
         except OSError as e:
           logger.warning('Cannot read asset directory: %s, OpError %s', run_dir,
                          e)

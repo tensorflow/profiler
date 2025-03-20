@@ -38,7 +38,7 @@ from tensorboard_plugin_profile.protobuf import trace_events_pb2
 try:
   from tensorboard_plugin_profile.convert import _pywrap_profiler_plugin  # pylint: disable=g-import-not-at-top
 except ImportError:
-  from tensorflow.python.profiler.internal import _pywrap_profiler_plugin  # pylint: disable=g-direct-tensorflow-import, g-import-not-at-top
+  from xprof.pywrap import _pywrap_profiler_plugin  # pylint: disable=g-import-not-at-top
 
 
 logger = logging.getLogger('tensorboard')

@@ -60,7 +60,7 @@ find tensorboard_plugin_profile/protobuf -name \*.py -exec sed -i.bak -e '
 
 find . -name "*.bak" -exec rm {} \;
 
-cp ${build_workspace}/bazel-bin/external/org_tensorflow/tensorflow/python/profiler/internal/_pywrap_profiler_plugin.so tensorboard_plugin_profile/convert/
+cp ${build_workspace}/bazel-bin/xprof/pywrap/_pywrap_profiler_plugin.so tensorboard_plugin_profile/convert/
 
 # Copy static files.
 cd tensorboard_plugin_profile
