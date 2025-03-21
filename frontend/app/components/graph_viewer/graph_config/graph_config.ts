@@ -67,7 +67,12 @@ export class GraphConfig implements OnDestroy, OnChanges {
     if (changes.hasOwnProperty('moduleList') &&
         changes['moduleList'].currentValue.length > 0 &&
         !this.params.selectedModule) {
-      this.selectedModule = changes['moduleList'].currentValue[0];
+      this.selectedModule = this.programId ?
+          changes['moduleList'].currentValue.find(
+              (module: string) => module.includes(this.programId),
+              ) ||
+              this.moduleList[0] :
+          this.moduleList[0];
     }
 
     if (changes.hasOwnProperty('graphTypes') &&
