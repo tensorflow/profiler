@@ -31,10 +31,11 @@ from etils import epath
 import six
 from werkzeug import wrappers
 
-from tensorboard.backend.event_processing import plugin_asset_util
-from tensorboard.context import RequestContext
-from tensorboard.plugins import base_plugin
 from tensorboard_plugin_profile.convert import raw_to_tool_data as convert
+from tensorboard_plugin_profile.standalone.tensorboard_shim import base_plugin
+from tensorboard_plugin_profile.standalone.tensorboard_shim import context as tb_context
+from tensorboard_plugin_profile.standalone.tensorboard_shim import plugin_asset_util
+
 
 logger = logging.getLogger('tensorboard')
 
@@ -56,6 +57,7 @@ except ImportError:
 # The prefix of routes provided by this plugin.
 PLUGIN_NAME = 'profile'
 
+BASE_ROUTE = '/'
 INDEX_JS_ROUTE = '/index.js'
 INDEX_HTML_ROUTE = '/index.html'
 BUNDLE_JS_ROUTE = '/bundle.js'
@@ -70,6 +72,7 @@ RUN_TOOLS_ROUTE = '/run_tools'
 HOSTS_ROUTE = '/hosts'
 HLO_MODULE_LIST_ROUTE = '/module_list'
 CAPTURE_ROUTE = '/capture_profile'
+LOCAL_ROUTE = '/local'
 
 # Suffixes of "^, #, @" symbols represent different input data formats for the
 # same tool.
@@ -441,6 +444,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
       self,
   ) -> dict[str, Callable[[wrappers.Request], wrappers.Response]]:
     return {
+        BASE_ROUTE: self.default_handler,
         INDEX_JS_ROUTE: self.static_file_route,
         INDEX_HTML_ROUTE: self.static_file_route,
         BUNDLE_JS_ROUTE: self.static_file_route,
@@ -455,9 +459,16 @@ class ProfilePlugin(base_plugin.TBPlugin):
         DATA_ROUTE: self.data_route,
         HLO_MODULE_LIST_ROUTE: self.hlo_module_list_route,
         CAPTURE_ROUTE: self.capture_route,
+        LOCAL_ROUTE: self.default_handler
     }
 
-  def frontend_metadata(self) -> base_plugin.FrontendMetadata:
+  # pytype: disable=wrong-arg-types
+  @wrappers.Request.application
+  def default_handler(self, _: wrappers.Request) -> wrappers.Response:
+    contents = self._read_static_file_impl('index.html')
+    return respond(contents, 'text/html')
+
+  def frontend_metadata(self):
     return base_plugin.FrontendMetadata(es_module_path='/index.js')
 
   def _read_static_file_impl(self, filename: str) -> bytes:
@@ -950,7 +961,7 @@ class ProfilePlugin(base_plugin.TBPlugin):
     """
 
     # Create a background context; we may not be in a request.
-    ctx = RequestContext()
+    ctx = tb_context.RequestContext()
     tb_runs = set()
     for run in self.data_provider.list_runs(ctx, experiment_id=''):
       tb_runs.add(run.run_name)

@@ -15,21 +15,29 @@
 # ==============================================================================
 """Tests for the Profile plugin."""
 
+# pylint: disable=missing-function-docstring
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import atexit
 import copy
+import inspect
 import json
+import logging
 import os
+import shutil
+import tempfile
 from unittest import mock
-import tensorflow.compat.v2 as tf
 
-from tensorboard.backend.event_processing import plugin_asset_util
-from tensorboard.backend.event_processing import plugin_event_multiplexer
+from absl.testing import absltest
+
 from tensorboard_plugin_profile import profile_plugin
 from tensorboard_plugin_profile import profile_plugin_test_utils as utils
 from tensorboard_plugin_profile.protobuf import trace_events_pb2
+from tensorboard_plugin_profile.standalone.tensorboard_shim import plugin_asset_util
+from tensorboard_plugin_profile.standalone.tensorboard_shim import plugin_event_multiplexer
 
 RUN_TO_TOOLS = {
     'foo': ['trace_viewer'],
@@ -91,19 +99,47 @@ def generate_testdata(logdir):
 
 
 def write_empty_event_file(logdir):
-  w = tf.summary.create_file_writer(logdir, filename_suffix=EVENT_FILE_SUFFIX)
-  w.close()
+  os.makedirs(logdir, exist_ok=True)
+  open(os.path.join(logdir, 'events.out.tfevents.profile-empty'), 'a').close()
 
 
-class ProfilePluginTest(tf.test.TestCase):
+class ProfilePluginTest(absltest.TestCase):
 
   def setUp(self):
     super(ProfilePluginTest, self).setUp()
+    self._temp_dir = None
     self.logdir = self.get_temp_dir()
     self.multiplexer = plugin_event_multiplexer.EventMultiplexer()
     self.multiplexer.AddRunsFromDirectory(self.logdir)
     self.plugin = utils.create_profile_plugin(self.logdir, self.multiplexer)
 
+  def get_temp_dir(self):
+    """Return a temporary directory for tests to use."""
+    if not self._temp_dir:
+      if os.environ.get('TEST_TMPDIR'):
+        temp_dir = tempfile.mkdtemp(prefix=os.environ['TEST_TMPDIR'])
+      else:
+        frame = inspect.stack()[-1]
+        filename = frame.filename
+        base_filename = os.path.basename(filename)
+        temp_dir_prefix = os.path.join(
+            tempfile.gettempdir(), base_filename.removesuffix('.py')
+        )
+        temp_dir = tempfile.mkdtemp(prefix=temp_dir_prefix)
+
+      def delete_temp_dir(dirname=temp_dir):
+        try:
+          shutil.rmtree(dirname)
+        except OSError as e:
+          logging.error('Error removing %s: %s', dirname, e)
+
+      atexit.register(delete_temp_dir)
+
+      self._temp_dir = temp_dir
+
+    return self._temp_dir
+
+  def _set_up_side_effect(self):  # pylint: disable=g-unreachable-test-method
     # Fail if we call PluginDirectory with a non-normalized logdir path, since
     # that won't work on GCS, as a regression test for b/235606632.
     original_plugin_directory = plugin_asset_util.PluginDirectory
@@ -313,4 +349,4 @@ class ProfilePluginTest(tf.test.TestCase):
 
 
 if __name__ == '__main__':
-  tf.test.main()
+  absltest.main()

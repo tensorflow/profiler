@@ -21,8 +21,7 @@ from __future__ import print_function
 import argparse
 import logging
 
-from tensorboard.plugins import base_plugin
-
+from tensorboard_plugin_profile.standalone.tensorboard_shim import base_plugin
 logger = logging.getLogger('tensorboard-plugin-profile')
 
 

@@ -30,7 +30,9 @@ REQUIRED_PACKAGES = [
     'setuptools >= 41.0.0',
     'six >= 1.10.0',
     'werkzeug >= 0.11.15',
-    'etils[epath] >= 1.0.0'
+    'etils[epath] >= 1.0.0',
+    'cheroot >= 10.0.1',
+    'fsspec >= 2024.10.0',
 ]
 
 
@@ -63,6 +65,9 @@ setuptools.setup(
                 'profile ='
                 ' tensorboard_plugin_profile.profile_plugin_loader:ProfilePluginLoader'
             ),
+        ],
+        'console_scripts': [
+            'xprof = tensorboard_plugin_profile.server:main',
         ],
     },
     python_requires='>= 2.7, != 3.0.*, != 3.1.*',

@@ -20,10 +20,10 @@ from __future__ import print_function
 
 from werkzeug import Request
 
-from tensorboard.backend.event_processing import data_provider
-from tensorboard.backend.event_processing import plugin_event_multiplexer
-from tensorboard.plugins import base_plugin
 from tensorboard_plugin_profile import profile_plugin
+from tensorboard_plugin_profile.standalone.tensorboard_shim import base_plugin
+from tensorboard_plugin_profile.standalone.tensorboard_shim import data_provider
+from tensorboard_plugin_profile.standalone.tensorboard_shim import plugin_event_multiplexer
 
 
 class _FakeFlags(object):
