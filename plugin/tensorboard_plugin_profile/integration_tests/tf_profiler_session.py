@@ -31,7 +31,11 @@ class TensorflowProfilerSession:
   def __enter__(self):
     """Starts profile session and serializes data to temp directory."""
     options = self.profiler.ProfilerOptions(
-        host_tracer_level=2, python_tracer_level=self.python_tracer_level
+        host_tracer_level=2,
+        python_tracer_level=self.python_tracer_level,
+        # TraceMe Host Traces can return errors when starting, however the TPU
+        # profiler still can be used.
+        ignore_start_error=True,
     )
     self.profiler.start(self.log_dir, options=options)
 
