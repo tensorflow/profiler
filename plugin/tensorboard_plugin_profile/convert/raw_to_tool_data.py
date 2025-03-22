@@ -33,7 +33,7 @@ from tensorboard_plugin_profile.convert import overview_page_proto_to_gviz
 from tensorboard_plugin_profile.convert import roofline_model_proto_to_gviz
 from tensorboard_plugin_profile.convert import tf_stats_proto_to_gviz
 from tensorboard_plugin_profile.convert import trace_events_json
-from tensorboard_plugin_profile.protobuf import trace_events_pb2
+from tensorboard_plugin_profile.protobuf import trace_events_old_pb2
 
 try:
   from tensorboard_plugin_profile.convert import _pywrap_profiler_plugin  # pylint: disable=g-import-not-at-top
@@ -46,7 +46,7 @@ logger = logging.getLogger('tensorboard')
 
 def process_raw_trace(raw_trace):
   """Processes raw trace data and returns the UI data."""
-  trace = trace_events_pb2.Trace()
+  trace = trace_events_old_pb2.Trace()
   trace.ParseFromString(raw_trace)
   return ''.join(trace_events_json.TraceEventsJsonStream(trace))
 
