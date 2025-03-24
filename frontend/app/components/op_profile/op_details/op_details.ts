@@ -37,6 +37,7 @@ export class OpDetails {
   name: string = '';
   subheader: string = '';
   flopsRate: string = '';
+  bf16FlopsRate = '';
   flopsUtilization: string = '';
   flopsColor: string = '';
   bandwidths: string[] =
@@ -205,12 +206,16 @@ export class OpDetails {
     }
 
     const flopsRate = utils.flopsRate(this.node);
+    const bf16FlopsRate = utils.normalizeToBf16FlopsRate(this.node);
     // Flops rate shouldn't be higher than 1EFLOPS.
     if (isNaN(flopsRate) || flopsRate > 1E18) {
       this.flopsRate = '';
+      this.bf16FlopsRate = '';
     } else {
       this.flopsRate = utils.humanReadableText(
           flopsRate, {si: true, dp: 2, suffix: 'FLOP/s'});
+      this.bf16FlopsRate = utils.humanReadableText(
+          bf16FlopsRate, {si: true, dp: 2, suffix: 'FLOP/s'});
     }
 
     for (let i = utils.MemBwType.MEM_BW_TYPE_FIRST;
