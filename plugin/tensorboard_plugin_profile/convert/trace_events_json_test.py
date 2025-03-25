@@ -24,15 +24,17 @@ import tensorflow as tf
 
 from google.protobuf import text_format
 from tensorboard_plugin_profile.convert import trace_events_json
-from tensorboard_plugin_profile.protobuf import trace_events_pb2
+from tensorboard_plugin_profile.protobuf import trace_events_old_pb2
 
 
 class TraceEventsJsonStreamTest(tf.test.TestCase):
 
   def convert(self, proto_text):
-    proto = trace_events_pb2.Trace()
+    proto = trace_events_old_pb2.Trace()
     text_format.Parse(proto_text, proto)
-    return json.loads(''.join(trace_events_json.TraceEventsJsonStream(proto)))
+    return json.loads(
+        ''.join(trace_events_json.TraceEventsJsonStream(proto))
+    )
 
   def testJsonConversion(self):
     self.assertEqual(
