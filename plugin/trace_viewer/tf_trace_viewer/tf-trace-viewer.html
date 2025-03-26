@@ -1544,6 +1544,7 @@ dashboard would integrate trace viewer app using iframe.
       }
       this._isLoading = false;
       this._throbber.className = 'inactive';
+      this.dispatchEvent(new CustomEvent('trace-viewer-loaded'));
       showWaitMsgLater(false);  // Necessary to cancel the timer.
       this._showWaitMessage(false);  // Hide immediately instead of waiting 30 seconds.
       const endTime = performance.now();
