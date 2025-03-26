@@ -665,6 +665,8 @@ class ProfilePlugin(base_plugin.TBPlugin):
     ):
       params['view_memory_allocation_timeline'] = True
 
+    params['memory_space'] = request.args.get('memory_space', '0')
+
     if tool == 'trace_viewer@^':
       options = {}
       options['resolution'] = request.args.get('resolution', 8000)

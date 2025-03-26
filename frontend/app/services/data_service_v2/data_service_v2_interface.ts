@@ -34,6 +34,13 @@ export interface DataServiceV2Interface {
       moduleName: string,
       opName: string,
       ): string;
+
+  downloadHloProto(
+      sessionId: string,
+      moduleName: string,
+      type: string,
+      showMetadata: boolean,
+      ): Observable<string|Blob|null>|null;
 }
 
 /** Injection token for the data service interface. */

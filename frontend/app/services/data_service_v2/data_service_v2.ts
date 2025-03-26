@@ -71,4 +71,13 @@ export class DataServiceV2 implements DataServiceV2Interface {
   getCustomCallTextLink(sessionId: string, moduleName: string, opName: string) {
     return '';
   }
+
+  downloadHloProto(
+      sessionId: string,
+      moduleName: string,
+      type: string,
+      showMetadata: boolean,
+      ): Observable<string|Blob|null>|null {
+    return null;
+  }
 }

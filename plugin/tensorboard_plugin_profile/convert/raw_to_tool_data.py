@@ -198,6 +198,7 @@ def xspace_to_tool_data(
     options = {
         'module_name': params.get('host'),
         'view_memory_allocation_timeline': view_memory_allocation_timeline,
+        'memory_space': params.get('memory_space', ''),
     }
     raw_data, success = xspace_wrapper_func(xspace_paths, tool, options)
     if success:

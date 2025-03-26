@@ -1,0 +1,19 @@
+
+<div class="item-container">
+  <div [ngClass]="{'mat-subheading-2': true}">Memory Types (7)</div>
+  <mat-form-field appearance="outline" class="full-width">
+    <mat-select
+      panelClass="panel-override"
+      [(value)]="selectedMemorySpaceColor"
+      (selectionChange)="emitUpdateEvent()"
+    >
+      <mat-option value="0">HBM</mat-option>
+      <mat-option value="3">CMEM</mat-option>
+      <mat-option value="2">Sflag</mat-option>
+      <mat-option value="1">VMEM</mat-option>
+      <mat-option value="4">SMEM</mat-option>
+      <mat-option value="5">Host</mat-option>
+      <mat-option value="6">SparseCore</mat-option>
+    </mat-select>
+  </mat-form-field>
+</div>

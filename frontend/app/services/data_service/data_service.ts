@@ -106,10 +106,10 @@ export class DataService {
         return of([]).pipe(delay(DELAY_TIME_MS));
       }
     }
-    const params =
+    let params =
         new HttpParams().set('run', run).set('tag', tag).set('host', host);
     parameters.forEach((value, key) => {
-      params.set(key, value);
+      params = params.set(key, value);
     });
     return this.httpClient.get(this.pathPrefix + DATA_API, {params}) as
         Observable<DataTable>;
