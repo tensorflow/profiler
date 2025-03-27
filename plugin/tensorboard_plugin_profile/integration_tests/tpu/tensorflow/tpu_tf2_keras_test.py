@@ -98,18 +98,18 @@ class TpuKerasTest(absltest.TestCase):
     result = raw_to_tool_data.xspace_to_tool_names(xspace_filenames)
     result.sort()
     expected = [
-        'trace_viewer@^',
-        'overview_page^',
-        'input_pipeline_analyzer^',
-        'framework_op_stats^',
-        'memory_profile^',
-        'pod_viewer^',
-        'op_profile^',
-        'memory_viewer^',
-        'graph_viewer^',
-        'hlo_stats^',
-        'inference_profile^',
-        'roofline_model^',
+        'trace_viewer@',
+        'overview_page',
+        'input_pipeline_analyzer',
+        'framework_op_stats',
+        'memory_profile',
+        'pod_viewer',
+        'op_profile',
+        'memory_viewer',
+        'graph_viewer',
+        'hlo_stats',
+        'inference_profile',
+        'roofline_model',
     ]
     expected.sort()
     self.assertListEqual(expected, result)
@@ -117,7 +117,7 @@ class TpuKerasTest(absltest.TestCase):
   def test_overview_page(self):
     xspace_filenames = self._get_session_snapshot()
     result, _ = raw_to_tool_data.xspace_to_tool_data(xspace_filenames,
-                                                     'overview_page^', {})
+                                                     'overview_page', {})
     result = json.loads(result)
     run_environment = result[2]
     self.assertEqual(run_environment['p']['host_count'], '1')
@@ -126,7 +126,7 @@ class TpuKerasTest(absltest.TestCase):
   def test_op_profile(self):
     xspace_filenames = self._get_session_snapshot()
     result, _ = raw_to_tool_data.xspace_to_tool_data(
-        xspace_filenames, 'op_profile^', {}
+        xspace_filenames, 'op_profile', {}
     )
     result = json.loads(result)
     logging.info(result)
@@ -145,7 +145,7 @@ class TpuKerasTest(absltest.TestCase):
   def test_device_trace_contains_threads(self):
     xspace_filenames = self._get_session_snapshot()
     result, _ = raw_to_tool_data.xspace_to_tool_data(
-        xspace_filenames, 'trace_viewer^', {}
+        xspace_filenames, 'trace_viewer', {}
     )
     result = json.loads(result)
     thread_names = []
