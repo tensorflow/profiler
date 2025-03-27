@@ -295,6 +295,13 @@ class ProtoToGvizTest(tf.test.TestCase):
     self.assertLen(table_description, 12)
     # DataTable also has 12 columns.
     self.assertLen(data_table.columns, 12)
+    # The step time graph column ids property is a string
+    #  with valid column name separated by comma.
+    print(custom_properties)
+    self.assertEqual(
+        custom_properties["step_time_graph_column_ids"],
+        "stepname,deviceComputeTimeMs,deviceToDeviceTimeMs,deviceCollectivesTimeMs,hostComputeTimeMs,kernelLaunchTimeMs,infeedTimeMs,outfeedTimeMs,compileTimeMs,otherTimeMs,tooltip,stepTimeMs",
+    )
 
     csv_file = io.StringIO(data_table.ToCsv())
     reader = csv.reader(csv_file)
@@ -354,6 +361,12 @@ class ProtoToGvizTest(tf.test.TestCase):
     self.assertLen(table_description, 10)
     # DataTable also has 12 columns.
     self.assertLen(data_table.columns, 10)
+    # The step time graph column ids property is a string
+    # with valid column name separated by comma.
+    self.assertEqual(
+        custom_properties["step_time_graph_column_ids"],
+        "stepnum,tcComputeTimeMs,tcInfeedTimeMs,tcOutfeedTimeMs,tcIdleTimeMs,hostTransferTimeMs,tooltip",
+    )
 
     csv_file = io.StringIO(data_table.ToCsv())
     reader = csv.reader(csv_file)
