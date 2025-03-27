@@ -205,8 +205,7 @@ export class OpDetails {
     }
 
     const flopsRate = utils.flopsRate(this.node);
-    // Flops rate shouldn't be higher than 1EFLOPS.
-    if (isNaN(flopsRate) || flopsRate > 1E18) {
+    if (isNaN(flopsRate)) {
       this.flopsRate = '';
     } else {
       this.flopsRate = utils.humanReadableText(
@@ -226,8 +225,7 @@ export class OpDetails {
         this.bandwidthUtilizations[i] = '';
       }
       const memoryBW = utils.memoryBandwidth(this.node, i);
-      // Memory bandwidth shouldn't be higher than 10TiB/s.
-      if (isNaN(memoryBW) || memoryBW > 1E13) {
+      if (isNaN(memoryBW)) {
         this.bandwidths[i] = '';
       } else {
         this.bandwidths[i] =
