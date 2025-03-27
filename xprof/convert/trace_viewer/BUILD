@@ -27,7 +27,6 @@ cc_library(
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
-        "@com_google_absl//absl/types:optional",
         "@local_xla//xla/tsl/profiler/utils:timespan",
         "@org_xprof//plugin/tensorboard_plugin_profile/protobuf:trace_events_proto_cc",
     ],

@@ -12,7 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
-#include "tensorflow/core/profiler/convert/hlo_proto_to_graph_view.h"
+#include "xprof/convert/hlo_proto_to_graph_view.h"
 
 #include <string>
 
