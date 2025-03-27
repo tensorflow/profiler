@@ -382,7 +382,11 @@ def get_step_breakdown_table_args(ipa):
       "steptime_ms_minimum": steptime_ms_minimum,
       "steptime_ms_maximum": steptime_ms_maximum,
       # Step time breakdown
-      "step_time_graph_column_ids": ",".join([t[0] for t in table_description]),
+      "step_time_graph_column_ids": ",".join(
+          # Do not include stepTimeMs in the column ids as it will
+          # double count the step time in the resulting graph.
+          [t[0] for t in table_description if t[0] != "stepTimeMs"]
+      ),
       "device_compute_time_ms_avg": device_compute_time_ms_avg,
       "device_compute_time_ms_sdv": device_compute_time_ms_sdv,
       "device_to_device_time_ms_avg": device_to_device_time_ms_avg,

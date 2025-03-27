@@ -300,7 +300,7 @@ class ProtoToGvizTest(tf.test.TestCase):
     print(custom_properties)
     self.assertEqual(
         custom_properties["step_time_graph_column_ids"],
-        "stepname,deviceComputeTimeMs,deviceToDeviceTimeMs,deviceCollectivesTimeMs,hostComputeTimeMs,kernelLaunchTimeMs,infeedTimeMs,outfeedTimeMs,compileTimeMs,otherTimeMs,tooltip,stepTimeMs",
+        "stepname,deviceComputeTimeMs,deviceToDeviceTimeMs,deviceCollectivesTimeMs,hostComputeTimeMs,kernelLaunchTimeMs,infeedTimeMs,outfeedTimeMs,compileTimeMs,otherTimeMs,tooltip",
     )
 
     csv_file = io.StringIO(data_table.ToCsv())
