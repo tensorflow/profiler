@@ -27,8 +27,8 @@ limitations under the License.
 #include "absl/log/log.h"
 #include "absl/types/optional.h"
 #include "xla/tsl/profiler/utils/timespan.h"
-#include "plugin/tensorboard_plugin_profile/protobuf/trace_events.pb.h"
 #include "xprof/convert/trace_viewer/trace_events_filter_interface.h"
+#include "plugin/tensorboard_plugin_profile/protobuf/trace_events.pb.h"
 
 namespace tensorflow {
 namespace profiler {

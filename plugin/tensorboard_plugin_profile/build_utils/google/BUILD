@@ -20,7 +20,6 @@ bzl_library(
         "//third_party/protobuf/bazel:java_lite_proto_library_bzl",
         "//third_party/protobuf/bazel:java_proto_library_bzl",
         "//third_party/protobuf/bazel:proto_library_bzl",
-        "//third_party/protobuf/build_defs:kt_jvm_proto_library",
         "//tools/build_defs/go:go_proto_library_bzl",
         "//tools/build_defs/proto/cpp:cc_proto_library_bzl",
         "@rules_python//python:proto_bzl",

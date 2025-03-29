@@ -16,7 +16,7 @@ limitations under the License.
 
 #include "net/proto2/contrib/parse_proto/parse_text_proto.h"
 #include "testing/base/public/gmock.h"
-#include "testing/base/public/gunit.h"
+#include "<gtest/gtest.h>"
 #include "plugin/tensorboard_plugin_profile/protobuf/dcn_slack_analysis.pb.h"
 
 namespace tensorflow {
