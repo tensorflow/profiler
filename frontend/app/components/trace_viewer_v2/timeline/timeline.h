@@ -442,6 +442,7 @@ class Timeline {
   void SetVisibleFlowCategories(const std::vector<int>& category_ids);
 
   void HideTrack(absl::string_view name);
+  void ReorderTrack(int source_org_idx, int target_org_idx, bool drop_after);
 
   void Draw();
 
@@ -651,6 +652,26 @@ class Timeline {
 
  protected:
   GroupRelativeInfo FindGroupRelatives(Group* target_group);
+  Group* GetGroupByOriginalIndex(int original_index);
+  // Returns the reordered root indices after reordering the group with the
+  // source_org_idx to the target_org_idx. If parent is not null, returns the
+  // reordered indices for the parent's children.
+  std::vector<int> GetReorderedRoots(Group* parent, int source_org_idx,
+                                     int target_org_idx, bool drop_after);
+  // Rebuilds the groups array based on the given root indices and updates the
+  // old_to_new_idx array to map original indices to new indices.
+  std::vector<Group> RebuildGroupsArray(const std::vector<int>& roots,
+                                        std::vector<int>& old_to_new_idx);
+  // Remaps the level indices based on the given new groups array
+  // and updates the old_to_new_level array to map original indices to new
+  // indices.
+  std::vector<int> RemapLevelIndices(std::vector<Group>& new_groups,
+                                     std::vector<int>& old_to_new_level);
+  // Remaps the events and flows based on the given old_to_new_level array.
+  void RemapEventsAndFlows(const std::vector<int>& old_to_new_level);
+  // Remaps the counter data and selection based on the given old_to_new_idx
+  // array.
+  void RemapCounterAndSelection(const std::vector<int>& old_to_new_idx);
 
  private:
   // Draws the timeline ruler UI (background, horizontal line, labels, ticks).
@@ -937,7 +958,21 @@ class Timeline {
   // doesn't cover the full requested range).
   TimeRange last_fetch_request_range_ = TimeRange::Zero();
 
+  // Stores the indices of the root groups in the timeline.
+  // This is used to determine the placement of each group in the timeline
+  // relative to one another.
+  // On a drag and drop operation, the root groups are reordered and the
+  // flattened groups are updated accordingly.
+  // For example, if the user drages process 1 to below process 2, the root
+  // groups will be reordered to {2, 1} and the flattened
+  // groups will be updated to reflect the new order.
+  std::vector<int> root_group_indices_;
+
   Pixel reorder_preview_line_y_ = -1.0f;
+  // The source and target indices for a pending reorder operation, and whether
+  // the target is to drop after the target index.
+  // This is used to reorder tracks when the user drops a track after a
+  // reorder operation is initiated.
   int pending_reorder_source_ = -1;
   int pending_reorder_target_ = -1;
   bool pending_reorder_drop_after_ = false;

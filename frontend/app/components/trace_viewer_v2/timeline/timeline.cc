@@ -366,13 +366,12 @@ void Timeline::CategorizeGroupsForTrackManagement(
 
   // Groups are expected in DFS pre-order: each process is immediately followed
   // by its child thread/counter tracks.
-  for (int i = 0; i < group_count; ++i) {
+  for (int i : root_group_indices_) {
     const Group& group = data.groups[i];
     if (group.nesting_level == kProcessNestingLevel) {
       current_process_hidden = hidden_track_names_.contains(group.name);
       current_process_pinned =
           !current_process_hidden && pinned_track_names_.contains(group.name);
-
       if (current_process_hidden) {
         hidden_processes_count_++;
       } else if (current_process_pinned) {
@@ -381,13 +380,23 @@ void Timeline::CategorizeGroupsForTrackManagement(
         all_processes_count_++;
       }
     }
-
+    // 1. Push the root / process track itself:
     if (current_process_hidden) {
       hidden_groups.push_back(&data.groups[i]);
     } else if (current_process_pinned) {
       pinned_groups.push_back(&data.groups[i]);
     } else {
       all_groups.push_back(&data.groups[i]);
+    }
+    // 2. Push its child tracks (threads / counters):
+    for (int j : group.child_indices) {
+      if (current_process_hidden) {
+        hidden_groups.push_back(&data.groups[j]);
+      } else if (current_process_pinned) {
+        pinned_groups.push_back(&data.groups[j]);
+      } else {
+        all_groups.push_back(&data.groups[j]);
+      }
     }
   }
 }
@@ -560,6 +569,7 @@ void Timeline::SetVisibleRange(const TimeRange& range, bool animate) {
 void Timeline::BackfillGroupLevelCount(FlameChartTimelineData& data) {
   // Backfill level_count for tests that only set start_level.
   for (size_t i = 0; i < data.groups.size(); ++i) {
+    data.groups[i].original_index = i;
     if (data.groups[i].level_count <= 0) {
       int next_level = (i + 1 < data.groups.size())
                            ? data.groups[i + 1].start_level
@@ -572,6 +582,14 @@ void Timeline::BackfillGroupLevelCount(FlameChartTimelineData& data) {
 
 void Timeline::SetTimelineData(FlameChartTimelineData data) {
   BackfillGroupLevelCount(data);
+  // Initialize root group indices
+  // (all top-level tracks with parent_index == -1).
+  root_group_indices_.clear();
+  for (size_t i = 0; i < data.groups.size(); ++i) {
+    if (data.groups[i].parent_index == -1) {
+      root_group_indices_.push_back(data.groups[i].original_index);
+    }
+  }
 
   // Capture anchor track and local pixel offset prior to updating layout.
   GroupKey anchor_group_key = {};
@@ -825,6 +843,14 @@ void Timeline::SetTimelineData(FlameChartTimelineData data) {
 }
 
 void Timeline::Draw() {
+  // Reorder the track if a pending reorder is set.
+  if (pending_reorder_source_ != -1 && pending_reorder_target_ != -1) {
+    ReorderTrack(pending_reorder_source_, pending_reorder_target_,
+                 pending_reorder_drop_after_);
+    pending_reorder_source_ = -1;
+    pending_reorder_target_ = -1;
+  }
+  reorder_preview_line_y_ = -1.0f;
   hovered_event_index_ = -1;
   event_clicked_this_frame_ = false;
   bool needs_layout_update = false;
@@ -1021,6 +1047,16 @@ void Timeline::Draw() {
   }
 
   ProcessPendingScroll();
+
+  // Draw the preview line for the drag and drop operation.
+  if (reorder_preview_line_y_ >= 0.0f) {
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    const Pixel x_start = tracks_start_screen_pos.x;
+    const Pixel x_end = x_start + label_width_ + current_timeline_width_;
+    draw_list->AddLine(ImVec2(x_start, reorder_preview_line_y_),
+                       ImVec2(x_end, reorder_preview_line_y_),
+                       IM_COL32(66, 133, 244, 255), 3.0f);
+  }
 
   last_scroll_y_ = ImGui::GetScrollY();
   ImGui::EndChild();
@@ -1300,8 +1336,7 @@ bool Timeline::DrawTrackRow(int group_index, const ImVec2& tracks_start_pos,
     if (group.type == Group::Type::kCounter) {
       group_height = kCounterTrackHeight;
     } else if (group.type == Group::Type::kFlame) {
-      const int end_level =
-          GetNextGroupStartLevel(timeline_data_, group_index);
+      const int end_level = group.start_level + group.level_count;
       group_height = std::max(1, end_level - group.start_level) *
                      (kEventHeight + kEventPaddingBottom);
     }
@@ -1369,6 +1404,11 @@ bool Timeline::DrawTrackRow(int group_index, const ImVec2& tracks_start_pos,
   } else {
     DrawGroup(group_index, px_per_time_unit_val, scroll_y, window_height);
   }
+
+  HandleTrackDragAndDropHoverAndFeedback(
+      group_index, group, tracks_start_pos, tracks_start_screen_pos,
+      group_height);
+
   ImGui::PopID();
 
   return needs_layout_update;
@@ -4755,6 +4795,36 @@ Timeline::GroupRelativeInfo Timeline::FindGroupRelatives(Group* target_group) {
   return info;
 }
 
+void Timeline::ReorderTrack(int source_org_idx, int target_org_idx,
+                            bool drop_after) {
+  if (source_org_idx == target_org_idx) return;
+
+  // Reorder the root group indices.
+  int src_pos = -1;
+  int dst_pos = -1;
+  for (size_t i = 0; i < root_group_indices_.size(); ++i) {
+    if (root_group_indices_[i] == source_org_idx) {
+      src_pos = i;
+    }
+    if (root_group_indices_[i] == target_org_idx) {
+      dst_pos = i;
+    }
+  }
+  if (src_pos == -1 || dst_pos == -1) return;
+  if (!drop_after && src_pos < dst_pos) {
+    dst_pos--;
+  } else if (drop_after && src_pos > dst_pos) {
+    dst_pos++;
+  }
+
+  // Move the source group to the target position.
+  root_group_indices_.erase(root_group_indices_.begin() + src_pos);
+  root_group_indices_.insert(root_group_indices_.begin() + dst_pos,
+                              source_org_idx);
+
+  UpdateLevelPositions(timeline_data_);
+}
+
 bool Timeline::HandleTrackDragAndDrop(int group_index, Group& group,
                                       const ImVec2& tracks_start_pos,
                                       const ImVec2& tracks_start_screen_pos,
@@ -4802,6 +4872,27 @@ bool Timeline::HandleTrackDragAndDrop(int group_index, Group& group,
           GroupRelativeInfo source_info = FindGroupRelatives(source_group);
           GroupRelativeInfo target_info = FindGroupRelatives(target_group);
           if (source_info.parent == target_info.parent) {
+            // Need to check if source and target info are root groups.
+            // If so, we need to verify that their header is the same.
+            if (source_info.parent == nullptr)
+            {
+              bool both_tracks_are_hidden =
+                  hidden_track_names_.contains(source_group->name) &&
+                  hidden_track_names_.contains(target_group->name);
+              bool both_tracks_are_pinned =
+                  pinned_track_names_.contains(source_group->name) &&
+                  pinned_track_names_.contains(target_group->name);
+              bool both_tracks_are_in_all =
+                  !hidden_track_names_.contains(source_group->name) &&
+                  !hidden_track_names_.contains(target_group->name) &&
+                  !pinned_track_names_.contains(source_group->name) &&
+                  !pinned_track_names_.contains(target_group->name);
+              if (!(both_tracks_are_in_all ||
+                    both_tracks_are_hidden ||
+                    both_tracks_are_pinned)) {
+                return false;
+              }
+            }
             Pixel line_y =
                 tracks_start_screen_pos.y + group_offsets_[group_index];
             bool drop_after =

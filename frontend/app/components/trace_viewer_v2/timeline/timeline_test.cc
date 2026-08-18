@@ -147,6 +147,11 @@ class MockTimeline : public Timeline {
         group_height);
   }
 
+  void CallReorderTrack(int source_org_idx, int target_org_idx,
+                        bool drop_after) {
+    ReorderTrack(source_org_idx, target_org_idx, drop_after);
+  }
+
  private:
   void SetupDefaultMockBehavior() {
     ON_CALL(*this, DrawGroup)
@@ -12563,6 +12568,365 @@ TEST_F(MockTimelineImGuiFixture, HandleTrackDragDrop_ThreadDifferentProcess) {
   // Reorder should NOT happen because parents are different!
   EXPECT_EQ(timeline_.get_pending_reorder_source_for_test(), -1);
   EXPECT_EQ(timeline_.get_pending_reorder_target_for_test(), -1);
+}
+
+TEST_F(MockTimelineImGuiFixture, ReorderTrack_SameIndexNoOp) {
+  FlameChartTimelineData data;
+  Group proc_a;
+  proc_a.name = "Proc A";
+  proc_a.original_index = 0;
+  proc_a.nesting_level = kProcessNestingLevel;
+  proc_a.parent_index = -1;
+
+  Group proc_b;
+  proc_b.name = "Proc B";
+  proc_b.original_index = 1;
+  proc_b.nesting_level = kProcessNestingLevel;
+  proc_b.parent_index = -1;
+
+  data.groups = {proc_a, proc_b};
+  timeline_.SetTimelineData(data);
+
+  timeline_.CallReorderTrack(0, 0, false);
+
+  const auto& groups = timeline_.timeline_data().groups;
+  ASSERT_EQ(groups.size(), 2);
+  EXPECT_EQ(groups[0].name, "Proc A");
+  EXPECT_EQ(groups[1].name, "Proc B");
+}
+
+TEST_F(MockTimelineImGuiFixture, ReorderTrack_ProcessTracksDropAfter) {
+  FlameChartTimelineData data;
+  Group proc_a;
+  proc_a.name = "Proc A";
+  proc_a.original_index = 0;
+  proc_a.nesting_level = kProcessNestingLevel;
+  proc_a.parent_index = -1;
+  proc_a.child_indices = {1};
+  proc_a.level_count = 1;
+  proc_a.start_level = 0;
+
+  Group thread_a;
+  thread_a.name = "Thread A";
+  thread_a.original_index = 1;
+  thread_a.nesting_level = kThreadNestingLevel;
+  thread_a.parent_index = 0;
+  thread_a.level_count = 1;
+  thread_a.start_level = 0;
+
+  Group proc_b;
+  proc_b.name = "Proc B";
+  proc_b.original_index = 2;
+  proc_b.nesting_level = kProcessNestingLevel;
+  proc_b.parent_index = -1;
+  proc_b.child_indices = {3};
+  proc_b.level_count = 1;
+  proc_b.start_level = 1;
+
+  Group thread_b;
+  thread_b.name = "Thread B";
+  thread_b.original_index = 3;
+  thread_b.nesting_level = kThreadNestingLevel;
+  thread_b.parent_index = 2;
+  thread_b.level_count = 1;
+  thread_b.start_level = 1;
+
+  data.groups = {proc_a, thread_a, proc_b, thread_b};
+  data.events_by_level.resize(2);
+  timeline_.SetTimelineData(data);
+
+  // Drop Proc A (original_index 0) after Proc B (original_index 2)
+  timeline_.CallReorderTrack(0, 2, /*drop_after=*/true);
+
+  const auto& groups = timeline_.timeline_data().groups;
+  ASSERT_EQ(groups.size(), 4);
+  EXPECT_EQ(groups[0].name, "Proc B");
+  EXPECT_EQ(groups[1].name, "Thread B");
+  EXPECT_EQ(groups[2].name, "Proc A");
+  EXPECT_EQ(groups[3].name, "Thread A");
+
+  // Verify parent-child links
+  EXPECT_EQ(groups[0].parent_index, -1);
+  ASSERT_EQ(groups[0].child_indices.size(), 1);
+  EXPECT_EQ(groups[0].child_indices[0], 1);
+  EXPECT_EQ(groups[1].parent_index, 0);
+
+  EXPECT_EQ(groups[2].parent_index, -1);
+  ASSERT_EQ(groups[2].child_indices.size(), 1);
+  EXPECT_EQ(groups[2].child_indices[0], 3);
+  EXPECT_EQ(groups[3].parent_index, 2);
+}
+
+TEST_F(MockTimelineImGuiFixture, ReorderTrack_ProcessTracksDropBefore) {
+  FlameChartTimelineData data;
+  Group proc_a;
+  proc_a.name = "Proc A";
+  proc_a.original_index = 0;
+  proc_a.nesting_level = kProcessNestingLevel;
+  proc_a.parent_index = -1;
+  proc_a.child_indices = {1};
+  proc_a.level_count = 1;
+  proc_a.start_level = 0;
+
+  Group thread_a;
+  thread_a.name = "Thread A";
+  thread_a.original_index = 1;
+  thread_a.nesting_level = kThreadNestingLevel;
+  thread_a.parent_index = 0;
+  thread_a.level_count = 1;
+  thread_a.start_level = 0;
+
+  Group proc_b;
+  proc_b.name = "Proc B";
+  proc_b.original_index = 2;
+  proc_b.nesting_level = kProcessNestingLevel;
+  proc_b.parent_index = -1;
+  proc_b.child_indices = {3};
+  proc_b.level_count = 1;
+  proc_b.start_level = 1;
+
+  Group thread_b;
+  thread_b.name = "Thread B";
+  thread_b.original_index = 3;
+  thread_b.nesting_level = kThreadNestingLevel;
+  thread_b.parent_index = 2;
+  thread_b.level_count = 1;
+  thread_b.start_level = 1;
+
+  data.groups = {proc_a, thread_a, proc_b, thread_b};
+  data.events_by_level.resize(2);
+  timeline_.SetTimelineData(data);
+
+  // Drop Proc B (original_index 2) before Proc A (original_index 0)
+  timeline_.CallReorderTrack(2, 0, /*drop_after=*/false);
+
+  const auto& groups = timeline_.timeline_data().groups;
+  ASSERT_EQ(groups.size(), 4);
+  EXPECT_EQ(groups[0].name, "Proc B");
+  EXPECT_EQ(groups[1].name, "Thread B");
+  EXPECT_EQ(groups[2].name, "Proc A");
+  EXPECT_EQ(groups[3].name, "Thread A");
+}
+
+TEST_F(MockTimelineImGuiFixture, ReorderTrack_ThreadTracksSameProcess) {
+  FlameChartTimelineData data;
+  Group proc;
+  proc.name = "Proc";
+  proc.original_index = 0;
+  proc.nesting_level = kProcessNestingLevel;
+  proc.parent_index = -1;
+  proc.child_indices = {1, 2, 3};
+  proc.level_count = 3;
+  proc.start_level = 0;
+
+  Group t0;
+  t0.name = "Thread 0";
+  t0.original_index = 1;
+  t0.nesting_level = kThreadNestingLevel;
+  t0.parent_index = 0;
+  t0.level_count = 1;
+  t0.start_level = 0;
+
+  Group t1;
+  t1.name = "Thread 1";
+  t1.original_index = 2;
+  t1.nesting_level = kThreadNestingLevel;
+  t1.parent_index = 0;
+  t1.level_count = 1;
+  t1.start_level = 1;
+
+  Group t2;
+  t2.name = "Thread 2";
+  t2.original_index = 3;
+  t2.nesting_level = kThreadNestingLevel;
+  t2.parent_index = 0;
+  t2.level_count = 1;
+  t2.start_level = 2;
+
+  data.groups = {proc, t0, t1, t2};
+  data.events_by_level.resize(3);
+  timeline_.SetTimelineData(data);
+
+  // Reorder Thread 0 (original_index 1) after Thread 2 (original_index 3)
+  timeline_.CallReorderTrack(1, 3, /*drop_after=*/true);
+
+  const auto& groups = timeline_.timeline_data().groups;
+  ASSERT_EQ(groups.size(), 4);
+  EXPECT_EQ(groups[0].name, "Proc");
+  EXPECT_EQ(groups[1].name, "Thread 1");
+  EXPECT_EQ(groups[2].name, "Thread 2");
+  EXPECT_EQ(groups[3].name, "Thread 0");
+}
+
+TEST_F(MockTimelineImGuiFixture, ReorderTrack_RemapsEventsAndFlows) {
+  FlameChartTimelineData data;
+  Group proc_a;
+  proc_a.name = "Proc A";
+  proc_a.original_index = 0;
+  proc_a.nesting_level = kProcessNestingLevel;
+  proc_a.parent_index = -1;
+  proc_a.child_indices = {1};
+  proc_a.level_count = 1;
+  proc_a.start_level = 0;
+
+  Group thread_a;
+  thread_a.name = "Thread A";
+  thread_a.original_index = 1;
+  thread_a.nesting_level = kThreadNestingLevel;
+  thread_a.parent_index = 0;
+  thread_a.level_count = 1;
+  thread_a.start_level = 0;
+
+  Group proc_b;
+  proc_b.name = "Proc B";
+  proc_b.original_index = 2;
+  proc_b.nesting_level = kProcessNestingLevel;
+  proc_b.parent_index = -1;
+  proc_b.child_indices = {3};
+  proc_b.level_count = 1;
+  proc_b.start_level = 1;
+
+  Group thread_b;
+  thread_b.name = "Thread B";
+  thread_b.original_index = 3;
+  thread_b.nesting_level = kThreadNestingLevel;
+  thread_b.parent_index = 2;
+  thread_b.level_count = 1;
+  thread_b.start_level = 1;
+
+  data.groups = {proc_a, thread_a, proc_b, thread_b};
+  // Event 10 on level 0, Event 20 on level 1
+  data.events_by_level = {{10}, {20}};
+  data.entry_levels = {0, 1};
+
+  FlowLine flow;
+  flow.source_level = 0;
+  flow.target_level = 1;
+  data.flow_lines = {flow};
+
+  timeline_.SetTimelineData(data);
+
+  // Swap Proc A and Proc B
+  timeline_.CallReorderTrack(0, 2, /*drop_after=*/true);
+
+  const auto& new_data = timeline_.timeline_data();
+  // Level 0 now has Event 20 (Thread B), Level 1 has Event 10 (Thread A)
+  ASSERT_EQ(new_data.events_by_level.size(), 2);
+  ASSERT_EQ(new_data.events_by_level[0].size(), 1);
+  EXPECT_EQ(new_data.events_by_level[0][0], 20);
+  ASSERT_EQ(new_data.events_by_level[1].size(), 1);
+  EXPECT_EQ(new_data.events_by_level[1][0], 10);
+
+  // Flow line source/target levels swapped
+  ASSERT_EQ(new_data.flow_lines.size(), 1);
+  EXPECT_EQ(new_data.flow_lines[0].source_level, 1);
+  EXPECT_EQ(new_data.flow_lines[0].target_level, 0);
+}
+
+TEST_F(MockTimelineImGuiFixture, Draw_ExecutesPendingReorder) {
+  FlameChartTimelineData data;
+  Group proc_a;
+  proc_a.name = "Proc A";
+  proc_a.original_index = 0;
+  proc_a.nesting_level = kProcessNestingLevel;
+  proc_a.parent_index = -1;
+
+  Group proc_b;
+  proc_b.name = "Proc B";
+  proc_b.original_index = 1;
+  proc_b.nesting_level = kProcessNestingLevel;
+  proc_b.parent_index = -1;
+
+  data.groups = {proc_a, proc_b};
+  timeline_.SetTimelineData(data);
+
+  timeline_.set_pending_reorder_source_for_test(0);
+  timeline_.set_pending_reorder_target_for_test(1);
+  timeline_.set_pending_reorder_drop_after_for_test(true);
+
+  ImGui::NewFrame();
+  ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
+  ImGui::SetNextWindowSize(ImVec2(200.0f, 200.0f));
+  timeline_.Draw();
+  ImGui::Render();
+
+  // Pending reorder should be consumed and reset
+  EXPECT_EQ(timeline_.get_pending_reorder_source_for_test(), -1);
+  EXPECT_EQ(timeline_.get_pending_reorder_target_for_test(), -1);
+
+  const auto& groups = timeline_.timeline_data().groups;
+  ASSERT_EQ(groups.size(), 2);
+  EXPECT_EQ(groups[0].name, "Proc B");
+  EXPECT_EQ(groups[1].name, "Proc A");
+}
+
+TEST_F(MockTimelineImGuiFixture, DragDrop_PreviewLinePosition) {
+  FlameChartTimelineData data;
+  Group proc_a;
+  proc_a.name = "Proc A";
+  proc_a.original_index = 0;
+  proc_a.nesting_level = kProcessNestingLevel;
+  proc_a.parent_index = -1;
+
+  Group proc_b;
+  proc_b.name = "Proc B";
+  proc_b.original_index = 1;
+  proc_b.nesting_level = kProcessNestingLevel;
+  proc_b.parent_index = -1;
+
+  data.groups = {proc_a, proc_b};
+  timeline_.SetTimelineData(data);
+
+  timeline_.set_group_offsets_for_test({0.0f, 30.0f});
+  timeline_.set_group_heights_for_test({30.0f, 30.0f});
+
+  auto& groups = const_cast<FlameChartTimelineData&>(
+      timeline_.timeline_data()).groups;
+
+  ImGuiIO& io = ImGui::GetIO();
+
+  // Warmup Frame: render window so ImGui registers position and hovered window
+  ImGui::NewFrame();
+  ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
+  ImGui::SetNextWindowSize(ImVec2(200.0f, 200.0f));
+  ImGui::Begin("Timeline");
+  timeline_.CallHandleTrackDragAndDrop(
+      1, groups[1], ImVec2(0.0f, 0.0f), ImVec2(0.0f, 0.0f), 30.0f, 100.0f);
+  ImGui::End();
+  ImGui::EndFrame();
+
+  // Frame 1: Hovering top half of Proc B (y=35, midpoint is y=45)
+  io.AddMousePosEvent(50.0f, 35.0f);
+  io.AddMouseButtonEvent(0, true);
+
+  ImGui::NewFrame();
+  ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
+  ImGui::SetNextWindowSize(ImVec2(200.0f, 200.0f));
+  ImGui::Begin("Timeline");
+
+  ImGuiContext& g = *GImGui;
+  g.DragDropActive = true;
+  g.DragDropMouseButton = 0;
+  g.DragDropSourceFrameCount = g.FrameCount;
+  g.DragDropPayload.SourceId = 99999;
+  g.DragDropPayload.DataFrameCount = g.FrameCount;
+  snprintf(g.DragDropPayload.DataType, sizeof(g.DragDropPayload.DataType), "%s",
+           "TRACK_REORDER");
+  Group* source_group_ptr = &groups[0];
+  g.DragDropPayloadBufHeap.resize(sizeof(Group*));
+  g.DragDropPayload.Data = g.DragDropPayloadBufHeap.Data;
+  memcpy(g.DragDropPayload.Data, &source_group_ptr, sizeof(Group*));
+  g.DragDropPayload.DataSize = sizeof(Group*);
+
+  timeline_.CallHandleTrackDragAndDrop(
+      1, groups[1], ImVec2(0.0f, 0.0f), ImVec2(0.0f, 0.0f), 30.0f, 100.0f);
+
+  // When hovering top half of Proc B, preview line should be
+  // at top boundary (y=30.0f)
+  EXPECT_FLOAT_EQ(timeline_.get_reorder_preview_line_y_for_test(), 30.0f);
+
+  ImGui::End();
+  ImGui::EndFrame();
 }
 
 // Helpers for concise timeline test data construction and verification.
