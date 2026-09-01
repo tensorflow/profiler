@@ -14,6 +14,7 @@ import {
 import {MatButtonModule} from '@angular/material/button';
 import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
+import {MatSlideToggleModule} from '@angular/material/slide-toggle';
 import {MatSliderModule} from '@angular/material/slider';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {TimeFormatPipe} from './time_format.pipe';
@@ -46,6 +47,7 @@ export interface SyncEventDetail {
     MatButtonModule,
     MatIconModule,
     MatMenuModule,
+    MatSlideToggleModule,
     MatSliderModule,
     MatTooltipModule,
     TimeFormatPipe,
@@ -65,6 +67,7 @@ export class TimelinePlayer implements OnInit, OnDestroy {
   readonly seek = output<number>();
   readonly speedChange = output<number>();
 
+  autoOpenSidePanel = true;
   activeEvents: Array<Record<string, string | number | boolean>> = [];
   activeCounters: Array<Record<string, string | number | boolean>> = [];
 

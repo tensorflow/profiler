@@ -58,6 +58,14 @@
         </mat-slider>
       </div>
 
+
+      <mat-slide-toggle
+        [checked]="autoOpenSidePanel"
+        (change)="autoOpenSidePanel = $event.checked"
+        class="auto-open-toggle"
+        color="primary">
+        Auto-open events panel
+      </mat-slide-toggle>
     </div>
   </div>
 </div>

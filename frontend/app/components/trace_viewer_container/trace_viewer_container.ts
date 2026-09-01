@@ -23,9 +23,11 @@ import {
 } from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {MatButtonModule} from '@angular/material/button';
+import {MatCardModule} from '@angular/material/card';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import {MatIconModule} from '@angular/material/icon';
 import {MatInputModule} from '@angular/material/input';
+import {MatListModule} from '@angular/material/list';
 import {MatProgressBarModule} from '@angular/material/progress-bar';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatSort, MatSortModule} from '@angular/material/sort';
@@ -252,6 +254,8 @@ declare interface TfTraceViewer {
     MatTableModule,
     MatTabsModule,
     MatTooltipModule,
+    MatCardModule,
+    MatListModule,
   ],
 })
 export class TraceViewerContainer
@@ -266,6 +270,7 @@ export class TraceViewerContainer
 
   /** Whether the timeline player applies */
   enableTimelinePlayer = false;
+  isPlayerSidePanelOpen = false;
 
   private handleTimelineRedrawRequest = () => {
     if (!this.traceViewerModule) return;
@@ -673,6 +678,9 @@ export class TraceViewerContainer
   @ViewChild(TimelinePlayer) timelinePlayer?: TimelinePlayer;
 
   onPlay() {
+    if (this.timelinePlayer?.autoOpenSidePanel) {
+      this.isPlayerSidePanelOpen = true;
+    }
     if (!this.traceViewerModule || !this.timelinePlayer) return;
     this.traceViewerModule.SetPlaybackState?.(
       true,
@@ -688,6 +696,11 @@ export class TraceViewerContainer
       this.timelinePlayer.currentTime(),
       this.timelinePlayer.playbackRate(),
     );
+  }
+
+  getObjectKeys(obj: unknown): string[] {
+    if (!obj || typeof obj !== 'object') return [];
+    return Object.keys(obj as Record<string, unknown>);
   }
 
   onSeek(time: number) {
