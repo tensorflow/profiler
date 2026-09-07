@@ -33,9 +33,9 @@ cc_test(
     srcs = ["xspace_to_parquet_test.cc"],
     data = [":xspace_to_parquet"],
     deps = [
-        "//file/base:path",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
+        "@tsl//tsl/platform:path",
         "@tsl//tsl/platform:protobuf",
         "@tsl//tsl/profiler/protobuf:xplane_proto_cc",
         "@xla//xla/tsl/platform:subprocess",
@@ -63,10 +63,10 @@ cc_test(
     srcs = ["count_zero_self_time_events_test.cc"],
     data = [":count_zero_self_time_events"],
     deps = [
-        "//file/base:path",
-        "//net/proto2/contrib/parse_proto:parse_text_proto",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
+        "@tsl//tsl/platform:path",
+        "@tsl//tsl/platform:protobuf",
         "@tsl//tsl/profiler/protobuf:xplane_proto_cc",
         "@xla//xla/tsl/platform:subprocess",
     ],

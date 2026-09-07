@@ -16,28 +16,27 @@ limitations under the License.
 #include <string_view>
 #include <vector>
 
-#include "file/base/path.h"
-#include "net/proto2/contrib/parse_proto/parse_text_proto.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "absl/strings/str_cat.h"
 #include "xla/tsl/platform/subprocess.h"
+#include "tsl/platform/path.h"
+#include "tsl/platform/protobuf.h"
 #include "tsl/profiler/protobuf/xplane.pb.h"
 
 namespace {
 
-using ::google::protobuf::contrib::parse_proto::ParseTextProtoOrDie;
 using ::testing::HasSubstr;
 
 std::string GetBinaryPath() {
   constexpr std::string_view kRelativeBinaryPath =
       "org_xprof/xprof/convert/events_db/examples/cpp/"
       "count_zero_self_time_events";
-  return file::JoinPath(testing::SrcDir(), kRelativeBinaryPath);
+  return tsl::io::JoinPath(testing::SrcDir(), kRelativeBinaryPath);
 }
 
 std::string CreateTempFilePath(std::string_view filename) {
-  return file::JoinPath(testing::TempDir(), filename);
+  return tsl::io::JoinPath(testing::TempDir(), filename);
 }
 
 void CreateTestXSpaceFile(std::string_view path) {
@@ -56,7 +55,8 @@ void CreateTestXSpaceFile(std::string_view path) {
       }
     }
   )pb";
-  const tensorflow::profiler::XSpace xspace = ParseTextProtoOrDie(kXSpaceText);
+  tensorflow::profiler::XSpace xspace;
+  ASSERT_TRUE(tsl::protobuf::TextFormat::ParseFromString(kXSpaceText, &xspace));
   std::ofstream ofs(std::string(path), std::ios::binary);
   ASSERT_TRUE(xspace.SerializeToOstream(&ofs));
 }

@@ -18,11 +18,11 @@ limitations under the License.
 #include <string_view>
 #include <vector>
 
-#include "file/base/path.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "absl/strings/str_cat.h"
 #include "xla/tsl/platform/subprocess.h"
+#include "tsl/platform/path.h"
 #include "tsl/platform/protobuf.h"
 #include "tsl/profiler/protobuf/xplane.pb.h"
 
@@ -35,11 +35,11 @@ using ::testing::StartsWith;
 std::string GetBinaryPath() {
   constexpr std::string_view kRelativeBinaryPath =
       "org_xprof/xprof/convert/events_db/examples/cpp/xspace_to_parquet";
-  return file::JoinPath(testing::SrcDir(), kRelativeBinaryPath);
+  return tsl::io::JoinPath(testing::SrcDir(), kRelativeBinaryPath);
 }
 
 std::string CreateTempFilePath(std::string_view filename) {
-  return file::JoinPath(testing::TempDir(), filename);
+  return tsl::io::JoinPath(testing::TempDir(), filename);
 }
 
 void CreateEmptyFile(std::string_view path) {
@@ -115,7 +115,8 @@ TEST_P(CompressionTest, ConvertsEmptyXSpace) {
 
 INSTANTIATE_TEST_SUITE_P(
     CompressionTypes, CompressionTest,
-    testing::Values<std::optional<std::string>>(std::nullopt, "", "SNAPPY"),
+    testing::Values<std::optional<std::string>>(std::nullopt, "", "SNAPPY",
+                                                "ZSTD"),
     [](const testing::TestParamInfo<std::optional<std::string>>& info)
         -> std::string {
       if (!info.param.has_value()) return "Default";
