@@ -29,7 +29,7 @@ limitations under the License.
 #include "absl/meta/type_traits.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "third_party/arrow/util/type_fwd.h"
+#include "arrow/util/type_fwd.h"  // from @arrow
 #include "third_party/nanobind/include/nanobind/make_iterator.h"
 #include "third_party/nanobind/include/nanobind/nanobind.h"
 #include "third_party/nanobind/include/nanobind/operators.h"

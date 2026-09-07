@@ -18,6 +18,163 @@ http_archive(
 )
 
 http_archive(
+    name = "arrow",
+    build_file = "//third_party:arrow.BUILD",
+    sha256 = "46d72113d776592195162ebd9f0b181ed224cdc3262f78508a0e7ef72e08cf74",
+    strip_prefix = "arrow-ee4d09ebef61c663c1efbfa4c18e518a03b798be",
+    urls = ["https://github.com/apache/arrow/archive/ee4d09ebef61c663c1efbfa4c18e518a03b798be.zip"],
+)
+
+http_archive(
+    name = "rapidjson",
+    build_file_content = """
+cc_library(
+    name = "rapidjson",
+    hdrs = glob(["include/rapidjson/**/*.h"]),
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+)
+""",
+    sha256 = "b9290a9a6d444c8e049bd589ab804e0ccf2b05dc5984a19ed5ae75d090064806",
+    strip_prefix = "rapidjson-232389d4f1012dddec4ef84861face2d2ba85709",
+    urls = [
+        "https://github.com/Tencent/rapidjson/archive/232389d4f1012dddec4ef84861face2d2ba85709.tar.gz",
+    ],
+)
+
+http_archive(
+    name = "boost_predef",
+    build_file_content = """
+cc_library(
+    name = "predef",
+    hdrs = glob(["include/boost/**/*.h"]),
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+)
+""",
+    sha256 = "7791fe4065d04950bb60bd0004860da3322ab7abc7847e34feb38d9cf51f8c8d",
+    strip_prefix = "predef-boost-1.84.0",
+    urls = [
+        "https://github.com/boostorg/predef/archive/refs/tags/boost-1.84.0.tar.gz",
+    ],
+)
+
+http_archive(
+    name = "thrift",
+    build_file_content = """
+genrule(
+    name = "config_h",
+    outs = ["lib/cpp/src/thrift/config.h"],
+    cmd = \"\"\"cat << 'CFG' > $@
+#ifndef CONFIG_H
+#define CONFIG_H
+#define ARITHMETIC_RIGHT_SHIFT 1
+#define SIGNED_RIGHT_SHIFT_IS 1
+#define HAVE_STDINT_H 1
+#define HAVE_INTTYPES_H 1
+#define HAVE_SYS_TYPES_H 1
+#define PACKAGE_VERSION "0.22.0"
+#ifndef _WIN32
+#define HAVE_NETINET_IN_H 1
+#define HAVE_ARPA_INET_H 1
+#define HAVE_STRERROR_R 1
+#define STRERROR_R_CHAR_P 1
+#endif
+#endif
+CFG
+\"\"\",
+)
+
+genrule(
+    name = "boost_cast_h",
+    outs = ["lib/cpp/src/boost/numeric/conversion/cast.hpp"],
+    cmd = \"\"\"cat << 'CFG' > $@
+#pragma once
+namespace boost {
+template <typename To, typename From>
+To numeric_cast(From from) {
+  return static_cast<To>(from);
+}
+}
+CFG
+\"\"\",
+)
+
+cc_library(
+    name = "thrift",
+    srcs = [
+        "lib/cpp/src/thrift/TApplicationException.cpp",
+        "lib/cpp/src/thrift/TOutput.cpp",
+        "lib/cpp/src/thrift/protocol/TProtocol.cpp",
+        "lib/cpp/src/thrift/transport/TBufferTransports.cpp",
+        "lib/cpp/src/thrift/transport/TTransportException.cpp",
+    ],
+    hdrs = glob([
+        "lib/cpp/src/thrift/**/*.h",
+    ]) + [
+        "lib/cpp/src/thrift/config.h",
+        "lib/cpp/src/boost/numeric/conversion/cast.hpp",
+    ],
+    textual_hdrs = glob([
+        "lib/cpp/src/thrift/**/*.tcc",
+    ]),
+    includes = ["lib/cpp/src"],
+    linkopts = select({
+        "@platforms//os:windows": ["ws2_32.lib"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:public"],
+    deps = [
+        "@boost_predef//:predef",
+    ],
+)
+""",
+    sha256 = "c4649c5879dd56c88f1e7a1c03e0fbfcc3b2a2872fb81616bffba5aa8a225a37",
+    strip_prefix = "thrift-0.22.0",
+    urls = [
+        "https://github.com/apache/thrift/archive/refs/tags/v0.22.0.tar.gz",
+    ],
+)
+
+http_archive(
+    name = "zstd",
+    build_file_content = """
+cc_library(
+    name = "zstd",
+    srcs = glob([
+        "lib/common/*.c",
+        "lib/common/*.h",
+        "lib/compress/*.c",
+        "lib/compress/*.h",
+        "lib/decompress/*.c",
+        "lib/decompress/*.h",
+        "lib/dictBuilder/*.c",
+        "lib/dictBuilder/*.h",
+    ]) + select({
+        "@platforms//cpu:x86_64": ["lib/decompress/huf_decompress_amd64.S"],
+        "//conditions:default": [],
+    }),
+    hdrs = glob([
+        "lib/*.h",
+        "lib/common/*.h",
+        "lib/dictBuilder/*.h",
+    ]),
+    local_defines = select({
+        "@platforms//cpu:x86_64": [],
+        "//conditions:default": ["ZSTD_DISABLE_ASM=1"],
+    }),
+    includes = ["lib", "lib/common", "lib/dictBuilder"],
+    visibility = ["//visibility:public"],
+)
+""",
+    sha256 = "37d7284556b20954e56e1ca85b80226768902e2edabd3b649e9e72c0c9012ee3",
+    strip_prefix = "zstd-1.5.7",
+    urls = [
+        "https://github.com/facebook/zstd/archive/refs/tags/v1.5.7.tar.gz",
+    ],
+)
+
+http_archive(
     name = "nlohmann_json",
     build_file_content = """
 cc_library(
@@ -143,8 +300,11 @@ _GRPC_PATCHES = [
     "@xla//third_party/grpc:grpc.patch",
     "//third_party:grpc.patch",
 ]
+
 _GRPC_SHA256 = "41b695614b26652ff9e97ce50cfd4a6c7a3d45a9fe598d1454407746499bbf2c"
+
 _GRPC_STRIP_PREFIX = "grpc-1.81.0"
+
 _GRPC_URLS = ["https://github.com/grpc/grpc/archive/refs/tags/v1.81.0.tar.gz"]
 
 http_archive(
@@ -363,8 +523,6 @@ npm_translate_lock(
 load("@npm//:repositories.bzl", "npm_repositories")
 
 npm_repositories()
-
-
 
 http_archive(
     name = "org_tensorflow_tensorboard",

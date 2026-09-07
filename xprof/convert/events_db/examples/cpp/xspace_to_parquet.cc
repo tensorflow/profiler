@@ -42,9 +42,9 @@ limitations under the License.
 #include "absl/strings/str_format.h"
 #include "absl/time/clock.h"
 #include "absl/time/time.h"
-#include "third_party/arrow/result.h"
-#include "third_party/arrow/util/compression.h"
-#include "third_party/arrow/util/type_fwd.h"
+#include "arrow/result.h"  // from @arrow
+#include "arrow/util/compression.h"  // from @arrow
+#include "arrow/util/type_fwd.h"  // from @arrow
 #include "tsl/platform/init_main.h"
 #include "xprof/convert/events_db/parquet_record_consumer.h"
 #include "xprof/convert/events_db/record_consumer.h"
