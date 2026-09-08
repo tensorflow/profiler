@@ -330,3 +330,17 @@ py_test(
         "@absl_py//absl/testing:parameterized",
     ],
 )
+
+pytype_strict_contrib_test(
+    name = "get_source_file_tool_test",
+    srcs = ["get_source_file_tool_test.py"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//plugin/xprof/cli/internal/oss:hlo_tools",
+        "//plugin/xprof/cli/tools:get_source_file_tool",
+        "@absl_py//absl/testing:absltest",
+        "@absl_py//absl/testing:flagsaver",
+        "@absl_py//absl/testing:parameterized",
+        "@pypi//absl_py",
+    ],
+)

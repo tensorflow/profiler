@@ -7,7 +7,10 @@ package(default_visibility = [
 pytype_strict_library(
     name = "get_kernel_stats_tool",
     srcs = ["get_kernel_stats_tool.py"],
-    visibility = ["//plugin/xprof:__subpackages__"],
+    visibility = [
+        "//plugin/xprof:__subpackages__",
+        "//vr:__subpackages__",
+    ],
     deps = [
         "//plugin/xprof/cli/internal:decorators",
         "//plugin/xprof/cli/internal/oss:kernel_stats_tools",
@@ -17,7 +20,10 @@ pytype_strict_library(
 pytype_strict_library(
     name = "check_host_boundness_tool",
     srcs = ["check_host_boundness_tool.py"],
-    visibility = ["//plugin/xprof:__subpackages__"],
+    visibility = [
+        "//plugin/xprof:__subpackages__",
+        "//vr:__subpackages__",
+    ],
     deps = [
         ":get_utilization_viewer_tool",
         "//plugin/xprof/cli/internal:decorators",
@@ -87,6 +93,7 @@ pytype_strict_library(
     srcs = ["get_kernel_utilization_tool.py"],
     visibility = [
         "//plugin/xprof:__subpackages__",
+        "//vr:__subpackages__",
     ],
     deps = [
         "//plugin/xprof/cli/internal:decorators",
@@ -118,7 +125,10 @@ pytype_strict_library(
 pytype_strict_library(
     name = "get_hlo_stats_tool",
     srcs = ["get_hlo_stats_tool.py"],
-    visibility = ["//plugin/xprof:__subpackages__"],
+    visibility = [
+        "//plugin/xprof:__subpackages__",
+        "//vr:__subpackages__",
+    ],
     deps = [
         "//plugin/xprof/cli/internal:decorators",
         "//plugin/xprof/cli/internal/oss:xprof_client",
@@ -195,5 +205,19 @@ pytype_strict_library(
     srcs = ["verify_numerical_parity_tool.py"],
     deps = [
         "//plugin/xprof/cli/internal:numerical_validator",
+    ],
+)
+
+pytype_strict_library(
+    name = "get_source_file_tool",
+    srcs = ["get_source_file_tool.py"],
+    visibility = [
+        "//plugin/xprof:__subpackages__",
+        "//vr:__subpackages__",
+    ],
+    deps = [
+        "//plugin/xprof/cli/internal/oss:hlo_tools",
+        "@absl_py//absl/flags",
+        "@pypi//absl_py",
     ],
 )
