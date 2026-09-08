@@ -44,8 +44,9 @@ export const ShortcutKey = {
  * Visual key separators.
  */
 export enum KeySeparator {
-  OR = ' / ',
-  COMBO = ' + ',
+  OR = '/',
+  COMBO = '+',
+  NONE = '',
 }
 
 /**
@@ -108,11 +109,11 @@ export const HUD_COMMON_NAVIGATION_HINTS: readonly ShortcutItem[] = Object.freez
 /**
  * Reusable selection modifier shortcut.
  */
-export const HUD_ADD_SELECTION_HINT: ShortcutItem = Object.freeze({
-  description: 'Add Selection',
+export const HUD_ADD_MEASUREMENT_HINT: ShortcutItem = Object.freeze({
+  description: 'Add Measurement',
   keys: [ShortcutKey.SHIFT, ShortcutKey.CLICK_OR_DRAG],
   separator: KeySeparator.COMBO,
-  context: 'SELECTION',
+  context: 'TIMING',
 });
 
 /**
@@ -132,7 +133,7 @@ export const MOUSE_MODE_DEFINITIONS: readonly MouseModeDefinition[] = Object.fre
         separator: KeySeparator.OR,
         context: 'SELECT',
       },
-      HUD_ADD_SELECTION_HINT,
+      HUD_ADD_MEASUREMENT_HINT,
       ...HUD_COMMON_NAVIGATION_HINTS,
     ],
   },
@@ -148,7 +149,7 @@ export const MOUSE_MODE_DEFINITIONS: readonly MouseModeDefinition[] = Object.fre
         keys: [ShortcutKey.DRAG],
         context: 'PAN',
       },
-      HUD_ADD_SELECTION_HINT,
+      HUD_ADD_MEASUREMENT_HINT,
       ...HUD_COMMON_NAVIGATION_HINTS,
     ],
   },
@@ -164,6 +165,7 @@ export const MOUSE_MODE_DEFINITIONS: readonly MouseModeDefinition[] = Object.fre
         keys: [ShortcutKey.DRAG],
         context: 'ZOOM',
       },
+      HUD_ADD_MEASUREMENT_HINT,
       ...HUD_COMMON_NAVIGATION_HINTS,
     ],
   },
@@ -179,12 +181,7 @@ export const MOUSE_MODE_DEFINITIONS: readonly MouseModeDefinition[] = Object.fre
         keys: [ShortcutKey.DRAG],
         context: 'TIMING',
       },
-      {
-        description: 'Add Measurement',
-        keys: [ShortcutKey.SHIFT, ShortcutKey.CLICK_OR_DRAG],
-        separator: KeySeparator.COMBO,
-        context: 'TIMING',
-      },
+      HUD_ADD_MEASUREMENT_HINT,
       ...HUD_COMMON_NAVIGATION_HINTS,
     ],
   },

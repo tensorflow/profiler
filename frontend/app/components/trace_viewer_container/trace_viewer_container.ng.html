@@ -106,6 +106,23 @@
         </svg>
       </button>
     </div>
+    <div class="mouse-mode-hints" *ngIf="currentMouseModeConfig as config">
+      <ng-container *ngFor="let mode of [currentMouseMode]">
+        <div class="status-content">
+          <ng-container *ngFor="let hint of config.hints; let last = last">
+            <span class="hint-group">
+              <span class="hint-desc">{{ hint.description }}</span>
+              <span class="keys-container">
+                <ng-container *ngFor="let key of hint.keys; let keyLast = last">
+                  <kbd>{{ key }}</kbd><span class="key-sep" *ngIf="!keyLast">{{ hint.separator ?? '/' }}</span>
+                </ng-container>
+              </span>
+            </span>
+            <span *ngIf="!last" class="divider"></span>
+          </ng-container>
+        </div>
+      </ng-container>
+    </div>
     <div class="spacer"></div>
     <trace-viewer-customization-panel></trace-viewer-customization-panel>
     <button *ngIf="useTraceViewerV2 && showHelpButton" type="button" mat-icon-button (click)="openHelpDialog()" title="Keyboard Shortcuts & Controls" aria-label="Keyboard Shortcuts & Controls">
@@ -126,18 +143,6 @@
       <as-split-area [size]="timelineHeightPercent">
         <div class="canvas-container" #canvasContainer>
           <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" (mousedown)="blurActiveElement()"></canvas>
-          <div class="timeline-status-bar-container">
-            <div class="timeline-status-bar" *ngIf="currentMouseModeConfig as config">
-              <ng-container *ngFor="let mode of [currentMouseMode]">
-                <span class="status-content">
-                  <mat-icon inline>{{ config.icon }}</mat-icon>
-                  <ng-container *ngFor="let hint of config.hints; let last = last">
-                    <ng-container *ngFor="let key of hint.keys; let keyLast = last"><kbd>{{ key }}</kbd><ng-container *ngIf="!keyLast">{{ hint.separator || ' / ' }}</ng-container></ng-container> {{ hint.description }}<span *ngIf="!last" class="divider"></span>
-                  </ng-container>
-                </span>
-              </ng-container>
-            </div>
-          </div>
           <timeline-player *ngIf="enableTimelinePlayer" (play)="onPlay()" (pause)="onPause()" (seek)="onSeek($event)" (speedChange)="onSpeedChange($event)" style="flex-shrink: 0;"></timeline-player>
         </div>
       </as-split-area>
