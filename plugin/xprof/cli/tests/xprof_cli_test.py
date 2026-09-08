@@ -98,6 +98,13 @@ class XProfCliTest(unittest.TestCase):
     self.cli.get_kernel_utilization('session_123', kernel_name='matmul')
     mock_get_kernel_util.assert_called_with('session_123', kernel_name='matmul')
 
+  @mock.patch.object(xprof_cli.XProfCli, 'upload_trace', autospec=True)
+  def test_upload_trace(self, mock_upload):
+    self.cli.upload_trace('/path/to/trace.xplane.pb', run_name='my_run')
+    mock_upload.assert_called_with(
+        '/path/to/trace.xplane.pb', run_name='my_run'
+    )
+
   @mock.patch.object(xprof_cli.fire, 'Fire')
   def test_main(self, mock_fire):
     xprof_cli.main([])

@@ -206,6 +206,16 @@ pytype_strict_contrib_test(
     ],
 )
 
+pytype_strict_contrib_test(
+    name = "oss_upload_trace_tool_test",
+    srcs = ["oss_upload_trace_tool_test.py"],
+    deps = [
+        "//plugin/xprof/cli/internal/oss:xprof_client",
+        "//plugin/xprof/cli/tools/oss:upload_trace_tool",
+        "@absl_py//absl/testing:absltest",
+    ],
+)
+
 py_library(
     name = "oracles",
     srcs = ["e2e/oracles.py"],
