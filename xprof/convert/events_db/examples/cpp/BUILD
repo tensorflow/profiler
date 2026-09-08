@@ -11,8 +11,8 @@ cc_binary(
     name = "xspace_to_parquet",
     srcs = ["xspace_to_parquet.cc"],
     deps = [
-        "//third_party/arrow:arrow_core",
-        "//third_party/arrow:util_hdrs",
+        "@arrow//:arrow_core",
+        "@arrow//:util_hdrs",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
         "@com_google_absl//absl/status",
