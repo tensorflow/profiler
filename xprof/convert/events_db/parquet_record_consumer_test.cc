@@ -294,7 +294,7 @@ TEST(ParquetRecordConsumerTest, CompressionTypeWithoutLevel) {
 
   ParquetExportOptions options;
   options.batch_size = 2;
-  options.compression_type = arrow::Compression::ZSTD;
+  options.compression_type = arrow::Compression::SNAPPY;
   // options.compression_level left as std::nullopt
 
   ASSERT_OK_AND_ASSIGN(

@@ -16,6 +16,7 @@ limitations under the License.
 #include <optional>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <vector>
 
 #include <gmock/gmock.h>
@@ -86,23 +87,41 @@ int RunCommand(const std::vector<std::string>& argv,
   return proc.Communicate(nullptr, stdout_output, stderr_output);
 }
 
-class CompressionTest
-    : public testing::TestWithParam<std::optional<std::string>> {};
+struct CompressionConfig {
+  std::optional<std::string> compression_type;
+  std::optional<int> compression_level;
+};
 
-TEST_P(CompressionTest, ConvertsEmptyXSpace) {
-  const std::string input_path = CreateTempFilePath("empty.xplane.pb");
+class CompressionTest : public testing::TestWithParam<
+                            std::tuple<CompressionConfig, /*is_empty=*/bool>> {
+};
+
+TEST_P(CompressionTest, ConvertsXSpaceToParquet) {
+  const auto& [config, is_empty] = GetParam();
+  const std::string input_path = CreateTempFilePath("test.xplane.pb");
   const std::string output_path = CreateTempFilePath("out.parquet");
-  CreateEmptyFile(input_path);
+  if (is_empty) {
+    CreateEmptyFile(input_path);
+  } else {
+    CreateTestXSpaceFile(input_path);
+  }
 
   std::vector<std::string> args = {
       GetBinaryPath(), absl::StrCat("--input_path=", input_path),
       absl::StrCat("--output_path=", output_path), "--batch_size=512",
       "--max_record_count=100"};
-  if (GetParam().has_value()) {
-    args.push_back(absl::StrCat("--compression_type=", *GetParam()));
+  if (config.compression_type.has_value()) {
+    args.push_back(
+        absl::StrCat("--compression_type=", *config.compression_type));
+  }
+  if (config.compression_level.has_value()) {
+    args.push_back(
+        absl::StrCat("--compression_level=", *config.compression_level));
   }
 
-  EXPECT_EQ(RunCommand(args), 0);
+  std::string stdout_output;
+  EXPECT_EQ(RunCommand(args, /*stderr_output=*/nullptr, &stdout_output), 0);
+  EXPECT_THAT(stdout_output, HasSubstr("with parse status: COMPLETE"));
 
   // Verify that the generated parquet file is valid and contains Parquet magic
   // bytes.
@@ -113,16 +132,26 @@ TEST_P(CompressionTest, ConvertsEmptyXSpace) {
   EXPECT_THAT(content, EndsWith("PAR1"));
 }
 
+std::string CompressionTestParamName(
+    const testing::TestParamInfo<std::tuple<CompressionConfig, bool>>& info) {
+  const auto& [config, is_empty] = info.param;
+  std::string codec_name = config.compression_type.value_or("Default");
+  if (config.compression_level.has_value()) {
+    absl::StrAppend(&codec_name, "Level", *config.compression_level);
+  }
+  return absl::StrCat(codec_name,
+                      is_empty ? "WithEmptyInput" : "WithNonEmptyInput");
+}
+
 INSTANTIATE_TEST_SUITE_P(
     CompressionTypes, CompressionTest,
-    testing::Values<std::optional<std::string>>(std::nullopt, "", "SNAPPY",
-                                                "ZSTD"),
-    [](const testing::TestParamInfo<std::optional<std::string>>& info)
-        -> std::string {
-      if (!info.param.has_value()) return "Default";
-      if (info.param->empty()) return "ExplicitEmpty";
-      return *info.param;
-    });
+    testing::Combine(testing::Values<CompressionConfig>(
+                         CompressionConfig{std::nullopt, std::nullopt},
+                         CompressionConfig{"SNAPPY", std::nullopt},
+                         CompressionConfig{"ZSTD", std::nullopt},
+                         CompressionConfig{"ZSTD", 2}),
+                     testing::Bool()),
+    CompressionTestParamName);
 
 TEST(XSpaceToParquetTest,
      ConvertXSpaceToParquetReturnsErrorIfInputPathIsEmpty) {
