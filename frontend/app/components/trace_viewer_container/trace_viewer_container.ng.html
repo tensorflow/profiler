@@ -124,22 +124,62 @@
   <div class="main-content-area">
     <as-split direction="vertical" (dragEnd)="onDragEnd($event)">
       <as-split-area [size]="timelineHeightPercent">
-        <div class="canvas-container" #canvasContainer>
-          <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" (mousedown)="blurActiveElement()"></canvas>
-          <div class="timeline-status-bar-container">
-            <div class="timeline-status-bar" *ngIf="currentMouseModeConfig as config">
-              <ng-container *ngFor="let mode of [currentMouseMode]">
-                <span class="status-content">
-                  <mat-icon inline>{{ config.icon }}</mat-icon>
-                  <ng-container *ngFor="let hint of config.hints; let last = last">
-                    <ng-container *ngFor="let key of hint.keys; let keyLast = last"><kbd>{{ key }}</kbd><ng-container *ngIf="!keyLast">{{ hint.separator || ' / ' }}</ng-container></ng-container> {{ hint.description }}<span *ngIf="!last" class="divider"></span>
+        <as-split direction="horizontal" [useTransition]="true">
+          <as-split-area [size]="75">
+            <div class="canvas-container" #canvasContainer>
+              <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" (mousedown)="blurActiveElement()"></canvas>
+              <div class="timeline-status-bar-container">
+                <div class="timeline-status-bar" *ngIf="currentMouseModeConfig as config">
+                  <ng-container *ngFor="let mode of [currentMouseMode]">
+                    <span class="status-content">
+                      <mat-icon inline>{{ config.icon }}</mat-icon>
+                      <ng-container *ngFor="let hint of config.hints; let last = last">
+                        <ng-container *ngFor="let key of hint.keys; let keyLast = last"><kbd>{{ key }}</kbd><ng-container *ngIf="!keyLast">{{ hint.separator || ' / ' }}</ng-container></ng-container> {{ hint.description }}<span *ngIf="!last" class="divider"></span>
+                      </ng-container>
+                    </span>
                   </ng-container>
-                </span>
-              </ng-container>
+                </div>
+              </div>
+              <timeline-player *ngIf="enableTimelinePlayer" (play)="onPlay()" (pause)="onPause()" (seek)="onSeek($event)" (speedChange)="onSpeedChange($event)" style="flex-shrink: 0;"></timeline-player>
             </div>
-          </div>
-          <timeline-player *ngIf="enableTimelinePlayer" (play)="onPlay()" (pause)="onPause()" (seek)="onSeek($event)" (speedChange)="onSpeedChange($event)" style="flex-shrink: 0;"></timeline-player>
-        </div>
+          </as-split-area>
+          <as-split-area [size]="25" [visible]="isPlayerSidePanelOpen">
+            <mat-card class="timeline-side-panel-card" appearance="outlined">
+              <mat-card-header class="timeline-side-panel-header">
+                <mat-card-title class="panel-title">Active Events</mat-card-title>
+                <button mat-icon-button class="close-btn" (click)="isPlayerSidePanelOpen = false" title="Close"><mat-icon>close</mat-icon></button>
+              </mat-card-header>
+              <mat-card-content class="timeline-side-panel-content">
+                <div *ngIf="timelinePlayer?.activeEvents?.length">
+                  <h4 class="section-title">Events</h4>
+                  <mat-list>
+                    <mat-card *ngFor="let ev of timelinePlayer?.activeEvents" class="active-item-card" appearance="outlined">
+                      <mat-list-item *ngFor="let key of getObjectKeys(ev)">
+                        <span matListItemTitle>{{key}}</span>
+                        <span matListItemLine>{{ev[key]}}</span>
+                      </mat-list-item>
+                    </mat-card>
+                  </mat-list>
+                </div>
+                <div *ngIf="timelinePlayer?.activeCounters?.length">
+                  <h4 class="section-title">Counters</h4>
+                  <mat-list>
+                    <mat-card *ngFor="let cnt of timelinePlayer?.activeCounters" class="active-item-card" appearance="outlined">
+                      <mat-list-item *ngFor="let key of getObjectKeys(cnt)">
+                        <span matListItemTitle>{{key}}</span>
+                        <span matListItemLine>{{cnt[key]}}</span>
+                      </mat-list-item>
+                    </mat-card>
+                  </mat-list>
+                </div>
+                <div *ngIf="!timelinePlayer?.activeEvents?.length && !timelinePlayer?.activeCounters?.length" class="no-data">
+                  <mat-icon class="no-data-icon">info</mat-icon>
+                  <span>No active events at this time.</span>
+                </div>
+              </mat-card-content>
+            </mat-card>
+          </as-split-area>
+        </as-split>
       </as-split-area>
       <as-split-area [size]="detailHeightPercent" [visible]="!!selectedEvent">
         <div *ngIf="selectedEvent" #drawer class="drawer">

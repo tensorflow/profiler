@@ -152,6 +152,15 @@ button.control-button {
   margin: 0;
 }
 
+.auto-open-toggle {
+  margin-left: 16px;
+  ::ng-deep .mdc-label {
+    color: var(--md-sys-color-on-surface);
+    font-size: 13px;
+    font-weight: 500;
+  }
+}
+
 .tooltips-overlay {
   position: absolute;
   top: -100px;
