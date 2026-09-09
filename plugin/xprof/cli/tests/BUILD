@@ -206,6 +206,16 @@ pytype_strict_contrib_test(
     ],
 )
 
+pytype_strict_contrib_test(
+    name = "oss_upload_trace_tool_test",
+    srcs = ["oss_upload_trace_tool_test.py"],
+    deps = [
+        "//plugin/xprof/cli/internal/oss:xprof_client",
+        "//plugin/xprof/cli/tools/oss:upload_trace_tool",
+        "@absl_py//absl/testing:absltest",
+    ],
+)
+
 py_library(
     name = "oracles",
     srcs = ["e2e/oracles.py"],
@@ -328,19 +338,5 @@ py_test(
         "//plugin/xprof/cli/tools:verify_numerical_parity_tool",
         "@absl_py//absl/testing:absltest",
         "@absl_py//absl/testing:parameterized",
-    ],
-)
-
-pytype_strict_contrib_test(
-    name = "get_source_file_tool_test",
-    srcs = ["get_source_file_tool_test.py"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "//plugin/xprof/cli/internal/oss:hlo_tools",
-        "//plugin/xprof/cli/tools:get_source_file_tool",
-        "@absl_py//absl/testing:absltest",
-        "@absl_py//absl/testing:flagsaver",
-        "@absl_py//absl/testing:parameterized",
-        "@pypi//absl_py",
     ],
 )

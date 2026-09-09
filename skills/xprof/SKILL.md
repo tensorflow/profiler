@@ -100,6 +100,18 @@ When asked to find performance bottlenecks for a session:
 6.  **Report** findings directly to the user with concrete data points derived
     from the analysis.
 
+### Profile Collection & Ingestion
+
+When collecting a performance trace or preparing an external trace for
+analysis:
+
+1.  **Collect Profile**: For JAX, PyTorch, or TensorFlow workloads, capture
+    traces programmatically or via remote profiler servers (see
+    [Profile Collection Guide](references/collect_profile.md)).
+2.  **Import Standalone Traces**: For pre-existing trace files (`.xplane.pb` or
+    `.xspace.pb`), run `xprof upload_trace` to stage them into your
+    `<logdir>` (see [Import Trace File](references/upload_trace.md)).
+
 ### Low Level Optimizer (LLO) & Custom Call Profiling
 
 > ⚠️ **EXPERIMENTAL FEATURE**: Low Level Optimizer (LLO) analysis and custom
@@ -185,6 +197,9 @@ Pallas or Mosaic):
     module performance, inspect HLO operations, and query timeline events.
 -   **[Import Trace File](references/upload_trace.md)**: Import raw trace files
     into an xprof logdir for analysis.
+-   **[Collect XProf Profile](references/collect_profile.md)**: Collect
+    performance profiles across JAX, PyTorch, and TensorFlow workloads via
+    programmatic tracing or remote capture.
 -   **[Get Smart Suggestions](references/smart_suggestions.md)**: Dynamic
     bottleneck rules and static HLO optimization patterns (data types, einsum
     folding, layout alignment).

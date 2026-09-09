@@ -6,6 +6,7 @@ import json
 import pathlib
 import re
 import sys
+import traceback
 from typing import Any
 
 from absl import app
@@ -37,6 +38,7 @@ from xprof.cli.tools import get_roofline_model_tool
 from xprof.cli.tools import get_top_hlo_ops_tool
 from xprof.cli.tools import get_utilization_viewer_tool
 from xprof.cli.tools import verify_numerical_parity_tool
+from xprof.cli.tools.oss import upload_trace_tool
 
 
 def cli_main() -> dict[str, Any]:
@@ -46,7 +48,7 @@ def cli_main() -> dict[str, Any]:
     A dictionary of tool names to functions.
   """
   return {
-      # 32 Core Tools (Available in both 1P and 3P):
+      # 33 Core Tools (Available in both 1P and 3P):
       # keep-sorted start
       "aggregate_xplane_events": xplane_tools.aggregate_xplane_events,
       "check_host_boundness": check_host_boundness_tool.check_host_boundness,
@@ -94,6 +96,7 @@ def cli_main() -> dict[str, Any]:
       "get_xspace_proto": xplane_tools.get_xspace_proto,
       "list_hlo_modules": hlo_tools.list_hlo_modules,
       "list_xplane_events": xplane_tools.list_xplane_events,
+      "upload_trace": upload_trace_tool.upload_trace,
       "verify_numerical_parity": (
           verify_numerical_parity_tool.verify_numerical_parity
       ),
@@ -404,15 +407,24 @@ def _check_xprof_version() -> None:
     pass
 
 
-def _emit_error(reason: str, message: str, exit_code: int) -> None:
+def _emit_error(
+    reason: str,
+    message: str,
+    exit_code: int,
+    traceback_str: str | None = None,
+) -> None:
   """Emits structured JSON on stdout and human-readable header on stderr."""
   payload = {
       "status": "ERROR",
       "reason": reason,
       "error": message,
   }
+  if traceback_str:
+    payload["traceback"] = traceback_str
   sys.stdout.write(json.dumps(payload, indent=2) + "\n")
   sys.stderr.write(f"{reason}: {message}\n")
+  if traceback_str:
+    sys.stderr.write(f"\n{traceback_str}\n")
   sys.exit(exit_code)
 
 
@@ -420,7 +432,7 @@ _UNDERSCORE_NUM_PATTERN = re.compile(r"^\d+(_\d+)+$")
 
 
 def _preprocess_argv(argv: list[str] | None) -> list[str] | None:
-  """Preprocesses CLI arguments so timestamp session IDs with underscores are preserved as strings in Fire."""
+  """Preprocesses CLI args to preserve timestamp session IDs as strings."""
   if not argv:
     return argv
   processed = []
@@ -456,13 +468,20 @@ def main(argv=None) -> None:
     fire.Fire(XProfCli(), command=processed_command, name="xprof")
   except (fire.core.FireError, TypeError) as e:
     _emit_error("USAGE_ERROR", str(e), 2)
-  except FileNotFoundError as e:
+  except OSError as e:
     _emit_error("PATH_ERROR", str(e), 3)
   except ValueError as e:
     _emit_error("INVALID_VALUE", str(e), 4)
   except Exception as e:  # pylint: disable=broad-exception-caught
     logging.exception("Unhandled defect in xprof_cli")
-    _emit_error("INTERNAL_ERROR", f"{e}\nPlease report to b/547935083", 1)
+    tb = traceback.format_exc().strip()
+    report_target = "https://github.com/openxla/xprof/issues"
+    _emit_error(
+        "INTERNAL_ERROR",
+        f"{e}\nPlease report to {report_target}",
+        1,
+        traceback_str=tb,
+    )
 
 
 if __name__ == "__main__":

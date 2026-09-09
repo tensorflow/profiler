@@ -208,16 +208,7 @@ pytype_strict_library(
     ],
 )
 
-pytype_strict_library(
+alias(
     name = "get_source_file_tool",
-    srcs = ["get_source_file_tool.py"],
-    visibility = [
-        "//plugin/xprof:__subpackages__",
-        "//vr:__subpackages__",
-    ],
-    deps = [
-        "//plugin/xprof/cli/internal/oss:hlo_tools",
-        "@absl_py//absl/flags",
-        "@pypi//absl_py",
-    ],
+    actual = "//plugin/xprof/cli/tools/oss:get_source_file_tool",
 )

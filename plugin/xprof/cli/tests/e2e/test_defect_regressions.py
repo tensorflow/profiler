@@ -199,7 +199,12 @@ class DefectRegressionsTest(parameterized.TestCase):
   def test_d14_llo_tools_unavailable_status(self):
     """D-14: LLO tools return UNAVAILABLE status in standard builds."""
     try:
-      from xprof.convert import _pywrap_profiler_plugin  # pylint: disable=g-import-not-at-top
+      try:
+        # pylint: disable=g-import-not-at-top
+        from xprof.convert import _pywrap_profiler_plugin
+      except ImportError:
+        from xprof.convert import _pywrap_profiler_plugin
+        # pylint: enable=g-import-not-at-top
 
       built_with_embedded = _pywrap_profiler_plugin.built_with_embedded()
     except (ImportError, AttributeError):
@@ -268,7 +273,12 @@ class DefectRegressionsTest(parameterized.TestCase):
   def test_d17_llo_analysis_opcode_resolution_and_multi_module(self):
     """D-17: LLO analysis resolves string opcodes and handles multi-modules."""
     try:
-      from xprof.convert import _pywrap_profiler_plugin  # pylint: disable=g-import-not-at-top
+      try:
+        # pylint: disable=g-import-not-at-top
+        from xprof.convert import _pywrap_profiler_plugin
+      except ImportError:
+        from xprof.convert import _pywrap_profiler_plugin
+        # pylint: enable=g-import-not-at-top
 
       built_with_embedded = _pywrap_profiler_plugin.built_with_embedded()
     except (ImportError, AttributeError):
@@ -360,7 +370,7 @@ class DefectRegressionsTest(parameterized.TestCase):
 
   def test_d23_get_hlo_neighborhood_default_mode_bfs_expansion(self):
     """D-23: get_hlo_neighborhood expands BFS in default mode (short_txt)."""
-    session_dir = self.create_tempdir().full_path
+    session_dir = tempfile.mkdtemp()
     proto_file = (
         pathlib.Path(session_dir) / "module_0001.jit_compute.hlo_proto.pb"
     )
