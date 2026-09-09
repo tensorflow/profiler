@@ -98,6 +98,11 @@ class XProfCliTest(unittest.TestCase):
     self.cli.get_kernel_utilization('session_123', kernel_name='matmul')
     mock_get_kernel_util.assert_called_with('session_123', kernel_name='matmul')
 
+  @mock.patch.object(xprof_cli.XProfCli, 'upload_trace', autospec=True)
+  def test_upload_trace(self, mock_upload):
+    self.cli.upload_trace('/path/to/trace.xplane.pb')
+    mock_upload.assert_called_with('/path/to/trace.xplane.pb')
+
   @mock.patch.object(xprof_cli.fire, 'Fire')
   def test_main(self, mock_fire):
     xprof_cli.main([])
@@ -110,8 +115,10 @@ class XProfCliTest(unittest.TestCase):
     tools_dir = cli_module_dir / 'tools'
     tool_files = [
         f
-        for f in tools_dir.glob('*_tool.py')
-        if f.name != '__init__.py' and not f.name.startswith('test_')
+        for f in tools_dir.rglob('*_tool.py')
+        if f.name != '__init__.py'
+        and not f.name.startswith('test_')
+        and 'google' not in f.parts
     ]
 
     cli_dict = xprof_cli.cli_main()
@@ -131,7 +138,7 @@ class XProfCliTest(unittest.TestCase):
 
   @mock.patch.object(xprof_cli, '_is_oss', return_value=True)
   def test_wrap_with_logdir_preserves_valid_signature_in_oss(self, _):
-    """Ensures _wrap_with_logdir creates valid inspect signatures in OSS mode."""
+    """Ensures _wrap_with_logdir creates valid inspect signatures in OSS."""
     # Test on all real registered tools.
     for tool_name, tool_func in xprof_cli.cli_main().items():
       wrapped = xprof_cli._wrap_with_logdir(tool_func)
@@ -174,6 +181,7 @@ class XProfCliTest(unittest.TestCase):
     payload = json.loads(mock_stdout.write.call_args_list[0][0][0])
     self.assertEqual(payload['status'], 'ERROR')
     self.assertEqual(payload['reason'], 'USAGE_ERROR')
+    self.assertNotIn('traceback', payload)
     mock_stderr.write.assert_called()
     self.assertIn('USAGE_ERROR', mock_stderr.write.call_args[0][0])
 
@@ -190,6 +198,45 @@ class XProfCliTest(unittest.TestCase):
     payload = json.loads(mock_stdout.write.call_args_list[0][0][0])
     self.assertEqual(payload['status'], 'ERROR')
     self.assertEqual(payload['reason'], 'PATH_ERROR')
+    self.assertNotIn('traceback', payload)
+    mock_stderr.write.assert_called()
+    self.assertIn('PATH_ERROR', mock_stderr.write.call_args[0][0])
+
+  @mock.patch.object(
+      xprof_cli.fire,
+      'Fire',
+      side_effect=PermissionError('Permission denied'),
+  )
+  @mock.patch('sys.stdout')
+  @mock.patch('sys.stderr')
+  def test_main_permission_error_exit_3(self, mock_stderr, mock_stdout, _):
+    with self.assertRaises(SystemExit) as cm:
+      xprof_cli.main(['xprof', 'upload_trace', 'trace.xplane.pb'])
+    self.assertEqual(cm.exception.code, 3)
+    mock_stdout.write.assert_called()
+    payload = json.loads(mock_stdout.write.call_args_list[0][0][0])
+    self.assertEqual(payload['status'], 'ERROR')
+    self.assertEqual(payload['reason'], 'PATH_ERROR')
+    self.assertNotIn('traceback', payload)
+    mock_stderr.write.assert_called()
+    self.assertIn('PATH_ERROR', mock_stderr.write.call_args[0][0])
+
+  @mock.patch.object(
+      xprof_cli.fire,
+      'Fire',
+      side_effect=OSError(28, 'No space left on device'),
+  )
+  @mock.patch('sys.stdout')
+  @mock.patch('sys.stderr')
+  def test_main_os_error_disk_full_exit_3(self, mock_stderr, mock_stdout, _):
+    with self.assertRaises(SystemExit) as cm:
+      xprof_cli.main(['xprof', 'upload_trace', 'trace.xplane.pb'])
+    self.assertEqual(cm.exception.code, 3)
+    mock_stdout.write.assert_called()
+    payload = json.loads(mock_stdout.write.call_args_list[0][0][0])
+    self.assertEqual(payload['status'], 'ERROR')
+    self.assertEqual(payload['reason'], 'PATH_ERROR')
+    self.assertNotIn('traceback', payload)
     mock_stderr.write.assert_called()
     self.assertIn('PATH_ERROR', mock_stderr.write.call_args[0][0])
 
@@ -206,6 +253,7 @@ class XProfCliTest(unittest.TestCase):
     payload = json.loads(mock_stdout.write.call_args_list[0][0][0])
     self.assertEqual(payload['status'], 'ERROR')
     self.assertEqual(payload['reason'], 'INVALID_VALUE')
+    self.assertNotIn('traceback', payload)
     mock_stderr.write.assert_called()
     self.assertIn('INVALID_VALUE', mock_stderr.write.call_args[0][0])
 
@@ -222,8 +270,70 @@ class XProfCliTest(unittest.TestCase):
     payload = json.loads(mock_stdout.write.call_args_list[0][0][0])
     self.assertEqual(payload['status'], 'ERROR')
     self.assertEqual(payload['reason'], 'INTERNAL_ERROR')
+    expected_bug_target = 'https://github.com/openxla/xprof/issues'
+    self.assertIn(expected_bug_target, payload['error'])
+    self.assertIn('traceback', payload)
+    self.assertIn('RuntimeError: Unexpected failure', payload['traceback'])
     mock_stderr.write.assert_called()
-    self.assertIn('INTERNAL_ERROR', mock_stderr.write.call_args[0][0])
+    stderr_output = ''.join(c[0][0] for c in mock_stderr.write.call_args_list)
+    self.assertIn('INTERNAL_ERROR', stderr_output)
+    self.assertIn('RuntimeError: Unexpected failure', stderr_output)
+
+  @mock.patch.object(
+      xprof_cli.XProfCli,
+      'upload_trace',
+      side_effect=ValueError("Unsupported file format 'trace.txt'"),
+  )
+  @mock.patch('sys.stdout')
+  @mock.patch('sys.stderr')
+  def test_main_upload_trace_value_error_exit_4(
+      self, mock_stderr, mock_stdout, _
+  ):
+    with self.assertRaises(SystemExit) as cm:
+      xprof_cli.main(['xprof', 'upload_trace', 'trace.txt'])
+    self.assertEqual(cm.exception.code, 4)
+    payload = json.loads(mock_stdout.write.call_args_list[0][0][0])
+    self.assertEqual(payload['status'], 'ERROR')
+    self.assertEqual(payload['reason'], 'INVALID_VALUE')
+    mock_stderr.write.assert_called()
+
+  @mock.patch.object(
+      xprof_cli.XProfCli,
+      'upload_trace',
+      side_effect=FileNotFoundError('Source trace file does not exist.'),
+  )
+  @mock.patch('sys.stdout')
+  @mock.patch('sys.stderr')
+  def test_main_upload_trace_file_not_found_exit_3(
+      self, mock_stderr, mock_stdout, _
+  ):
+    with self.assertRaises(SystemExit) as cm:
+      xprof_cli.main(['xprof', 'upload_trace', 'missing.xplane.pb'])
+    self.assertEqual(cm.exception.code, 3)
+    payload = json.loads(mock_stdout.write.call_args_list[0][0][0])
+    self.assertEqual(payload['status'], 'ERROR')
+    self.assertEqual(payload['reason'], 'PATH_ERROR')
+    mock_stderr.write.assert_called()
+
+  @mock.patch.object(
+      xprof_cli.XProfCli,
+      'upload_trace',
+      side_effect=RuntimeError(
+          'Failed to upload trace: Unexpected internal state'
+      ),
+  )
+  @mock.patch('sys.stdout')
+  @mock.patch('sys.stderr')
+  def test_main_upload_trace_runtime_error_exit_1(
+      self, mock_stderr, mock_stdout, _
+  ):
+    with self.assertRaises(SystemExit) as cm:
+      xprof_cli.main(['xprof', 'upload_trace', 'trace.xplane.pb'])
+    self.assertEqual(cm.exception.code, 1)
+    payload = json.loads(mock_stdout.write.call_args_list[0][0][0])
+    self.assertEqual(payload['status'], 'ERROR')
+    self.assertEqual(payload['reason'], 'INTERNAL_ERROR')
+    mock_stderr.write.assert_called()
 
   def test_empty_session_id_raises_value_error(self):
     """Ensures empty session_id is rejected with ValueError."""
@@ -237,7 +347,7 @@ class XProfCliTest(unittest.TestCase):
       wrapped(session_id='')
 
   def test_preprocess_argv_quotes_timestamp_tokens(self):
-    """Ensures timestamp tokens with underscores are quoted to prevent PEP 515 parsing."""
+    """Ensures timestamp tokens with underscores are quoted for PEP 515."""
     raw_args = [
         'get_kernel_stats',
         '2026_08_24_06_33_12',
