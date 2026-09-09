@@ -81,15 +81,16 @@ Parquet Exporting & Streaming:
 from __future__ import annotations
 
 from collections.abc import Sequence
-import dataclasses
-import enum
 from typing import TypeAlias
 
 from xprof.convert.events_db.python import pywrap_events_db
+from xprof.convert.events_db.python import pywrap_events_db_c_api
 
 # Re-export core C++ classes, enums, and parser functions
 # go/keep-sorted start
+ArrowCompressionType = pywrap_events_db_c_api.ArrowCompressionType
 FieldIndex = pywrap_events_db.FieldIndex
+ParquetExportOptions = pywrap_events_db_c_api.ParquetExportOptions
 ParquetRecordConsumer = pywrap_events_db.ParquetRecordConsumer
 ParseStatus = pywrap_events_db.ParseStatus
 Record = pywrap_events_db.Record
@@ -180,53 +181,6 @@ Repeated Field Semantics (Zero-Copy Sequence Views):
       print(safe_tensors[0])  # Safe: safe_tensors is an independent copy
       ```
 """
-
-
-class ArrowCompressionType(enum.Enum):
-  """Compression codec applied to Parquet data pages."""
-
-  # go/keep-sorted start
-  BROTLI = "BROTLI"
-  BZ2 = "BZ2"
-  GZIP = "GZIP"
-  LZ4 = "LZ4"
-  LZ4_FRAME = "LZ4_FRAME"
-  LZ4_HADOOP = "LZ4_HADOOP"
-  LZO = "LZO"
-  SNAPPY = "SNAPPY"
-  UNCOMPRESSED = "UNCOMPRESSED"
-  ZSTD = "ZSTD"
-  # go/keep-sorted end
-
-
-@dataclasses.dataclass(frozen=True, kw_only=True, slots=True)
-class ParquetExportOptions:
-  """Configuration options for exporting events DB records to Apache Parquet.
-
-  Attributes:
-    max_record_count: If set, at most this many records will be written before
-      early stopping.
-    batch_size: Number of records buffered before flushing a batch to disk.
-    compression_type: Compression codec applied to Parquet data pages.
-    compression_level: Compressor-specific compression level.
-  """
-
-  max_record_count: int | None = None
-  batch_size: int = 65536
-  compression_type: ArrowCompressionType | None = None
-  compression_level: int | None = None
-
-  def __post_init__(self) -> None:
-    """Validate the options."""
-    if self.max_record_count is not None and self.max_record_count <= 0:
-      raise ValueError(
-          f"max_record_count must be positive, got {self.max_record_count}"
-      )
-    if self.batch_size <= 0:
-      raise ValueError(f"batch_size must be positive, got {self.batch_size}")
-    if self.compression_level is not None and self.compression_type is None:
-      raise ValueError("compression_level requires compression_type to be set.")
-
 
 __all__ = [
     # go/keep-sorted start

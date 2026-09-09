@@ -41,3 +41,19 @@ cc_test(
         "@tsl//tsl/profiler/protobuf:xplane_proto_cc",
     ],
 )
+
+pytype_strict_library(
+    name = "pywrap_events_db_c_api_py",
+    srcs = ["pywrap_events_db_c_api.py"],
+)
+
+pytype_strict_contrib_test(
+    name = "pywrap_events_db_c_api_test_py",
+    srcs = ["pywrap_events_db_c_api_test.py"],
+    main = "pywrap_events_db_c_api_test.py",
+    deps = [
+        ":pywrap_events_db_c_api_py",
+        "@absl_py//absl/testing:absltest",
+        "@absl_py//absl/testing:parameterized",
+    ],
+)
