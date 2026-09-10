@@ -430,30 +430,99 @@ def _emit_error(
 
 _UNDERSCORE_NUM_PATTERN = re.compile(r"^\d+(_\d+)+$")
 
+# Session-directory alias flags. Autonomous agents frequently invoke tools with
+# these named flags instead of the first positional argument. They are all
+# normalized to the first positional argument, which _wrap_with_logdir() routes
+# to whichever parameter (session_id/source) a tool declares. See b/555254723.
+_SESSION_ALIAS_FLAGS = ("--session_dir", "--session_path", "--source")
+
+# Output-format flags. The CLI always emits JSON, so these are accepted as
+# documented no-ops to avoid Fire usage errors when agents pass them.
+_OUTPUT_FORMAT_FLAGS = ("-o", "--output_format")
+
+
+def _quote_if_timestamp(token: str) -> str:
+  """Quotes underscore timestamp tokens so Fire keeps them as strings."""
+  if _UNDERSCORE_NUM_PATTERN.match(token) and not (
+      token.startswith(('"', "'")) and token.endswith(('"', "'"))
+  ):
+    return f'"{token}"'
+  return token
+
 
 def _preprocess_argv(argv: list[str] | None) -> list[str] | None:
-  """Preprocesses CLI args to preserve timestamp session IDs as strings."""
+  """Preprocesses CLI args for robustness against common agent invocations.
+
+  Three normalizations are applied so autonomous agents and humans can use
+  intuitive flags without triggering Python Fire argument errors:
+
+    1. Session-directory alias flags (``--session_dir``, ``--session_path``,
+       ``--source``) are rewritten to the first positional argument.
+    2. Output-format flags (``-o``/``--output_format``) are accepted and
+       dropped as no-ops, since the CLI always emits JSON.
+    3. Timestamp session IDs containing underscores are quoted so Fire does not
+       interpret them as PEP 515 numeric literals.
+
+  Args:
+    argv: The raw argument vector (excluding the program name), or None.
+
+  Returns:
+    The normalized argument vector, or the original value if it was empty.
+  """
   if not argv:
     return argv
+
+  # Phase 1: drop output-format no-ops and extract any session-dir alias value,
+  # collecting the remaining tokens (argv[0] is the subcommand name).
+  tokens: list[str] = []
+  alias_value: str | None = None
+  skip_next = False
+  n = len(argv)
+  for i, arg in enumerate(argv):
+    if skip_next:
+      skip_next = False
+      continue
+    if arg.startswith("-") and "=" in arg:
+      flag, val = arg.split("=", 1)
+    else:
+      flag, val = arg, None
+
+    if flag in _OUTPUT_FORMAT_FLAGS:
+      # Consume a separate value token (e.g. the "json" in "-o json").
+      if val is None and i + 1 < n and not argv[i + 1].startswith("-"):
+        skip_next = True
+      continue
+
+    if flag in _SESSION_ALIAS_FLAGS:
+      if val is None:
+        if i + 1 < n and not argv[i + 1].startswith("-"):
+          val = argv[i + 1]
+          skip_next = True
+        else:
+          val = ""
+      alias_value = val
+      continue
+
+    tokens.append(arg)
+
+  # Phase 2: re-inject the alias value as the first positional argument, so
+  # _wrap_with_logdir() routes it to whichever positional the tool declares.
+  if alias_value is not None:
+    if tokens:
+      tokens = [tokens[0], alias_value] + tokens[1:]
+    else:
+      tokens = [alias_value]
+
+  # Phase 3: preserve underscore-timestamp tokens as strings.
   processed = []
-  for arg in argv:
+  for arg in tokens:
     if arg.startswith("--") and "=" in arg:
       key, val = arg.split("=", 1)
-      if _UNDERSCORE_NUM_PATTERN.match(val) and not (
-          val.startswith(('"', "'")) and val.endswith(('"', "'"))
-      ):
-        processed.append(f'{key}="{val}"')
-      else:
-        processed.append(arg)
+      processed.append(f"{key}={_quote_if_timestamp(val)}")
     elif arg.startswith("-"):
       processed.append(arg)
     else:
-      if _UNDERSCORE_NUM_PATTERN.match(arg) and not (
-          arg.startswith(('"', "'")) and arg.endswith(('"', "'"))
-      ):
-        processed.append(f'"{arg}"')
-      else:
-        processed.append(arg)
+      processed.append(_quote_if_timestamp(arg))
   return processed
 
 

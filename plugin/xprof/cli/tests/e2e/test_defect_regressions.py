@@ -32,6 +32,7 @@ try:
   from xprof.cli.tools import get_roofline_model_tool
   from xprof.cli.tools import get_top_hlo_ops_tool
   from xprof.cli.tools import get_utilization_viewer_tool
+  from xprof.cli.tools.oss import upload_trace_tool
 except ImportError:
   absltest = None
   from xprof.cli import xprof_cli
@@ -48,6 +49,7 @@ except ImportError:
   from xprof.cli.tools import get_roofline_model_tool
   from xprof.cli.tools import get_top_hlo_ops_tool
   from xprof.cli.tools import get_utilization_viewer_tool
+  from xprof.cli.tools.oss import upload_trace_tool
 
 
 def _get_fixture_path(rel_path: str) -> str:
@@ -724,6 +726,42 @@ class DefectRegressionsTest(parameterized.TestCase):
     cli = xprof_cli.XProfCli()
     with self.assertRaises(ValueError):
       cli.get_overview("")
+
+  def test_d23_upload_trace_import_roundtrip(self):
+    """D-23: upload_trace imports a bare trace into a queryable logdir.
+
+    Regression guard for the OSS defect where `upload_trace` was gated 1P-only
+    and therefore absent from the exported OSS CLI, so the shipped reference doc
+    (`upload_trace.md`) documented a command that did not exist. Verifies the
+    OSS
+    tool imports a raw trace under a run_name and that the resulting run is
+    readable by a core analysis tool.
+    """
+    temp_dir = tempfile.mkdtemp()
+    self.addCleanup(lambda: shutil.rmtree(temp_dir, ignore_errors=True))
+
+    logdir = os.path.join(temp_dir, "logdir")
+    run_name = "imported_step_100"
+    xprof_client.get_client().set_logdir(logdir)
+
+    res_raw = upload_trace_tool.upload_trace(
+        file_path=self.t1_path, run_name=run_name
+    )
+    res = json.loads(res_raw) if isinstance(res_raw, str) else res_raw
+
+    # 1. The import must succeed (not the stale-doc "unknown command" failure).
+    self.assertEqual(res.get("status"), "success", msg=res)
+    self.assertTrue(os.path.isdir(res["run_path"]))
+    self.assertTrue(os.path.exists(res["imported_file"]))
+    self.assertEqual(
+        os.path.basename(res["imported_file"]), os.path.basename(self.t1_path)
+    )
+
+    # 2. Round-trip: the imported run is analyzable via a core tool.
+    cli = xprof_cli.XProfCli()
+    ov_raw = cli.get_overview(run_name, logdir=logdir)
+    ov = json.loads(ov_raw) if isinstance(ov_raw, str) else ov_raw
+    self.assertIsNotNone(ov)
 
 
 if __name__ == "__main__":
