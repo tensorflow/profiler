@@ -2,13 +2,14 @@ import inspect
 import json
 import pathlib
 from typing import Any
-import unittest
 from unittest import mock
 
+from absl.testing import absltest
+from absl.testing import parameterized
 from xprof.cli import xprof_cli
 
 
-class XProfCliTest(unittest.TestCase):
+class XProfCliTest(parameterized.TestCase):
 
   def setUp(self):
     super().setUp()
@@ -373,6 +374,35 @@ class XProfCliTest(unittest.TestCase):
         processed, ['list_xplane_events', 'sess1', '--limit=10', '-k=5']
     )
 
+  @parameterized.named_parameters(
+      (
+          'session_dir_equals',
+          ['get_overview', '--session_dir=/tmp/trace'],
+          ['get_overview', '/tmp/trace'],
+      ),
+      (
+          'session_path_equals_with_trailing_flags',
+          ['get_top_hlo_ops', '--session_path=/tmp/trace', '--limit=10'],
+          ['get_top_hlo_ops', '/tmp/trace', '--limit=10'],
+      ),
+      (
+          'source_space_separated',
+          ['get_overview', '--source', '/tmp/trace'],
+          ['get_overview', '/tmp/trace'],
+      ),
+  )
+  def test_d25_cli_argument_aliases(self, raw_argv, expected):
+    """b/555254723: session-dir aliases normalize to the first positional."""
+    self.assertEqual(xprof_cli._preprocess_argv(raw_argv), expected)
+
+  @mock.patch.object(xprof_cli.fire, 'Fire', autospec=True, spec_set=True)
+  def test_d25_cli_argument_aliases_reach_fire(self, mock_fire):
+    """b/555254723: aliased invocations reach Fire without usage errors."""
+    xprof_cli.main(['xprof', 'get_overview', '--session_dir=/tmp/trace'])
+    mock_fire.assert_called_once_with(
+        mock.ANY, command=['get_overview', '/tmp/trace'], name='xprof'
+    )
+
   def test_wrap_with_logdir_coerces_int_to_str(self):
     """Ensures int session_id and source parameters are coerced to string."""
     def dummy_tool(source: str, limit: int = 10):
@@ -385,4 +415,4 @@ class XProfCliTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-  unittest.main()
+  absltest.main()
