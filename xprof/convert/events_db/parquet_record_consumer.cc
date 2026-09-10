@@ -121,13 +121,13 @@ struct ParquetRecordConsumer::Impl {
        std::unique_ptr<parquet::arrow::FileWriter> file_writer)
       : file_path(file_path),
         options(std::move(options)),
+        batch_size(this->options.batch_size.value_or(1 << 16)),
         indices(indices),
         executor(executor_factory()),
         arrow_schema(std::move(arrow_schema)),
         outfile(std::move(outfile)),
         file_writer(std::move(file_writer)),
-        batches{Batch(indices, this->options.batch_size),
-                Batch(indices, this->options.batch_size)} {}
+        batches{Batch(indices, batch_size), Batch(indices, batch_size)} {}
 
   ~Impl() { executor->JoinAll(); }
 
@@ -155,8 +155,8 @@ struct ParquetRecordConsumer::Impl {
     // It is loaded here using `memory_order_acquire` to guarantee that we
     // see the updated value.
     const uint64_t curr_epoch = epoch.load(std::memory_order_acquire);
-    const uint64_t next_epoch = seq / options.batch_size;
-    const uint32_t next_index = seq % options.batch_size;
+    const uint64_t next_epoch = seq / batch_size;
+    const uint32_t next_index = seq % batch_size;
     Batch& batch = batches[next_epoch % 2];
 
     // We must wait if we are switching epochs and the previous records in the
@@ -171,7 +171,7 @@ struct ParquetRecordConsumer::Impl {
     const bool failed_before = failed.load(std::memory_order_acquire);
     if (!failed_before) batch.Fill(record, next_index);
     if (batch.ready_count.fetch_add(1, std::memory_order_release) + 1 ==
-        options.batch_size) {
+        batch_size) {
       WaitIfEpochIsTooFarBehind(next_epoch);
       executor->Execute([this, &batch] { WriteBatch(batch); });
     }
@@ -188,8 +188,8 @@ struct ParquetRecordConsumer::Impl {
   absl::Status Finalize(const absl::StatusOr<ParseStatus>& result) {
     // No other threads are running `Consume` at this point.
     const uint64_t seq = record_count.load(std::memory_order_relaxed);
-    if (result.ok() && seq % options.batch_size != 0) {
-      const uint64_t epoch_num = seq / options.batch_size;
+    if (result.ok() && seq % batch_size != 0) {
+      const uint64_t epoch_num = seq / batch_size;
       Batch& batch = batches[epoch_num % 2];
       WaitIfEpochIsTooFarBehind(epoch_num);
       executor->Execute([this, &batch] { WriteBatch(batch); });
@@ -254,6 +254,7 @@ struct ParquetRecordConsumer::Impl {
 
   const std::string file_path;
   const ParquetExportOptions options;
+  const uint32_t batch_size;
   const internal::FieldIndices indices;
   const std::unique_ptr<tensorflow::profiler::Executor> executor;
   const std::shared_ptr<arrow::Schema> arrow_schema;
@@ -278,7 +279,7 @@ absl::StatusOr<ParquetRecordConsumer> ParquetRecordConsumer::Build(
     Schema& schema, absl::string_view file_path,
     tensorflow::profiler::ExecutorFactoryRef executor_factory,
     ParquetExportOptions options) {
-  if (options.batch_size == 0) {
+  if (options.batch_size.has_value() && *options.batch_size == 0) {
     return absl::InvalidArgumentError("batch_size must be positive.");
   }
   if (options.compression_level.has_value() &&

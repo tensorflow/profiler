@@ -51,7 +51,7 @@ class ParquetExportOptions:
   """
 
   max_record_count: int | None = None
-  batch_size: int = 65536
+  batch_size: int | None = None
   compression_type: ArrowCompressionType | None = None
   compression_level: int | None = None
 
@@ -61,7 +61,7 @@ class ParquetExportOptions:
       raise ValueError(
           f"max_record_count must be positive, got {self.max_record_count}"
       )
-    if self.batch_size <= 0:
+    if self.batch_size is not None and self.batch_size <= 0:
       raise ValueError(f"batch_size must be positive, got {self.batch_size}")
     if self.compression_level is not None and self.compression_type is None:
       raise ValueError("compression_level requires compression_type to be set.")
@@ -189,7 +189,7 @@ def xspace_to_parquet(
   opts = options or ParquetExportOptions()
   c_input_path = os.fspath(input_path).encode("utf-8")
   c_output_path = os.fspath(output_path).encode("utf-8")
-  c_batch_size = opts.batch_size
+  c_batch_size = opts.batch_size if opts.batch_size is not None else 0
   c_compression_level = (
       opts.compression_level if opts.compression_level is not None else -1
   )

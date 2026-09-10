@@ -521,7 +521,8 @@ struct type_caster<xprof::events_db::ParquetExportOptions> {
       if (!isinstance(src, import_python_class(kName))) return false;
       value.max_record_count =
           cast<std::optional<uint64_t>>(src.attr("max_record_count"));
-      value.batch_size = cast<uint32_t>(src.attr("batch_size"));
+      value.batch_size =
+          cast<std::optional<uint32_t>>(src.attr("batch_size"));
       value.compression_type = cast<std::optional<arrow::Compression::type>>(
           src.attr("compression_type"));
       value.compression_level =

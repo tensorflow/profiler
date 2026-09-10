@@ -12,6 +12,7 @@ limitations under the License.
 
 #include "xprof/convert/events_db/python/pywrap_events_db_c_api.h"
 
+#include <cstdint>
 #include <fstream>
 #include <ios>
 #include <iterator>
@@ -89,7 +90,7 @@ TEST_P(XSpaceToParquetOptionsTest, ConvertsSuccessfullyWithParametricOptions) {
 
   char* error = nullptr;
   const bool success = XProfEventsDbXSpaceToParquet(
-      input_path.c_str(), output_path.c_str(), options.batch_size,
+      input_path.c_str(), output_path.c_str(), options.batch_size.value_or(0),
       options.compression_type.has_value() ? codec_name.c_str() : nullptr,
       options.compression_level.value_or(-1),
       options.max_record_count.value_or(0), &error);
@@ -116,7 +117,11 @@ std::string ParquetExportOptionsTestName(
   } else {
     name += "DefaultCodec";
   }
-  absl::StrAppend(&name, "_Batch", info.param.batch_size);
+  if (info.param.batch_size.has_value()) {
+    absl::StrAppend(&name, "_Batch", *info.param.batch_size);
+  } else {
+    absl::StrAppend(&name, "_DefaultBatch");
+  }
   if (info.param.compression_level.has_value()) {
     absl::StrAppend(&name, "_Level", *info.param.compression_level);
   } else {
@@ -133,32 +138,32 @@ std::string ParquetExportOptionsTestName(
 INSTANTIATE_TEST_SUITE_P(
     AllOptionCombinations, XSpaceToParquetOptionsTest,
     testing::Values(
-        // Default options (nullopt for max_records, compression_type, level;
-        // batch_size=0 for default)
+        // Default options (nullopt for max_records, compression_type, level,
+        // and batch_size)
         ParquetExportOptions{
             /*max_record_count=*/std::nullopt,
-            /*batch_size=*/0,
+            /*batch_size=*/std::nullopt,
             /*compression_type=*/std::nullopt,
             /*compression_level=*/std::nullopt,
         },
         // Standard default batch size (65536) with nullopt compression
         ParquetExportOptions{
             /*max_record_count=*/std::nullopt,
-            /*batch_size=*/65536,
+            /*batch_size=*/std::optional<uint32_t>(65536),
             /*compression_type=*/std::nullopt,
             /*compression_level=*/std::nullopt,
         },
         // Explicit SNAPPY compression with custom batch size
         ParquetExportOptions{
             /*max_record_count=*/std::nullopt,
-            /*batch_size=*/512,
+            /*batch_size=*/std::optional<uint32_t>(512),
             /*compression_type=*/arrow::Compression::SNAPPY,
             /*compression_level=*/std::nullopt,
         },
         // Explicit ZSTD compression with default compression level
         ParquetExportOptions{
             /*max_record_count=*/std::nullopt,
-            /*batch_size=*/1024,
+            /*batch_size=*/std::optional<uint32_t>(1024),
             /*compression_type=*/arrow::Compression::ZSTD,
             /*compression_level=*/std::nullopt,
         },
@@ -166,14 +171,14 @@ INSTANTIATE_TEST_SUITE_P(
         // limit
         ParquetExportOptions{
             /*max_record_count=*/10,
-            /*batch_size=*/512,
+            /*batch_size=*/std::optional<uint32_t>(512),
             /*compression_type=*/arrow::Compression::ZSTD,
             /*compression_level=*/3,
         },
         // Max record count early stopping test
         ParquetExportOptions{
             /*max_record_count=*/1,
-            /*batch_size=*/65536,
+            /*batch_size=*/std::optional<uint32_t>(65536),
             /*compression_type=*/arrow::Compression::SNAPPY,
             /*compression_level=*/std::nullopt,
         }),

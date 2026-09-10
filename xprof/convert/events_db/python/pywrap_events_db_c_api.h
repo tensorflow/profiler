@@ -37,8 +37,7 @@ EXPORT_C void XProfEventsDbFreeString(char* str);
 // Parameters:
 //   input_path: Path to the input XSpace/trace file (e.g. `.xplane.pb`).
 //   output_path: Destination path for the generated `.parquet` file.
-//   batch_size: Number of records per Parquet batch (e.g. `65536`, or `0` for
-//     unspecified).
+//   batch_size: Number of records per Parquet batch (`0` for unspecified).
 //   compression_type: Codec name (`"SNAPPY"` or `"ZSTD"`), or `NULL` for
 //     unspecified.
 //   compression_level: Compression level (`-1` for unspecified).

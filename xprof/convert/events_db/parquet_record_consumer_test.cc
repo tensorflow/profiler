@@ -68,6 +68,50 @@ absl::StatusOr<std::shared_ptr<arrow::Table>> ReadParquetFile(
   return table;
 }
 
+TEST(ParquetExportOptionsTest, DefaultValues) {
+  ParquetExportOptions options;
+  EXPECT_FALSE(options.batch_size.has_value());
+  EXPECT_FALSE(options.max_record_count.has_value());
+  EXPECT_FALSE(options.compression_type.has_value());
+  EXPECT_FALSE(options.compression_level.has_value());
+}
+
+TEST(ParquetRecordConsumerTest, DefaultBatchSizeNulloptUses2ToThe16) {
+  const std::string file_path =
+      absl::StrCat(testing::TempDir(), "/default_batch_2_to_16_test.parquet");
+  Schema schema;
+  const FieldIndices indices(schema);
+
+  ParquetExportOptions options;
+  ASSERT_FALSE(options.batch_size.has_value());
+
+  ASSERT_OK_AND_ASSIGN(
+      ParquetRecordConsumer consumer,
+      ParquetRecordConsumer::Build(schema, file_path, options));
+
+  constexpr uint32_t kDefaultBatchSize = 1 << 16;  // 65536 (2^16)
+  for (uint32_t i = 0; i < kDefaultBatchSize + 1; ++i) {
+    Record record;
+    record[indices.kernel_name] = "kernel";
+    record[indices.start_ns] = static_cast<uint64_t>(i);
+    EXPECT_THAT(consumer.Consume(record),
+                IsOkAndHolds(Eq(StepControl::kContinue)));
+  }
+
+  EXPECT_OK(consumer.Finalize());
+
+  ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::io::ReadableFile> infile_res,
+                       internal::ToAbslStatusOr(arrow::io::ReadableFile::Open(
+                           std::string(file_path))));
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<parquet::arrow::FileReader> reader,
+                       internal::ToAbslStatusOr(parquet::arrow::OpenFile(
+                           infile_res, arrow::default_memory_pool())));
+  EXPECT_EQ(reader->num_row_groups(), 2);
+  EXPECT_EQ(reader->parquet_reader()->metadata()->RowGroup(0)->num_rows(),
+            kDefaultBatchSize);
+  EXPECT_EQ(reader->parquet_reader()->metadata()->RowGroup(1)->num_rows(), 1);
+}
+
 TEST(ParquetRecordConsumerTest, InvalidBatchSizeReturnsError) {
   Schema schema;
   ParquetExportOptions options;

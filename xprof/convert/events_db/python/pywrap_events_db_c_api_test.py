@@ -32,10 +32,14 @@ class ParquetExportOptionsTest(parameterized.TestCase):
 
   def test_default_options(self):
     opts = events_db.ParquetExportOptions()
-    self.assertEqual(opts.batch_size, 65536)
+    self.assertIsNone(opts.batch_size)
     self.assertIsNone(opts.max_record_count)
     self.assertIsNone(opts.compression_type)
     self.assertIsNone(opts.compression_level)
+
+  def test_explicit_none_batch_size(self):
+    opts = events_db.ParquetExportOptions(batch_size=None)
+    self.assertIsNone(opts.batch_size)
 
   def test_custom_options(self):
     opts = events_db.ParquetExportOptions(
@@ -114,6 +118,20 @@ class XSpaceToParquetTest(parameterized.TestCase):
         input_path=self._xspace_path,
         output_path=output_path,
         options=None,
+    )
+    self.assertTrue(os.path.exists(output_path))
+    self.assertGreater(os.path.getsize(output_path), 0)
+    with open(output_path, "rb") as f:
+      content = f.read()
+      self.assertTrue(content.startswith(b"PAR1"))
+      self.assertTrue(content.endswith(b"PAR1"))
+
+  def test_xspace_to_parquet_explicit_none_batch_size(self):
+    output_path = self.create_tempfile("test_none_batch.parquet").full_path
+    events_db.xspace_to_parquet(
+        input_path=self._xspace_path,
+        output_path=output_path,
+        options=events_db.ParquetExportOptions(batch_size=None),
     )
     self.assertTrue(os.path.exists(output_path))
     self.assertGreater(os.path.getsize(output_path), 0)

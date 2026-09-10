@@ -40,8 +40,10 @@ struct ParquetExportOptions {
   // If set, at most this many records will be written before early stopping.
   std::optional<uint64_t> max_record_count = std::nullopt;
 
-  // Number of records buffered before flushing a batch to disk.
-  uint32_t batch_size = 65536;
+  // Number of records buffered before flushing a batch to disk. If unset
+  // (`std::nullopt`), a default value is used and could change in the future.
+  // Do not rely on the default value used in the implementation.
+  std::optional<uint32_t> batch_size = std::nullopt;
 
   // Compression codec applied to Parquet data pages (e.g.
   // `arrow::Compression::UNCOMPRESSED`, `arrow::Compression::SNAPPY`,
