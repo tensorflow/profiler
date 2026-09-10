@@ -97,8 +97,7 @@ class ParquetRecordConsumer {
   absl::StatusOr<StepControl> Consume(Record& record);
 
   // Flushes any remaining buffered records and closes the Parquet file.
-  absl::Status Finalize(
-      const absl::StatusOr<ParseStatus>& result = ParseStatus::kComplete);
+  absl::Status Finalize(const absl::StatusOr<ParseStatus>& result);
 
  private:
   struct Impl;

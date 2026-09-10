@@ -1205,7 +1205,7 @@ class ParquetRecordConsumerTest(parameterized.TestCase):
     temp_path = self.create_tempfile("empty.parquet").full_path
     schema = events_db.Schema()
     consumer = events_db.ParquetRecordConsumer(schema, temp_path)
-    consumer.finalize()
+    consumer.finalize(events_db.ParseStatus.COMPLETE)
     self.assertTrue(os.path.exists(temp_path))
     self.assertGreater(os.path.getsize(temp_path), 0)
     with open(temp_path, "rb") as f:
@@ -1224,7 +1224,7 @@ class ParquetRecordConsumerTest(parameterized.TestCase):
     step = consumer.consume(record)
     self.assertEqual(step, events_db.StepControl.CONTINUE)
 
-    consumer.finalize()
+    consumer.finalize(events_db.ParseStatus.COMPLETE)
     self.assertTrue(os.path.exists(temp_path))
     self.assertGreater(os.path.getsize(temp_path), 0)
     with open(temp_path, "rb") as f:
@@ -1279,13 +1279,22 @@ class ParquetRecordConsumerTest(parameterized.TestCase):
     record[kernel_name_field] = "k2"
     self.assertEqual(consumer.consume(record), events_db.StepControl.STOP)
 
-    consumer.finalize()
+    consumer.finalize(events_db.ParseStatus.STOPPED_EARLY)
     self.assertTrue(os.path.exists(temp_path))
     self.assertGreater(os.path.getsize(temp_path), 0)
     with open(temp_path, "rb") as f:
       content = f.read()
       self.assertTrue(content.startswith(b"PAR1"))
       self.assertTrue(content.endswith(b"PAR1"))
+
+  def test_finalize_without_argument_raises(self):
+    temp_path = self.create_tempfile("no_arg.parquet").full_path
+    schema = events_db.Schema()
+    consumer = events_db.ParquetRecordConsumer(schema, temp_path)
+    with self.assertRaisesRegex(
+        TypeError, r"finalize\(\): incompatible function arguments"
+    ):
+      consumer.finalize()
 
 
 if __name__ == "__main__":

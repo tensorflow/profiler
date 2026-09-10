@@ -98,7 +98,7 @@ TEST(ParquetRecordConsumerTest, DefaultBatchSizeNulloptUses2ToThe16) {
                 IsOkAndHolds(Eq(StepControl::kContinue)));
   }
 
-  EXPECT_OK(consumer.Finalize());
+  EXPECT_OK(consumer.Finalize(ParseStatus::kComplete));
 
   ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::io::ReadableFile> infile_res,
                        internal::ToAbslStatusOr(arrow::io::ReadableFile::Open(
@@ -134,7 +134,7 @@ TEST(ParquetRecordConsumerTest, EmptyConsumerCreatesValidParquet) {
   ASSERT_OK_AND_ASSIGN(ParquetRecordConsumer consumer,
                        ParquetRecordConsumer::Build(schema, file_path));
 
-  EXPECT_OK(consumer.Finalize());
+  EXPECT_OK(consumer.Finalize(ParseStatus::kComplete));
 
   ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Table> table,
                        ReadParquetFile(file_path));
@@ -169,7 +169,7 @@ TEST(ParquetRecordConsumerTest, WriteAndReadBackSingleBatch) {
   EXPECT_THAT(consumer.Consume(record1),
               IsOkAndHolds(Eq(StepControl::kContinue)));
 
-  EXPECT_OK(consumer.Finalize());
+  EXPECT_OK(consumer.Finalize(ParseStatus::kComplete));
 
   ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Table> table,
                        ReadParquetFile(file_path));
@@ -236,7 +236,7 @@ TEST(ParquetRecordConsumerTest, MultiBatchBufferingAndFlushing) {
                 IsOkAndHolds(Eq(StepControl::kContinue)));
   }
 
-  EXPECT_OK(consumer.Finalize());
+  EXPECT_OK(consumer.Finalize(ParseStatus::kComplete));
 
   ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Table> table,
                        ReadParquetFile(file_path));
@@ -290,7 +290,7 @@ TEST(ParquetRecordConsumerTest, MaxRecordCountEarlyStopping) {
   record3[indices.kernel_name] = "k3";
   EXPECT_THAT(consumer.Consume(record3), IsOkAndHolds(Eq(StepControl::kStop)));
 
-  EXPECT_OK(consumer.Finalize());
+  EXPECT_OK(consumer.Finalize(ParseStatus::kComplete));
 
   ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Table> table,
                        ReadParquetFile(file_path));
@@ -317,7 +317,7 @@ TEST(ParquetRecordConsumerTest, CompressionOptionsConfigured) {
   EXPECT_THAT(consumer.Consume(record),
               IsOkAndHolds(Eq(StepControl::kContinue)));
 
-  EXPECT_OK(consumer.Finalize());
+  EXPECT_OK(consumer.Finalize(ParseStatus::kComplete));
 
   ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Table> table,
                        ReadParquetFile(file_path));
@@ -350,7 +350,7 @@ TEST(ParquetRecordConsumerTest, CompressionTypeWithoutLevel) {
   EXPECT_THAT(consumer.Consume(record),
               IsOkAndHolds(Eq(StepControl::kContinue)));
 
-  EXPECT_OK(consumer.Finalize());
+  EXPECT_OK(consumer.Finalize(ParseStatus::kComplete));
 
   ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Table> table,
                        ReadParquetFile(file_path));
@@ -423,7 +423,7 @@ TEST(ParquetRecordConsumerTest, MoveConstructible) {
   record[indices.kernel_name] = "moved_kernel";
   EXPECT_THAT(consumer2.Consume(record),
               IsOkAndHolds(Eq(StepControl::kContinue)));
-  EXPECT_OK(consumer2.Finalize());
+  EXPECT_OK(consumer2.Finalize(ParseStatus::kComplete));
 
   ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Table> table,
                        ReadParquetFile(file_path));
@@ -449,7 +449,7 @@ TEST(ParquetRecordConsumerTest, MoveAssignable) {
   record[indices.kernel_name] = "move_assigned_kernel";
   EXPECT_THAT(consumer2.Consume(record),
               IsOkAndHolds(Eq(StepControl::kContinue)));
-  EXPECT_OK(consumer2.Finalize());
+  EXPECT_OK(consumer2.Finalize(ParseStatus::kComplete));
 
   ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Table> table,
                        ReadParquetFile(file_path1));
@@ -500,7 +500,7 @@ TEST(ParquetRecordConsumerTest, ConcurrentConsume) {
     EXPECT_THAT(thread_statuses[t], IsOkAndHolds(Eq(StepControl::kContinue)));
   }
 
-  EXPECT_OK(consumer.Finalize());
+  EXPECT_OK(consumer.Finalize(ParseStatus::kComplete));
 
   ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Table> table,
                        ReadParquetFile(file_path));

@@ -521,8 +521,7 @@ struct type_caster<xprof::events_db::ParquetExportOptions> {
       if (!isinstance(src, import_python_class(kName))) return false;
       value.max_record_count =
           cast<std::optional<uint64_t>>(src.attr("max_record_count"));
-      value.batch_size =
-          cast<std::optional<uint32_t>>(src.attr("batch_size"));
+      value.batch_size = cast<std::optional<uint32_t>>(src.attr("batch_size"));
       value.compression_type = cast<std::optional<arrow::Compression::type>>(
           src.attr("compression_type"));
       value.compression_level =
@@ -945,14 +944,12 @@ NB_MODULE(pywrap_events_db, m) {
           "is reached.")
       .def(
           "finalize",
-          [](ParquetRecordConsumer& self, std::optional<ParseStatus> status) {
-            absl::Status finalize_status =
-                status.has_value() ? self.Finalize(*status) : self.Finalize();
+          [](ParquetRecordConsumer& self, ParseStatus status) {
+            const absl::Status finalize_status = self.Finalize(status);
             if (!finalize_status.ok())
               throw std::runtime_error(std::string(finalize_status.message()));
           },
-          "result"_a.none() = nb::none(),
-          nb::call_guard<nb::gil_scoped_release>(),
+          "result"_a, nb::call_guard<nb::gil_scoped_release>(),
           "Flushes any remaining buffered records and closes the Parquet "
           "file.");
 }
