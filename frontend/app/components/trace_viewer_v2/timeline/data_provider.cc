@@ -1295,4 +1295,9 @@ absl::flat_hash_map<ProcessId, std::string> DataProvider::GetProcessMappings()
   return map;
 }
 
+const absl::flat_hash_map<ProcessId, std::string>&
+DataProvider::GetProcessNames() const {
+  return process_names_;
+}
+
 }  // namespace traceviewer
