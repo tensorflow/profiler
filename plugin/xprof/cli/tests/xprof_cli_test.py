@@ -373,6 +373,57 @@ class XProfCliTest(unittest.TestCase):
         processed, ['list_xplane_events', 'sess1', '--limit=10', '-k=5']
     )
 
+  def test_d25_cli_argument_aliases(self):
+    """b/555254723: session-dir and output-format aliases normalize cleanly."""
+    # --session_dir is rewritten to the first positional argument.
+    self.assertEqual(
+        xprof_cli._preprocess_argv(
+            ['get_overview', '--session_dir=/tmp/trace']
+        ),
+        ['get_overview', '/tmp/trace'],
+    )
+    # --session_path is rewritten and trailing flags are preserved in order.
+    self.assertEqual(
+        xprof_cli._preprocess_argv(
+            ['get_top_hlo_ops', '--session_path=/tmp/trace', '--limit=10']
+        ),
+        ['get_top_hlo_ops', '/tmp/trace', '--limit=10'],
+    )
+    # --source (space-separated) is rewritten to the first positional argument.
+    self.assertEqual(
+        xprof_cli._preprocess_argv(['get_overview', '--source', '/tmp/trace']),
+        ['get_overview', '/tmp/trace'],
+    )
+    # -o json (space-separated) is dropped as a no-op.
+    self.assertEqual(
+        xprof_cli._preprocess_argv(
+            ['get_overview', '--source=/tmp/trace', '-o', 'json']
+        ),
+        ['get_overview', '/tmp/trace'],
+    )
+    # --output_format=json is dropped as a no-op.
+    self.assertEqual(
+        xprof_cli._preprocess_argv(
+            ['get_overview', 'sess1', '--output_format=json']
+        ),
+        ['get_overview', 'sess1'],
+    )
+    # -o=text is accepted as a no-op (the CLI always emits JSON).
+    self.assertEqual(
+        xprof_cli._preprocess_argv(['get_overview', 'sess1', '-o=text']),
+        ['get_overview', 'sess1'],
+    )
+
+  @mock.patch.object(xprof_cli.fire, 'Fire')
+  def test_d25_cli_argument_aliases_reach_fire(self, mock_fire):
+    """b/555254723: aliased invocations reach Fire without usage errors."""
+    xprof_cli.main(
+        ['xprof', 'get_overview', '--session_dir=/tmp/trace', '-o', 'json']
+    )
+    mock_fire.assert_called_once_with(
+        mock.ANY, command=['get_overview', '/tmp/trace'], name='xprof'
+    )
+
   def test_wrap_with_logdir_coerces_int_to_str(self):
     """Ensures int session_id and source parameters are coerced to string."""
     def dummy_tool(source: str, limit: int = 10):
