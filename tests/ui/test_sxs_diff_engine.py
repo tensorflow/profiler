@@ -17,13 +17,16 @@ except ImportError:
   _HAS_PIL = False
 
 try:
+  from google3.third_party.xprof.tests.ui import sxs_diff_engine
   from google3.third_party.xprof.tests.ui.sxs_diff_engine import SxsDiffEngine
   from google3.third_party.xprof.tests.ui.sxs_report_generator import generate_sxs_html_report
 except ImportError:
   try:
+    from tests.ui import sxs_diff_engine  # pyrefly: ignore[missing-import]
     from tests.ui.sxs_diff_engine import SxsDiffEngine  # pyrefly: ignore[missing-import]
     from tests.ui.sxs_report_generator import generate_sxs_html_report  # pyrefly: ignore[missing-import]
   except ImportError:
+    import sxs_diff_engine  # pyrefly: ignore[missing-import]
     from sxs_diff_engine import SxsDiffEngine  # pyrefly: ignore[missing-import]
     from sxs_report_generator import generate_sxs_html_report  # pyrefly: ignore[missing-import]
 
@@ -31,9 +34,20 @@ except ImportError:
 def _create_test_image(
     color: tuple[int, int, int], size: tuple[int, int] = (50, 50)
 ) -> bytes:
-  if not _HAS_PIL or Image is None:
-    return b"\x89PNG\r\n\x1a\n" + bytes(color) + bytes(size)
+  """Creates in-memory PNG image bytes with solid color for visual diff tests."""
+  assert Image is not None
   img = Image.new("RGB", size, color=color)
+  buf = io.BytesIO()
+  img.save(buf, format="PNG")
+  return buf.getvalue()
+
+
+def _create_rgba_test_image(
+    color: tuple[int, int, int, int], size: tuple[int, int] = (50, 50)
+) -> bytes:
+  """Creates in-memory RGBA PNG image bytes for visual diff tests."""
+  assert Image is not None
+  img = Image.new("RGBA", size, color=color)
   buf = io.BytesIO()
   img.save(buf, format="PNG")
   return buf.getvalue()
@@ -42,7 +56,14 @@ def _create_test_image(
 class SxsDiffEngineTest(unittest.TestCase):
   """Tests for SxS Diff Engine and HTML report generation."""
 
-  @unittest.skipUnless(_HAS_PIL, "PIL/Pillow not available in environment")
+  def test_pillow_dependency_strictly_available(self):
+    """Asserts that Pillow is installed in the test execution environment."""
+    self.assertTrue(
+        _HAS_PIL and Image is not None,
+        "PIL.Image must be installed in the test execution environment. "
+        "Silent skipping in CI hides visual regressions.",
+    )
+
   def test_visual_diff_identical_and_divergent(self):
     """Verifies visual diff measures pixel differences and flags size deltas."""
     engine = SxsDiffEngine()
@@ -67,6 +88,91 @@ class SxsDiffEngineTest(unittest.TestCase):
     diff_mismatch = engine.compute_visual_diff(img_white, img_tall)
     self.assertIsNotNone(diff_mismatch.dimension_mismatch)
     self.assertIn("50, 50", diff_mismatch.dimension_mismatch)
+
+  def test_visual_diff_measures_divergence_strictly(self):
+    """Verifies pixel diff calculation without conditional skip."""
+    engine = sxs_diff_engine.SxsDiffEngine()
+    img_white = _create_test_image((255, 255, 255), size=(50, 50))
+    img_black = _create_test_image((0, 0, 0), size=(50, 50))
+
+    diff = engine.compute_visual_diff(img_white, img_black)
+
+    self.assertEqual(diff.diff_pixels, 2500)
+    self.assertEqual(diff.total_pixels, 2500)
+    self.assertEqual(diff.diff_ratio, 1.0)
+    self.assertIsNotNone(diff.composite_png_bytes)
+    self.assertIsNone(diff.dimension_mismatch)
+
+  def test_visual_diff_alpha_channel_transparency(self):
+    """Verifies alpha compositing prevents false divergence and detects alpha delta."""
+    engine = SxsDiffEngine()
+    img_trans_red = _create_rgba_test_image((255, 0, 0, 0))
+    img_trans_black = _create_rgba_test_image((0, 0, 0, 0))
+
+    # Transparent red vs transparent black (both invisible, no divergence)
+    diff_trans = engine.compute_visual_diff(img_trans_red, img_trans_black)
+    self.assertEqual(diff_trans.diff_pixels, 0)
+    self.assertEqual(diff_trans.diff_ratio, 0.0)
+    self.assertIsNone(diff_trans.dimension_mismatch)
+
+    # Transparent red vs opaque red (element appearance/disappearance)
+    img_opaque_red = _create_rgba_test_image((255, 0, 0, 255))
+    diff_alpha_change = engine.compute_visual_diff(
+        img_trans_red, img_opaque_red
+    )
+    self.assertEqual(diff_alpha_change.diff_pixels, 2500)
+    self.assertEqual(diff_alpha_change.diff_ratio, 1.0)
+    self.assertIsNone(diff_alpha_change.dimension_mismatch)
+
+  def test_visual_diff_custom_background_color(self):
+    """Verifies configurable background color for dark theme alpha compositing."""
+    engine = SxsDiffEngine()
+    img_semi_trans = _create_rgba_test_image((255, 0, 0, 128))
+    dark_bg = (32, 33, 36, 255)
+    diff = engine.compute_visual_diff(
+        img_semi_trans, img_semi_trans, background_color=dark_bg
+    )
+    self.assertEqual(diff.diff_pixels, 0)
+    self.assertEqual(diff.diff_ratio, 0.0)
+    self.assertIsNone(diff.dimension_mismatch)
+
+  def test_visual_diff_corrupt_and_empty_bytes_handled_gracefully(self):
+    """Verifies corrupt, truncated, or empty bytes return error status without crash."""
+    engine = SxsDiffEngine()
+    valid_img = _create_test_image((255, 255, 255), size=(50, 50))
+
+    # Empty image bytes
+    diff_empty = engine.compute_visual_diff(b"", b"")
+    self.assertIsNotNone(diff_empty.dimension_mismatch)
+    self.assertEqual(diff_empty.diff_ratio, 1.0)
+
+    # Corrupted non-image bytes vs valid image
+    diff_corrupt = engine.compute_visual_diff(
+        b"not_a_valid_png_payload", valid_img
+    )
+    self.assertIsNotNone(diff_corrupt.dimension_mismatch)
+    self.assertEqual(diff_corrupt.diff_ratio, 1.0)
+
+    # Truncated PNG header bytes vs valid image
+    diff_truncated = engine.compute_visual_diff(
+        b"\x89PNG\r\n\x1a\n\x00\x00", valid_img
+    )
+    self.assertIsNotNone(diff_truncated.dimension_mismatch)
+    self.assertEqual(diff_truncated.diff_ratio, 1.0)
+
+  def test_visual_diff_transposed_dimension_mismatch(self):
+    """Verifies flipped aspect ratios with equal area flag all pixels as mismatched."""
+    engine = SxsDiffEngine()
+    img_portrait = _create_test_image((255, 255, 255), size=(100, 200))
+    img_landscape = _create_test_image((255, 255, 255), size=(200, 100))
+
+    diff = engine.compute_visual_diff(img_portrait, img_landscape)
+    self.assertIsNotNone(diff.dimension_mismatch)
+    self.assertIn("100, 200", diff.dimension_mismatch)
+    self.assertIn("200, 100", diff.dimension_mismatch)
+    self.assertEqual(diff.total_pixels, 20000)
+    self.assertEqual(diff.diff_pixels, 20000)
+    self.assertEqual(diff.diff_ratio, 1.0)
 
   def test_dom_diff_structural_delta(self):
     """Verifies unified diff generation between DOM snapshots."""

@@ -104,7 +104,10 @@ class SxsDiffEngine:
         self.approved_manifest = {}
 
   def compute_visual_diff(
-      self, img_bytes_a: bytes, img_bytes_b: bytes
+      self,
+      img_bytes_a: bytes,
+      img_bytes_b: bytes,
+      background_color: tuple[int, int, int, int] = (255, 255, 255, 255),
   ) -> VisualDiff:
     """Computes perceptual pixel difference between two PNG screenshots."""
     if not _HAS_PIL or Image is None or ImageChops is None:
@@ -118,21 +121,36 @@ class SxsDiffEngine:
           candidate_png_bytes=img_bytes_b,
       )
 
-    img_a = Image.open(io.BytesIO(img_bytes_a)).convert("RGBA")
-    img_b = Image.open(io.BytesIO(img_bytes_b)).convert("RGBA")
-
-    if img_a.size != img_b.size:
+    try:
+      img_a = Image.open(io.BytesIO(img_bytes_a)).convert("RGBA")
+      img_b = Image.open(io.BytesIO(img_bytes_b)).convert("RGBA")
+    except (OSError, Exception) as e:  # pylint: disable=broad-exception-caught
+      total_bytes = max(len(img_bytes_a), len(img_bytes_b))
       return VisualDiff(
           diff_ratio=1.0,
-          total_pixels=img_a.width * img_a.height,
-          diff_pixels=abs(
-              img_a.width * img_a.height - img_b.width * img_b.height
-          )
-          or 1,
-          dimension_mismatch=f"{img_a.size} vs {img_b.size}",
+          total_pixels=total_bytes,
+          diff_pixels=total_bytes,
+          dimension_mismatch=f"Corrupt or invalid image bytes: {e}",
+          base_png_bytes=img_bytes_a,
+          candidate_png_bytes=img_bytes_b,
       )
 
-    diff = ImageChops.difference(img_a, img_b)
+    if img_a.size != img_b.size:
+      max_pixels = max(img_a.width * img_a.height, img_b.width * img_b.height)
+      return VisualDiff(
+          diff_ratio=1.0,
+          total_pixels=max_pixels,
+          diff_pixels=max_pixels,
+          dimension_mismatch=f"{img_a.size} vs {img_b.size}",
+          base_png_bytes=img_bytes_a,
+          candidate_png_bytes=img_bytes_b,
+      )
+
+    bg = Image.new("RGBA", img_a.size, background_color)
+    flat_a = Image.alpha_composite(bg, img_a)
+    flat_b = Image.alpha_composite(bg, img_b)
+
+    diff = ImageChops.difference(flat_a, flat_b)
     threshold = (
         int(self.pixel_threshold * 255)
         if self.pixel_threshold < 1.0
@@ -144,13 +162,13 @@ class SxsDiffEngine:
     total_pixels = img_a.width * img_a.height
     diff_ratio = diff_pixels / float(total_pixels) if total_pixels > 0 else 0.0
 
-    diff_overlay = img_b.copy()
+    diff_overlay = flat_b.copy()
     red_highlight = Image.new("RGBA", img_b.size, (235, 50, 50, 200))
     diff_overlay.paste(red_highlight, (0, 0), mask=mask)
 
     composite = Image.new("RGBA", (img_a.width * 3, img_a.height))
-    composite.paste(img_a, (0, 0))
-    composite.paste(img_b, (img_a.width, 0))
+    composite.paste(flat_a, (0, 0))
+    composite.paste(flat_b, (img_a.width, 0))
     composite.paste(diff_overlay, (img_a.width * 2, 0))
     buf = io.BytesIO()
     composite.save(buf, format="PNG")
