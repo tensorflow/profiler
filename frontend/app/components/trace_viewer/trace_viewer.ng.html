@@ -127,7 +127,8 @@
       </div>
 
       <!-- Right Content Area -->
-      <div class="settings-content-pane">
+      <div class="settings-content-wrapper">
+        <div class="settings-content-pane">
         <!-- Tab 1: General -->
         <div *ngIf="activeSettingsTab === SettingsTab.GENERAL" class="settings-tab-pane">
           <div class="settings-section-header settings-section-header-with-actions">
@@ -307,15 +308,6 @@
             <div class="custom-colors-hint">Minimum 4 colors, maximum 23 colors.</div>
           </div>
 
-          <!-- Save/Close actions for Color Settings -->
-          <div class="settings-actions">
-            <button mat-button color="primary" (click)="saveColorSettings(); dialogRef.close(selectedPalette)">
-              Save
-            </button>
-            <button mat-button (click)="dialogRef.close()">
-              Close
-            </button>
-          </div>
         </div>
 
         <!-- Tab 3: Feature flags -->
@@ -349,22 +341,37 @@
               </button>
             </div>
           </div>
+        </div>
+      </div>
 
-          <div *ngIf="hasFeatureFlagChanges" class="feature-flag-warning">
+      <!-- Sticky footer for Save/Cancel actions -->
+      <div class="settings-dialog-footer" *ngIf="activeSettingsTab === SettingsTab.COLOR || activeSettingsTab === SettingsTab.FLAGS">
+        <div class="settings-footer-left">
+          <div *ngIf="activeSettingsTab === SettingsTab.FLAGS && hasFeatureFlagChanges" class="feature-flag-warning">
             <mat-icon class="feature-flag-warning-icon">warning</mat-icon>
             <span>Changes will take effect after page refresh.</span>
           </div>
-
-          <div class="settings-actions">
-            <button mat-button color="primary" [disabled]="!hasFeatureFlagChanges" (click)="saveFeatureFlags()">
-              Save
-            </button>
+        </div>
+        <div class="settings-actions">
+          <ng-container *ngIf="activeSettingsTab === SettingsTab.COLOR">
             <button mat-button (click)="dialogRef.close()">
               Cancel
             </button>
-          </div>
+            <button mat-button color="primary" (click)="saveColorSettings(); dialogRef.close(selectedPalette)">
+              Save
+            </button>
+          </ng-container>
+          <ng-container *ngIf="activeSettingsTab === SettingsTab.FLAGS">
+            <button mat-button (click)="dialogRef.close()">
+              Cancel
+            </button>
+            <button mat-button color="primary" [disabled]="!hasFeatureFlagChanges" (click)="saveFeatureFlags()">
+              Save
+            </button>
+          </ng-container>
         </div>
       </div>
     </div>
   </div>
+</div>
 </ng-template>

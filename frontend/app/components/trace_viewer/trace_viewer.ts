@@ -1447,18 +1447,16 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
   }
 
   saveColorSettings(): void {
-    if (this.traceViewerModule) {
-      if (this.selectedPalette === CUSTOM_PALETTE_NAME) {
-        this.saveCustomColors();
-        this.applyCustomColors();
-      } else {
-        this.traceViewerModule.SetPalette(this.selectedPalette);
-      }
-      window.localStorage.setItem(
-        COLOR_PALETTE_STORAGE_KEY,
-        this.selectedPalette,
-      );
+    if (this.selectedPalette === CUSTOM_PALETTE_NAME) {
+      this.saveCustomColors();
+      this.applyCustomColors();
+    } else if (this.traceViewerModule) {
+      this.traceViewerModule.SetPalette(this.selectedPalette);
     }
+    window.localStorage.setItem(
+      COLOR_PALETTE_STORAGE_KEY,
+      this.selectedPalette,
+    );
   }
 
   openColorPaletteSettings() {
