@@ -83,22 +83,32 @@ skill's markdown files but are NOT visible by running `xprof -h`.
 
 ### Bottleneck Analysis
 
-When asked to find performance bottlenecks for a session:
+When asked to find performance bottlenecks for a session, follow the structured
+**7-Phase Performance Analysis Protocol** documented in
+[analysis.md](references/analysis.md):
 
-1.  **Execute** `get_overview` to identify the high-level breakdown (Compute vs
-    Host vs Communication).
-2.  **Verify** if the workload is compute-bound, memory-bound, or host-bound
-    using `get_device_information` hardware roofline constants.
-3.  **Execute** `get_hlo_op_profile` (see
-    [get_hlo_op_profile](references/get_hlo_op_profile.md)) or `get_top_hlo_ops`
-    for progressive macro-to-micro category breakdown and expensive operations
-    if HLO profiles are available.
-4.  **Execute** `list_xplane_events --max_events=200000` for detailed timeline
-    attribution and step-time evaluation.
-5.  **Inspect** HLO code using `list_hlo_modules` and `get_hlo_module_content`
-    for suspect modules.
-6.  **Report** findings directly to the user with concrete data points derived
-    from the analysis.
+1.  **Phase 1 — Turn-1 Parallel Triage**: Dispatch `get_overview`,
+    `get_roofline_model`, and `check_host_boundness` concurrently, then classify
+    the workload (host/infeed, memory, compute, or communication bound) via the
+    Triage Decision Matrix.
+2.  **Phase 2 — Macro-to-Micro Op Drilldown**: Use `get_hlo_op_profile` (see
+    [get_hlo_op_profile](references/get_hlo_op_profile.md)) with
+    `--view=category`, then drill into the dominant `--category` for leaf-op
+    source attribution.
+3.  **Phase 3 — Headroom & Resource Waste**: Quantify Roofline Headroom %,
+    theoretical step-latency reduction, and Equivalent Idle Chips (EIC).
+4.  **Phase 4 — Actionable Code Proposal**: Provide concrete line-level code or
+    configuration edits (layout fusion, dtype fixes, tiling/block-size tuning,
+    input pipeline prefetch).
+5.  **Phase 5 — Empirical Validation**: Provide a copy-pasteable, deterministic
+    benchmark command and assert the measured speedup.
+6.  **Phase 6 — Numerical Parity**: Enforce correctness contracts with
+    `verify_numerical_parity` before recommending any change.
+7.  **Phase 7 — Artifact Closure**: Conclude analysis with concrete operational
+    deliverables (report sharing, CL creation, rerun reproduction commands).
+
+See [analysis.md](references/analysis.md) for the full protocol, decision
+matrix, and formulas.
 
 ### Profile Collection & Ingestion
 
@@ -195,6 +205,8 @@ Pallas or Mosaic):
     utilization metrics filtered by host, device, or node.
 -   **[Analyze XLA Module Performance](references/analysis.md)**: Analyze XLA
     module performance, inspect HLO operations, and query timeline events.
+-   **[Architecture Mapping](references/architecture_mapping.md)**: Map model
+    architecture blocks to the HLO ops and timeline events that implement them.
 -   **[Import Trace File](references/upload_trace.md)**: Import raw trace files
     into an xprof logdir for analysis.
 -   **[Collect XProf Profile](references/collect_profile.md)**: Collect

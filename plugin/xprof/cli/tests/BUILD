@@ -291,6 +291,7 @@ py_test(
         "//plugin/xprof/cli/tools:get_overview_tool",
         "//plugin/xprof/cli/tools:get_top_hlo_ops_tool",
         "//plugin/xprof/cli/tools:get_utilization_viewer_tool",
+        "//plugin/xprof/cli/tools/oss:upload_trace_tool",
         "@absl_py//absl/testing:absltest",
         "@absl_py//absl/testing:parameterized",
         "@org_xprof//xprof/embedded/llo_analysis:llo_lite_py_pb2",
