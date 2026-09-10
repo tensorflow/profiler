@@ -81,24 +81,13 @@ skill's markdown files but are NOT visible by running `xprof -h`.
 
 ## Workflows
 
-### Bottleneck Analysis
+### Bottleneck Analysis (7-Phase Protocol)
 
-When asked to find performance bottlenecks for a session:
-
-1.  **Execute** `get_overview` to identify the high-level breakdown (Compute vs
-    Host vs Communication).
-2.  **Verify** if the workload is compute-bound, memory-bound, or host-bound
-    using `get_device_information` hardware roofline constants.
-3.  **Execute** `get_hlo_op_profile` (see
-    [get_hlo_op_profile](references/get_hlo_op_profile.md)) or `get_top_hlo_ops`
-    for progressive macro-to-micro category breakdown and expensive operations
-    if HLO profiles are available.
-4.  **Execute** `list_xplane_events --max_events=200000` for detailed timeline
-    attribution and step-time evaluation.
-5.  **Inspect** HLO code using `list_hlo_modules` and `get_hlo_module_content`
-    for suspect modules.
-6.  **Report** findings directly to the user with concrete data points derived
-    from the analysis.
+When asked to find or analyze performance bottlenecks for an XProf session,
+follow the structured **7-Phase Performance Analysis Protocol** detailed in
+[references/analysis.md](references/analysis.md) (Turn-1 Parallel Triage,
+Macro-to-Micro Op Drilldown, Headroom & EIC Quantification, Actionable Code
+Proposal, Empirical Validation, Numerical Parity, and Artifact Closure).
 
 ### Profile Collection & Ingestion
 
@@ -195,6 +184,8 @@ Pallas or Mosaic):
     utilization metrics filtered by host, device, or node.
 -   **[Analyze XLA Module Performance](references/analysis.md)**: Analyze XLA
     module performance, inspect HLO operations, and query timeline events.
+-   **[Architecture Mapping](references/architecture_mapping.md)**: Map model
+    architecture blocks to the HLO ops and timeline events that implement them.
 -   **[Import Trace File](references/upload_trace.md)**: Import raw trace files
     into an xprof logdir for analysis.
 -   **[Collect XProf Profile](references/collect_profile.md)**: Collect
