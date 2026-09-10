@@ -263,3 +263,70 @@ export function applyStackTraceArg(
     args[STACK_TRACE_ARG_KEY] = stackTrace;
   }
 }
+
+/**
+ * Display label / argument key under which the calculated effective bandwidth
+ * is surfaced in the selected-event details panel.
+ */
+export const EFFECTIVE_BANDWIDTH_ARG_KEY = 'effective_bandwidth';
+
+/**
+ * Computes the effective bandwidth in GB/s given bytes accessed and device duration in picoseconds.
+ * Formula: (bytes_accessed / (device_duration_ps * 1e-12)) / 1e9 = (bytes_accessed * 1000) / device_duration_ps (GB/s).
+ * Formats with 2 decimal places and unit 'GB/s' (e.g. '24.94 GB/s').
+ * Returns undefined if either value is missing, invalid (NaN, negative bytes), or duration is <= 0.
+ */
+export function computeEffectiveBandwidth(
+  bytesAccessed: number | string | undefined | null,
+  deviceDurationPs: number | string | undefined | null,
+): string | undefined {
+  if (typeof bytesAccessed !== 'number' && typeof bytesAccessed !== 'string') {
+    return undefined;
+  }
+  if (
+    typeof deviceDurationPs !== 'number' &&
+    typeof deviceDurationPs !== 'string'
+  ) {
+    return undefined;
+  }
+  if (typeof bytesAccessed === 'string' && bytesAccessed.trim() === '') {
+    return undefined;
+  }
+  if (typeof deviceDurationPs === 'string' && deviceDurationPs.trim() === '') {
+    return undefined;
+  }
+  const bytes = Number(bytesAccessed);
+  const durationPs = Number(deviceDurationPs);
+  if (isNaN(bytes) || isNaN(durationPs) || bytes < 0 || durationPs <= 0) {
+    return undefined;
+  }
+  const gbPerSec = (bytes * 1000) / durationPs;
+  if (!isFinite(gbPerSec)) {
+    return undefined;
+  }
+  return `${gbPerSec.toFixed(2)} GB/s`;
+}
+
+/**
+ * Calculates effective bandwidth from `bytes_accessed` and `device_duration_ps` in `args`
+ * and injects `effective_bandwidth` into `args` when both are present and duration > 0.
+ * Mutates `args` in place.
+ */
+export function applyEffectiveBandwidthArg(
+  args: Record<string, unknown>,
+): void {
+  if (!args || typeof args !== 'object') {
+    return;
+  }
+  const effectiveBandwidth = computeEffectiveBandwidth(
+    args['bytes_accessed'] as number | string | undefined,
+    args['device_duration_ps'] as number | string | undefined,
+  );
+  if (effectiveBandwidth !== undefined) {
+    try {
+      args[EFFECTIVE_BANDWIDTH_ARG_KEY] = effectiveBandwidth;
+    } catch {
+      // Ignore if args is frozen/non-extensible.
+    }
+  }
+}

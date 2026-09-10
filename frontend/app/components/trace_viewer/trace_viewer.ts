@@ -93,6 +93,7 @@ import {
   TraceFilters,
 } from './trace_viewer_typings';
 import {
+  applyEffectiveBandwidthArg,
   applyStackTraceArg,
   getProcessMappingsFromWasm,
   getProcessNamesFromWasm,
@@ -792,6 +793,9 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
     }
     this.selectedEventProperties = properties;
 
+    if (event.args) {
+      this.addArgsToSelectedEvent(event.args);
+    }
     if (uid) {
       this.maybeFetchEventArgs({name, startUs, durationUs, uid, pid});
     }
@@ -970,6 +974,7 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
             lastEvent['sf'] as number | undefined,
             traceData.stackFrames,
           );
+          applyEffectiveBandwidthArg(args);
           this.eventArgsCache.set(cacheKey, args);
           this.addArgsToSelectedEvent(args);
         }
@@ -978,9 +983,15 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
 
   private addArgsToSelectedEvent(args: Record<string, string>): void {
     if (!this.selectedEvent) return;
+    applyEffectiveBandwidthArg(args);
     const properties = [...this.selectedEventProperties];
     for (const key of Object.keys(args)) {
-      properties.push({property: key, value: args[key]});
+      const existing = properties.find((p) => p.property === key);
+      if (existing) {
+        existing.value = args[key];
+      } else {
+        properties.push({property: key, value: args[key]});
+      }
     }
     this.selectedEventProperties = properties;
     this.maybeFetchAdjacentNodes();
