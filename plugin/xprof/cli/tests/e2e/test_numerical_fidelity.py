@@ -17,6 +17,7 @@ try:
   from xprof.cli.tools import get_memory_profile_tool
   from xprof.cli.tools import get_overview_tool
   from xprof.cli.tools import get_roofline_model_tool
+  from xprof.cli.tools import get_step_trace_tool
   from xprof.cli.tools import get_top_hlo_ops_tool
 except ImportError:
   try:
@@ -30,6 +31,7 @@ except ImportError:
   from xprof.cli.tools import get_memory_profile_tool
   from xprof.cli.tools import get_overview_tool
   from xprof.cli.tools import get_roofline_model_tool
+  from xprof.cli.tools import get_step_trace_tool
   from xprof.cli.tools import get_top_hlo_ops_tool
 
 
@@ -166,7 +168,20 @@ class NumericalFidelityTest(parameterized.TestCase):
         overview_step_time, oracle_step_time, delta=0.01 * oracle_step_time
     )
 
+  def test_n04_t1_step_trace_fidelity(self):
+    """N-4: get_step_trace runs on T1 and returns valid breakdown."""
+    res_raw = get_step_trace_tool.get_step_trace(self.t1_path)
+    res = json.loads(res_raw)
+    self.assertIsInstance(res, dict)
+    self.assertNotIn("error", res)
+    self.assertIn("summary", res)
+    self.assertIn("step_breakdown", res)
+    summary = res["summary"]
+    self.assertGreater(summary["total_steps"], 0)
+    self.assertGreater(summary["step_time_ms_average"], 0.0)
+
   def test_n05_kpi_metrics_contract(self):
+
     """N-5: get_kpi_metrics returns structured schema with physical bounds."""
     res_raw = get_kpi_metrics_tool.get_kpi_metrics(self.t1_path)
     res = json.loads(res_raw)
