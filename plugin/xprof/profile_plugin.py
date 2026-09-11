@@ -228,6 +228,34 @@ def _parse_filename(filename: str) -> tuple[str | None, str | None]:
   return m.group(1), _EXTENSION_TO_TOOL[m.group(2)]
 
 
+def _get_module_name(full_name: str | None) -> str:
+  """Extracts the base module name without the program ID."""
+  if not full_name:
+    return ''
+  open_paren = full_name.find('(')
+  if open_paren != -1:
+    return full_name[:open_paren].strip()
+  return full_name.strip()
+
+
+def _extract_hlo_module_names(
+    filenames: Iterable[str | None] | None,
+) -> list[str]:
+  """Extracts and sorts unique HLO module names from directory basenames."""
+  if not filenames:
+    return []
+  modules: set[str] = set()
+  for f in filenames:
+    if not f:
+      continue
+    basename = os.path.basename(f)
+    if basename.endswith('.hlo_proto.pb'):
+      parsed_host, _ = _parse_filename(basename)
+      if parsed_host and (name := parsed_host.strip()):
+        modules.add(name)
+  return sorted(modules, key=lambda name: (_get_module_name(name), name))
+
+
 def _get_hosts(filenames: Sequence[str]) -> set[str]:
   """Parses a sequence of filenames and returns the set of hosts.
 
@@ -1360,7 +1388,7 @@ class ProfilePlugin(base_plugin.TBPlugin):  # pyrefly: ignore[invalid-inheritanc
     return None, content_type, None
 
   def hlo_module_list_impl(self, request: wrappers.Request) -> str:
-    """Returns a string of HLO module names concatenated by comma for the given run."""
+    """Returns comma-separated HLO module names for the given run."""
     run = request.args.get('run')
     run_dir = self._run_dir(run, request)
     if not run_dir:
@@ -1368,11 +1396,7 @@ class ProfilePlugin(base_plugin.TBPlugin):  # pyrefly: ignore[invalid-inheritanc
       return ''
     try:
       all_basenames = self._get_all_basenames(run_dir)
-      module_list = [
-          name
-          for f in all_basenames
-          if f.endswith('.hlo_proto.pb') and (name := _parse_filename(f)[0])
-      ]
+      module_list = _extract_hlo_module_names(all_basenames)
 
       if not module_list:
         xplane_basenames = self._get_xplane_basenames(run_dir)
@@ -1387,11 +1411,7 @@ class ProfilePlugin(base_plugin.TBPlugin):  # pyrefly: ignore[invalid-inheritanc
             )
 
           all_basenames = self._get_all_basenames(run_dir)
-          module_list = [
-              name
-              for f in all_basenames
-              if f.endswith('.hlo_proto.pb') and (name := _parse_filename(f)[0])
-          ]
+          module_list = _extract_hlo_module_names(all_basenames)
 
       return ','.join(module_list)
     except OSError as e:
