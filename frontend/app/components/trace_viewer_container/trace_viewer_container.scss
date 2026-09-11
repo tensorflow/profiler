@@ -291,6 +291,17 @@ canvas.emscripten {
     width: 100%;
     padding: 24px 10px 10px 10px;
     box-sizing: border-box;
+
+    // When the single-event details panel is shown, give this wrapper a
+    // definite height. angular-split's host and (horizontal) areas are all
+    // height:100%, which only resolves to a bounded height if every ancestor
+    // has a definite height; this wrapper was the missing link, so the split
+    // sized to its content and got clipped by the host's overflow:hidden,
+    // leaving only a tiny scroll. Scoped with :has() so the multi-event table
+    // branch keeps its natural, content-driven height.
+    &:has(.single-event-details) {
+      height: 100%;
+    }
   }
 
   table.mat-mdc-table {
@@ -349,10 +360,20 @@ canvas.emscripten {
   }
 
   .single-event-details {
+    // Give the panel a definite height so the nested angular-split resolves.
+    // angular-split's host and (horizontal) areas are all height:100%, which
+    // only resolves to a bounded height if every ancestor has a definite
+    // height. This panel previously had none, so the split sized to its
+    // content and overflowed the drawer, producing a second scrollbar on the
+    // drawer in addition to the inner one. Filling the drawer height (with
+    // box-sizing folding the padding in, and no bottom margin) makes
+    // .split-area-inner the single scroll container for tall content.
+    height: 100%;
+    box-sizing: border-box;
     padding: 16px;
     border-radius: 8px;
     background-color: var(--mat-sys-surface);
-    margin-bottom: 16px;
+    margin-bottom: 0;
     border: none;
 
     h3 {
