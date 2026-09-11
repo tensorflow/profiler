@@ -54,6 +54,86 @@ using ::tensorflow::profiler::TraceViewOption;
 using ::tensorflow::profiler::XprofThreadPoolExecutor;
 using ::tensorflow::profiler::XSpace;
 
+namespace {
+
+// Encapsulates the on-disk LevelDB SSTable file paths for a single host's
+// trace viewer data (trace events, metadata, and prefix trie).
+struct HostPaths {
+  std::string host_name;
+  std::string trace_events_sstable_path;
+  std::string trace_events_metadata_sstable_path;
+  std::string trace_events_prefix_trie_sstable_path;
+};
+
+// Preprocesses and loads trace events for a single host:
+// 1. If LevelDB SSTables do not exist on disk, reads and preprocesses the
+//    host's XSpace (step grouping, derived timeline, and optional Megascale
+//    DCN), converts it to a TraceEventsContainer, and writes out the LevelDB
+//    tables.
+// 2. Loads the TraceEventsContainer from the LevelDB SSTables using the
+//    specified trace options.
+// Each host operates on its own XSpace and LevelDB SSTable files independently,
+// making this function thread-safe to run in parallel across hosts.
+absl::StatusOr<TraceEventsContainer> ProcessHost(
+    const SessionSnapshot& session_snapshot, int host_index,
+    const HostPaths& host_paths, const TraceViewOption& trace_option,
+    const tensorflow::profiler::TraceOptions& profiler_trace_options,
+    absl::string_view session_id) {
+  if (!tsl::Env::Default()
+           ->FileExists(host_paths.trace_events_sstable_path)
+           .ok()) {
+    absl::Time preprocess_start_time = absl::Now();
+    LOG(INFO) << "Preprocessing XSpace for host " << host_index
+              << " session_id: " << session_id;
+    google::protobuf::Arena arena;
+    TF_ASSIGN_OR_RETURN(XSpace * xspace,
+                        session_snapshot.GetXSpace(host_index, &arena));
+    PreprocessSingleHostXSpace(xspace, /*step_grouping=*/true,
+                               /*derived_timeline=*/true);
+    if (profiler_trace_options.enable_legacy_dcn) {
+      ProcessMegascaleDcn(xspace);
+    }
+
+    TraceEventsContainer trace_container;
+    ConvertXSpaceToTraceEventsContainer(host_paths.host_name, *xspace,
+                                        &trace_container);
+    std::unique_ptr<tsl::WritableFile> trace_events_file;
+    TF_RETURN_IF_ERROR(tsl::Env::Default()->NewWritableFile(
+        host_paths.trace_events_sstable_path, &trace_events_file));
+    std::unique_ptr<tsl::WritableFile> trace_events_metadata_file;
+    TF_RETURN_IF_ERROR(tsl::Env::Default()->NewWritableFile(
+        host_paths.trace_events_metadata_sstable_path,
+        &trace_events_metadata_file));
+    std::unique_ptr<tsl::WritableFile> trace_events_prefix_trie_file;
+    TF_RETURN_IF_ERROR(tsl::Env::Default()->NewWritableFile(
+        host_paths.trace_events_prefix_trie_sstable_path,
+        &trace_events_prefix_trie_file));
+    TF_RETURN_IF_ERROR(trace_container.StoreAsLevelDbTables(
+        std::move(trace_events_file), std::move(trace_events_metadata_file),
+        std::move(trace_events_prefix_trie_file)));
+    LOG(INFO) << "Preprocessing done for host " << host_index
+              << ". Duration: " << absl::Now() - preprocess_start_time
+              << " session_id: " << session_id;
+  }
+
+  TraceEventsLevelDbFilePaths file_paths;
+  file_paths.trace_events_file_path = host_paths.trace_events_sstable_path;
+  file_paths.trace_events_metadata_file_path =
+      host_paths.trace_events_metadata_sstable_path;
+  file_paths.trace_events_prefix_trie_file_path =
+      host_paths.trace_events_prefix_trie_sstable_path;
+
+  TraceEventsContainer trace_container;
+  absl::Time load_start_time = absl::Now();
+  TF_RETURN_IF_ERROR(LoadTraceEventsContainer(
+      file_paths, trace_option, profiler_trace_options, &trace_container));
+  LOG(INFO) << "Loaded trace container for host " << host_index
+            << ". Duration: " << absl::Now() - load_start_time
+            << " session_id: " << session_id;
+  return trace_container;
+}
+
+}  // namespace
 
 absl::Status StreamingTraceViewerProcessor::ProcessSession(
     const SessionSnapshot& session_snapshot, const ToolOptions& options) {
@@ -62,15 +142,18 @@ absl::Status StreamingTraceViewerProcessor::ProcessSession(
       << "StreamingTraceViewerProcessor::ProcessSession started session_id: "
       << session_id;
   absl::Time start_time = absl::Now();
-  TraceEventsContainer merged_trace_container;
 
   TF_ASSIGN_OR_RETURN(TraceViewOption trace_option,
                       GetTraceViewOption(options));
   tensorflow::profiler::TraceOptions profiler_trace_options =
       TraceOptionsFromToolOptions(options);
 
-  // TODO: b/452217676 - Optimize this to process hosts in parallel.
-  for (int i = 0; i < session_snapshot.XSpaceSize(); ++i) {
+  int num_hosts = session_snapshot.XSpaceSize();
+
+  // Step 1: Precompute file paths for all hosts. If file paths cannot be
+  // resolved for any host, fail early before dispatching thread pool tasks.
+  std::vector<HostPaths> host_paths(num_hosts);
+  for (int i = 0; i < num_hosts; ++i) {
     std::string host_name = session_snapshot.GetHostname(i);
     std::optional<std::string> trace_events_sstable_path =
         session_snapshot.MakeHostDataFilePath(
@@ -90,64 +173,70 @@ absl::Status StreamingTraceViewerProcessor::ProcessSession(
       return absl::UnimplementedError(
           "streaming trace viewer hasn't been supported in Cloud AI");
     }
+    host_paths[i] = {
+        std::move(host_name),
+        std::move(*trace_events_sstable_path),
+        std::move(*trace_events_metadata_sstable_path),
+        std::move(*trace_events_prefix_trie_sstable_path),
+    };
+  }
 
-    if (!tsl::Env::Default()->FileExists(*trace_events_sstable_path).ok()) {
-      absl::Time preprocess_start_time = absl::Now();
-      LOG(INFO) << "Preprocessing XSpace for host " << i
-                << " session_id: " << session_id;
-      google::protobuf::Arena arena;
-      TF_ASSIGN_OR_RETURN(XSpace * xspace,
-                          session_snapshot.GetXSpace(i, &arena));
-      PreprocessSingleHostXSpace(xspace, /*step_grouping=*/true,
-                                 /*derived_timeline=*/true);
-      if (profiler_trace_options.enable_legacy_dcn) {
-        ProcessMegascaleDcn(xspace);
-      }
+  // Step 2: Concurrently preprocess and load trace containers across all hosts.
+  // Each host's XSpace and LevelDB tables are independent, allowing safe
+  // parallel execution using XprofThreadPoolExecutor up to MaxParallelism().
+  std::vector<absl::StatusOr<TraceEventsContainer>> trace_containers(num_hosts);
+  if (num_hosts > 0) {
+    int num_threads = std::min(num_hosts, tsl::port::MaxParallelism());
+    XprofThreadPoolExecutor executor("StreamingTraceViewerProcessSession",
+                                     num_threads);
+    for (int i = 0; i < num_hosts; ++i) {
+      executor.Execute([&session_snapshot, &host_paths, &trace_option,
+                        &profiler_trace_options, &trace_containers, session_id,
+                        i]() {
+        trace_containers[i] =
+            ProcessHost(session_snapshot, i, host_paths[i], trace_option,
+                        profiler_trace_options, session_id);
+      });
+    }
+    executor.JoinAll();
+  }
 
-      TraceEventsContainer trace_container;
-      ConvertXSpaceToTraceEventsContainer(host_name, *xspace,
-                                          &trace_container);
-      std::unique_ptr<tsl::WritableFile> trace_events_file;
-      TF_RETURN_IF_ERROR(tsl::Env::Default()->NewWritableFile(
-          *trace_events_sstable_path, &trace_events_file));
-      std::unique_ptr<tsl::WritableFile> trace_events_metadata_file;
-      TF_RETURN_IF_ERROR(tsl::Env::Default()->NewWritableFile(
-          *trace_events_metadata_sstable_path, &trace_events_metadata_file));
-      std::unique_ptr<tsl::WritableFile> trace_events_prefix_trie_file;
-      TF_RETURN_IF_ERROR(tsl::Env::Default()->NewWritableFile(
-          *trace_events_prefix_trie_sstable_path,
-          &trace_events_prefix_trie_file));
-      TF_RETURN_IF_ERROR(trace_container.StoreAsLevelDbTables(
-          std::move(trace_events_file),
-          std::move(trace_events_metadata_file),
-          std::move(trace_events_prefix_trie_file)
-      ));
-      LOG(INFO) << "Preprocessing done for host " << i
-                << ". Duration: " << absl::Now() - preprocess_start_time
-                << " session_id: " << session_id;
+  // Step 3: Sequentially merge host trace containers into a unified container.
+  // Merging is done in deterministic host index order (host 0 -> host 1 -> ...)
+  // so that trace events and devices maintain consistent grouping.
+  // If individual hosts fail, log the error and proceed with remaining valid
+  // hosts (matching the fault-tolerant semantics of Reduce).
+  TraceEventsContainer merged_trace_container;
+  int successful_hosts = 0;
+  for (int i = 0; i < num_hosts; ++i) {
+    if (!trace_containers[i].ok()) {
+      LOG(ERROR) << "Skipping host " << i
+                 << " due to failure: " << trace_containers[i].status();
+      continue;
     }
 
-    TraceEventsLevelDbFilePaths file_paths;
-    file_paths.trace_events_file_path = *trace_events_sstable_path;
-    file_paths.trace_events_metadata_file_path =
-        *trace_events_metadata_sstable_path;
-    file_paths.trace_events_prefix_trie_file_path =
-        *trace_events_prefix_trie_sstable_path;
+    TF_ASSIGN_OR_RETURN(TraceEventsContainer trace_container,
+                        std::move(trace_containers[i]));
 
-    TraceEventsContainer trace_container;
-    absl::Time load_start_time = absl::Now();
-    TF_RETURN_IF_ERROR(LoadTraceEventsContainer(
-        file_paths, trace_option, profiler_trace_options, &trace_container));
-    LOG(INFO) << "Loaded trace container for host " << i
-              << ". Duration: " << absl::Now() - load_start_time
-              << " session_id: " << session_id;
     absl::Time merge_start_time = absl::Now();
     merged_trace_container.Merge(std::move(trace_container), i + 1);
     LOG(INFO) << "Merged trace container for host " << i
               << ". Duration: " << absl::Now() - merge_start_time
               << " session_id: " << session_id;
+    successful_hosts++;
   }
 
+  // Step 4: If all hosts failed, propagate the first failure status.
+  if (num_hosts > 0 && successful_hosts == 0) {
+    for (int i = 0; i < num_hosts; ++i) {
+      if (!trace_containers[i].ok()) {
+        return trace_containers[i].status();
+      }
+    }
+    return absl::InternalError("No hosts with valid trace data.");
+  }
+
+  // Step 5: Serialize the merged trace events container and set tool output.
   TF_RETURN_IF_ERROR(SerializeAndSetOutput(merged_trace_container, trace_option,
                                            profiler_trace_options, session_id));
 

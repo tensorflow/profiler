@@ -546,6 +546,58 @@ TEST_F(StreamingTraceViewerProcessorTest, ProcessSessionEndToEnd) {
   TF_EXPECT_OK(processor.ProcessSession(snapshot, tool_options));
 }
 
+// Verifies that ProcessSession correctly handles multi-host sessions where
+// host preprocessing and LevelDB loading execute concurrently in parallel.
+// Ensures all host trace events are preserved and correctly merged into the
+// output JSON without data loss or concurrency race conditions.
+TEST_F(StreamingTraceViewerProcessorTest, ProcessSessionMultiHostStressTest) {
+  const int kNumHosts = 10;
+  absl::flat_hash_map<std::string, XSpace> host_xspaces;
+  std::vector<std::string> host_names;
+
+  for (int i = 0; i < kNumHosts; ++i) {
+    std::string host_name = absl::StrCat("host", i);
+    host_names.push_back(host_name);
+
+    XSpace space = CreateSingleEventXSpace();
+    XEventMetadata& metadata =
+        (*space.mutable_planes(0)
+              ->mutable_event_metadata())[static_cast<int64_t>(
+            tsl::profiler::HostEventType::kSessionRun)];
+    metadata.set_name(absl::StrCat("EventFrom", host_name));
+
+    host_xspaces[host_name] = std::move(space);
+  }
+
+  TF_ASSERT_OK_AND_ASSIGN(SessionSnapshot snapshot,
+                          CreateSnapshot(host_xspaces));
+
+  ToolOptions tool_options;
+  tool_options["end_time_ms"] = "5000.0";
+  tool_options["resolution"] = "1";
+  StreamingTraceViewerProcessor processor(tool_options);
+
+  TF_EXPECT_OK(processor.ProcessSession(snapshot, tool_options));
+
+  const std::string& json_output = processor.GetData();
+  ASSERT_FALSE(json_output.empty());
+
+  nlohmann::json parsed_json = nlohmann::json::parse(json_output);
+  const auto& trace_events = parsed_json["traceEvents"];
+
+  for (const auto& host_name : host_names) {
+    std::string expected_event_name = absl::StrCat("EventFrom", host_name);
+    bool found = false;
+    for (const auto& event : trace_events) {
+      if (event.value("name", "") == expected_event_name) {
+        found = true;
+        break;
+      }
+    }
+    EXPECT_TRUE(found) << "Could not find event from " << host_name;
+  }
+}
+
 TEST_F(StreamingTraceViewerProcessorTest, ProcessSessionSingleHost) {
   XSpace space = CreateTestXSpace(1);
   absl::flat_hash_map<std::string, XSpace> host_xspaces = {{"host1", space}};
