@@ -146,7 +146,7 @@
           <timeline-player *ngIf="enableTimelinePlayer" (play)="onPlay()" (pause)="onPause()" (seek)="onSeek($event)" (speedChange)="onSpeedChange($event)" style="flex-shrink: 0;"></timeline-player>
         </div>
       </as-split-area>
-      <as-split-area [size]="detailHeightPercent" [visible]="!!selectedEvent">
+      <as-split-area [size]="detailHeightPercent" [minSize]="selectedEvent ? minDrawerSizePercent : 0" [visible]="!!selectedEvent">
         <div *ngIf="selectedEvent" #drawer class="drawer">
           <div class="event-detail-table-container">
             <div *ngIf="isSingleEventTable()" class="single-event-details">

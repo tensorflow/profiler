@@ -57,6 +57,15 @@ import {debounceTime, distinctUntilChanged, takeUntil} from 'rxjs/operators';
 
 const DEPRECATED_STORAGE_KEYS = ['trace_viewer_timing_prompted'];
 
+/** Default height percentage for the drawer (bottom panel). */
+export const DEFAULT_DRAWER_SIZE_PERCENT = 30;
+
+/**
+ * Minimum height percentage for the drawer (bottom panel) to ensure the drag
+ * handle remains permanently visible and interactive.
+ */
+export const MIN_DRAWER_SIZE_PERCENT = 10;
+
 function clearDeprecatedStorageKeys(): void {
   for (const key of DEPRECATED_STORAGE_KEYS) {
     window.localStorage.removeItem(key);
@@ -304,7 +313,6 @@ export class TraceViewerContainer
     return this.readFeatureFlag('enable_source_code_tooltip');
   }
 
-
   /** Toggles the fullscreen mode for the trace viewer component. */
   toggleFullscreen(): void {
     const element = this.el.nativeElement as HTMLElement;
@@ -475,7 +483,8 @@ export class TraceViewerContainer
   readonly tutorials = TUTORIALS;
   currentTutorialIndex = 0;
   tutorialSubscription?: Subscription;
-  drawerSizePercent = 30;
+  drawerSizePercent = DEFAULT_DRAWER_SIZE_PERCENT;
+  readonly minDrawerSizePercent = MIN_DRAWER_SIZE_PERCENT;
   timelineHeightPercent = 100;
   detailHeightPercent = 0;
 
@@ -634,7 +643,11 @@ export class TraceViewerContainer
     } else if (event.key === '?') {
       this.openHelpDialog();
       event.preventDefault();
-    } else if (event.key === ' ' && this.enableTimelinePlayer && this.timelinePlayer) {
+    } else if (
+      event.key === ' ' &&
+      this.enableTimelinePlayer &&
+      this.timelinePlayer
+    ) {
       this.timelinePlayer.togglePlay();
       event.preventDefault();
     } else if (event.key === ';') {
@@ -806,7 +819,12 @@ export class TraceViewerContainer
    */
   private updateSplitSizes(drawerSizePercent?: number) {
     if (drawerSizePercent !== undefined) {
-      this.drawerSizePercent = drawerSizePercent;
+      this.drawerSizePercent = Math.max(
+        drawerSizePercent,
+        this.minDrawerSizePercent,
+      );
+    } else if (this.drawerSizePercent < this.minDrawerSizePercent) {
+      this.drawerSizePercent = DEFAULT_DRAWER_SIZE_PERCENT;
     }
 
     // If an event is selected, the timeline height is reduced to accommodate
@@ -950,7 +968,7 @@ export class TraceViewerContainer
       // '*' represents a wildcard size (null). We ignore it because we need a
       // numeric percentage.
       if (typeof size === 'number') {
-        this.updateSplitSizes(size);
+        this.updateSplitSizes(Math.max(size, this.minDrawerSizePercent));
       }
     }
   }
@@ -1005,7 +1023,13 @@ export class TraceViewerContainer
   openHelpDialog(): void {
     const dialog = this.el.nativeElement.querySelector(
       'trace-viewer-help-dialog',
-    ) as (HTMLElement & {openDialog?: () => void; closeDialog?: () => void, open?: boolean}) | null;
+    ) as
+      | (HTMLElement & {
+          openDialog?: () => void;
+          closeDialog?: () => void;
+          open?: boolean;
+        })
+      | null;
     // Call openDialog() or closeDialog() on the upgraded Lit web component instance if available;
     // fallback to setting the \`open\` property directly if custom element definition
     // upgrade is still pending.
