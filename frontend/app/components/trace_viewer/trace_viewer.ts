@@ -977,12 +977,18 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private addArgsToSelectedEvent(args: Record<string, string>): void {
-    if (!this.selectedEvent) return;
+    const event = this.selectedEvent;
+    if (!event) return;
     const properties = [...this.selectedEventProperties];
     for (const key of Object.keys(args)) {
       properties.push({property: key, value: args[key]});
     }
     this.selectedEventProperties = properties;
+    // Expose the resolved args on the event and reassign it so Trace Viewer
+    // v2 can render them as an auto-traversed JSON tree (see
+    // TraceViewerContainer.buildSelectedEventJson).
+    event.args = Object.assign({}, event.args, args);
+    this.selectedEvent = Object.assign({}, event);
     this.maybeFetchAdjacentNodes();
   }
 

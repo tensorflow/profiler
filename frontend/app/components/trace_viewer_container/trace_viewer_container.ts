@@ -35,6 +35,7 @@ import {MatTooltipModule} from '@angular/material/tooltip';
 import {ActivatedRoute} from '@angular/router';
 import {AngularSplitModule} from 'angular-split';
 
+import {NgxJsonViewerModule} from 'ngx-json-viewer';
 import {TimelinePlayer} from 'org_xprof/frontend/app/components/timeline_player/timeline_player';
 import {getDefaultFeatureFlag} from 'org_xprof/frontend/app/components/trace_viewer_v2/feature_flags';
 import {
@@ -261,6 +262,7 @@ declare interface TfTraceViewer {
     MatTableModule,
     MatTabsModule,
     MatTooltipModule,
+    NgxJsonViewerModule,
   ],
 })
 export class TraceViewerContainer
@@ -271,6 +273,13 @@ export class TraceViewerContainer
   @Input() useTraceViewerV2 = true;
   @Input() showHelpButton = false;
   @Input() selectedEvent?: SelectedEvent | null;
+  /**
+   * The selected event rendered as an auto-traversed JSON tree in Trace
+   * Viewer v2 (identity, timing and the full args map, with the stack trace
+   * already resolved into args). Derived from `selectedEvent` whenever it
+   * changes; `undefined` until the event's args are available.
+   */
+  selectedEventJson?: Record<string, unknown>;
   @Input() searching = false;
 
   /** Whether the timeline player applies */
@@ -462,6 +471,51 @@ export class TraceViewerContainer
     }
   }
 
+  /**
+   * Whether the JSON "Event details" title is currently stuck to the top of its
+   * scroll container. Drives the elevation shadow and divider on the sticky
+   * header (see the .is-sticky styles in the stylesheet).
+   */
+  isJsonTitleStuck = false;
+
+  /** Watches the sticky-header sentinel to toggle {@link isJsonTitleStuck}. */
+  private stickyTitleObserver?: IntersectionObserver;
+
+  /**
+   * Observes a sentinel at the top of the JSON scroll content to detect when the
+   * "Event details" title becomes stuck. The JSON view is rendered behind an
+   * *ngIf, so this setter runs whenever the sentinel is added or removed: it
+   * (re)creates the observer when the sentinel is present and tears it down
+   * otherwise. The observer runs outside the Angular zone and only triggers
+   * change detection when the stuck state actually flips, so scrolling never
+   * runs app-wide change detection.
+   */
+  @ViewChild('jsonStickySentinel')
+  set jsonStickySentinel(sentinel: ElementRef<HTMLElement> | undefined) {
+    this.stickyTitleObserver?.disconnect();
+    this.stickyTitleObserver = undefined;
+    this.isJsonTitleStuck = false;
+
+    const sentinelEl = sentinel?.nativeElement;
+    const scrollRoot = sentinelEl?.closest('.split-area-inner') ?? null;
+    if (!sentinelEl || !scrollRoot) return;
+
+    this.ngZone.runOutsideAngular(() => {
+      this.stickyTitleObserver = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0];
+          if (!entry) return;
+          const stuck = !entry.isIntersecting;
+          if (stuck === this.isJsonTitleStuck) return;
+          this.isJsonTitleStuck = stuck;
+          this.cdRef.detectChanges();
+        },
+        {root: scrollRoot, threshold: 0},
+      );
+      this.stickyTitleObserver.observe(sentinelEl);
+    });
+  }
+
   readonly TraceViewerV2LoadingStatus = TraceViewerV2LoadingStatus;
   traceViewerV2LoadingStatus: TraceViewerV2LoadingStatus =
     TraceViewerV2LoadingStatus.IDLE;
@@ -576,6 +630,7 @@ export class TraceViewerContainer
   }
 
   ngOnDestroy() {
+    this.stickyTitleObserver?.disconnect();
     window.removeEventListener(
       'timeline-player-redraw-request',
       this.handleTimelineRedrawRequest,
@@ -621,7 +676,35 @@ export class TraceViewerContainer
   ngOnChanges(changes: SimpleChanges) {
     if (changes['selectedEvent']) {
       this.updateSplitSizes();
+      this.selectedEventJson = this.buildSelectedEventJson();
     }
+  }
+
+  /**
+   * Builds the object rendered by the JSON tree view in the v2 details panel
+   * from the selected event: its identity, timing and, once resolved, the full
+   * args map (the stack trace is already resolved into args by the parent
+   * component). The object is built as soon as an event is selected, so the
+   * JSON tree renders immediately with the identity/timing fields and simply
+   * gains an `args` node once args are fetched, avoiding a jarring switch from
+   * the flat property rows to the tree view.
+   * Returns `undefined` only when there is no selected event.
+   */
+  private buildSelectedEventJson(): Record<string, unknown> | undefined {
+    const event = this.selectedEvent;
+    if (!event) {
+      return undefined;
+    }
+    const json: Record<string, unknown> = {
+      'name': event.name,
+      'startUs': event.startUs,
+      'durationUs': event.durationUs,
+      'pid': event.pid,
+    };
+    if (event.args && Object.keys(event.args).length > 0) {
+      json['args'] = event.args;
+    }
+    return json;
   }
 
   private readonly keyDownEventListener = (event: KeyboardEvent) => {

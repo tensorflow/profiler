@@ -153,11 +153,29 @@
               <as-split direction="horizontal" style="min-height: 150px; width: 100%;">
                 <as-split-area [size]="60" class="split-area-left">
                   <div class="split-area-inner">
-                    <h3>{{selectedEvent.name}}</h3>
-                    <div class="detail-row" *ngFor="let prop of leftSideProperties; trackBy: trackByProperty">
-                      <span class="detail-label">{{prop.property}}:</span>
-                      <span class="detail-value">{{prop.value}}</span>
-                    </div>
+                    <ng-container
+                      *ngIf="useTraceViewerV2 && selectedEventJson; else flatLeftDetails">
+                      <div class="json-event-details">
+                        <div
+                          #jsonStickySentinel
+                          class="json-sticky-sentinel"
+                          aria-hidden="true"></div>
+                        <div
+                          class="json-event-details-title"
+                          [class.is-sticky]="isJsonTitleStuck">
+                          Event details
+                        </div>
+                        <ngx-json-viewer [json]="selectedEventJson" [depth]="3">
+                        </ngx-json-viewer>
+                      </div>
+                    </ng-container>
+                    <ng-template #flatLeftDetails>
+                      <h3>{{selectedEvent.name}}</h3>
+                      <div class="detail-row" *ngFor="let prop of leftSideProperties; trackBy: trackByProperty">
+                        <span class="detail-label">{{prop.property}}:</span>
+                        <span class="detail-value">{{prop.value}}</span>
+                      </div>
+                    </ng-template>
                   </div>
                 </as-split-area>
                 <as-split-area [size]="40" class="split-area-right">

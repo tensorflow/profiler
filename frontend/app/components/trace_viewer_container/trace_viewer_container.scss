@@ -376,6 +376,94 @@ canvas.emscripten {
     margin-bottom: 0;
     border: none;
 
+    // Trace Viewer v2 auto-traversed JSON view of the selected event. Themes
+    // the vendored ngx-json-viewer via its CSS custom properties (which cascade
+    // into the component) mapped to GM3 system tokens.
+    .json-event-details {
+      // Positioning context for the sticky-header sentinel
+      // (.json-sticky-sentinel), which is absolutely positioned at the top of
+      // this scrolling content so an IntersectionObserver can detect when the
+      // title becomes stuck.
+      position: relative;
+      --ngx-json-font-size: 13px;
+      --ngx-json-key: var(--mat-sys-primary);
+      --ngx-json-value: var(--mat-sys-on-surface);
+      --ngx-json-string: var(--mat-sys-on-surface);
+      --ngx-json-number: var(--mat-sys-secondary);
+      --ngx-json-boolean: var(--mat-sys-secondary);
+      --ngx-json-separator: var(--mat-sys-on-surface-variant);
+      --ngx-json-toggler: var(--mat-sys-on-surface-variant);
+      --ngx-json-array: var(--mat-sys-on-surface-variant);
+      --ngx-json-object: var(--mat-sys-on-surface-variant);
+
+      // Zero-visual-impact marker at the very top of the scroll content. Once
+      // it scrolls out of the .split-area-inner viewport the title has become
+      // stuck, and an IntersectionObserver toggles .is-sticky on the title (see
+      // trace_viewer_container.ts). A small non-zero height keeps the observer
+      // reliable; the 4px acts as the scroll threshold before the shadow shows.
+      .json-sticky-sentinel {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      // Pin the title to the top of the scroll container (.split-area-inner)
+      // so it stays visible while the JSON tree scrolls. The opaque background
+      // matches the panel surface so scrolled content does not show through.
+      .json-event-details-title {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        // Full-bleed opaque header: the scroll container drops its top padding
+        // (see .split-area-left .split-area-inner) so the pinned title sits
+        // flush at the very top, while the negative side margins cancel the
+        // container's 12px side padding so the opaque background (and the
+        // stuck-state divider and shadow) span edge-to-edge. The matching
+        // padding restores the text alignment with the JSON tree below and
+        // keeps the tree from peeking through around the title while scrolling.
+        margin: 0 -12px 12px;
+        padding: 12px;
+        background-color: var(--mat-sys-surface);
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--mat-sys-on-surface);
+        // Elevate the header only once it is stuck (i.e. JSON has scrolled
+        // beneath it). .is-sticky is toggled off the Angular zone by the
+        // IntersectionObserver, so scrolling never triggers change detection.
+        // The transparent border is reserved up-front so toggling its color
+        // does not shift the layout.
+        border-bottom: 1px solid transparent;
+        transition:
+          box-shadow 0.2s ease,
+          border-color 0.2s ease;
+
+        &.is-sticky {
+          border-bottom-color: var(--mat-sys-outline-variant);
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+      }
+
+      // ngx-json-viewer's root section defaults to height:100%; overflow:hidden.
+      // Once the drawer gives this panel a definite height (see
+      // .single-event-details), that height resolves and clips tall JSON,
+      // making it unscrollable. Let the viewer grow with its content so the
+      // outer .split-area-inner stays the single scroll container.
+      ::ng-deep .ngx-json-viewer {
+        height: auto;
+        overflow: visible;
+      }
+
+      // Allow the long HLO expression (resolved stack trace) to wrap instead
+      // of overflowing the panel.
+      ::ng-deep .ngx-json-viewer .segment-value {
+        word-break: break-word;
+      }
+    }
+
     h3 {
       margin-top: 0;
       margin-bottom: 12px;
@@ -389,6 +477,10 @@ canvas.emscripten {
 
       .split-area-inner {
         background-color: var(--mat-sys-surface);
+        // Drop the top padding so the sticky "Event details" title (a
+        // descendant) can sit flush against the top edge of this scroll
+        // container.
+        padding-top: 0;
       }
     }
 
