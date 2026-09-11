@@ -1281,5 +1281,185 @@ class GenerateCacheImplTest(parameterized.TestCase):
     self.assertCountEqual(kwargs['tool_list'], expected_submitted_tools)
 
 
+class HloModuleListImplTest(parameterized.TestCase):
+  """Tests for hlo_module_list_impl."""
+
+  def setUp(self):
+    super().setUp()
+    self.logdir = self.create_tempdir().full_path
+    self.multiplexer = plugin_event_multiplexer.EventMultiplexer()
+    self.plugin = utils.create_profile_plugin(self.logdir, self.multiplexer)
+
+  def test_hlo_module_list_returns_sorted_modules(self):
+    """Verifies that HLO module names are returned in sorted order."""
+    run_dir = self.create_tempdir().full_path
+    for filename in [
+        'jit_train_step(4869159985936022652).hlo_proto.pb',
+        'jit_add(8254229641153238180).hlo_proto.pb',
+        'jit_add(3326385976583000095).hlo_proto.pb',
+        'jit__where(2141868631891211743).hlo_proto.pb',
+    ]:
+      epath.Path(run_dir, filename).touch()
+
+    with mock.patch.object(
+        self.plugin, '_run_dir', return_value=run_dir, autospec=True
+    ):
+      request = wrappers.Request.from_values(query_string='run=test_run')
+      response = self.plugin.hlo_module_list_impl(request)
+
+    expected = (
+        'jit__where(2141868631891211743),'
+        'jit_add(3326385976583000095),'
+        'jit_add(8254229641153238180),'
+        'jit_train_step(4869159985936022652)'
+    )
+    self.assertEqual(response, expected)
+
+  def test_hlo_module_list_sorted_after_xplane_conversion(self):
+    """Verifies module names are sorted when converted from XPlane."""
+    run_dir = self.create_tempdir().full_path
+    epath.Path(run_dir, 'host1.xplane.pb').touch()
+
+    def fake_convert(filenames):
+      del filenames
+      for filename in [
+          'jit_subtract(100).hlo_proto.pb',
+          'jit_add(200).hlo_proto.pb',
+      ]:
+        epath.Path(run_dir, filename).touch()
+
+    with mock.patch.object(
+        self.plugin, '_run_dir', return_value=run_dir, autospec=True
+    ), mock.patch.object(
+        convert, 'xspace_to_tool_names', side_effect=fake_convert, autospec=True
+    ):
+      request = wrappers.Request.from_values(query_string='run=test_run')
+      response = self.plugin.hlo_module_list_impl(request)
+
+    self.assertEqual(response, 'jit_add(200),jit_subtract(100)')
+
+  def test_hlo_module_list_returns_empty_on_missing_run_dir(self):
+    """Verifies empty string is returned when run directory is not found."""
+    with mock.patch.object(
+        self.plugin, '_run_dir', return_value=None, autospec=True
+    ):
+      request = wrappers.Request.from_values(query_string='run=missing_run')
+      response = self.plugin.hlo_module_list_impl(request)
+    self.assertEqual(response, '')
+
+  def test_hlo_module_list_deduplicates_identical_module_names(self):
+    """Verifies identical module names from duplicate files are deduplicated."""
+    run_dir = self.create_tempdir().full_path
+    epath.Path(run_dir, 'jit_add(10).hlo_proto.pb').touch()
+
+    with mock.patch.object(
+        self.plugin, '_run_dir', return_value=run_dir, autospec=True
+    ), mock.patch.object(
+        self.plugin,
+        '_get_all_basenames',
+        return_value=[
+            'jit_add(10).hlo_proto.pb',
+            'jit_add(10).hlo_proto.pb',
+            'jit_sub(20).hlo_proto.pb',
+        ],
+        autospec=True,
+    ):
+      request = wrappers.Request.from_values(query_string='run=test_run')
+      response = self.plugin.hlo_module_list_impl(request)
+
+    self.assertEqual(response, 'jit_add(10),jit_sub(20)')
+
+  def test_hlo_module_list_filters_non_hlo_and_empty_module_names(self):
+    """Verifies non-HLO files and empty module names are ignored."""
+    run_dir = self.create_tempdir().full_path
+    for filename in [
+        '.hlo_proto.pb',
+        'host1.xplane.pb',
+        'run.log',
+        'valid_mod(1).hlo_proto.pb',
+    ]:
+      epath.Path(run_dir, filename).touch()
+
+    with mock.patch.object(
+        self.plugin, '_run_dir', return_value=run_dir, autospec=True
+    ):
+      request = wrappers.Request.from_values(query_string='run=test_run')
+      response = self.plugin.hlo_module_list_impl(request)
+
+    self.assertEqual(response, 'valid_mod(1)')
+
+  def test_hlo_module_list_handles_oserror(self):
+    """Verifies empty string is returned when directory read raises OSError."""
+    with mock.patch.object(
+        self.plugin, '_run_dir', return_value='/fake/dir', autospec=True
+    ), mock.patch.object(
+        self.plugin,
+        '_get_all_basenames',
+        side_effect=OSError('Permission denied'),
+        autospec=True,
+    ):
+      request = wrappers.Request.from_values(query_string='run=test_run')
+      response = self.plugin.hlo_module_list_impl(request)
+
+    self.assertEqual(response, '')
+
+  def test_get_module_name_extracts_base_name(self):
+    """Verifies _get_module_name extracts base module names accurately."""
+    self.assertEqual(profile_plugin._get_module_name(None), '')
+    self.assertEqual(profile_plugin._get_module_name(''), '')
+    self.assertEqual(profile_plugin._get_module_name('   '), '')
+    self.assertEqual(
+        profile_plugin._get_module_name('jit_add(123)'), 'jit_add'
+    )
+    self.assertEqual(
+        profile_plugin._get_module_name('  jit_add(123)  '), 'jit_add'
+    )
+    self.assertEqual(
+        profile_plugin._get_module_name('standalone_module'),
+        'standalone_module',
+    )
+    self.assertEqual(profile_plugin._get_module_name('(123)'), '')
+    self.assertEqual(
+        profile_plugin._get_module_name('nested(foo(bar))'), 'nested'
+    )
+
+  def test_extract_hlo_module_names_sorts_deterministically(self):
+    """Verifies _extract_hlo_module_names sorts by base name and full name."""
+    filenames = [
+        'jit_matmul(300).hlo_proto.pb',
+        'jit_matmul.hlo_proto.pb',
+        'jit_matmul(100).hlo_proto.pb',
+        'jit_matmul(20).hlo_proto.pb',
+        'jit_matmul(300).hlo_proto.pb',
+        'ignored.txt',
+        '.hlo_proto.pb',
+    ]
+    result = profile_plugin._extract_hlo_module_names(filenames)
+    self.assertEqual(
+        result,
+        [
+            'jit_matmul',
+            'jit_matmul(100)',
+            'jit_matmul(20)',
+            'jit_matmul(300)',
+        ],
+    )
+
+  def test_extract_hlo_module_names_handles_paths_and_none(self):
+    """Verifies _extract_hlo_module_names safely handles None, paths, and blanks."""
+    self.assertEqual(profile_plugin._extract_hlo_module_names(None), [])
+    self.assertEqual(profile_plugin._extract_hlo_module_names([]), [])
+    filenames = [
+        None,
+        '',
+        '   ',
+        '/var/log/profiles/jit_conv(5).hlo_proto.pb',
+        '  jit_relu(6)  .hlo_proto.pb',
+        'jit_conv(5).hlo_proto.pb',
+    ]
+    result = profile_plugin._extract_hlo_module_names(filenames)
+    self.assertEqual(result, ['jit_conv(5)', 'jit_relu(6)'])
+
+
 if __name__ == '__main__':
   absltest.main()

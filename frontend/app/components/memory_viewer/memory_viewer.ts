@@ -84,7 +84,15 @@ export class MemoryViewer implements OnDestroy {
       !this.selectedModule ||
       !this.moduleList.includes(this.selectedModule)
     ) {
-      this.selectedModule = this.moduleList[this.firstLoadModuleIndex];
+      const matched = this.selectedModule
+        ? this.moduleList.find(
+            (m) =>
+              m === this.selectedModule ||
+              this.getModuleName(m) === this.selectedModule,
+          )
+        : undefined;
+      this.selectedModule =
+        matched || this.moduleList[this.firstLoadModuleIndex] || '';
     }
     if (!this.selectedMemorySpaceColor && this.firstLoadMemorySpaceColor) {
       this.selectedMemorySpaceColor = this.firstLoadMemorySpaceColor;
@@ -117,21 +125,37 @@ export class MemoryViewer implements OnDestroy {
       this.dataService
         .getModuleList(this.sessionId)
         .pipe(takeUntil(this.destroyed))
-        .subscribe((moduleList: string) => {
-          if (moduleList) {
-            this.moduleList = moduleList.split(',');
-            // No need to regenerate modules.
-            this.dataService.disableCacheRegeneration();
-            this.resolveSelectedModuleAndMemorySpace();
-            this.loadModule(
-              this.selectedModule,
-              this.selectedMemorySpaceColor,
-              true,
-            );
-          } else {
+        .subscribe({
+          next: (moduleList: string) => {
+            if (moduleList) {
+              const rawModules = moduleList
+                .split(',')
+                .map((m) => m.trim())
+                .filter((m) => Boolean(m));
+              this.moduleList = this.sortModules(rawModules);
+              // No need to regenerate modules.
+              this.dataService.disableCacheRegeneration();
+              if (this.moduleList.length > 0) {
+                this.resolveSelectedModuleAndMemorySpace();
+                this.loadModule(
+                  this.selectedModule,
+                  this.selectedMemorySpaceColor,
+                  true,
+                );
+              } else {
+                this.throbber.stop();
+                setLoadingState(false, this.store);
+              }
+            } else {
+              this.throbber.stop();
+              setLoadingState(false, this.store);
+            }
+          },
+          error: (error: unknown) => {
             this.throbber.stop();
             setLoadingState(false, this.store);
-          }
+            console.error('Failed to load module list:', error);
+          },
         });
     }
   }
@@ -205,32 +229,78 @@ export class MemoryViewer implements OnDestroy {
         Number(memorySpaceColor),
       )
       .pipe(takeUntil(this.destroyed))
-      .subscribe((data) => {
-        // Page start latency  = initial load of module list + module data
-        if (initialLoad) {
-          this.throbber.stop();
-          setLoadingState(false, this.store);
-        }
-        this.loading = false;
-
-        this.memoryViewerPreprocessResult =
-          data as MemoryViewerPreprocessResult;
-
-        // If the caller of loadModule does not provide the module name (like
-        // in xsymbol use case), parse and set selectedModule and moduleList
-        // using the data from backend.
-        if (module === '') {
-          if (this.memoryViewerPreprocessResult) {
-            this.selectedModule =
-              this.memoryViewerPreprocessResult.moduleName || '';
+      .subscribe({
+        next: (data) => {
+          // Page start latency  = initial load of module list + module data
+          if (initialLoad) {
+            this.throbber.stop();
+            setLoadingState(false, this.store);
           }
-          this.moduleList = [this.selectedModule];
-        }
+          this.loading = false;
+
+          this.memoryViewerPreprocessResult =
+            data as MemoryViewerPreprocessResult;
+
+          // If the caller of loadModule does not provide the module name (like
+          // in xsymbol use case), parse and set selectedModule and moduleList
+          // using the data from backend.
+          if (module === '') {
+            if (this.memoryViewerPreprocessResult) {
+              this.selectedModule =
+                this.memoryViewerPreprocessResult.moduleName || '';
+            }
+            this.moduleList = [this.selectedModule];
+          }
+        },
+        error: (error: unknown) => {
+          if (initialLoad) {
+            this.throbber.stop();
+            setLoadingState(false, this.store);
+          }
+          this.loading = false;
+          console.error('Failed to load module data:', error);
+        },
       });
   }
 
+  /**
+   * Sorts HLO module names deterministically by base module name with full name
+   * tie-breaker, deduplicating identical entries.
+   */
+  private sortModules(modules: string[]): string[] {
+    if (!modules || modules.length === 0) {
+      return [];
+    }
+    const unique = Array.from(new Set(modules));
+    return unique.sort((a, b) => {
+      const safeA = a || '';
+      const safeB = b || '';
+      const nameA = this.getModuleName(safeA);
+      const nameB = this.getModuleName(safeB);
+      return (
+        nameA.localeCompare(nameB) ||
+        safeA.localeCompare(safeB) ||
+        (safeA < safeB ? -1 : safeA > safeB ? 1 : 0)
+      );
+    });
+  }
+
+  /** Extracts the module name without the program ID. */
+  private getModuleName(fullName: string): string {
+    if (!fullName) {
+      return '';
+    }
+    const openParenIndex = fullName.indexOf('(');
+    if (openParenIndex > -1) {
+      return fullName.substring(0, openParenIndex).trim();
+    }
+    return fullName.trim();
+  }
+
   ngOnDestroy() {
-    // Unsubscribes all pending subscriptions.
+    // Unsubscribes all pending subscriptions and cleans up UI states.
+    this.throbber.stop();
+    this.loading = false;
     setLoadingState(false, this.store);
     this.destroyed.next();
     this.destroyed.complete();
