@@ -282,64 +282,69 @@ def get_hlo_op_profile(
           f"{current_name_prefix}/{name}" if current_name_prefix else name
       )
 
-      metrics = node.metrics
-      # Only emit leaf instructions with non-zero execution time
-      is_xla_leaf = node.HasField("xla") and metrics.raw_time > 0
-      is_other_leaf = not node.children and metrics.raw_time > 0
+      # Check if children carry execution time (e.g., grouping nodes like
+      # 'X and its duplicate(s)'). Fusion nodes have sub-instruction children
+      # that carry 0 raw_time, so they must be treated as leaf nodes.
+      children_time = (
+          sum(c.metrics.raw_time for c in node.children)
+          if node.children
+          else 0
+      )
+      if node.children and children_time > 0:
+        for child in node.children:
+          traverse(child, full_name)
+      else:
+        metrics = node.metrics
+        if metrics.raw_time > 0:
+          total_bytes = (
+              sum(metrics.raw_bytes_accessed_array)
+              if metrics.raw_bytes_accessed_array
+              else 0
+          )
 
-      if is_xla_leaf or is_other_leaf:
-        total_bytes = (
-            sum(metrics.raw_bytes_accessed_array)
-            if metrics.raw_bytes_accessed_array
-            else 0
-        )
+          if node.HasField("xla") and node.xla.category:
+            category_str = node.xla.category
+          elif node.HasField("category"):
+            category_str = f"Category: {name}"
+          else:
+            category_str = "unknown"
+            lower_name = name.lower()
+            for cat in (
+                "custom-call",
+                "fusion",
+                "convolution",
+                "dot",
+                "reduce",
+                "copy",
+                "reshape",
+                "broadcast",
+                "while",
+                "tuple",
+            ):
+              if cat in lower_name:
+                category_str = cat
+                break
+            if category_str == "unknown" and name.startswith("%"):
+              category_str = name.lstrip("%").split(".")[0].split("_")[0]
 
-        if node.HasField("xla") and node.xla.category:
-          category_str = node.xla.category
-        elif node.HasField("category"):
-          category_str = f"Category: {name}"
-        else:
-          category_str = "unknown"
-          lower_name = name.lower()
-          for cat in (
-              "custom-call",
-              "fusion",
-              "convolution",
-              "dot",
-              "reduce",
-              "copy",
-              "reshape",
-              "broadcast",
-              "while",
-              "tuple",
-          ):
-            if cat in lower_name:
-              category_str = cat
-              break
-          if category_str == "unknown" and name.startswith("%"):
-            category_str = name.lstrip("%").split(".")[0].split("_")[0]
+          occurrences = metrics.occurrences if metrics.occurrences > 0 else 1
 
-        occurrences = metrics.occurrences if metrics.occurrences > 0 else 1
-
-        item = {
-            "name": full_name,
-            "category": category_str,
-            "total_self_time_ms": round(metrics.raw_time / 1e9, 4),
-            "occurrences": occurrences,
-            "flops": metrics.raw_flops,
-            "bytes_accessed": total_bytes,
-        }
-        if node.HasField("xla") and node.xla.HasField("source_info"):
-          if node.xla.source_info.file_name:
-            item["source_file"] = node.xla.source_info.file_name
-          if node.xla.source_info.line_number > 0:
-            item["source_line"] = node.xla.source_info.line_number
-          if node.xla.source_info.stack_frame:
-            item["stack_frame"] = node.xla.source_info.stack_frame
-        flat_ops.append(item)
-
-      for child in node.children:
-        traverse(child, full_name)
+          item = {
+              "name": full_name,
+              "category": category_str,
+              "total_self_time_ms": round(metrics.raw_time / 1e9, 4),
+              "occurrences": occurrences,
+              "flops": metrics.raw_flops,
+              "bytes_accessed": total_bytes,
+          }
+          if node.HasField("xla") and node.xla.HasField("source_info"):
+            if node.xla.source_info.file_name:
+              item["source_file"] = node.xla.source_info.file_name
+            if node.xla.source_info.line_number > 0:
+              item["source_line"] = node.xla.source_info.line_number
+            if node.xla.source_info.stack_frame:
+              item["stack_frame"] = node.xla.source_info.stack_frame
+          flat_ops.append(item)
 
     traverse(root)
 
@@ -450,7 +455,7 @@ def get_hlo_op_profile(
           "navigation_hints": {
               "inspect_top_op_ast": (
                   "xprof get_hlo_neighborhood <trace>"
-                  f" --op_name='{top_op_name}'"
+                  f" --instruction_name='{top_op_name}'"
               ),
               "inspect_graph": (
                   f"xprof get_graph_viewer <trace> --node_name='{top_op_name}'"
@@ -499,6 +504,7 @@ def get_hlo_op_profile(
             f"xprof get_hlo_op_profile <trace> --category='{comm_cat}'"
         )
       result = {
+          "total_profile_time_ms": round(total_time_ms, 4),
           "category_summary": category_summary,
           "navigation_hints": hints,
       }
@@ -628,6 +634,7 @@ def get_hlo_op_profile(
       grouped_operations[c_name] = c_ops_formatted
 
     result = {
+        "total_profile_time_ms": round(total_time_ms, 4),
         "category_summary": category_summary,
         "grouped_operations": grouped_operations,
         "navigation_hints": {
@@ -635,7 +642,8 @@ def get_hlo_op_profile(
                 "xprof get_hlo_op_profile <trace> --category='<category_name>'"
             ),
             "inspect_op_neighborhood": (
-                "xprof get_hlo_neighborhood <trace> --op_name='<op_name>'"
+                "xprof get_hlo_neighborhood <trace>"
+                " --instruction_name='<op_name>'"
             ),
             "inspect_roofline": "xprof get_roofline_model <trace>",
             "explore_tree": (

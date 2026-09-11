@@ -30,6 +30,13 @@ class XProfCliTest(unittest.TestCase):
         'session_123', 'instr_name', 2, None
     )
 
+  @mock.patch.object(xprof_cli.XProfCli, 'get_hlo_neighborhood')
+  def test_get_hlo_neighborhood_with_op_name(self, mock_get_neighborhood):
+    self.cli.get_hlo_neighborhood('session_123', op_name='instr_name')
+    mock_get_neighborhood.assert_called_with(
+        'session_123', op_name='instr_name'
+    )
+
   @mock.patch.object(xprof_cli.XProfCli, 'get_hlo_text')
   def test_get_hlo_text(self, mock_get_hlo_text):
     self.cli.get_hlo_text('session_123', 'path', 'module_name', 'op_name')
@@ -237,6 +244,22 @@ class XProfCliTest(unittest.TestCase):
     self.assertEqual(payload['status'], 'ERROR')
     self.assertEqual(payload['reason'], 'PATH_ERROR')
     self.assertNotIn('traceback', payload)
+    mock_stderr.write.assert_called()
+    self.assertIn('PATH_ERROR', mock_stderr.write.call_args[0][0])
+
+  @mock.patch.object(
+      xprof_cli.fire, 'Fire', side_effect=IsADirectoryError('Is a directory')
+  )
+  @mock.patch('sys.stdout')
+  @mock.patch('sys.stderr')
+  def test_main_is_a_directory_exit_3(self, mock_stderr, mock_stdout, _):
+    with self.assertRaises(SystemExit) as cm:
+      xprof_cli.main(['xprof', 'get_kernel_utilization', '/tmp/some_dir'])
+    self.assertEqual(cm.exception.code, 3)
+    mock_stdout.write.assert_called()
+    payload = json.loads(mock_stdout.write.call_args_list[0][0][0])
+    self.assertEqual(payload['status'], 'ERROR')
+    self.assertEqual(payload['reason'], 'PATH_ERROR')
     mock_stderr.write.assert_called()
     self.assertIn('PATH_ERROR', mock_stderr.write.call_args[0][0])
 

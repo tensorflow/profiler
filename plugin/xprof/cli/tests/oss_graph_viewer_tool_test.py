@@ -1,11 +1,13 @@
+"""Unit tests for get_graph_viewer_tool CLI interface in OSS."""
+
 from unittest import mock
 
 from absl.testing import absltest
 from xprof.cli.internal.oss import xprof_client
-from xprof.cli.tools import get_graph_viewer_tool
+from xprof.cli.tools.oss import get_graph_viewer_tool
 
 
-class GetGraphViewerToolTest(absltest.TestCase):
+class OssGraphViewerToolTest(absltest.TestCase):
 
   def setUp(self):
     super().setUp()
@@ -109,6 +111,12 @@ class GetGraphViewerToolTest(absltest.TestCase):
     with self.assertRaises(FileNotFoundError) as cm:
       get_graph_viewer_tool.get_graph_viewer(session_id="session_without_hlo")
     self.assertIn("xla_flags", str(cm.exception).lower())
+
+  def test_empty_graph_viewer_data_raises_file_not_found(self):
+    self.mock_client.fetch.return_value = (81, b"")
+    with self.assertRaises(FileNotFoundError) as cm:
+      get_graph_viewer_tool.get_graph_viewer(session_id="session_empty")
+    self.assertIn("No graph_viewer data found", str(cm.exception))
 
 
 if __name__ == "__main__":

@@ -1,7 +1,8 @@
-"""Tool to calculate TPU hardware kernel compute utilization in 3P."""
+"""Tool to calculate TPU hardware kernel compute utilization in OSS."""
 
 import json
 import logging
+import pathlib
 from typing import Any
 
 from xprof.cli.internal import decorators
@@ -22,10 +23,10 @@ def get_kernel_utilization(
     raw_bytes: bytes | None = None,
     bypass_cache: bool = False,
 ) -> str | dict[str, Any]:
-  """Calculates hardware compute utilization from performance counters in 3P.
+  """Calculates hardware compute utilization from performance counters in OSS.
 
   Args:
-    session_id: The XProf session ID, session path, or file path.
+    session_id: The XProf session ID, run name, directory, or file path.
     kernel_name: Optional filter for a specific kernel name.
     duration_us: Optional benchmark duration override in microseconds.
     force_duration: Whether to force duration_us override over hardware cycle
@@ -33,7 +34,7 @@ def get_kernel_utilization(
     host: Host filter.
     device: Device filter (0-indexed integer).
     output_format: "json" (default) or "dict".
-    raw_bytes: Optional raw XSpace or XprofResponse protobuf bytes.
+    raw_bytes: Optional raw XSpace protobuf bytes.
     bypass_cache: Whether to bypass cache.
 
   Returns:
@@ -58,7 +59,7 @@ def get_kernel_utilization(
   if device is not None:
     params["device_id"] = str(device)
 
-  # Mode 1: Direct in-memory proto bytes (e.g. KernelBench/offline)
+  # Mode 1: Direct in-memory proto bytes (e.g. offline analysis)
   if raw_bytes is not None:
     raw_data, _ = convert.xspace_to_tools_data_from_byte_string(
         [raw_bytes], ["trace.pb"], "kernel_utilization", params
@@ -72,23 +73,41 @@ def get_kernel_utilization(
     else:
       decoded_str = str(raw_data)
 
-  # Mode 2: Local, CNS, or x20 file path
-  elif (
-      session_id.startswith("/")
-      or session_id.startswith("cns/")
-      or session_id.startswith("x20/")
-  ):
-    file_path = session_id
-    if file_path.startswith("cns/") or file_path.startswith("x20/"):
-      file_path = "/" + file_path
-    with open(file_path, "rb") as f:
-      file_bytes = f.read()
+  # Mode 2: Local file or directory path
+  elif session_id.startswith("/") or session_id.startswith("./"):
+    file_path = pathlib.Path(session_id)
+    if not file_path.exists():
+      raise FileNotFoundError(f"Path does not exist: {session_id!r}")
+
+    if file_path.is_dir():
+      all_files = sorted(
+          set(
+              [str(p) for p in file_path.glob("**/*.xplane.pb")]
+              + [str(p) for p in file_path.glob("**/*.xspace.pb")]
+          )
+      )
+      if not all_files:
+        raise FileNotFoundError(
+            "No .xplane.pb or .xspace.pb files found in directory:"
+            f" {session_id!r}"
+        )
+      file_bytes_list = []
+      for p in all_files:
+        with open(p, "rb") as f:
+          file_bytes_list.append(f.read())
+      file_paths_list = all_files
+    else:
+      with open(session_id, "rb") as f:
+        file_bytes = f.read()
+      file_bytes_list = [file_bytes]
+      file_paths_list = [session_id]
+
     raw_data, _ = convert.xspace_to_tools_data_from_byte_string(
-        [file_bytes], [file_path], "kernel_utilization", params
+        file_bytes_list, file_paths_list, "kernel_utilization", params
     )
     if not raw_data:
       raise RuntimeError(
-          f"Failed to compute utilization from file {file_path!r}: no data"
+          f"Failed to compute utilization from file {session_id!r}: no data"
           " returned."
       )
     if isinstance(raw_data, bytes):
@@ -96,7 +115,7 @@ def get_kernel_utilization(
     else:
       decoded_str = str(raw_data)
 
-  # Mode 3: Session ID lookup via xprof_client
+  # Mode 3: Session ID lookup via OSS xprof_client
   else:
     client = xprof_client.get_client()
     try:

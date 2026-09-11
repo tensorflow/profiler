@@ -19,15 +19,8 @@ from xprof.cli.internal.oss import hlo_tools
 from xprof.cli.internal.oss import xplane_tools
 from xprof.cli.internal.oss import xprof_client
 from xprof.cli.tools import check_host_boundness_tool
-from xprof.cli.tools import detect_layout_mismatch_copies_tool
-from xprof.cli.tools import detect_unfused_reshapes_tool
-from xprof.cli.tools import detect_unfused_updates_tool
-from xprof.cli.tools import detect_unnecessary_convert_dynamic_scale_tool
-from xprof.cli.tools import detect_unnecessary_convert_reduce_tool
-from xprof.cli.tools import get_graph_viewer_tool
 from xprof.cli.tools import get_hlo_stats_tool
 from xprof.cli.tools import get_kernel_stats_tool
-from xprof.cli.tools import get_kernel_utilization_tool
 from xprof.cli.tools import get_kpi_metrics_tool
 from xprof.cli.tools import get_llo_analysis_tool
 from xprof.cli.tools import get_llo_debug_string_tool
@@ -38,6 +31,8 @@ from xprof.cli.tools import get_roofline_model_tool
 from xprof.cli.tools import get_top_hlo_ops_tool
 from xprof.cli.tools import get_utilization_viewer_tool
 from xprof.cli.tools import verify_numerical_parity_tool
+from xprof.cli.tools.oss import get_graph_viewer_tool
+from xprof.cli.tools.oss import get_kernel_utilization_tool
 from xprof.cli.tools.oss import upload_trace_tool
 
 
@@ -48,26 +43,11 @@ def cli_main() -> dict[str, Any]:
     A dictionary of tool names to functions.
   """
   return {
-      # 33 Core Tools (Available in both 1P and 3P):
+      # 28 Core Tools (Available in both 1P and 3P):
       # keep-sorted start
       "aggregate_xplane_events": xplane_tools.aggregate_xplane_events,
       "check_host_boundness": check_host_boundness_tool.check_host_boundness,
       "compute_utilization": get_kernel_utilization_tool.get_kernel_utilization,
-      "detect_layout_mismatch_copies": (
-          detect_layout_mismatch_copies_tool.detect_layout_mismatch_copies
-      ),
-      "detect_unfused_reshapes": (
-          detect_unfused_reshapes_tool.detect_unfused_reshapes
-      ),
-      "detect_unfused_updates": (
-          detect_unfused_updates_tool.detect_unfused_updates
-      ),
-      "detect_unnecessary_convert_dynamic_scale": (
-          detect_unnecessary_convert_dynamic_scale_tool.detect_unnecessary_convert_dynamic_scale
-      ),
-      "detect_unnecessary_convert_reduce": (
-          detect_unnecessary_convert_reduce_tool.detect_unnecessary_convert_reduce
-      ),
       "get_avg_step_time": get_kernel_stats_tool.get_avg_step_time,
       "get_device_information": xprof_data.get_device_information,
       "get_graph_viewer": get_graph_viewer_tool.get_graph_viewer,

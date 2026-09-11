@@ -191,9 +191,6 @@ Pallas or Mosaic):
 -   **[Collect XProf Profile](references/collect_profile.md)**: Collect
     performance profiles across JAX, PyTorch, and TensorFlow workloads via
     programmatic tracing or remote capture.
--   **[Get Smart Suggestions](references/smart_suggestions.md)**: Dynamic
-    bottleneck rules and static HLO optimization patterns (data types, einsum
-    folding, layout alignment).
 -   **[Diff Sessions](references/diff_session.md)**: Compare performance, kernel
     execution times, top operations, and HLO graphs between baseline and
     candidate sessions.

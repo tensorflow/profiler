@@ -118,13 +118,12 @@ py_test(
     ],
 )
 
-py_test(
-    name = "get_graph_viewer_tool_test",
-    srcs = ["get_graph_viewer_tool_test.py"],
-    visibility = ["//visibility:public"],
+pytype_strict_contrib_test(
+    name = "oss_graph_viewer_tool_test",
+    srcs = ["oss_graph_viewer_tool_test.py"],
     deps = [
         "//plugin/xprof/cli/internal/oss:xprof_client",
-        "//plugin/xprof/cli/tools:get_graph_viewer_tool",
+        "//plugin/xprof/cli/tools/oss:get_graph_viewer_tool",
         "@absl_py//absl/testing:absltest",
     ],
 )
@@ -213,6 +212,19 @@ pytype_strict_contrib_test(
         "//plugin/xprof/cli/internal/oss:xprof_client",
         "//plugin/xprof/cli/tools/oss:upload_trace_tool",
         "@absl_py//absl/testing:absltest",
+    ],
+)
+
+pytype_strict_contrib_test(
+    name = "oss_kernel_utilization_tool_test",
+    srcs = ["oss_kernel_utilization_tool_test.py"],
+    deps = [
+        "//plugin/xprof/cli/internal:decorators",
+        "//plugin/xprof/cli/internal/oss:xprof_client",
+        "//plugin/xprof/cli/tools/oss:get_kernel_utilization_tool",
+        "@absl_py//absl/testing:absltest",
+        "@absl_py//absl/testing:parameterized",
+        "@tsl//tsl/profiler/protobuf:xplane_py_pb2",
     ],
 )
 

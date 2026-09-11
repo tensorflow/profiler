@@ -81,8 +81,18 @@ class XprofDataTest(absltest.TestCase):
     self.assertIn("Category: MatMul", categories)
     self.assertIn("FusionCategory", categories)
 
+    self.assertIn("total_profile_time_ms", result_json)
+    self.assertEqual(result_json["total_profile_time_ms"], 100.0)
     self.assertIn("drill_down_category", result_json["navigation_hints"])
     self.assertIn("available_categories", result_json["navigation_hints"])
+    self.assertIn(
+        "--instruction_name=",
+        result_json["navigation_hints"]["inspect_op_neighborhood"],
+    )
+    self.assertNotIn(
+        "--op_name=",
+        result_json["navigation_hints"]["inspect_op_neighborhood"],
+    )
 
   def test_get_hlo_op_profile_category_view(self):
     profile = self._create_mock_profile()
@@ -91,6 +101,8 @@ class XprofDataTest(absltest.TestCase):
     result_json = json.loads(result)
 
     self.assertIn("category_summary", result_json)
+    self.assertIn("total_profile_time_ms", result_json)
+    self.assertEqual(result_json["total_profile_time_ms"], 100.0)
     self.assertNotIn("grouped_operations", result_json)
     self.assertLen(result_json["category_summary"], 2)
     self.assertEqual(
@@ -99,6 +111,164 @@ class XprofDataTest(absltest.TestCase):
     self.assertEqual(
         result_json["category_summary"][0]["total_self_time_ms"], 60.0
     )
+    total_frac = sum(
+        c["fraction_of_total_time"] for c in result_json["category_summary"]
+    )
+    self.assertAlmostEqual(total_frac, 1.0, places=4)
+
+  def test_get_hlo_op_profile_nested_fusions_category_rollup_unity(self):
+    """Verifies that nested fusions do not cause rollup double-counting."""
+    profile = op_profile_pb2.Profile(
+        by_category=op_profile_pb2.Node(
+            name="by_category",
+            metrics=op_profile_pb2.Metrics(
+                raw_time=100000000000, occurrences=15, raw_flops=1500
+            ),
+            children=[
+                op_profile_pb2.Node(
+                    name="MatMul",
+                    category=op_profile_pb2.Node.InstructionCategory(),
+                    metrics=op_profile_pb2.Metrics(
+                        raw_time=60000000000,
+                        occurrences=10,
+                        raw_flops=1000,
+                    ),
+                ),
+                op_profile_pb2.Node(
+                    name="FusionParent",
+                    xla=op_profile_pb2.Node.XLAInstruction(
+                        category="FusionCategory"
+                    ),
+                    metrics=op_profile_pb2.Metrics(
+                        raw_time=40000000000, occurrences=5, raw_flops=500
+                    ),
+                    children=[
+                        op_profile_pb2.Node(
+                            name="child_add",
+                            xla=op_profile_pb2.Node.XLAInstruction(
+                                category="FusionCategory"
+                            ),
+                            metrics=op_profile_pb2.Metrics(
+                                raw_time=15000000000,
+                                occurrences=5,
+                                raw_flops=200,
+                            ),
+                        ),
+                        op_profile_pb2.Node(
+                            name="child_mul",
+                            xla=op_profile_pb2.Node.XLAInstruction(
+                                category="FusionCategory"
+                            ),
+                            metrics=op_profile_pb2.Metrics(
+                                raw_time=25000000000,
+                                occurrences=5,
+                                raw_flops=300,
+                            ),
+                        ),
+                    ],
+                ),
+            ],
+        )
+    )
+    self.mock_client.fetch.return_value = (None, profile.SerializeToString())
+    result = xprof_data.get_hlo_op_profile("session_nested", view="category")
+    result_json = json.loads(result)
+
+    total_frac = sum(
+        c["fraction_of_total_time"] for c in result_json["category_summary"]
+    )
+    self.assertAlmostEqual(total_frac, 1.0, places=4)
+
+    # In flat view, only true leaves (child_add, child_mul, MatMul) appear,
+    # never the intermediate FusionParent container.
+    flat_result = json.loads(
+        xprof_data.get_hlo_op_profile("session_nested", view="flat")
+    )
+    flat_names = [op["name"] for op in flat_result]
+    self.assertIn("by_category/MatMul", flat_names)
+    self.assertIn("by_category/FusionParent/child_add", flat_names)
+    self.assertIn("by_category/FusionParent/child_mul", flat_names)
+    self.assertNotIn("by_category/FusionParent", flat_names)
+
+  def test_get_hlo_op_profile_fusion_with_zero_time_children_preserved(self):
+    """Verifies that fusion ops with zero-time children are preserved as leaves."""
+    profile = op_profile_pb2.Profile(
+        by_category=op_profile_pb2.Node(
+            name="by_category",
+            metrics=op_profile_pb2.Metrics(
+                raw_time=100000000000, occurrences=15, raw_flops=1500
+            ),
+            children=[
+                op_profile_pb2.Node(
+                    name="MatMul",
+                    category=op_profile_pb2.Node.InstructionCategory(),
+                    metrics=op_profile_pb2.Metrics(
+                        raw_time=60000000000,
+                        occurrences=10,
+                        raw_flops=1000,
+                    ),
+                ),
+                op_profile_pb2.Node(
+                    name="fusion.668",
+                    xla=op_profile_pb2.Node.XLAInstruction(
+                        category="convolution fusion"
+                    ),
+                    metrics=op_profile_pb2.Metrics(
+                        raw_time=40000000000, occurrences=5, raw_flops=500
+                    ),
+                    # In real HLO traces, fusion sub-instructions carry 0
+                    # raw_time
+                    children=[
+                        op_profile_pb2.Node(
+                            name="sub_add",
+                            xla=op_profile_pb2.Node.XLAInstruction(
+                                category="convolution fusion"
+                            ),
+                            metrics=op_profile_pb2.Metrics(
+                                raw_time=0,
+                                occurrences=5,
+                                raw_flops=0,
+                            ),
+                        ),
+                        op_profile_pb2.Node(
+                            name="sub_mul",
+                            xla=op_profile_pb2.Node.XLAInstruction(
+                                category="convolution fusion"
+                            ),
+                            metrics=op_profile_pb2.Metrics(
+                                raw_time=0,
+                                occurrences=5,
+                                raw_flops=0,
+                            ),
+                        ),
+                    ],
+                ),
+            ],
+        )
+    )
+    self.mock_client.fetch.return_value = (None, profile.SerializeToString())
+    result = xprof_data.get_hlo_op_profile("session_fusion", view="category")
+    result_json = json.loads(result)
+
+    categories = {c["category"]: c for c in result_json["category_summary"]}
+    self.assertIn("convolution fusion", categories)
+    self.assertEqual(
+        categories["convolution fusion"]["total_self_time_ms"], 40.0
+    )
+    total_frac = sum(
+        c["fraction_of_total_time"] for c in result_json["category_summary"]
+    )
+    self.assertAlmostEqual(total_frac, 1.0, places=4)
+
+    # In flat view, fusion.668 itself is the leaf op emitted
+    flat_result = json.loads(
+        xprof_data.get_hlo_op_profile("session_fusion", view="flat")
+    )
+    flat_names = [op["name"] for op in flat_result]
+    self.assertIn("by_category/MatMul", flat_names)
+    self.assertIn("by_category/fusion.668", flat_names)
+    self.assertNotIn("by_category/fusion.668/sub_add", flat_names)
+    self.assertNotIn("by_category/fusion.668/sub_mul", flat_names)
 
   def test_get_hlo_op_profile_category_filter(self):
     profile = self._create_mock_profile()
@@ -110,6 +280,14 @@ class XprofDataTest(absltest.TestCase):
     self.assertEqual(result_json["total_self_time_ms"], 40.0)
     self.assertLen(result_json["operations"], 1)
     self.assertEqual(result_json["operations"][0]["name"], "by_category/Fusion")
+    self.assertIn(
+        "--instruction_name=",
+        result_json["navigation_hints"]["inspect_top_op_ast"],
+    )
+    self.assertNotIn(
+        "--op_name=",
+        result_json["navigation_hints"]["inspect_top_op_ast"],
+    )
 
   def test_get_hlo_op_profile_category_not_found(self):
     profile = self._create_mock_profile()

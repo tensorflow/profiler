@@ -214,6 +214,38 @@ def _is_error_payload(value: Any) -> bool:
   return False
 
 
+def _get_xprof_version() -> str:
+  """Retrieves the xprof version string for cache key versioning."""
+  try:
+    import importlib.metadata  # pylint: disable=g-import-not-at-top
+
+    return importlib.metadata.version("xprof")
+  except Exception:  # pylint: disable=broad-except
+    pass
+  try:
+    for mod_name in (
+        "google3.third_party.xprof.plugin.xprof.version",
+        "xprof.version",
+    ):
+      if mod_name in sys.modules:
+        mod = sys.modules[mod_name]
+        return getattr(mod, "__version__", "unknown")
+    import importlib  # pylint: disable=g-import-not-at-top
+
+    for mod_name in (
+        "google3.third_party.xprof.plugin.xprof.version",
+        "xprof.version",
+    ):
+      try:
+        mod = importlib.import_module(mod_name)
+        return getattr(mod, "__version__", "unknown")
+      except Exception:  # pylint: disable=broad-except
+        pass
+  except Exception:  # pylint: disable=broad-except
+    pass
+  return "unknown"
+
+
 def _resolve_session_path_via_client(val: str) -> pathlib.Path | None:
   """Dynamically resolves a session ID against the active xprof client if present."""
   mod_names = ("xprof.cli.internal.oss.xprof_client",)
@@ -453,6 +485,7 @@ def cached(
             [
                 getattr(func, "__module__", ""),
                 getattr(func, "__qualname__", ""),
+                _get_xprof_version(),
                 normalized_args,
                 key_kwargs_sorted,
                 fingerprint_str,

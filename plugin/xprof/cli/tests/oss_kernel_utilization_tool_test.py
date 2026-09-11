@@ -1,17 +1,21 @@
-"""Unit tests for get_kernel_utilization_tool CLI interface in 3P."""
-
 import json
+from typing import Any
 from unittest import mock
 
 from absl.testing import absltest
 from absl.testing import parameterized
-from tensorflow.tsl.profiler.protobuf import xplane_pb2  # pylint: disable=g-direct-tensorflow-import
 from xprof.cli.internal import decorators
 from xprof.cli.internal.oss import xprof_client
-from xprof.cli.tools import get_kernel_utilization_tool
+from xprof.cli.tools.oss import get_kernel_utilization_tool
+
+try:
+  from tensorflow.tsl.profiler.protobuf import xplane_pb2  # pylint: disable=g-direct-tensorflow-import,g-import-not-at-top
+except ImportError:
+  xplane_pb2 = None
 
 
-def _create_sample_xspace() -> xplane_pb2.XSpace:
+def _create_sample_xspace() -> Any:
+  assert xplane_pb2 is not None
   space = xplane_pb2.XSpace()
   plane = space.planes.add()
   plane.name = "/device:TPU:0"
@@ -76,10 +80,12 @@ def _create_sample_xspace() -> xplane_pb2.XSpace:
   return space
 
 
-class GetKernelUtilizationToolTest(parameterized.TestCase):
+class OssKernelUtilizationToolTest(parameterized.TestCase):
 
   def setUp(self):
     super().setUp()
+    if xplane_pb2 is None:
+      self.skipTest("tensorflow.tsl.profiler.protobuf.xplane_pb2 not installed")
     mock_cache = mock.create_autospec(
         decorators.Cache, instance=True, spec_set=True
     )
@@ -116,6 +122,8 @@ class GetKernelUtilizationToolTest(parameterized.TestCase):
         output_format="json",
         bypass_cache=True,
     )
+    self.assertIsInstance(result, str)
+    assert isinstance(result, str)
     parsed = json.loads(result)
     self.assertEqual(parsed["status"], "SUCCESS")
     self.assertIn("devices", parsed)
@@ -147,6 +155,35 @@ class GetKernelUtilizationToolTest(parameterized.TestCase):
     self.assertEqual(
         result["devices"][0]["kernels"][0]["kernel_name"], "matmul"
     )
+
+  def test_get_kernel_utilization_from_local_directory(self):
+    space = _create_sample_xspace()
+    temp_dir = self.create_tempdir()
+    temp_dir.create_file(
+        "test.xplane.pb", content=space.SerializeToString()
+    )
+
+    result = get_kernel_utilization_tool.get_kernel_utilization(
+        session_id=temp_dir.full_path,
+        output_format="dict",
+        bypass_cache=True,
+    )
+    self.assertIsInstance(result, dict)
+    self.assertEqual(result["status"], "SUCCESS")
+    self.assertIn("devices", result)
+    self.assertEqual(
+        result["devices"][0]["kernels"][0]["kernel_name"], "matmul"
+    )
+
+  def test_get_kernel_utilization_from_empty_directory_raises_file_not_found(
+      self,
+  ):
+    temp_dir = self.create_tempdir()
+    with self.assertRaises(FileNotFoundError):
+      get_kernel_utilization_tool.get_kernel_utilization(
+          session_id=temp_dir.full_path,
+          bypass_cache=True,
+      )
 
   def test_get_kernel_utilization_from_session_id_with_client(self):
     mock_json_response = json.dumps({
@@ -185,6 +222,8 @@ class GetKernelUtilizationToolTest(parameterized.TestCase):
         bypass_cache=True,
         kernel="matmul",
     )
+    self.assertIsInstance(result, dict)
+    assert isinstance(result, dict)
     self.assertEqual(result["status"], "SUCCESS")
     self.assertEqual(
         result["devices"][0]["kernels"][0]["kernel_name"], "matmul"
@@ -200,6 +239,8 @@ class GetKernelUtilizationToolTest(parameterized.TestCase):
         output_format="dict",
         bypass_cache=True,
     )
+    self.assertIsInstance(result, dict)
+    assert isinstance(result, dict)
     self.assertEqual(result["status"], "SUCCESS")
     self.assertAlmostEqual(
         result["devices"][0]["kernels"][0]["duration_us"], 20.0, places=3

@@ -137,8 +137,19 @@ class SetupTest(absltest.TestCase):
         'oss',
     )
     init_py = os.path.join(oss_tools_dir, '__init__.py')
+    graph_viewer_py = os.path.join(oss_tools_dir, 'get_graph_viewer_tool.py')
+    kernel_utilization_py = os.path.join(
+        oss_tools_dir, 'get_kernel_utilization_tool.py'
+    )
     upload_trace_py = os.path.join(oss_tools_dir, 'upload_trace_tool.py')
     self.assertTrue(os.path.isfile(init_py), f'Missing {init_py}')
+    self.assertTrue(
+        os.path.isfile(graph_viewer_py), f'Missing {graph_viewer_py}'
+    )
+    self.assertTrue(
+        os.path.isfile(kernel_utilization_py),
+        f'Missing {kernel_utilization_py}',
+    )
     self.assertTrue(
         os.path.isfile(upload_trace_py), f'Missing {upload_trace_py}'
     )

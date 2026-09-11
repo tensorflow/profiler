@@ -85,7 +85,7 @@ copy-pasteable command templates and discovery lists:
 ```json
 "navigation_hints": {
   "drill_down_category": "xprof get_hlo_op_profile <trace> --category='<category_name>'",
-  "inspect_op_neighborhood": "xprof get_hlo_neighborhood <trace> --op_name='<op_name>'",
+  "inspect_op_neighborhood": "xprof get_hlo_neighborhood <trace> --instruction_name='<op_name>'",
   "inspect_graph": "xprof get_graph_viewer <trace> --node_name='<op_name>'",
   "inspect_roofline": "xprof get_roofline_model <trace>",
   "explore_tree": "xprof get_hlo_op_profile <trace> --view=tree --path='<path>' --depth=2",
