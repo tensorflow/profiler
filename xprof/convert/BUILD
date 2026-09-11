@@ -599,6 +599,7 @@ cc_library(
         ":xplane_to_trace_container",
         ":xprof_thread_pool_executor",
         "//plugin/xprof/protobuf:op_stats_proto_cc",
+        "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
@@ -618,6 +619,7 @@ cc_library(
         "@xla//xla/tsl/platform:errors",
         "@xla//xla/tsl/platform:statusor",
         "@xla//xla/tsl/profiler/utils:timespan",
+        "@xla//xla/tsl/profiler/utils:xplane_visitor",
     ],
     alwayslink = 1,
 )
@@ -2147,6 +2149,7 @@ cc_library(
         "//plugin/xprof/protobuf:roofline_model_proto_cc",
         "//plugin/xprof/protobuf:tf_data_stats_proto_cc",
         "//plugin/xprof/protobuf:tf_stats_proto_cc",
+        "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
@@ -2165,6 +2168,8 @@ cc_library(
         "@xla//xla/tsl/platform:errors",
         "@xla//xla/tsl/platform:statusor",
         "@xla//xla/tsl/profiler/convert:xplane_to_trace_events",
+        "@xla//xla/tsl/profiler/utils:timespan",
+        "@xla//xla/tsl/profiler/utils:xplane_visitor",
     ],
 )
 
