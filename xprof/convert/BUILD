@@ -3024,6 +3024,8 @@ cc_test(
     name = "multi_xspace_to_inference_stats_test",
     srcs = ["multi_xspace_to_inference_stats_test.cc"],
     deps = [
+        ":data_table_utils",
+        ":inference_stats",
         ":multi_xspace_to_inference_stats",
         ":repository",
         "@com_google_absl//absl/status",
@@ -3031,6 +3033,8 @@ cc_test(
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
         "@tsl//tsl/profiler/protobuf:xplane_proto_cc",
+        "@xla//xla/tsl/profiler/utils:device_utils",
+        "@xla//xla/tsl/profiler/utils:group_events",
         "@xla//xla/tsl/profiler/utils:xplane_builder",
         "@xla//xla/tsl/profiler/utils:xplane_schema",
     ],

@@ -220,14 +220,16 @@ void UpdateEventTimestamps(
   // Note: Timestamp updates for batch analysis is not supported yet.
 }
 
-void UpdateBatchEvents(const GroupMetadataMap& group_metadata_map,
-                       absl::Span<const EventTypeSpan> events, int64_t group_id,
-                       BatchEventsMap* batch_events_map) {
+BatchEvents* UpdateBatchEvents(absl::Span<const EventTypeSpan> events,
+                               int64_t group_id,
+                               BatchEventsMap* batch_events_map) {
   // Update BatchEvents that are directly associated with <group_id>.
   if (auto batch_events = FindOrNull(*batch_events_map, group_id)) {
     batch_events->events.insert(batch_events->events.end(), events.begin(),
                                 events.end());
+    return batch_events;
   }
+  return nullptr;
 }
 
 // Updates RequestEvents using ReadFromDevice, WriteToDevice and DeviceRun.
@@ -419,7 +421,7 @@ void UpdateTpuDataTransferEventsInTpuSystem(
                             request_events_map);
       }
       if (batch_events_map != nullptr) {
-        UpdateBatchEvents(group_metadata_map, event_to_update,
+        UpdateBatchEvents(event_to_update,
                           events[0]->GetStat(StatType::kGroupId)->IntValue(),
                           batch_events_map);
       }
@@ -473,8 +475,7 @@ void BuildTPUDeviceEvents(const std::vector<XPlane*>& device_traces,
                               request_events_map);
         }
         if (batch_events_map != nullptr) {
-          UpdateBatchEvents(group_metadata_map, event_to_update, group_id,
-                            batch_events_map);
+          UpdateBatchEvents(event_to_update, group_id, batch_events_map);
         }
       }
     }
@@ -503,6 +504,10 @@ void BuildTPUDeviceEvents(const std::vector<XPlane*>& device_traces,
         std::optional<XStatVisitor> group_id =
             event.GetStat(StatType::kGroupId);
         if (!group_id) return;
+        // Read program_id from the same device event for batch -> program
+        // linking.
+        std::optional<XStatVisitor> program_id =
+            event.GetEventOrMetadataStat(StatType::kProgramId);
         // TPU compute does not specify 32bit or 16bit, use
         // DEVICE_COMPUTE_32 to annotate this is a compute event.
         event_to_update[0] = {EventType::DEVICE_COMPUTE_32,
@@ -512,8 +517,16 @@ void BuildTPUDeviceEvents(const std::vector<XPlane*>& device_traces,
                               group_id->IntValue(), request_events_map);
         }
         if (batch_events_map != nullptr) {
-          UpdateBatchEvents(group_metadata_map, event_to_update,
-                            group_id->IntValue(), batch_events_map);
+          BatchEvents* batch_events = UpdateBatchEvents(
+              event_to_update, group_id->IntValue(), batch_events_map);
+          if (program_id.has_value() && batch_events != nullptr) {
+            auto& batch_detail = batch_events->batch_detail_proto;
+            uint64_t pid = program_id->IntOrUintValue();
+            // Append to program_ids list if not already present.
+            if (!absl::c_linear_search(batch_detail.program_ids(), pid)) {
+              batch_detail.add_program_ids(pid);
+            }
+          }
         }
       });
     });
@@ -599,8 +612,7 @@ void BuildGPUDeviceEvents(const StepEvents& nonoverlapped_step_events,
   }
   if (batch_events_map != nullptr) {
     for (const auto& [step_id, step_details] : nonoverlapped_step_events) {
-      UpdateBatchEvents(group_metadata_map, step_details.Events(), step_id,
-                        batch_events_map);
+      UpdateBatchEvents(step_details.Events(), step_id, batch_events_map);
     }
   }
 }
