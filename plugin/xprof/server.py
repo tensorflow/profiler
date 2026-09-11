@@ -73,13 +73,23 @@ def make_wsgi_app(plugin):
 
   prefix = "/data/plugin/profile"
 
+  def _not_found_handler(environ, start_response):
+    del environ  # Unused.
+    start_response("404 Not Found", [("Content-Type", "text/plain")])
+    return [b"Not Found"]
+
   def application(environ, start_response):
     path = environ["PATH_INFO"]
     if path.startswith(prefix):
       path = path[len(prefix) :]
     if path != "/" and path.endswith("/"):
       path = path[:-1]
-    handler = apps.get(path, plugin.default_handler)
+    if path in apps:
+      handler = apps[path]
+    elif path in ("", "/"):
+      handler = plugin.default_handler
+    else:
+      handler = _not_found_handler
     return handler(environ, start_response)
 
   return application

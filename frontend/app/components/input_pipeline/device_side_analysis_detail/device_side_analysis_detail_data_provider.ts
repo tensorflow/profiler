@@ -1,4 +1,5 @@
 import {SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {clampDataTableNumericValues} from 'org_xprof/frontend/app/common/utils/chart_utils';
 import {DefaultDataProvider} from 'org_xprof/frontend/app/components/chart/default_data_provider';
 
 /** A device side analysis detail data provider. */
@@ -24,5 +25,6 @@ export class DeviceSideAnalysisDetailDataProvider extends DefaultDataProvider {
     }
 
     this.dataTable = dataView.toDataTable();
+    clampDataTableNumericValues(this.dataTable);
   }
 }
