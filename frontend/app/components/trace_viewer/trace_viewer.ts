@@ -957,6 +957,10 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
         ) {
           return;
         }
+        // TODO: Once fully migrated to Trace Viewer v2, refactor this to return
+        // a single event details object instead of returning an entire Catapult
+        // TraceData array where the slice event is implicitly assumed to be the
+        // last element.
         const lastEvent =
           traceData.traceEvents[traceData.traceEvents.length - 1];
         if (
