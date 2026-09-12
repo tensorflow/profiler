@@ -5,6 +5,7 @@ package(default_visibility = ["//frontend:internal"])
 xprof_ng_module(
     name = "trace_viewer_container",
     srcs = [
+        "hlo_pretty_printer.ts",
         "trace_viewer_container.ts",
         "trace_viewer_utils.ts",
     ],
@@ -43,7 +44,10 @@ xprof_ng_module(
 xprof_ng_module(
     name = "trace_viewer_container_tests",
     testonly = True,
-    srcs = ["trace_viewer_container_test.ts"],
+    srcs = [
+        "hlo_pretty_printer_test.ts",
+        "trace_viewer_container_test.ts",
+    ],
     deps = [
         ":trace_viewer_container",
         "//javascript/angular2/testing/catalyst/fake_async",

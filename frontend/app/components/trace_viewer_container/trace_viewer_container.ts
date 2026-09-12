@@ -36,6 +36,7 @@ import {ActivatedRoute} from '@angular/router';
 import {AngularSplitModule} from 'angular-split';
 
 import {NgxJsonViewerModule} from 'ngx-json-viewer';
+import {formatHloArgsForJsonTree} from './hlo_pretty_printer';
 import {TimelinePlayer} from 'org_xprof/frontend/app/components/timeline_player/timeline_player';
 import {getDefaultFeatureFlag} from 'org_xprof/frontend/app/components/trace_viewer_v2/feature_flags';
 import {
@@ -702,7 +703,7 @@ export class TraceViewerContainer
       'pid': event.pid,
     };
     if (event.args && Object.keys(event.args).length > 0) {
-      json['args'] = event.args;
+      json['args'] = formatHloArgsForJsonTree(event.args);
     }
     return json;
   }

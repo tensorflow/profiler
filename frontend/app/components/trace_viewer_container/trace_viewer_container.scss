@@ -458,9 +458,11 @@ canvas.emscripten {
       }
 
       // Allow the long HLO expression (resolved stack trace) to wrap instead
-      // of overflowing the panel.
+      // of overflowing the panel, and preserve the line breaks added by the
+      // HLO pretty-printer so each operand/attribute stays on its own line.
       ::ng-deep .ngx-json-viewer .segment-value {
         word-break: break-word;
+        white-space: pre-wrap;
       }
     }
 
