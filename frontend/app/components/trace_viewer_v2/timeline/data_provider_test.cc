@@ -4890,5 +4890,120 @@ TEST_F(DataProviderTest, AsyncTracks_PersistsAcrossSlices) {
   EXPECT_THAT(group_names, Contains(Eq("AsyncOp")));
 }
 
+TEST_F(DataProviderTest, ChildThreadTracksInitializedAsExpandedInDataProvider) {
+  // Create events with two processes: Process 1 (first) and Process 2 (second),
+  // each with multiple levels of events (nested complete events) so the thread
+  // is collapsible.
+  const std::vector<TraceEvent> events = {
+      CreateProcessEvent(1, "Process 1"),
+      CreateCompleteEvent(1, 10, "ParentOp1", 100.0, 100.0),
+      CreateCompleteEvent(1, 10, "ChildOp1", 110.0, 50.0),
+
+      CreateProcessEvent(2, "Process 2"),
+      CreateCompleteEvent(2, 20, "ParentOp2", 200.0, 100.0),
+      CreateCompleteEvent(2, 20, "ChildOp2", 210.0, 50.0),
+  };
+
+  data_provider_.ProcessTraceEvents(ParsedTraceEvents{.flame_events = events},
+                                    timeline_);
+
+  const auto& groups = timeline_.timeline_data().groups;
+  ASSERT_THAT(groups, SizeIs(4));
+
+  // Top-level Process 1 is expanded by default (first process).
+  EXPECT_EQ(groups[0].name, "Process 1");
+  EXPECT_EQ(groups[0].nesting_level, kProcessNestingLevel);
+  EXPECT_TRUE(groups[0].expanded);
+
+  // Thread under Process 1 is expanded by default.
+  EXPECT_EQ(groups[1].nesting_level, kThreadNestingLevel);
+  EXPECT_TRUE(groups[1].expanded);
+
+  // Top-level Process 2 is collapsed on initial load to keep layout clean.
+  EXPECT_EQ(groups[2].name, "Process 2");
+  EXPECT_EQ(groups[2].nesting_level, kProcessNestingLevel);
+  EXPECT_FALSE(groups[2].expanded);
+
+  // Child thread under Process 2 is initialized as expanded, so all events and
+  // flame graph levels are immediately visible when Process 2 is expanded.
+  EXPECT_EQ(groups[3].nesting_level, kThreadNestingLevel);
+  EXPECT_TRUE(groups[3].expanded);
+}
+
+TEST_F(DataProviderTest, IncrementalStreamingPreservingUserManualCollapse) {
+  const std::vector<TraceEvent> initial_events = {
+      CreateProcessEvent(1, "Process 1"),
+      CreateCompleteEvent(1, 10, "ParentOp1", 100.0, 100.0),
+      CreateCompleteEvent(1, 10, "ChildOp1", 110.0, 50.0),
+
+      CreateProcessEvent(2, "Process 2"),
+      CreateCompleteEvent(2, 20, "ParentOp2", 200.0, 100.0),
+      CreateCompleteEvent(2, 20, "ChildOp2", 210.0, 50.0),
+  };
+
+  data_provider_.ProcessTraceEvents(
+      ParsedTraceEvents{.flame_events = initial_events}, timeline_);
+
+  ASSERT_THAT(timeline_.timeline_data().groups, SizeIs(4));
+  EXPECT_TRUE(timeline_.timeline_data().groups[1].expanded);
+  EXPECT_TRUE(timeline_.timeline_data().groups[3].expanded);
+
+  // User manually collapses both child threads.
+  {
+    FlameChartTimelineData data = timeline_.timeline_data();
+    data.groups[1].expanded = false;
+    data.groups[3].expanded = false;
+    timeline_.SetTimelineData(std::move(data));
+  }
+
+  // Next chunk of events arrives incrementally.
+  const std::vector<TraceEvent> next_events = {
+      CreateCompleteEvent(1, 10, "NewOp1", 300.0, 50.0),
+      CreateCompleteEvent(2, 20, "NewOp2", 300.0, 50.0),
+  };
+  std::vector<TraceEvent> all_events = initial_events;
+  all_events.insert(all_events.end(), next_events.begin(), next_events.end());
+
+  data_provider_.ProcessTraceEvents(
+      ParsedTraceEvents{.flame_events = all_events}, timeline_);
+
+  // User manual collapse must be preserved across incremental streaming.
+  ASSERT_THAT(timeline_.timeline_data().groups, SizeIs(4));
+  EXPECT_FALSE(timeline_.timeline_data().groups[1].expanded);
+  EXPECT_FALSE(timeline_.timeline_data().groups[3].expanded);
+}
+
+TEST_F(DataProviderTest,
+       ChildCounterTrackUnderNonFirstProcessIsDefaultExpanded) {
+  const std::vector<TraceEvent> events = {
+      CreateProcessEvent(1, "Process 1"),
+      CreateCompleteEvent(1, 10, "Op1", 100.0, 50.0),
+      CreateProcessEvent(2, "Process 2"),
+  };
+  const std::vector<CounterEvent> counter_events = {
+      CreateCounterEvent(2, "Counter 2", {10.0, 20.0}, {1.0, 2.0}),
+  };
+
+  data_provider_.ProcessTraceEvents(
+      ParsedTraceEvents{.flame_events = events,
+                        .counter_events = counter_events},
+      timeline_);
+
+  const auto& groups = timeline_.timeline_data().groups;
+  ASSERT_THAT(groups, SizeIs(4));
+  // Process 1 (group 0, expanded)
+  EXPECT_EQ(groups[0].name, "Process 1");
+  EXPECT_TRUE(groups[0].expanded);
+  // Thread 10 (group 1, expanded)
+  EXPECT_TRUE(groups[1].expanded);
+  // Process 2 (group 2, collapsed by default)
+  EXPECT_EQ(groups[2].name, "Process 2");
+  EXPECT_FALSE(groups[2].expanded);
+  // Counter 2 under Process 2 (group 3, default_expanded=true)
+  EXPECT_EQ(groups[3].name, "Counter 2");
+  EXPECT_EQ(groups[3].type, Group::Type::kCounter);
+  EXPECT_TRUE(groups[3].expanded);
+}
+
 }  // namespace
 }  // namespace traceviewer

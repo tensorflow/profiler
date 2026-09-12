@@ -925,13 +925,14 @@ void PopulateProcessTrack(
     if (is_async_process) {
       PopulateAsyncProcessTrack(
           pid, process_group_name, trace_info, current_level, data, bounds,
-          thread_levels, default_expanded, expanded_states, max_observed_levels,
-          known_threads, known_async_tracks, process_index);
+          thread_levels, /*default_expanded=*/true, expanded_states,
+          max_observed_levels, known_threads, known_async_tracks,
+          process_index);
     } else {
       PopulateSyncProcessTrack(
           pid, process_group_name, trace_info, current_level, data, bounds,
-          thread_levels, default_expanded, expanded_states, max_observed_levels,
-          known_threads, process_index);
+          thread_levels, /*default_expanded=*/true, expanded_states,
+          max_observed_levels, known_threads, process_index);
     }
   }
 
@@ -945,9 +946,10 @@ void PopulateProcessTrack(
       combined_counters.try_emplace(counter_name);
     }
     for (const auto& [name, events] : combined_counters) {
-      PopulateCounterTrack(pid, name, events, trace_info, current_level, data,
-                           bounds, process_group_name, default_expanded,
-                           expanded_states, process_index);
+      PopulateCounterTrack(
+          pid, name, events, trace_info, current_level, data, bounds,
+          process_group_name, /*default_expanded=*/true, expanded_states,
+          process_index);
     }
   }
 
