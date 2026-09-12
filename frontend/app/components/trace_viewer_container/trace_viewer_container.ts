@@ -439,13 +439,11 @@ export class TraceViewerContainer
   @Output() readonly requestHoveredEventArgs =
     new EventEmitter<SelectedEvent>();
   @Input() set hoveredEventArgs(args: Record<string, string> | null) {
-    if (this.hoveredEvent && args) {
-      if (!this.hoveredEvent.args) {
-        this.hoveredEvent.args = {};
-      }
-      this.hoveredEvent.args = {...this.hoveredEvent.args, ...args};
-      this.cdRef.markForCheck();
+    if (!this.hoveredEvent || !args) {
+      return;
     }
+    this.hoveredEvent.args = {...this.hoveredEvent.args, ...args};
+    this.cdRef.markForCheck();
   }
 
   getTotal(
