@@ -1,5 +1,7 @@
+import {AsyncPipe, NgFor, NgIf} from '@angular/common';
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   inject,
   Input,
@@ -7,6 +9,18 @@ import {
   OnDestroy,
   SimpleChanges,
 } from '@angular/core';
+import {FormsModule} from '@angular/forms';
+import {MatOption} from '@angular/material/core';
+import {
+  MatExpansionPanel,
+  MatExpansionPanelHeader,
+  MatExpansionPanelTitle,
+} from '@angular/material/expansion';
+import {MatFormField, MatLabel} from '@angular/material/form-field';
+import {MatIcon} from '@angular/material/icon';
+import {MatProgressBar} from '@angular/material/progress-bar';
+import {MatSelect} from '@angular/material/select';
+import {MatTooltip} from '@angular/material/tooltip';
 import {Store} from '@ngrx/store';
 import {
   GRAPH_TYPE_DEFAULT,
@@ -14,6 +28,8 @@ import {
 } from 'org_xprof/frontend/app/common/constants/constants';
 import {FileExtensionType} from 'org_xprof/frontend/app/common/constants/enums';
 import {ProfilerConfig} from 'org_xprof/frontend/app/common/interfaces/capture_profile';
+import {Message} from 'org_xprof/frontend/app/components/stack_trace_snippet/message';
+import {StackTraceSnippet} from 'org_xprof/frontend/app/components/stack_trace_snippet/stack_trace_snippet';
 import {
   DATA_SERVICE_INTERFACE_TOKEN,
   DataServiceV2Interface,
@@ -26,8 +42,8 @@ import {
   getProfilerConfig,
   getTagsState,
 } from 'org_xprof/frontend/app/store/selectors';
-import {ReplaySubject} from 'rxjs';
-import {takeUntil} from 'rxjs/operators';
+import {BehaviorSubject, combineLatest, Observable, ReplaySubject} from 'rxjs';
+import {map, takeUntil} from 'rxjs/operators';
 
 import {CompilerPass, IrText} from './ir_text';
 
@@ -42,13 +58,32 @@ const CUSTOM_CALL_CATEGORY = 'custom-call';
  * TPU operations can be HLO or LLO.
  */
 @Component({
-  changeDetection: ChangeDetectionStrategy.Default,
-  standalone: false,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
   selector: 'source-mapper',
   templateUrl: './source_mapper.ng.html',
   styleUrls: ['./source_mapper.scss'],
+  imports: [
+    AsyncPipe,
+    FormsModule,
+    MatExpansionPanel,
+    MatExpansionPanelHeader,
+    MatExpansionPanelTitle,
+    MatFormField,
+    MatIcon,
+    MatLabel,
+    MatOption,
+    MatProgressBar,
+    MatSelect,
+    MatTooltip,
+    Message,
+    NgFor,
+    NgIf,
+    StackTraceSnippet,
+  ],
 })
 export class SourceMapper implements OnDestroy, OnChanges {
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyed = new ReplaySubject<void>(1);
   private readonly dataService: DataServiceV2Interface = inject(
     DATA_SERVICE_INTERFACE_TOKEN,
@@ -59,12 +94,12 @@ export class SourceMapper implements OnDestroy, OnChanges {
    * This is used to find the source code snippet.
    * Processed from xla source info.
    */
-  @Input() sourceFileAndLineNumber: string | undefined = undefined;
+  @Input() sourceFileAndLineNumber?: string;
   /**
    * The stack trace of the HLO op.
    * Processed from xla stack frame info.
    */
-  @Input() stackTrace: string | undefined = undefined;
+  @Input() stackTrace?: string;
   // The number of lines to show around the stack frame.
   @Input() sourceContextWindow = 40;
   @Input() sessionId = '';
@@ -74,6 +109,7 @@ export class SourceMapper implements OnDestroy, OnChanges {
   @Input() opName = '';
   // The category of the HLO op.
   @Input() opCategory = '';
+  private readonly opCategorySubject = new BehaviorSubject<string>('');
 
   sourceCodeSnippetAddresses: readonly Address[] = [];
   hloTextCache = new Map<string, IrText>();
@@ -82,25 +118,26 @@ export class SourceMapper implements OnDestroy, OnChanges {
   selectedCompilerPass = CompilerPass.HLO_OPTIMIZED;
   sourceFileNames: string[] = [];
   selectedSourceFileName = '';
-  tags: string[] = [];
   // The prefix of the source file path if specified by users.
   srcPathPrefix = '';
 
+  protected readonly tags$: Observable<string[]>;
+  protected readonly srcPathPrefix$: Observable<string>;
+  readonly compilerPasses$: Observable<CompilerPass[]>;
+
   constructor(private readonly store: Store<{}>) {
-    this.store
-      .select(getTagsState)
-      .pipe(takeUntil(this.destroyed))
-      .subscribe((tags: string[]) => {
-        if (!tags || tags.length === 0) return;
-        this.tags = tags;
-      });
-    this.store
+    this.tags$ = this.store.select(getTagsState);
+    this.srcPathPrefix$ = this.store
       .select(getProfilerConfig)
-      .pipe(takeUntil(this.destroyed))
-      .subscribe((config: ProfilerConfig) => {
-        if (!config) return;
-        this.srcPathPrefix = config.srcPathPrefix;
-      });
+      .pipe(map((config: ProfilerConfig) => config?.srcPathPrefix || ''));
+    this.compilerPasses$ = combineLatest([
+      this.tags$,
+      this.opCategorySubject,
+    ]).pipe(
+      map(([tags, opCategory]) =>
+        this.getCompilerPasses(tags || [], opCategory),
+      ),
+    );
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -108,9 +145,12 @@ export class SourceMapper implements OnDestroy, OnChanges {
       changes['sessionId'] &&
       changes['sessionId'].currentValue !== changes['sessionId'].previousValue
     ) {
-      this.hloTextCache.clear();
-      this.mosaicTextByKernelName.clear();
-      this.mosaicSourceFileAndLineNumberByKernelName.clear();
+      this.hloTextCache = new Map<string, IrText>();
+      this.mosaicTextByKernelName = new Map<string, IrText>();
+      this.mosaicSourceFileAndLineNumberByKernelName = new Map<
+        string,
+        string
+      >();
     }
     if (changes['programId']) {
       this.update();
@@ -119,10 +159,16 @@ export class SourceMapper implements OnDestroy, OnChanges {
       changes['opName'] &&
       changes['opName'].currentValue !== changes['opName'].previousValue
     ) {
-      if (!this.compilerPasses.includes(this.selectedCompilerPass)) {
-        this.selectedCompilerPass = this.compilerPasses[0];
+      if (
+        this.selectedCompilerPass === CompilerPass.MOSAIC_ORIGINAL &&
+        !this.isCustomCall
+      ) {
+        this.selectedCompilerPass = CompilerPass.HLO_OPTIMIZED;
       }
       this.update();
+    }
+    if (changes['opCategory']) {
+      this.opCategorySubject.next(this.opCategory);
     }
     if (changes['sourceFileAndLineNumber'] || changes['stackTrace']) {
       this.parseSourceFileNames();
@@ -160,29 +206,22 @@ export class SourceMapper implements OnDestroy, OnChanges {
     }
   }
 
-  get compilerPasses(): CompilerPass[] {
+  getCompilerPasses(tags: string[], opCategory: string): CompilerPass[] {
     const basePasses = [CompilerPass.HLO_OPTIMIZED];
-    if (this.hasUnoptimizedHloTag) {
+    if (tags.includes('has_original_hlo_proto')) {
       basePasses.push(CompilerPass.HLO_UNOPTIMIZED);
     }
     // llo_debug tag is identifier for llo debug proto captured.
     // the proto contains llo bundles for kernels, and source info for mosaic
     // passes.
-    if (this.hasLloDebugTag) {
+    if (
+      tags.includes('llo_debug') &&
+      opCategory.includes(CUSTOM_CALL_CATEGORY)
+    ) {
       // CustomCall op category is identifier for a pallas kernel.
-      if (this.isCustomCall) {
-        basePasses.push(CompilerPass.MOSAIC_ORIGINAL);
-      }
+      basePasses.push(CompilerPass.MOSAIC_ORIGINAL);
     }
     return basePasses;
-  }
-
-  get hasLloDebugTag() {
-    return this.tags.includes('llo_debug');
-  }
-
-  get hasUnoptimizedHloTag() {
-    return this.tags.includes('has_original_hlo_proto');
   }
 
   get irFileName(): string {
@@ -337,6 +376,7 @@ export class SourceMapper implements OnDestroy, OnChanges {
         if (typeof data === 'string' && data) {
           this.hloTextCache.set(cacheKey, new IrText(data, compilerPass));
         }
+        this.cdr.markForCheck();
       });
   }
 
@@ -357,11 +397,11 @@ export class SourceMapper implements OnDestroy, OnChanges {
       .pipe(takeUntil(this.destroyed))
       .subscribe((data: string) => {
         if (data) {
-          this.mosaicTextByKernelName.set(
-            this.opName,
-            new IrText(data, CompilerPass.MOSAIC_ORIGINAL),
-          );
+          this.mosaicTextByKernelName = new Map(
+            this.mosaicTextByKernelName,
+          ).set(this.opName, new IrText(data, CompilerPass.MOSAIC_ORIGINAL));
         }
+        this.cdr.markForCheck();
       });
   }
 
@@ -388,6 +428,7 @@ export class SourceMapper implements OnDestroy, OnChanges {
             sourceInfo,
           );
         }
+        this.cdr.markForCheck();
       });
   }
 
@@ -408,6 +449,7 @@ export class SourceMapper implements OnDestroy, OnChanges {
   }
 
   ngOnDestroy(): void {
+    this.opCategorySubject.complete();
     this.destroyed.next();
     this.destroyed.complete();
   }
