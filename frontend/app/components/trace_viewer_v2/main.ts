@@ -1,3 +1,4 @@
+const safeScript = (s: TemplateStringsArray) => s[0];
 
 import {getDefaultFeatureFlag} from './feature_flags';
 
@@ -221,6 +222,17 @@ declare global {
     dataSize: number,
     timeRangeFromUrl?: [number, number],
   ): void;
+  beginIncrementalTraceEvents?(timeRangeFromUrl?: [number, number]): void;
+  hasCachedTraceEventsIncremental?(): boolean;
+  shouldEnqueueCompressedFrameIncremental?(): boolean;
+  appendCompressedTraceEventsIncremental?(
+    dataPtr: number,
+    dataSize: number,
+  ): void;
+  stepIncrementalTraceEvents?(maxEventsPerStep: number): boolean;
+  finishIncrementalTraceEvents?(): boolean | void;
+  cancelIncrementalTraceEvents?(): void;
+  restoreFullTraceOverviewIfAvailable?(): boolean;
   /**
    * Passes Perfetto trace events from a memory buffer in the WASM heap.
    * @param dataPtr A pointer to the memory address in the WASM heap where
@@ -349,6 +361,23 @@ interface RegisteredListener {
   listener: EventListener;
 }
 
+const MAX_CACHED_COMPRESSED_BYTES = 512 * 1024 * 1024;
+let cachedFullTraceUrl: string | null = null;
+let cachedFullTraceFrames: Uint8Array[] | null = null;
+
+function getCanonicalTraceCacheKey(urlObj: URL): string {
+  const copy = new URL(urlObj.toString());
+  copy.searchParams.delete(TRACE_VIEW_OPTION.RESOLUTION);
+  copy.searchParams.delete(TRACE_VIEW_OPTION.START_TIME_MS);
+  copy.searchParams.delete(TRACE_VIEW_OPTION.END_TIME_MS);
+  copy.searchParams.delete(VIEW_START);
+  copy.searchParams.delete(VIEW_END);
+  copy.searchParams.delete('stream');
+  copy.searchParams.delete('use_saved_result');
+  copy.searchParams.sort();
+  return copy.toString();
+}
+
 const registeredEventListeners: RegisteredListener[] = [];
 
 function registerWindowListener(type: string, listener: EventListener) {
@@ -361,6 +390,8 @@ function registerWindowListener(type: string, listener: EventListener) {
  * resources, including event listeners and WASM memory.
  */
 export function shutdownTraceViewerV2() {
+  cachedFullTraceUrl = null;
+  cachedFullTraceFrames = null;
   if (activeWasmModule) {
     try {
       activeWasmModule.application.instance().shutdown();
@@ -914,6 +945,747 @@ function isFetchDataEvent(
   );
 }
 
+const INCREMENTAL_EVENTS_PER_STEP = 131072;
+
+declare interface WorkerTraceMessage {
+  type: 'frame' | 'done' | 'error';
+  buffer?: ArrayBuffer;
+  message?: string;
+}
+
+function supportsIncrementalTraceEvents(
+  module: TraceViewerV2Module,
+): module is TraceViewerV2Module & {
+  beginIncrementalTraceEvents: (timeRangeFromUrl?: [number, number]) => void;
+  appendCompressedTraceEventsIncremental: (
+    dataPtr: number,
+    dataSize: number,
+  ) => void;
+  stepIncrementalTraceEvents: (maxEventsPerStep: number) => boolean;
+  finishIncrementalTraceEvents: () => boolean | void;
+} {
+  return (
+    typeof module.beginIncrementalTraceEvents === 'function' &&
+    typeof module.appendCompressedTraceEventsIncremental === 'function' &&
+    typeof module.stepIncrementalTraceEvents === 'function' &&
+    typeof module.finishIncrementalTraceEvents === 'function'
+  );
+}
+
+function isWindowFetchSpied(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.fetch === 'function' &&
+    (window.fetch as unknown as {and?: unknown}).and !== undefined
+  );
+}
+
+function yieldToBrowserForNextSlice(): Promise<void> {
+  return new Promise((resolve) => {
+    if (
+      typeof requestAnimationFrame === 'function' &&
+      typeof document !== 'undefined' &&
+      document.visibilityState !== 'hidden'
+    ) {
+      requestAnimationFrame(() => {
+        setTimeout(resolve, 0);
+      });
+    } else {
+      setTimeout(resolve, 0);
+    }
+  });
+}
+
+function createTraceStreamWorker(): {
+  worker: Worker;
+  revokeUrl: () => void;
+} | null {
+  if (typeof Worker === 'undefined' || isWindowFetchSpied()) {
+    return null;
+  }
+  try {
+    const script = safeScript`
+      let opfsFrames = [];
+      self.onmessage = async (event) => {
+        if (event.data && event.data.type === 'read_frame') {
+          const idx = event.data.frameIndex;
+          if (idx >= 0 && idx < opfsFrames.length && self.navigator && self.navigator.storage && self.navigator.storage.getDirectory) {
+            try {
+              const root = await self.navigator.storage.getDirectory();
+              const handle = await root.getFileHandle('xprof_active_trace.xchn', {create: false});
+              if (handle.createSyncAccessHandle) {
+                const sync = await handle.createSyncAccessHandle();
+                const entry = opfsFrames[idx];
+                const out = new Uint8Array(entry.length);
+                sync.read(out, {at: entry.offset});
+                sync.close();
+                self.postMessage({type: 'opfs_frame', frameIndex: idx, buffer: out.buffer}, [out.buffer]);
+              }
+            } catch (_) {}
+          }
+          return;
+        }
+        const url = event.data && event.data.url;
+        if (!url) return;
+        const cacheKey = (event.data && event.data.cacheKey) || '';
+        const bypassCache = Boolean(event.data && event.data.bypassCache);
+        let opfsRoot = null;
+        try {
+          if (self.navigator && self.navigator.storage && typeof self.navigator.storage.getDirectory === 'function') {
+            opfsRoot = await self.navigator.storage.getDirectory();
+          }
+        } catch (_) {
+          opfsRoot = null;
+        }
+
+        // Option 1: Check if a completed XCHN stream for this session cacheKey
+        // is already persisted in OPFS and replay it directly without hitting
+        // the server.
+        if (opfsRoot && cacheKey && !bypassCache) {
+          try {
+            const metaHandle = await opfsRoot.getFileHandle('xprof_active_trace.meta.json', {create: false});
+            const dataHandle = await opfsRoot.getFileHandle('xprof_active_trace.xchn', {create: false});
+            if (metaHandle && dataHandle && typeof dataHandle.createSyncAccessHandle === 'function') {
+              let metaText = '';
+              if (typeof metaHandle.createSyncAccessHandle === 'function') {
+                const metaSync = await metaHandle.createSyncAccessHandle();
+                const metaSize = metaSync.getSize();
+                if (metaSize > 0 && metaSize <= (16 << 20)) {
+                  const metaBuf = new Uint8Array(metaSize);
+                  metaSync.read(metaBuf, {at: 0});
+                  metaText = new TextDecoder().decode(metaBuf);
+                }
+                metaSync.close();
+              } else if (typeof metaHandle.getFile === 'function') {
+                const metaFile = await metaHandle.getFile();
+                metaText = await metaFile.text();
+              }
+              if (metaText) {
+                const meta = JSON.parse(metaText);
+                if (
+                  meta &&
+                  meta.complete === true &&
+                  meta.cacheKey === cacheKey &&
+                  Array.isArray(meta.frames) &&
+                  meta.frames.length > 0
+                ) {
+                  const dataSync = await dataHandle.createSyncAccessHandle();
+                  const fileSize = dataSync.getSize();
+                  if (fileSize === meta.totalBytes && fileSize > 0) {
+                    opfsFrames = meta.frames;
+                    for (let i = 0; i < meta.frames.length; i++) {
+                      const entry = meta.frames[i];
+                      const out = new Uint8Array(entry.length);
+                      dataSync.read(out, {at: entry.offset});
+                      self.postMessage({type: 'frame', buffer: out.buffer}, [out.buffer]);
+                      if (i === 0 || (i & 15) === 15) {
+                        await new Promise((r) => setTimeout(r, 0));
+                      }
+                    }
+                    dataSync.close();
+                    self.postMessage({
+                      type: 'done',
+                      opfsHit: true,
+                      opfsBytes: meta.totalBytes,
+                      opfsFrames: meta.frames.length,
+                    });
+                    return;
+                  }
+                  dataSync.close();
+                }
+              }
+            }
+          } catch (_) {
+            // Cache miss or unreadable OPFS entry; fall through to network fetch.
+          }
+        }
+
+        let opfsSync = null;
+        let opfsOffset = 0;
+        let opfsWriteOk = false;
+        opfsFrames = [];
+        try {
+          if (opfsRoot) {
+            try {
+              await opfsRoot.removeEntry('xprof_active_trace.meta.json');
+            } catch (_) {}
+            const fileHandle = await opfsRoot.getFileHandle('xprof_active_trace.xchn', {create: true});
+            if (typeof fileHandle.createSyncAccessHandle === 'function') {
+              opfsSync = await fileHandle.createSyncAccessHandle();
+              opfsSync.truncate(0);
+              opfsWriteOk = true;
+            }
+          }
+        } catch (_) {
+          opfsSync = null;
+          opfsWriteOk = false;
+        }
+        const persistAndEmitFrame = (frameBytes) => {
+          if (opfsSync && opfsWriteOk) {
+            try {
+              const written = opfsSync.write(frameBytes, {at: opfsOffset});
+              if (written === frameBytes.byteLength) {
+                opfsFrames.push({offset: opfsOffset, length: frameBytes.byteLength});
+                opfsOffset += frameBytes.byteLength;
+              } else {
+                opfsWriteOk = false;
+              }
+            } catch (_) {
+              opfsWriteOk = false;
+            }
+          }
+          const frameBuffer = frameBytes.buffer;
+          self.postMessage({type: 'frame', buffer: frameBuffer}, [frameBuffer]);
+        };
+        const finalizeOpfsCache = async () => {
+          if (opfsSync) {
+            try {
+              opfsSync.flush();
+              opfsSync.close();
+            } catch (_) {
+              opfsWriteOk = false;
+            }
+            opfsSync = null;
+          }
+          if (opfsRoot && opfsWriteOk && cacheKey && opfsFrames.length > 0) {
+            try {
+              const metaHandle = await opfsRoot.getFileHandle('xprof_active_trace.meta.json', {create: true});
+              if (typeof metaHandle.createSyncAccessHandle === 'function') {
+                const metaSync = await metaHandle.createSyncAccessHandle();
+                metaSync.truncate(0);
+                const metaBytes = new TextEncoder().encode(JSON.stringify({
+                  cacheKey,
+                  complete: true,
+                  totalBytes: opfsOffset,
+                  frames: opfsFrames,
+                }));
+                metaSync.write(metaBytes, {at: 0});
+                metaSync.flush();
+                metaSync.close();
+              }
+            } catch (_) {}
+          }
+        };
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            if (opfsSync) { try { opfsSync.close(); } catch (_) {} }
+            const errorMsg =
+              response.status === 404
+                ? 'Trace data not found (404). The profile session may have expired or does not contain trace data.'
+                : 'Failed to load trace data: HTTP error! status: ' + response.status;
+            self.postMessage({
+              type: 'error',
+              message: errorMsg,
+            });
+            return;
+          }
+          const isXchnHeader = (bytes) =>
+            bytes.length >= 4 &&
+            bytes[0] === 0x58 &&
+            bytes[1] === 0x43 &&
+            bytes[2] === 0x48 &&
+            bytes[3] === 0x4e;
+          const readUint32Le = (bytes, offset) =>
+            (bytes[offset] |
+              (bytes[offset + 1] << 8) |
+              (bytes[offset + 2] << 16) |
+              (bytes[offset + 3] << 24)) >>>
+            0;
+          if (!response.body || typeof response.body.getReader !== 'function') {
+            const buffer = await response.arrayBuffer();
+            const bytes = new Uint8Array(buffer);
+            if (isXchnHeader(bytes)) {
+              let offset = 4;
+              while (offset + 4 <= bytes.length) {
+                const frameLen = readUint32Le(bytes, offset);
+                offset += 4;
+                if (offset + frameLen > bytes.length) break;
+                persistAndEmitFrame(bytes.slice(offset, offset + frameLen));
+                offset += frameLen;
+              }
+            } else {
+              persistAndEmitFrame(bytes);
+            }
+            await finalizeOpfsCache();
+            self.postMessage({type: 'done', opfsBytes: opfsOffset, opfsFrames: opfsFrames.length});
+            return;
+          }
+          const reader = response.body.getReader();
+          let buffer = new Uint8Array(0);
+          let mode = 'init';
+          const appendChunk = (chunk) => {
+            if (buffer.length === 0) {
+              buffer = chunk;
+              return;
+            }
+            const combined = new Uint8Array(buffer.length + chunk.length);
+            combined.set(buffer, 0);
+            combined.set(chunk, buffer.length);
+            buffer = combined;
+          };
+          while (true) {
+            const {done, value} = await reader.read();
+            if (value && value.byteLength > 0) {
+              appendChunk(value);
+            }
+            if (mode === 'init' && (buffer.length >= 4 || done)) {
+              if (isXchnHeader(buffer)) {
+                mode = 'xchn';
+                buffer = buffer.slice(4);
+              } else {
+                mode = 'raw';
+              }
+            }
+            if (mode === 'xchn') {
+              let offset = 0;
+              while (offset + 4 <= buffer.length) {
+                const frameLen = readUint32Le(buffer, offset);
+                if (offset + 4 + frameLen > buffer.length) break;
+                persistAndEmitFrame(
+                  buffer.slice(offset + 4, offset + 4 + frameLen),
+                );
+                offset += 4 + frameLen;
+              }
+              if (offset > 0) {
+                buffer = buffer.slice(offset);
+              }
+            }
+            if (done) {
+              if (mode === 'raw' && buffer.length > 0) {
+                persistAndEmitFrame(buffer.slice(0));
+              }
+              await finalizeOpfsCache();
+              self.postMessage({type: 'done', opfsBytes: opfsOffset, opfsFrames: opfsFrames.length});
+              break;
+            }
+          }
+        } catch (e) {
+          if (opfsSync) { try { opfsSync.close(); } catch (_) {} }
+          self.postMessage({
+            type: 'error',
+            message: e instanceof Error ? e.message : String(e),
+          });
+        }
+      };
+    `;
+    const workerUrl = URL.createObjectURL(
+      new Blob([script], {type: 'application/javascript'}),
+    );
+    const worker = new Worker(workerUrl);
+    return {
+      worker,
+      revokeUrl: () => {
+        URL.revokeObjectURL(workerUrl.toString());
+      },
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function streamCompressedTraceFrames(
+  urlObj: URL,
+  cacheKey: string,
+  bypassCache: boolean,
+  onFrame: (frame: Uint8Array) => void,
+  isAbortRequested: () => boolean,
+): Promise<void> {
+  const workerHandle = createTraceStreamWorker();
+  if (!workerHandle) {
+    const buffer = await loadCompressedTraceDataInternal(urlObj.toString());
+    if (!isAbortRequested()) {
+      onFrame(new Uint8Array(buffer));
+    }
+    return;
+  }
+
+  const streamUrlObj = new URL(urlObj.toString());
+  if (!streamUrlObj.searchParams.has('stream')) {
+    streamUrlObj.searchParams.set('stream', 'true');
+  }
+
+  return new Promise<void>((resolve, reject) => {
+    const {worker, revokeUrl} = workerHandle;
+    const cleanup = () => {
+      worker.terminate();
+      revokeUrl();
+    };
+    worker.onmessage = (event: MessageEvent<WorkerTraceMessage>) => {
+      if (isAbortRequested()) {
+        cleanup();
+        resolve();
+        return;
+      }
+      const data = event.data;
+      if (!data) return;
+      if (data.type === 'frame' && data.buffer) {
+        try {
+          onFrame(new Uint8Array(data.buffer));
+        } catch (err) {
+          cleanup();
+          reject(err);
+        }
+      } else if (data.type === 'done') {
+        cleanup();
+        resolve();
+      } else if (data.type === 'error') {
+        cleanup();
+        const err = new Error(
+          data.message || 'Worker failed to load compressed trace data',
+        );
+        console.error('Failed to load compressed trace data:', err);
+        reject(err);
+      }
+    };
+    worker.onerror = (event: ErrorEvent) => {
+      cleanup();
+      const err = new Error(
+        event.message || 'Worker error while loading compressed trace data',
+      );
+      console.error('Failed to load compressed trace data:', err);
+      reject(err);
+    };
+    worker.postMessage({
+      url: streamUrlObj.toString(),
+      cacheKey,
+      bypassCache,
+    });
+  });
+}
+
+async function fetchAndProcessCompressedTraceDataIncremental({
+  urlObj,
+  traceviewerModule,
+  isAbortRequested,
+  timeRange,
+  isRefetch = false,
+}: {
+  urlObj: URL;
+  traceviewerModule: TraceViewerV2Module & {
+    beginIncrementalTraceEvents: (timeRangeFromUrl?: [number, number]) => void;
+    hasCachedTraceEventsIncremental?: () => boolean;
+    shouldEnqueueCompressedFrameIncremental?: () => boolean;
+    appendCompressedTraceEventsIncremental: (
+      dataPtr: number,
+      dataSize: number,
+    ) => void;
+    stepIncrementalTraceEvents: (maxEventsPerStep: number) => boolean;
+    finishIncrementalTraceEvents: () => boolean | void;
+    cancelIncrementalTraceEvents?: () => void;
+    restoreFullTraceOverviewIfAvailable?: () => boolean;
+  };
+  isAbortRequested: () => boolean;
+  timeRange?: [number, number];
+  isRefetch?: boolean;
+}): Promise<boolean> {
+  const cacheKey = getCanonicalTraceCacheKey(urlObj);
+  const hasInMemoryBlockCache =
+    (cachedFullTraceUrl === null || cachedFullTraceUrl === cacheKey) &&
+    typeof traceviewerModule.hasCachedTraceEventsIncremental === 'function' &&
+    traceviewerModule.hasCachedTraceEventsIncremental();
+
+  let effectiveTimeRange = timeRange;
+  if (isRefetch && effectiveTimeRange && effectiveTimeRange.length === 2) {
+    const requestedDurationMs = effectiveTimeRange[1] - effectiveTimeRange[0];
+    const minWindowMs = hasInMemoryBlockCache ? 1500 : 2000;
+    if (requestedDurationMs < minWindowMs) {
+      const mid = 0.5 * (effectiveTimeRange[0] + effectiveTimeRange[1]);
+      const halfWindow = 0.5 * minWindowMs;
+      effectiveTimeRange = [Math.max(0, mid - halfWindow), mid + halfWindow];
+    } else if (!hasInMemoryBlockCache && requestedDurationMs > 4200) {
+      effectiveTimeRange = undefined;
+    }
+  }
+
+  const yieldBetweenSlices = () => {
+    if (isRefetch) {
+      return new Promise<void>((resolve) => {
+        setTimeout(resolve, 0);
+      });
+    }
+    return yieldToBrowserForNextSlice();
+  };
+
+  if (isRefetch) {
+    await yieldBetweenSlices();
+    if (isAbortRequested()) {
+      traceviewerModule.cancelIncrementalTraceEvents?.();
+      return false;
+    }
+  }
+
+  if (
+    isRefetch &&
+    effectiveTimeRange === undefined &&
+    typeof traceviewerModule.restoreFullTraceOverviewIfAvailable === 'function'
+  ) {
+    performance.mark('traceProcessStart');
+    if (traceviewerModule.restoreFullTraceOverviewIfAvailable()) {
+      return false;
+    }
+  }
+
+  if (isRefetch && hasInMemoryBlockCache) {
+    performance.mark('traceProcessStart');
+    traceviewerModule.beginIncrementalTraceEvents(effectiveTimeRange);
+    while (
+      !isAbortRequested() &&
+      traceviewerModule.stepIncrementalTraceEvents(
+        INCREMENTAL_EVENTS_PER_STEP * 4,
+      )
+    ) {
+      await yieldBetweenSlices();
+    }
+    if (isAbortRequested()) {
+      traceviewerModule.cancelIncrementalTraceEvents?.();
+      return false;
+    }
+    const fullLoaded = traceviewerModule.finishIncrementalTraceEvents();
+    return typeof fullLoaded === 'boolean' ? fullLoaded : false;
+  }
+
+  const pendingFrames: Uint8Array[] = [];
+  let streamFinished = false;
+  let streamError: unknown = null;
+  let wakeConsumer: (() => void) | null = null;
+  const bypassOpfsCache =
+    urlObj.searchParams.get('nocache') === 'true' ||
+    (typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('nocache') === 'true');
+
+  // Use cached full-stream compressed frames on zoom/pan refetches when
+  // available so zooming in or out on huge profiles takes ~150ms in memory
+  // with zero backend round-trip.
+  const canReplayFromCache =
+    isRefetch &&
+    cachedFullTraceUrl === cacheKey &&
+    cachedFullTraceFrames !== null &&
+    cachedFullTraceFrames.length > 0;
+
+  let streamPromise: Promise<void> = Promise.resolve();
+  const collectedFrames: Uint8Array[] = [];
+  let collectedBytes = 0;
+  let canCacheFullFrames = !isRefetch;
+
+  const notifyConsumer = () => {
+    if (wakeConsumer) {
+      const fn = wakeConsumer;
+      wakeConsumer = null;
+      fn();
+    }
+  };
+
+  if (canReplayFromCache && cachedFullTraceFrames) {
+    pendingFrames.push(...cachedFullTraceFrames);
+    streamFinished = true;
+  } else {
+    // Request all events at full resolution in one streaming pass on initial
+    // load so zooming and panning can replay from memory or fetch full-res
+    // windows.
+    urlObj.searchParams.set(TRACE_VIEW_OPTION.RESOLUTION, '0');
+    if (!isRefetch) {
+      urlObj.searchParams.delete(TRACE_VIEW_OPTION.START_TIME_MS);
+      urlObj.searchParams.delete(TRACE_VIEW_OPTION.END_TIME_MS);
+    }
+
+    streamPromise = streamCompressedTraceFrames(
+      urlObj,
+      cacheKey,
+      bypassOpfsCache,
+      (frame: Uint8Array) => {
+        pendingFrames.push(frame);
+        if (canCacheFullFrames) {
+          if (
+            collectedBytes + frame.byteLength <=
+            MAX_CACHED_COMPRESSED_BYTES
+          ) {
+            collectedFrames.push(frame);
+            collectedBytes += frame.byteLength;
+          } else {
+            canCacheFullFrames = false;
+            collectedFrames.length = 0;
+          }
+        }
+        notifyConsumer();
+      },
+      isAbortRequested,
+    )
+      .then(() => {
+        if (
+          !isAbortRequested() &&
+          canCacheFullFrames &&
+          collectedFrames.length > 0
+        ) {
+          cachedFullTraceUrl = cacheKey;
+          cachedFullTraceFrames = collectedFrames;
+        }
+        streamFinished = true;
+        notifyConsumer();
+      })
+      .catch((err) => {
+        streamError = err;
+        streamFinished = true;
+        notifyConsumer();
+      });
+
+    while (
+      pendingFrames.length === 0 &&
+      !streamFinished &&
+      !isAbortRequested()
+    ) {
+      await new Promise<void>((resolve) => {
+        wakeConsumer = resolve;
+      });
+    }
+  }
+
+  if (streamError) {
+    throw streamError;
+  }
+  if (isAbortRequested()) {
+    await streamPromise;
+    return false;
+  }
+
+  if (!canReplayFromCache) {
+    window.dispatchEvent(
+      new CustomEvent(LOADING_STATUS_UPDATE_EVENT_NAME, {
+        detail: {status: TraceViewerV2LoadingStatus.PROCESSING_DATA},
+      }),
+    );
+
+    // Yield to the event loop so the UI can display 'Processing data' before
+    // starting the incremental processing pipeline.
+    await new Promise((resolve) => {
+      setTimeout(resolve, 0);
+    });
+  }
+
+  if (isAbortRequested()) {
+    await streamPromise;
+    return false;
+  }
+
+  performance.mark('traceProcessStart');
+  traceviewerModule.beginIncrementalTraceEvents(effectiveTimeRange);
+
+  let hasMoreInWasm = false;
+  let firstSliceYielded = false;
+  let enqueuedEventFrames = 0;
+  let initialOverlayDismissed = isRefetch;
+
+  const enqueueNextPendingFrameIntoWasm = () => {
+    const maxFramesToEnqueue = canReplayFromCache
+      ? 2
+      : firstSliceYielded
+        ? 4
+        : 1;
+    let enqueued = 0;
+    while (pendingFrames.length > 0 && enqueued < maxFramesToEnqueue) {
+      const frame = pendingFrames.shift()!;
+      if (frame.byteLength === 0) continue;
+      if (
+        canReplayFromCache &&
+        typeof traceviewerModule.shouldEnqueueCompressedFrameIncremental ===
+          'function' &&
+        !traceviewerModule.shouldEnqueueCompressedFrameIncremental()
+      ) {
+        continue;
+      }
+      let dataPtr: number | undefined;
+      try {
+        dataPtr = traceviewerModule._malloc(frame.byteLength);
+        if (!dataPtr) {
+          throw new Error('Failed to allocate WASM memory buffer');
+        }
+        traceviewerModule.HEAPU8.set(frame, dataPtr);
+        traceviewerModule.appendCompressedTraceEventsIncremental(
+          dataPtr,
+          frame.byteLength,
+        );
+        // Header-only frames (timespan metadata only, < 256 bytes) do not
+        // contain track events and should not consume the initial frame slot.
+        if (frame.byteLength >= 256) {
+          enqueued++;
+          enqueuedEventFrames++;
+        }
+      } finally {
+        if (dataPtr !== undefined && dataPtr !== 0) {
+          traceviewerModule._free(dataPtr);
+        }
+      }
+    }
+  };
+
+  while (!isAbortRequested()) {
+    if (streamError) {
+      throw streamError;
+    }
+    if (!hasMoreInWasm) {
+      enqueueNextPendingFrameIntoWasm();
+    }
+    const stepBudget = isRefetch
+      ? INCREMENTAL_EVENTS_PER_STEP
+      : INCREMENTAL_EVENTS_PER_STEP * 2;
+    hasMoreInWasm = traceviewerModule.stepIncrementalTraceEvents(stepBudget);
+    if (enqueuedEventFrames > 0) {
+      firstSliceYielded = true;
+      if (!initialOverlayDismissed && !hasMoreInWasm) {
+        initialOverlayDismissed = true;
+        // Transition out of initial full-screen loading overlay once the first
+        // event frame is flushed to the canvas; keep toolbar spinner active if
+        // additional frames are still streaming.
+        window.dispatchEvent(
+          new CustomEvent(LOADING_STATUS_UPDATE_EVENT_NAME, {
+            detail: {status: TraceViewerV2LoadingStatus.IDLE},
+          }),
+        );
+      }
+    }
+    if (hasMoreInWasm || pendingFrames.length > 0) {
+      await yieldBetweenSlices();
+      continue;
+    }
+    if (streamFinished) {
+      break;
+    }
+    await new Promise<void>((resolve) => {
+      wakeConsumer = resolve;
+    });
+  }
+
+  await streamPromise;
+  if (streamError) {
+    throw streamError;
+  }
+  while (!isAbortRequested() && (hasMoreInWasm || pendingFrames.length > 0)) {
+    if (!hasMoreInWasm) {
+      enqueueNextPendingFrameIntoWasm();
+    }
+    hasMoreInWasm = traceviewerModule.stepIncrementalTraceEvents(
+      isRefetch ? INCREMENTAL_EVENTS_PER_STEP : INCREMENTAL_EVENTS_PER_STEP * 4,
+    );
+    if (hasMoreInWasm || pendingFrames.length > 0) {
+      await yieldBetweenSlices();
+    }
+  }
+  if (isAbortRequested()) {
+    traceviewerModule.cancelIncrementalTraceEvents?.();
+    return false;
+  }
+  const fullLoaded = traceviewerModule.finishIncrementalTraceEvents();
+  if (
+    !isRefetch &&
+    typeof traceviewerModule.hasCachedTraceEventsIncremental === 'function' &&
+    traceviewerModule.hasCachedTraceEventsIncremental()
+  ) {
+    cachedFullTraceUrl = cacheKey;
+    cachedFullTraceFrames = null;
+  }
+  return typeof fullLoaded === 'boolean' ? fullLoaded : !isRefetch;
+}
+
 /**
  * Fetches and processes trace data (either .pb or .json) from the given URL.
  * Handles status dispatches, yielding to event loop, and latency measurement.
@@ -923,19 +1695,25 @@ async function fetchAndProcessTraceData({
   traceviewerModule,
   isAbortRequested,
   timeRange,
+  isRefetch = false,
   errorContext,
+  onFullTraceLoaded,
 }: {
   urlObj: URL;
   traceviewerModule: TraceViewerV2Module;
   isAbortRequested: () => boolean;
   timeRange?: [number, number];
+  isRefetch?: boolean;
   errorContext: string;
+  onFullTraceLoaded?: () => void;
 }) {
-  window.dispatchEvent(
-    new CustomEvent(LOADING_STATUS_UPDATE_EVENT_NAME, {
-      detail: {status: TraceViewerV2LoadingStatus.LOADING_DATA},
-    }),
-  );
+  if (!isRefetch) {
+    window.dispatchEvent(
+      new CustomEvent(LOADING_STATUS_UPDATE_EVENT_NAME, {
+        detail: {status: TraceViewerV2LoadingStatus.LOADING_DATA},
+      }),
+    );
+  }
 
   updateUrlWithResolution(urlObj, traceviewerModule.canvas);
 
@@ -944,41 +1722,55 @@ async function fetchAndProcessTraceData({
       urlObj.pathname.endsWith('.pb') ||
       urlObj.searchParams.get('format') === 'pb'
     ) {
-      const buffer = await loadCompressedTraceDataInternal(urlObj.toString());
-      if (isAbortRequested()) return;
-
-      window.dispatchEvent(
-        new CustomEvent(LOADING_STATUS_UPDATE_EVENT_NAME, {
-          detail: {status: TraceViewerV2LoadingStatus.PROCESSING_DATA},
-        }),
-      );
-
-      // Yield to the event loop to allow the UI to re-render and display
-      // the 'Processing data' status before the potentially long-running
-      // processCompressedTraceEvents call.
-      await new Promise((resolve) => {
-        setTimeout(resolve, 0);
-      });
-
-      if (isAbortRequested()) return;
-
-      performance.mark('traceProcessStart');
-
-      let dataPtr: number | undefined;
-      try {
-        dataPtr = traceviewerModule._malloc(buffer.byteLength);
-        if (!dataPtr) {
-          throw new Error('Failed to allocate WASM memory buffer');
-        }
-        traceviewerModule.HEAPU8.set(new Uint8Array(buffer), dataPtr);
-        traceviewerModule.processCompressedTraceEvents(
-          dataPtr,
-          buffer.byteLength,
+      if (supportsIncrementalTraceEvents(traceviewerModule)) {
+        const fullLoaded = await fetchAndProcessCompressedTraceDataIncremental({
+          urlObj,
+          traceviewerModule,
+          isAbortRequested,
           timeRange,
+          isRefetch,
+        });
+        if (isAbortRequested()) return;
+        if (fullLoaded) {
+          onFullTraceLoaded?.();
+        }
+      } else {
+        const buffer = await loadCompressedTraceDataInternal(urlObj.toString());
+        if (isAbortRequested()) return;
+
+        window.dispatchEvent(
+          new CustomEvent(LOADING_STATUS_UPDATE_EVENT_NAME, {
+            detail: {status: TraceViewerV2LoadingStatus.PROCESSING_DATA},
+          }),
         );
-      } finally {
-        if (dataPtr !== undefined && dataPtr !== 0) {
-          traceviewerModule._free(dataPtr);
+
+        // Yield to the event loop to allow the UI to re-render and display
+        // the 'Processing data' status before the potentially long-running
+        // processCompressedTraceEvents call.
+        await new Promise((resolve) => {
+          setTimeout(resolve, 0);
+        });
+
+        if (isAbortRequested()) return;
+
+        performance.mark('traceProcessStart');
+
+        let dataPtr: number | undefined;
+        try {
+          dataPtr = traceviewerModule._malloc(buffer.byteLength);
+          if (!dataPtr) {
+            throw new Error('Failed to allocate WASM memory buffer');
+          }
+          traceviewerModule.HEAPU8.set(new Uint8Array(buffer), dataPtr);
+          traceviewerModule.processCompressedTraceEvents(
+            dataPtr,
+            buffer.byteLength,
+            timeRange,
+          );
+        } finally {
+          if (dataPtr !== undefined && dataPtr !== 0) {
+            traceviewerModule._free(dataPtr);
+          }
         }
       }
     } else {
@@ -1056,8 +1848,14 @@ async function handleFetchDataEvent(
   event: Event,
   getCurrentDataUrl: () => string | null,
   traceviewerModule: TraceViewerV2Module | null,
+  isFullTraceLoaded: () => boolean = () => false,
+  isCurrentlyLoading: () => boolean = () => false,
+  isRefetchSuperseded: () => boolean = () => false,
 ) {
   if (!isFetchDataEvent(event)) {
+    return;
+  }
+  if (isFullTraceLoaded() || isCurrentlyLoading()) {
     return;
   }
   const detail = event.detail;
@@ -1087,8 +1885,10 @@ async function handleFetchDataEvent(
   await fetchAndProcessTraceData({
     urlObj,
     traceviewerModule,
-    isAbortRequested: () => initialDataUrl !== getCurrentDataUrl(),
+    isAbortRequested: () =>
+      initialDataUrl !== getCurrentDataUrl() || isRefetchSuperseded(),
     timeRange: [detail.start_time_ms, detail.end_time_ms],
+    isRefetch: true,
     errorContext: 'fetching new data',
   });
 }
@@ -1144,6 +1944,8 @@ export async function traceViewerV2Main(
   let traceviewerModule: TraceViewerV2Module | null = null;
   let currentDataUrl: string | null = null;
   let currentLoadingPromise: Promise<void> | null = null;
+  let fullTraceLoaded = false;
+  let activeRefetchId = 0;
 
   try {
     traceviewerModule = await initGpuAndStartWasmApp();
@@ -1165,6 +1967,8 @@ export async function traceViewerV2Main(
 
   setupFileInputHandler(traceviewerModule, () => {
     currentDataUrl = null;
+    fullTraceLoaded = false;
+    ++activeRefetchId;
     if (options?.onFileUploadedToXprof) {
       options.onFileUploadedToXprof();
     }
@@ -1195,6 +1999,8 @@ export async function traceViewerV2Main(
       return currentLoadingPromise;
     }
     currentDataUrl = url;
+    fullTraceLoaded = false;
+    ++activeRefetchId;
     if (!traceviewerModule) return;
 
     currentLoadingPromise = (async () => {
@@ -1228,6 +2034,9 @@ export async function traceViewerV2Main(
           isAbortRequested: () => url !== currentDataUrl,
           timeRange: timeRangeFromUrl,
           errorContext: 'loading data',
+          onFullTraceLoaded: () => {
+            fullTraceLoaded = true;
+          },
         });
       } finally {
         if (url === currentDataUrl) {
@@ -1281,7 +2090,15 @@ export async function traceViewerV2Main(
   };
 
   registerWindowListener(FETCH_DATA_EVENT_NAME, (event: Event) => {
-    handleFetchDataEvent(event, () => currentDataUrl, traceviewerModule);
+    const refetchId = ++activeRefetchId;
+    handleFetchDataEvent(
+      event,
+      () => currentDataUrl,
+      traceviewerModule,
+      () => fullTraceLoaded,
+      () => currentLoadingPromise !== null,
+      () => refetchId !== activeRefetchId,
+    );
   });
 
   return traceviewerModule;
