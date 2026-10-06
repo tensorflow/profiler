@@ -485,6 +485,12 @@ class Timeline {
   // logic as MaybeRequestData (scaling, min-bounds, and ConstrainTimeRange).
   void InitializeLastFetchRequestRange(const TimeRange& visible_range);
 
+  void set_last_fetch_request_range(const TimeRange& range) {
+    TimeRange clamped = range;
+    ConstrainTimeRange(clamped);
+    last_fetch_request_range_ = clamped;
+  }
+
   void set_data_time_range(const TimeRange& range) {
     if (data_time_range_ != range) {
       data_time_range_ = range;
@@ -499,25 +505,68 @@ class Timeline {
       absl::FunctionRef<FlameChartTimelineData()> builder);
   const FlameChartTimelineData& timeline_data() const { return timeline_data_; }
 
-  void set_max_uncompacted_overview_entries_for_test(size_t max_entries) {
-    max_uncompacted_overview_entries_ = max_entries;
+  void MarkCurrentDataAsFullOverview() {
+    is_full_overview_data_ = true;
+    stash_full_overview_on_next_update_ = false;
+    ClearLoadedActiveTracks();
+    saved_full_overview_.reset();
+    if (is_compacted_ && timeline_data_.entry_start_times.size() >
+                             max_uncompacted_overview_entries_) {
+      CompactTimelineDataToMipOverview();
+      UploadGpuFlameInstances();
+    }
+    overview_fetched_data_time_range_ = fetched_data_time_range_;
+    overview_data_time_range_ = data_time_range_;
+    overview_full_trace_loaded_ = full_trace_loaded_;
+    overview_is_compacted_ = is_compacted_;
+    overview_window_at_full_resolution_ = window_at_full_resolution_;
   }
-  size_t max_uncompacted_overview_entries() const {
-    return max_uncompacted_overview_entries_;
-  }
-
-  void MarkCurrentDataAsFullOverview() { is_full_overview_data_ = true; }
   void PrepareForFilteredRefetch() {
     if (is_full_overview_data_ && !saved_full_overview_.has_value()) {
       stash_full_overview_on_next_update_ = true;
     }
   }
   bool HasSavedFullOverview() const { return saved_full_overview_.has_value(); }
+  bool is_showing_full_overview() const { return is_full_overview_data_; }
+  bool stash_full_overview_on_next_update() const {
+    return stash_full_overview_on_next_update_;
+  }
+  void set_stash_full_overview_on_next_update(bool stash) {
+    stash_full_overview_on_next_update_ = stash;
+  }
   bool RestoreSavedFullOverview();
   void ClearSavedFullOverview() {
     saved_full_overview_.reset();
     is_full_overview_data_ = false;
     stash_full_overview_on_next_update_ = false;
+    overview_fetched_data_time_range_ = TimeRange::Zero();
+    overview_data_time_range_ = TimeRange::Zero();
+    overview_full_trace_loaded_ = false;
+    overview_is_compacted_ = false;
+    overview_window_at_full_resolution_ = false;
+  }
+  bool HasCompactedMipLevels() const { return is_compacted_; }
+
+  absl::flat_hash_set<std::pair<ProcessId, ThreadId>>
+  ComputeActiveTracksForFetch(bool include_vertical_margin = true) const;
+  bool HasUnloadedVisibleExpandedTracks() const;
+  void SetLoadedActiveTracks(
+      absl::flat_hash_set<std::pair<ProcessId, ThreadId>> tracks) {
+    has_active_track_filter_ = true;
+    loaded_active_tracks_ = std::move(tracks);
+  }
+  void ClearLoadedActiveTracks() {
+    has_active_track_filter_ = false;
+    loaded_active_tracks_.clear();
+  }
+  void set_tracks_window_height_for_test(float height) {
+    last_tracks_window_height_ = height;
+  }
+  void set_max_uncompacted_overview_entries_for_test(size_t max_entries) {
+    max_uncompacted_overview_entries_ = max_entries;
+  }
+  size_t max_uncompacted_overview_entries() const {
+    return max_uncompacted_overview_entries_;
   }
 
   int selected_event_index() const { return selected_event_index_; }
@@ -852,6 +901,39 @@ class Timeline {
   }
   size_t gpu_flame_instances_count_for_test() const {
     return gpu_flame_instances_.size();
+  }
+  struct LevelMipTile {
+    Microseconds min_start = 0.0;
+    Microseconds max_end = 0.0;
+    Microseconds total_occupied_dur = 0.0;
+    int dominant_event_index = -1;
+    uint32_t count = 0;
+    ImU32 blended_color = 0;
+  };
+  struct LevelMipLevel {
+    Microseconds bin_width_us = 0.0;
+    std::vector<LevelMipTile> tiles;
+    uint32_t gpu_instance_offset = 0;
+  };
+  struct LevelMipPyramid {
+    static constexpr int kNumMipLevels = 3;
+    bool has_pyramid = false;
+    bool raw_events_compacted = false;
+    LevelMipLevel levels[kNumMipLevels];
+    uint32_t raw_gpu_instance_offset = UINT32_MAX;
+
+    int SelectMipLevel(Microseconds max_bin_width_us) const {
+      for (int m = kNumMipLevels - 1; m >= 0; --m) {
+        const LevelMipLevel& mip = levels[m];
+        if (!mip.tiles.empty() && mip.bin_width_us <= max_bin_width_us) {
+          return m;
+        }
+      }
+      return -1;
+    }
+  };
+  const std::vector<LevelMipPyramid>& level_mip_pyramids_for_test() const {
+    return level_mip_pyramids_;
   }
   void ExpandAllGroupsForTest() {
     for (Group& group : timeline_data_.groups) {
@@ -1238,36 +1320,6 @@ class Timeline {
   uint64_t cached_trace_colors_version_ = std::numeric_limits<uint64_t>::max();
   std::vector<float> utilization_bins_;
 
-  struct LevelMipTile {
-    Microseconds min_start = 0.0;
-    Microseconds max_end = 0.0;
-    Microseconds total_occupied_dur = 0.0;
-    int dominant_event_index = -1;
-    uint32_t count = 0;
-    ImU32 blended_color = 0;
-  };
-  struct LevelMipLevel {
-    Microseconds bin_width_us = 0.0;
-    std::vector<LevelMipTile> tiles;
-    uint32_t gpu_instance_offset = 0;
-  };
-  struct LevelMipPyramid {
-    static constexpr int kNumMipLevels = 3;
-    bool has_pyramid = false;
-    bool raw_events_compacted = false;
-    LevelMipLevel levels[kNumMipLevels];
-    uint32_t raw_gpu_instance_offset = UINT32_MAX;
-
-    int SelectMipLevel(Microseconds max_bin_width_us) const {
-      for (int m = kNumMipLevels - 1; m >= 0; --m) {
-        const LevelMipLevel& mip = levels[m];
-        if (!mip.tiles.empty() && mip.bin_width_us <= max_bin_width_us) {
-          return m;
-        }
-      }
-      return -1;
-    }
-  };
   static constexpr size_t kMinEventsForMipPyramid = 64;
   static constexpr size_t kMinVisibleEventsForMipDraw = 128;
   static constexpr double kMaxMipBinWidthPx = 1.25;
@@ -1326,10 +1378,23 @@ class Timeline {
     std::vector<ProcessUtilizationPyramid> process_utilization_pyramids;
     std::vector<CachedGpuFlameInstance> gpu_flame_instances;
     TimeRange fetched_data_time_range = TimeRange::Zero();
+    TimeRange data_time_range = TimeRange::Zero();
+    bool full_trace_loaded = false;
+    bool is_compacted = false;
+    bool window_at_full_resolution = false;
   };
   std::optional<SavedFullOverview> saved_full_overview_;
   bool is_full_overview_data_ = false;
   bool stash_full_overview_on_next_update_ = false;
+  TimeRange overview_fetched_data_time_range_ = TimeRange::Zero();
+  TimeRange overview_data_time_range_ = TimeRange::Zero();
+  bool overview_full_trace_loaded_ = false;
+  bool overview_is_compacted_ = false;
+  bool overview_window_at_full_resolution_ = false;
+  Pixel last_tracks_window_height_ = 800.0f;
+  bool has_active_track_filter_ = false;
+  absl::flat_hash_set<std::pair<ProcessId, ThreadId>> loaded_active_tracks_;
+  size_t max_uncompacted_overview_entries_ = 200000;
 
   // TODO - b/444026851: Set the label width based on the real screen width.
   Pixel label_width_ = kDefaultLabelWidth;
@@ -1508,7 +1573,6 @@ class Timeline {
   bool full_trace_loaded_ = false;
   bool is_compacted_ = false;
   bool window_at_full_resolution_ = false;
-  size_t max_uncompacted_overview_entries_ = 200000;
 
   bool incremental_fetch_enabled_ = true;
 

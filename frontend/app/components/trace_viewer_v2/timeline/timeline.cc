@@ -1313,6 +1313,11 @@ void Timeline::UpdateTimelineData(
   if ((stash_full_overview_on_next_update_ || is_full_overview_data_) &&
       !saved_full_overview_.has_value() &&
       !timeline_data_.entry_start_times.empty()) {
+    if (is_compacted_ && timeline_data_.entry_start_times.size() >
+                             max_uncompacted_overview_entries_) {
+      CompactTimelineDataToMipOverview();
+      UploadGpuFlameInstances();
+    }
     saved_full_overview_ = SavedFullOverview{
         .data = std::move(timeline_data_),
         .entry_colors = std::move(entry_colors_),
@@ -1321,7 +1326,16 @@ void Timeline::UpdateTimelineData(
         .process_utilization_pyramids =
             std::move(process_utilization_pyramids_),
         .gpu_flame_instances = std::move(gpu_flame_instances_),
-        .fetched_data_time_range = fetched_data_time_range_,
+        .fetched_data_time_range =
+            overview_fetched_data_time_range_ != TimeRange::Zero()
+                ? overview_fetched_data_time_range_
+                : fetched_data_time_range_,
+        .data_time_range = overview_data_time_range_ != TimeRange::Zero()
+                               ? overview_data_time_range_
+                               : data_time_range_,
+        .full_trace_loaded = overview_full_trace_loaded_,
+        .is_compacted = overview_is_compacted_,
+        .window_at_full_resolution = overview_window_at_full_resolution_,
     };
   } else {
     ReleaseEntryMemory(timeline_data_);
@@ -1741,6 +1755,82 @@ void Timeline::BuildLevelMipPyramids() {
     }
   }
 
+  // For flame thread groups skipped by active track filtering, borrow their
+  // overview MIP pyramids from saved_full_overview_ so collapsed previews,
+  // utilization area charts, and newly scrolled tracks render immediately.
+  if (saved_full_overview_.has_value() && !is_full_overview_data_ &&
+      has_active_track_filter_) {
+    const auto& saved_data = saved_full_overview_->data;
+    const auto& saved_pyramids = saved_full_overview_->level_mip_pyramids;
+    absl::flat_hash_map<GroupKey, size_t> saved_group_by_key;
+    saved_group_by_key.reserve(saved_data.groups.size());
+    for (size_t i = 0; i < saved_data.groups.size(); ++i) {
+      const Group& sg = saved_data.groups[i];
+      if (sg.nesting_level != kThreadNestingLevel ||
+          sg.type != Group::Type::kFlame) {
+        continue;
+      }
+      const std::string parent_name =
+          (sg.parent_index >= 0 &&
+           sg.parent_index < static_cast<int>(saved_data.groups.size()))
+              ? saved_data.groups[sg.parent_index].name
+              : "";
+      saved_group_by_key[{sg.nesting_level, sg.name, parent_name}] = i;
+    }
+
+    for (size_t i = 0; i < timeline_data_.groups.size(); ++i) {
+      const Group& g = timeline_data_.groups[i];
+      if (g.nesting_level != kThreadNestingLevel ||
+          g.type != Group::Type::kFlame) {
+        continue;
+      }
+      if ((g.pid != 0 || g.tid != 0) &&
+          loaded_active_tracks_.contains({g.pid, g.tid})) {
+        continue;
+      }
+      const std::string parent_name =
+          (g.parent_index >= 0 &&
+           g.parent_index < static_cast<int>(timeline_data_.groups.size()))
+              ? timeline_data_.groups[g.parent_index].name
+              : "";
+      const auto it =
+          saved_group_by_key.find({g.nesting_level, g.name, parent_name});
+      if (it == saved_group_by_key.end()) {
+        continue;
+      }
+      const size_t saved_idx = it->second;
+      const Group& sg = saved_data.groups[saved_idx];
+      const int cur_end =
+          GetNextGroupStartLevel(timeline_data_, static_cast<int>(i));
+      const int saved_end =
+          GetNextGroupStartLevel(saved_data, static_cast<int>(saved_idx));
+      const int count =
+          std::min(cur_end - g.start_level, saved_end - sg.start_level);
+      for (int r = 0; r < count; ++r) {
+        const int cur_lvl = g.start_level + r;
+        const int saved_lvl = sg.start_level + r;
+        if (cur_lvl < 0 || cur_lvl >= num_levels || saved_lvl < 0 ||
+            saved_lvl >= static_cast<int>(saved_pyramids.size())) {
+          continue;
+        }
+        if (!timeline_data_.level_events(cur_lvl).empty() ||
+            !saved_pyramids[saved_lvl].has_pyramid) {
+          continue;
+        }
+        LevelMipPyramid borrowed = saved_pyramids[saved_lvl];
+        borrowed.raw_events_compacted = true;
+        borrowed.raw_gpu_instance_offset = UINT32_MAX;
+        for (int m = 0; m < LevelMipPyramid::kNumMipLevels; ++m) {
+          borrowed.levels[m].gpu_instance_offset = 0;
+          for (LevelMipTile& tile : borrowed.levels[m].tiles) {
+            tile.dominant_event_index = -1;
+          }
+        }
+        level_mip_pyramids_[cur_lvl] = std::move(borrowed);
+      }
+    }
+  }
+
   BuildProcessUtilizationPyramids();
 }
 
@@ -1897,6 +1987,11 @@ void Timeline::CompactTimelineDataToMipOverview() {
   // raw events in memory so zoom-in does not lose non-dominant events.
   if (!incremental_fetch_enabled_ || !is_compacted_) {
     return;
+  }
+  for (const auto& pyramid : level_mip_pyramids_) {
+    if (pyramid.raw_events_compacted) {
+      return;
+    }
   }
   const size_t old_n = timeline_data_.entry_start_times.size();
   // Only compact huge traces (>200k events by default) where the raw entry
@@ -2097,8 +2192,17 @@ void Timeline::CompactTimelineDataToMipOverview() {
 
 bool Timeline::RestoreSavedFullOverview() {
   if (!saved_full_overview_.has_value()) {
+    if (is_full_overview_data_) {
+      stash_full_overview_on_next_update_ = false;
+      ClearLoadedActiveTracks();
+      InitializeLastFetchRequestRange(data_time_range_);
+      set_is_incremental_loading(false);
+      if (redraw_callback_) redraw_callback_();
+      return true;
+    }
     return false;
   }
+  ClearLoadedActiveTracks();
 
   absl::flat_hash_map<GroupKey, bool> current_expanded;
   for (size_t i = 0; i < timeline_data_.groups.size(); ++i) {
@@ -2137,14 +2241,27 @@ bool Timeline::RestoreSavedFullOverview() {
       std::move(saved_full_overview_->process_utilization_pyramids);
   gpu_flame_instances_ = std::move(saved_full_overview_->gpu_flame_instances);
   fetched_data_time_range_ = saved_full_overview_->fetched_data_time_range;
+  if (saved_full_overview_->data_time_range != TimeRange::Zero()) {
+    data_time_range_ = saved_full_overview_->data_time_range;
+  }
+  full_trace_loaded_ = saved_full_overview_->full_trace_loaded;
+  is_compacted_ = saved_full_overview_->is_compacted;
+  window_at_full_resolution_ = saved_full_overview_->window_at_full_resolution;
+  overview_fetched_data_time_range_ = fetched_data_time_range_;
+  overview_data_time_range_ = data_time_range_;
+  overview_full_trace_loaded_ = full_trace_loaded_;
+  overview_is_compacted_ = is_compacted_;
+  overview_window_at_full_resolution_ = window_at_full_resolution_;
   saved_full_overview_.reset();
   is_full_overview_data_ = true;
   stash_full_overview_on_next_update_ = false;
+  is_incremental_loading_ = false;
+  should_restore_scroll_ = true;
   selected_event_index_ = -1;
   selected_event_indices_.clear();
   matching_event_indices_.clear();
   if (data_time_range_.duration() > 0) {
-    last_fetch_request_range_ = data_time_range_;
+    InitializeLastFetchRequestRange(data_time_range_);
   }
 #ifdef __EMSCRIPTEN__
   if (!gpu_flame_instances_.empty()) {
@@ -2457,6 +2574,7 @@ void Timeline::Draw() {
 
   const Pixel scroll_y = ImGui::GetScrollY();
   const Pixel window_height = ImGui::GetWindowHeight();
+  last_tracks_window_height_ = window_height;
 
   // Find first visible item or item intersecting scroll_y using binary search.
   // Rows tucked away by an accordion transition break the ordering the search
@@ -5236,8 +5354,16 @@ void Timeline::DrawFlameGroupPreview(int start_level, int end_level,
         static_cast<size_t>(level) < level_mip_pyramids_.size()) {
       const LevelMipPyramid& pyramid = level_mip_pyramids_[level];
       const Microseconds us_per_px = 1.0 / px_per_time_unit_val;
-      const int selected_mip =
+      int selected_mip =
           pyramid.SelectMipLevel(kMaxPreviewMipBinWidthPx * us_per_px);
+      if (selected_mip < 0 && pyramid.raw_events_compacted) {
+        for (int m = 0; m < LevelMipPyramid::kNumMipLevels; ++m) {
+          if (!pyramid.levels[m].tiles.empty()) {
+            selected_mip = m;
+            break;
+          }
+        }
+      }
       if (selected_mip >= 0) {
         const auto& tiles = pyramid.levels[selected_mip].tiles;
         auto tile_first =
@@ -6762,7 +6888,97 @@ void Timeline::InitializeLastFetchRequestRange(const TimeRange& visible_range) {
   last_fetch_request_range_ = fetch;
 }
 
+absl::flat_hash_set<std::pair<ProcessId, ThreadId>>
+Timeline::ComputeActiveTracksForFetch(bool include_vertical_margin) const {
+  absl::flat_hash_set<std::pair<ProcessId, ThreadId>> active;
+  if (timeline_data_.groups.empty()) {
+    return active;
+  }
+
+  const Pixel win_h = std::max(last_tracks_window_height_, 600.0f);
+  const Pixel margin = include_vertical_margin ? win_h : 0.0f;
+  const Pixel min_y = std::max(0.0f, last_scroll_y_ - margin);
+  const Pixel max_y = last_scroll_y_ + win_h + margin;
+
+  absl::flat_hash_set<ProcessId> visible_expanded_pids;
+  for (size_t i = 0; i < timeline_data_.groups.size(); ++i) {
+    if (i < group_visible_.size() && !group_visible_[i]) {
+      continue;
+    }
+    const Group& g = timeline_data_.groups[i];
+    const Pixel top = GetGroupTop(&g);
+    const Pixel bottom = GetGroupBottom(&g);
+    if (bottom < min_y || top > max_y) {
+      continue;
+    }
+    if (g.nesting_level == kProcessNestingLevel && g.expanded) {
+      visible_expanded_pids.insert(g.pid);
+    } else if (g.nesting_level == kThreadNestingLevel &&
+               g.type == Group::Type::kFlame) {
+      active.insert({g.pid, g.tid});
+    }
+  }
+
+  for (const Group& g : timeline_data_.groups) {
+    if (g.nesting_level == kThreadNestingLevel &&
+        g.type == Group::Type::kFlame &&
+        visible_expanded_pids.contains(g.pid)) {
+      active.insert({g.pid, g.tid});
+    }
+  }
+
+  // Fallback: if no expanded thread tracks were in the vertical window, include
+  // all currently expanded process tracks so zoomed-in fetches are never empty.
+  if (active.empty()) {
+    absl::flat_hash_set<ProcessId> any_expanded_pids;
+    for (const Group& g : timeline_data_.groups) {
+      if (g.nesting_level == kProcessNestingLevel && g.expanded) {
+        any_expanded_pids.insert(g.pid);
+      }
+    }
+    for (const Group& g : timeline_data_.groups) {
+      if (g.nesting_level == kThreadNestingLevel &&
+          g.type == Group::Type::kFlame && any_expanded_pids.contains(g.pid)) {
+        active.insert({g.pid, g.tid});
+      }
+    }
+  }
+  return active;
+}
+
+bool Timeline::HasUnloadedVisibleExpandedTracks() const {
+  if (!has_active_track_filter_ || is_full_overview_data_ ||
+      timeline_data_.groups.empty()) {
+    return false;
+  }
+  const auto visible_tracks =
+      ComputeActiveTracksForFetch(/*include_vertical_margin=*/false);
+  for (const auto& track : visible_tracks) {
+    if (!loaded_active_tracks_.contains(track)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void Timeline::MaybeRequestData() {
+  const TimeRange current_visible = visible_range();
+  TimeRange fetch = current_visible.Scale(kFetchRatio);
+  if (fetch.duration() < kMinFetchDurationMicros) {
+    Microseconds center = fetch.center();
+    fetch = {center - kMinFetchDurationMicros / 2.0,
+             center + kMinFetchDurationMicros / 2.0};
+  }
+  ConstrainTimeRange(fetch);
+
+  if ((!is_full_overview_data_ || stash_full_overview_on_next_update_) &&
+      (saved_full_overview_.has_value() || is_full_overview_data_) &&
+      data_time_range_.duration() > 0 &&
+      fetch.duration() >= 0.9 * data_time_range_.duration()) {
+    RestoreSavedFullOverview();
+    return;
+  }
+
   // Don't request more data if a request is already in flight or if the entire
   // trace is already loaded at full resolution in memory.
   if (is_incremental_loading_ || (full_trace_loaded_ && !is_compacted_)) return;
@@ -6781,22 +6997,8 @@ void Timeline::MaybeRequestData() {
   // is too coarse, a new load of 'fetch' range is triggered.
   // - last_fetch_request_range_: The time range covered by data currently
   // loaded.
-  const TimeRange current_visible = visible_range();
-
   TimeRange preserve = current_visible.Scale(kPreserveRatio);
-  TimeRange fetch = current_visible.Scale(kFetchRatio);
-
-  if (fetch.duration() < kMinFetchDurationMicros) {
-    Microseconds center = fetch.center();
-    fetch = {center - kMinFetchDurationMicros / 2.0,
-             center + kMinFetchDurationMicros / 2.0};
-  }
-
-  // Constrain the ranges to the valid data range. This ensures that we don't
-  // try to fetch data outside the available trace duration (e.g. negative time
-  // or future time), preventing infinite refetch loops at the boundaries.
   ConstrainTimeRange(preserve);
-  ConstrainTimeRange(fetch);
 
   // Refetch data if user zoomed in significantly, making resolution too coarse.
   // We use last_fetch_request_range_ here because it reflects the density of
@@ -6809,6 +7011,7 @@ void Timeline::MaybeRequestData() {
       is_compacted_ && !window_at_full_resolution_ &&
       data_time_range_.duration() > 0 &&
       fetch.duration() <= 0.85 * data_time_range_.duration();
+  const bool has_unloaded_visible_tracks = HasUnloadedVisibleExpandedTracks();
 
   // Utilize the last fetch request range as a guard to prevent redundant
   // fetches only if we don't need higher resolution data.
@@ -6819,13 +7022,8 @@ void Timeline::MaybeRequestData() {
   // range, the data density might be too low, so we MUST refetch to get
   // higher-resolution data.
   if (!zoomed_in_too_much && !needs_full_resolution_window &&
+      !has_unloaded_visible_tracks &&
       last_fetch_request_range_.Contains(preserve)) {
-    return;
-  }
-
-  if (saved_full_overview_.has_value() && data_time_range_.duration() > 0 &&
-      fetch.duration() >= 0.9 * data_time_range_.duration()) {
-    RestoreSavedFullOverview();
     return;
   }
 
