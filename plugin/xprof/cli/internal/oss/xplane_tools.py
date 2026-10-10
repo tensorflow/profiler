@@ -18,6 +18,7 @@ except ImportError:
   except ImportError:
     from google3.perftools.accelerators.xprof.api.python.profile_data import profile_data as profiler  # pyrefly: ignore[missing-import,missing-module-attribute]
 
+from xprof.cli.internal import async_overlap
 from xprof.cli.internal import decorators
 
 from . import xprof_client
@@ -474,3 +475,32 @@ def inspect_capture(session_id: str) -> str:
       },
       indent=2,
   )
+
+
+def iter_timeline_events(
+    session_id: Any,
+    host: str = "",
+    bypass_cache: bool = False,
+) -> list[async_overlap.TimelineEvent]:
+  """Extracts device timeline events from an XSpace for overlap analysis."""
+  del host, bypass_cache
+  events: list[async_overlap.TimelineEvent] = []
+  for plane in iter_planes(session_id):
+    plane_name = getattr(plane, "name", "") or ""
+    for line in getattr(plane, "lines", []) or []:
+      line_name = (
+          getattr(line, "display_name", "") or getattr(line, "name", "") or ""
+      )
+      if line_name not in async_overlap.LINE_NAMES:
+        continue
+      for event in getattr(line, "events", []) or []:
+        events.append(
+            async_overlap.TimelineEvent(
+                plane=plane_name,
+                line=line_name,
+                name=getattr(event, "name", "") or "",
+                start_ps=int(event.start_ns * 1000),
+                duration_ps=int(event.duration_ns * 1000),
+            )
+        )
+  return events
