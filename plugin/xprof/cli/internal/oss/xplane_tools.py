@@ -1,12 +1,12 @@
 """XPlane-related tools for XProf MCP."""
 
 import collections
+from collections.abc import Sequence
 import json
 import logging
 import os
 import pathlib
 import re
-import statistics
 from typing import Any, Iterator
 
 # pylint: disable=g-import-not-at-top
@@ -19,6 +19,7 @@ except ImportError:
     from google3.perftools.accelerators.xprof.api.python.profile_data import profile_data as profiler  # pyrefly: ignore[missing-import,missing-module-attribute]
 
 from xprof.cli.internal import decorators
+from xprof.cli.internal import xplane_event_query
 
 from . import xprof_client
 
@@ -116,7 +117,6 @@ def iter_planes(source: Any) -> Iterator[Any]:
 @decorators.cached(expire=86_400)
 def list_xplane_events(
     session_id: str,
-    *,
     plane_regex: str = ".*",
     event_regex: str = ".*",
     start_time_ps: int | None = None,
@@ -124,12 +124,17 @@ def list_xplane_events(
     max_events: int = 100,
     offset: int = 0,
     bypass_cache: bool = False,
+    window_semantics: str = "containment",
+    min_duration_ps: int | None = None,
+    max_duration_ps: int | None = None,
+    filter: str = "",  # pylint: disable=redefined-builtin
 ) -> str:
   """Searches and filters timeline events across XPlanes.
 
   **Use this** to find specific instances of slow kernels or gaps in
   computation. Supports regex filtering on both the plane (host/device)
-  and the event name.
+  and the event name, containment or overlap time-window semantics,
+  duration bounds, and boolean filter expressions.
 
   **Examples:**
   - `plane_regex='Device.*'`, `event_regex='Fusion.*'`: Find all device-side
@@ -147,6 +152,13 @@ def list_xplane_events(
     max_events: Limit results to this count (default 100).
     offset: Skip this many events before returning (useful for pagination).
     bypass_cache: Whether to bypass cache and recompute metrics.
+    window_semantics: Time-window matching mode: 'containment' (default, events
+      fully inside [start_time_ps, end_time_ps]) or 'overlap' (any event
+      intersecting the window).
+    min_duration_ps: Optional minimum event duration in picoseconds.
+    max_duration_ps: Optional maximum event duration in picoseconds.
+    filter: Optional boolean filter expression over plane, line, event,
+      duration_ps/ns/us/ms, offset_ps/start_ps, and end_ps.
 
   Returns:
     A JSON-formatted object (not a bare list) with the shape
@@ -161,29 +173,43 @@ def list_xplane_events(
   """
   del bypass_cache
   try:
+    window_mode = xplane_event_query.validate_window_semantics(window_semantics)
+    xplane_event_query.matches_window(
+        0, 0, start_time_ps, end_time_ps, window_mode
+    )
+    xplane_event_query.matches_duration(0, min_duration_ps, max_duration_ps)
+    filter_pred = xplane_event_query.compile_filter(filter)
+    p_re = re.compile(plane_regex)
+    e_re = re.compile(event_regex)
+
     events = []
     total_matched = 0
     skipped_count = 0
-
-    p_re = re.compile(plane_regex)
-    e_re = re.compile(event_regex)
 
     for plane in iter_planes(session_id):
       if not p_re.search(plane.name):
         continue
 
       for line in plane.lines:
+        line_label = (
+            getattr(line, "display_name", "") or getattr(line, "name", "") or ""
+        )
         for event in line.events:
-          # Check start/end time
           offset_ps = int(event.start_ns * 1000)
           duration_ps = int(event.duration_ns * 1000)
 
-          if start_time_ps is not None and offset_ps < start_time_ps:
+          if not xplane_event_query.matches_window(
+              offset_ps,
+              duration_ps,
+              start_time_ps,
+              end_time_ps,
+              window_mode,
+          ):
             continue
-          if end_time_ps is not None:
-            event_end_ps = offset_ps + duration_ps
-            if event_end_ps > end_time_ps:
-              continue
+          if not xplane_event_query.matches_duration(
+              duration_ps, min_duration_ps, max_duration_ps
+          ):
+            continue
 
           event_name = event.name
 
@@ -197,6 +223,17 @@ def list_xplane_events(
                   break
 
           if not e_re.search(event_name):
+            continue
+
+          record = xplane_event_query.EventRecord(
+              plane=plane.name,
+              line=line_label,
+              event=event_name,
+              offset_ps=offset_ps,
+              duration_ps=duration_ps,
+              line_id=str(line.name),
+          )
+          if not filter_pred(record):
             continue
 
           total_matched += 1
@@ -243,12 +280,19 @@ def aggregate_xplane_events(
     plane_regex: str = ".*",
     event_regex: str = ".*",
     bypass_cache: bool = False,
+    start_time_ps: int | None = None,
+    end_time_ps: int | None = None,
+    window_semantics: str = "containment",
+    min_duration_ps: int | None = None,
+    max_duration_ps: int | None = None,
+    filter: str = "",  # pylint: disable=redefined-builtin
+    group_by: str | Sequence[str] = "event",
 ) -> str:
   """Calculates statistical aggregates for matching timeline events.
 
   **Systemic Analysis.** Use this to determine if a specific kernel type is
   consistently slow or has high variance (noise). Returns count, average,
-  min, max, and standard deviation of durations.
+  min, p50, p90, p99, max, and standard deviation of durations.
 
   **Examples:**
   - `plane_regex='Device'`, `event_regex='Fusion'`: Aggregate performance of all
@@ -261,9 +305,17 @@ def aggregate_xplane_events(
     plane_regex: Regex to filter XPlanes.
     event_regex: Regex to filter event names.
     bypass_cache: Whether to bypass cache and recompute metrics.
+    start_time_ps: Optional start of time window in picoseconds.
+    end_time_ps: Optional end of time window in picoseconds.
+    window_semantics: Time-window matching mode ('containment' or 'overlap').
+    min_duration_ps: Optional minimum event duration in picoseconds.
+    max_duration_ps: Optional maximum event duration in picoseconds.
+    filter: Optional boolean filter expression.
+    group_by: Grouping dimensions from {'event', 'plane', 'line'} (default
+      'event'), as a comma-separated string or a sequence of field names.
 
   Returns:
-    A JSON string containing statistical aggregates grouped by event name.
+    A JSON string containing statistical aggregates grouped by `group_by`.
 
   Raises:
     FileNotFoundError: If path or session run is not found.
@@ -272,20 +324,52 @@ def aggregate_xplane_events(
   """
   del bypass_cache
   try:
+    window_mode = xplane_event_query.validate_window_semantics(window_semantics)
+    group_fields = xplane_event_query.parse_group_by(group_by)
+    xplane_event_query.matches_window(
+        0, 0, start_time_ps, end_time_ps, window_mode
+    )
+    xplane_event_query.matches_duration(0, min_duration_ps, max_duration_ps)
+    filter_pred = xplane_event_query.compile_filter(filter)
     p_re = re.compile(plane_regex)
     e_re = re.compile(event_regex)
 
     total_events_scanned = 0
     max_events_to_scan = 5_000_000
 
-    stats_data = collections.defaultdict(list)
+    stats_data: dict[tuple[str, ...], list[int]] = collections.defaultdict(list)
 
     for plane in iter_planes(session_id):
       if not p_re.search(plane.name):
         continue
 
       for line in plane.lines:
+        line_label = (
+            getattr(line, "display_name", "") or getattr(line, "name", "") or ""
+        )
         for event in line.events:
+          offset_ps = int(event.start_ns * 1000)
+          duration_ps = int(event.duration_ns * 1000)
+
+          if not xplane_event_query.matches_window(
+              offset_ps,
+              duration_ps,
+              start_time_ps,
+              end_time_ps,
+              window_mode,
+          ):
+            total_events_scanned += 1
+            if total_events_scanned > max_events_to_scan:
+              break
+            continue
+          if not xplane_event_query.matches_duration(
+              duration_ps, min_duration_ps, max_duration_ps
+          ):
+            total_events_scanned += 1
+            if total_events_scanned > max_events_to_scan:
+              break
+            continue
+
           name_info = event.name
 
           # If name is a simple number, try to find a better name in stats
@@ -299,7 +383,19 @@ def aggregate_xplane_events(
                   break
 
           if e_re.search(name_info):
-            stats_data[name_info].append(int(event.duration_ns * 1000))
+            record = xplane_event_query.EventRecord(
+                plane=plane.name,
+                line=line_label,
+                event=name_info,
+                offset_ps=offset_ps,
+                duration_ps=duration_ps,
+                line_id=str(line.name),
+            )
+            if filter_pred(record):
+              group_key = xplane_event_query.record_group_key(
+                  record, group_fields
+              )
+              stats_data[group_key].append(duration_ps)
 
           # Safety check
           total_events_scanned += 1
@@ -310,23 +406,7 @@ def aggregate_xplane_events(
       if total_events_scanned > max_events_to_scan:
         break
 
-    # Calculate stats
-    results = []
-    for name, durations in stats_data.items():
-      count = len(durations)
-      total_duration = sum(durations)
-      avg_duration = total_duration / count
-      results.append({
-          "event": name,
-          "count": count,
-          "total_duration_ps": total_duration,
-          "avg_duration_ps": avg_duration,
-          "min_duration_ps": min(durations),
-          "max_duration_ps": max(durations),
-          "std_dev_ps": statistics.stdev(durations) if count > 1 else 0.0,
-      })
-
-    results.sort(key=lambda x: x["total_duration_ps"], reverse=True)
+    results = xplane_event_query.summarize_groups(stats_data, group_fields)
     result_payload = {
         "aggregates": results,
         "returned": len(results),

@@ -12,6 +12,8 @@ import pathlib
 import tempfile
 from unittest import mock
 
+import fire
+
 from absl.testing import absltest
 from xprof.cli.internal import decorators
 from xprof.cli.internal.oss import xplane_tools
@@ -227,6 +229,120 @@ class InspectCaptureTest(absltest.TestCase):
       res = json.loads(xplane_tools.inspect_capture("session_llo_stat"))
 
     self.assertTrue(res["capture_valid_for_llo_analysis"])
+
+  def test_list_xplane_events_window_semantics_and_filter(self):
+    fake_plane = _FakePlane(
+        "/device:TPU:0",
+        lines=[
+            _FakeLine(
+                "XLA Ops",
+                events=[
+                    _FakeEvent("Fusion.1", start_ns=80, duration_ns=70),
+                    _FakeEvent("Copy.1", start_ns=110, duration_ns=100),
+                ],
+            )
+        ],
+    )
+    with mock.patch.object(
+        xplane_tools, "iter_planes", return_value=[fake_plane]
+    ):
+      contained = json.loads(
+          xplane_tools.list_xplane_events(
+              "sess_oss_win_c",
+              start_time_ps=100_000,
+              end_time_ps=250_000,
+              window_semantics="containment",
+          )
+      )
+      overlapped = json.loads(
+          xplane_tools.list_xplane_events(
+              "sess_oss_win_o",
+              start_time_ps=100_000,
+              end_time_ps=250_000,
+              window_semantics="overlap",
+          )
+      )
+      filtered = json.loads(
+          xplane_tools.list_xplane_events(
+              "sess_oss_flt",
+              min_duration_ps=70_000,
+              filter='event =~ "^Fusion" AND duration_ns == 70',
+          )
+      )
+    self.assertEqual([e["event"] for e in contained["events"]], ["Copy.1"])
+    self.assertEqual(
+        [e["event"] for e in overlapped["events"]], ["Fusion.1", "Copy.1"]
+    )
+    self.assertEqual([e["event"] for e in filtered["events"]], ["Fusion.1"])
+
+  def test_aggregate_xplane_events_percentiles_and_group_by(self):
+    fake_plane = _FakePlane(
+        "/device:TPU:0",
+        lines=[
+            _FakeLine(
+                "XLA Ops",
+                events=[
+                    _FakeEvent("Fusion", start_ns=i * 10, duration_ns=d)
+                    for i, d in enumerate((1, 2, 3, 4, 5))
+                ],
+            )
+        ],
+    )
+    with mock.patch.object(
+        xplane_tools, "iter_planes", return_value=[fake_plane]
+    ):
+      payload = json.loads(
+          xplane_tools.aggregate_xplane_events(
+              "sess_oss_agg",
+              group_by="plane,line,event",
+              filter="duration_ns >= 1",
+          )
+      )
+    self.assertEqual(payload["returned"], 1)
+    row = payload["aggregates"][0]
+    self.assertEqual(row["plane"], "/device:TPU:0")
+    self.assertEqual(row["line"], "XLA Ops")
+    self.assertEqual(row["event"], "Fusion")
+    self.assertEqual(row["count"], 5)
+    self.assertEqual(row["min_duration_ps"], 1000)
+    self.assertAlmostEqual(row["p50_duration_ps"], 3000.0)
+    self.assertAlmostEqual(row["p90_duration_ps"], 4600.0)
+    self.assertAlmostEqual(row["p99_duration_ps"], 4960.0)
+    self.assertEqual(row["max_duration_ps"], 5000)
+
+  def test_aggregate_xplane_events_fire_comma_separated_group_by(self):
+    # python-fire parses `--group_by=plane,event` into a tuple.
+    fake_plane = _FakePlane(
+        "/device:TPU:0",
+        lines=[
+            _FakeLine(
+                "XLA Ops",
+                events=[
+                    _FakeEvent("Fusion", start_ns=0, duration_ns=1),
+                    _FakeEvent("Copy", start_ns=10, duration_ns=2),
+                ],
+            )
+        ],
+    )
+    with mock.patch.object(
+        xplane_tools, "iter_planes", return_value=[fake_plane]
+    ), mock.patch("sys.stdout"):
+      payload = json.loads(
+          fire.Fire(
+              xplane_tools.aggregate_xplane_events,
+              command=[
+                  "sess_oss_agg_fire",
+                  "--group_by=plane,event",
+                  "--bypass_cache=True",
+              ],
+          )
+      )
+    self.assertEqual(payload["returned"], 2)
+    self.assertEqual(
+        sorted((r["plane"], r["event"]) for r in payload["aggregates"]),
+        [("/device:TPU:0", "Copy"), ("/device:TPU:0", "Fusion")],
+    )
+    self.assertNotIn("line", payload["aggregates"][0])
 
 
 if __name__ == "__main__":
