@@ -150,7 +150,7 @@ export interface KernelEventTooltipContent {
   readonly bundles: string;
   /** Number of bundles of an event that spans several, e.g. `32 bundles`. */
   readonly length?: string;
-  /** Hexadecimal bundle address, e.g. `<0x3039>`, matching compiler/Percale dumps. */
+  /** Hexadecimal bundle address, e.g. `<0x3039>`, matching compiler LLO dumps. */
   readonly hexBundle?: string;
   /** Program-order ordinal badge, e.g. `Ord #92`. */
   readonly ordinalLabel?: string;
