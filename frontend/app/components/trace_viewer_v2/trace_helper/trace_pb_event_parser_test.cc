@@ -178,4 +178,62 @@ TEST_F(TracePbEventParserTest, IncrementalLoadPreservesLastFetchRequestRange) {
   EXPECT_EQ(timeline_.last_fetch_request_range(), expected_fetch_range);
 }
 
+TEST_F(
+    TracePbEventParserTest,
+    InitialOverviewLoadCompactsLargeTraceAndSubWindowPreservesFullResolution) {
+  xprof::TraceDataResponse response;
+  response.add_interned_strings("");
+  response.add_interned_strings("op");
+  response.set_full_timespan_start_ps(0);
+  response.set_full_timespan_end_ps(5000000000ULL);  // 5 ms
+  auto* process = response.mutable_metadata()->add_processes();
+  process->set_id(1);
+  process->set_name("Host");
+  auto* thread = process->add_threads();
+  thread->set_id(1);
+  thread->set_name("Thread 1");
+
+  auto* series = response.add_complete_events();
+  series->mutable_metadata()->set_process_id(1);
+  series->mutable_metadata()->set_thread_id(1);
+  constexpr int kNumEvents = 500;
+  for (int i = 0; i < kNumEvents; ++i) {
+    series->add_deltas(10000000ULL);    // +10 us each
+    series->add_durations(5000000ULL);  // 5 us duration
+    series->add_name_refs(1);
+    series->add_event_metadata();
+  }
+
+  std::string serialized_proto;
+  ASSERT_TRUE(response.SerializeToString(&serialized_proto));
+  const std::string compressed_buffer =
+      *tensorflow::profiler::ZstdCompression::Compress(serialized_proto);
+
+  timeline_.set_max_uncompacted_overview_entries_for_test(64);
+  timeline_.set_incremental_fetch_enabled(true);
+
+  // 1. Initial overview load (no visible_range_from_url) configures
+  // is_compacted(true) and compacts the 500 events down to MIP dominant events.
+  ParseAndProcessCompressedTraceEvents(
+      reinterpret_cast<uintptr_t>(compressed_buffer.data()),
+      compressed_buffer.size(), emscripten::val::undefined(), data_provider_,
+      timeline_);
+  EXPECT_TRUE(timeline_.is_compacted());
+  EXPECT_FALSE(timeline_.window_at_full_resolution());
+  EXPECT_FALSE(timeline_.full_trace_loaded());
+  EXPECT_LT(timeline_.timeline_data().entry_start_times.size(), 300u);
+
+  // 2. Subsequent sub-window fetch (with visible_range_from_url) configures
+  // is_compacted(false) and preserves all 500 events at full resolution.
+  emscripten::val fetch_range_ms = emscripten::val::array();
+  fetch_range_ms.call<void>("push", emscripten::val(0.0));
+  fetch_range_ms.call<void>("push", emscripten::val(5.0));
+  ParseAndProcessCompressedTraceEvents(
+      reinterpret_cast<uintptr_t>(compressed_buffer.data()),
+      compressed_buffer.size(), fetch_range_ms, data_provider_, timeline_);
+  EXPECT_FALSE(timeline_.is_compacted());
+  EXPECT_TRUE(timeline_.window_at_full_resolution());
+  EXPECT_EQ(timeline_.timeline_data().entry_start_times.size(), 500u);
+}
+
 }  // namespace traceviewer

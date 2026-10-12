@@ -340,6 +340,13 @@ void ParseAndProcessTraceEvents(const emscripten::val& trace_data,
       (timeline.last_fetch_request_range() == TimeRange::Zero());
   const ParsedTraceEvents parsed_events =
       ParseTraceEvents(trace_data, visible_range_from_url);
+  const bool has_url_range = parsed_events.visible_range_from_url.has_value();
+  const bool is_overview_load =
+      is_initial_load && !has_url_range && timeline.incremental_fetch_enabled();
+  timeline.set_full_trace_loaded(!timeline.incremental_fetch_enabled() &&
+                                 !has_url_range);
+  timeline.set_is_compacted(is_overview_load);
+  timeline.set_window_at_full_resolution(!is_overview_load);
   Application::Instance().data_provider().ProcessTraceEvents(parsed_events,
                                                              timeline);
 

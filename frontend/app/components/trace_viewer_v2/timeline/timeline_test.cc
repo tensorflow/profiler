@@ -15792,6 +15792,228 @@ TEST(TimelineTest, EmitsMinimapUpdatedWhenMinimapEnabledWithTimeAxisAndSteps) {
   EXPECT_FALSE(minimap_updates.back().contains("bins"));
 }
 
+TEST(TimelineTest, CompactTimelineDataRemapsAndClearsSparseEntryGroupIds) {
+  ColorPalette palette = ColorPalette::Default();
+  Timeline timeline(palette);
+  timeline.set_max_uncompacted_overview_entries_for_test(64);
+  timeline.set_is_compacted(true);
+
+  FlameChartTimelineData data;
+  data.groups.push_back({.name = "Group 1",
+                         .start_level = 0,
+                         .nesting_level = kThreadNestingLevel,
+                         .expanded = true,
+                         .level_count = 1});
+
+  constexpr int kNumEvents = 5000;
+  data.level_offsets = {0, kNumEvents};
+  data.level_event_indices.reserve(kNumEvents);
+  for (int i = 0; i < kNumEvents; ++i) {
+    data.level_event_indices.push_back(i);
+    data.entry_names.push_back(absl::StrCat("ev_", i));
+    data.entry_levels.push_back(0);
+    data.entry_start_times.push_back(static_cast<double>(i));
+    data.entry_total_times.push_back(i == 100 ? 0.9 : 0.2);
+    data.entry_self_times.push_back(i == 100 ? 0.9 : 0.2);
+    data.entry_event_ids.push_back(i + 1);
+    data.entry_serials.push_back(0);
+    data.entry_arg_flags.push_back(
+        (i == 100 || i == 101) ? FlameChartTimelineData::kEntryArgHasGroupId
+                               : 0);
+    data.entry_hlo_module_ids.push_back(0);
+  }
+  data.sparse_entry_group_ids[100] = 42;
+  data.sparse_entry_group_ids[101] = 99;
+
+  timeline.SetTimelineData(std::move(data));
+
+  const FlameChartTimelineData& compacted = timeline.timeline_data();
+  EXPECT_LT(compacted.entry_start_times.size(), 2500u);
+
+  int new_idx_100 = -1;
+  for (int i = 0; i < static_cast<int>(compacted.entry_names.size()); ++i) {
+    if (compacted.entry_names[i] == "ev_100") {
+      new_idx_100 = i;
+      break;
+    }
+  }
+  ASSERT_GE(new_idx_100, 0);
+  EXPECT_LT(new_idx_100, 100);
+  const auto args = compacted.GetEntryArgs(new_idx_100);
+  ASSERT_TRUE(args.contains("group_id"));
+  EXPECT_EQ(args.at("group_id"), "42");
+
+  bool verified_cleared_before_build = false;
+  timeline.UpdateTimelineData([&]() {
+    EXPECT_TRUE(timeline.timeline_data().sparse_entry_group_ids.empty());
+    verified_cleared_before_build = true;
+    return FlameChartTimelineData{};
+  });
+  EXPECT_TRUE(verified_cleared_before_build);
+}
+
+TEST(TimelineTest, CompactTimelineDataSkipsFullLoadsAndCompactsOverviews) {
+  auto make_dense_data = []() {
+    FlameChartTimelineData data;
+    data.groups.push_back({.name = "Group 1",
+                           .start_level = 0,
+                           .nesting_level = kThreadNestingLevel,
+                           .expanded = true,
+                           .level_count = 1});
+    constexpr int kNumEvents = 5000;
+    data.level_offsets = {0, kNumEvents};
+    data.level_event_indices.reserve(kNumEvents);
+    for (int i = 0; i < kNumEvents; ++i) {
+      data.level_event_indices.push_back(i);
+      data.entry_names.push_back(absl::StrCat("ev_", i));
+      data.entry_levels.push_back(0);
+      data.entry_start_times.push_back(static_cast<double>(i));
+      data.entry_total_times.push_back(0.5);
+      data.entry_self_times.push_back(0.5);
+      data.entry_event_ids.push_back(i + 1);
+    }
+    return data;
+  };
+
+  ColorPalette palette = ColorPalette::Default();
+  Timeline timeline(palette);
+  timeline.set_max_uncompacted_overview_entries_for_test(64);
+
+  // Full-resolution load (!is_compacted) must retain all raw events for zoom-in
+  // and SetSearchQuery.
+  timeline.set_is_compacted(false);
+  timeline.set_full_trace_loaded(true);
+  timeline.SetTimelineData(make_dense_data());
+  EXPECT_EQ(timeline.timeline_data().entry_start_times.size(), 5000u);
+  EXPECT_FALSE(timeline.is_compacted());
+  EXPECT_TRUE(timeline.full_trace_loaded());
+  EXPECT_FALSE(timeline.is_level_raw_events_compacted_for_test(0));
+
+  // Downsampled overview (is_compacted) must compact to MIP dominant events and
+  // trigger a refetch when zooming in.
+  timeline.set_is_compacted(true);
+  timeline.SetTimelineData(make_dense_data());
+  EXPECT_LT(timeline.timeline_data().entry_start_times.size(), 2500u);
+  EXPECT_TRUE(timeline.is_compacted());
+  EXPECT_FALSE(timeline.full_trace_loaded());
+  EXPECT_FALSE(timeline.window_at_full_resolution());
+  EXPECT_TRUE(timeline.is_level_raw_events_compacted_for_test(0));
+
+  bool fetch_requested = false;
+  timeline.set_event_callback(
+      [&](absl::string_view type, const EventData&) {
+        if (type == kFetchData) {
+          fetch_requested = true;
+        }
+      });
+  timeline.set_data_time_range({0.0, 5000.0});
+  timeline.set_fetched_data_time_range({0.0, 5000.0});
+  timeline.set_is_incremental_loading(false);
+  timeline.SetVisibleRange({0.0, 100.0}, /*animate=*/false);
+  timeline.MaybeRequestData();
+  EXPECT_TRUE(fetch_requested);
+}
+
+TEST_F(MockTimelineImGuiFixture,
+       DrawEventsForLevel_CompactedOverviewUsesMipTilesWhenRawEventsCompacted) {
+  FlameChartTimelineData data;
+  data.groups.push_back({.name = "Group 1",
+                         .start_level = 0,
+                         .nesting_level = kThreadNestingLevel,
+                         .expanded = true,
+                         .level_count = 1});
+
+  constexpr int kNumEvents = 300;
+  data.level_offsets = {0, kNumEvents};
+  data.level_event_indices.reserve(kNumEvents);
+  for (int i = 0; i < kNumEvents; ++i) {
+    data.level_event_indices.push_back(i);
+    data.entry_names.push_back(absl::StrCat("ev_", i));
+    data.entry_levels.push_back(0);
+    double start = i * 10.0;
+    double dur = 1.0;
+    if (i == 0) {
+      start = 0.0;
+      dur = 2.0;
+    } else if (i == 1) {
+      start = 5.0;
+      dur = 4.0;
+    }
+    data.entry_start_times.push_back(start);
+    data.entry_total_times.push_back(dur);
+    data.entry_self_times.push_back(dur);
+    data.entry_event_ids.push_back(i + 1);
+  }
+
+  timeline_.set_max_uncompacted_overview_entries_for_test(64);
+  timeline_.set_is_compacted(true);
+  timeline_.SetTimelineData(std::move(data));
+  timeline_.set_data_time_range({0.0, 3000.0});
+  timeline_.SetVisibleRange({0.0, 3000.0});
+
+  ASSERT_TRUE(timeline_.is_compacted());
+  ASSERT_TRUE(timeline_.is_level_raw_events_compacted_for_test(0));
+  const auto compacted_level_events = timeline_.timeline_data().level_events(0);
+  // For 300 events (129..2048), BuildLevelMipPyramids skips m=0..1 and only
+  // populates m=2 (128 bins), so compaction reduces raw events to <= 130
+  // (128 MIP dominant events + front/back boundary events) where
+  // visible_tiles (128) * 2 >= visible_count (130).
+  EXPECT_LE(compacted_level_events.size(), 130u);
+
+  const ImVec2 pos(100.0f, 50.0f);
+  const ImVec2 max(150.0f, 500.0f);
+  const float event_height = 16.0f;
+  const float padding_bottom = 1.0f;
+
+  // 1. At overview zoom (px_per = 0.05, us_per_px = 20.0), even though
+  // visible_count <= kMinVisibleEventsForMipDraw and visible_tiles ==
+  // visible_count after compaction, MIP tiles must still be rendered and
+  // hover/click on the coalesced tile [0.0, 11.0] at x = 101.8f must select
+  // the remapped dominant event ("ev_1").
+  ImGuiIO& io = ImGui::GetIO();
+  io.MousePos = ImVec2(101.8f, 58.0f);
+  ImGui::NewFrame();
+  io.MouseReleased[0] = true;
+  ImGui::SetNextWindowPos(ImVec2(0, 0));
+  ImGui::SetNextWindowSize(ImVec2(1000, 500));
+  ImGui::Begin(
+      "TestWindow", nullptr,
+      ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+  ImGuiWindow* window = ImGui::GetCurrentWindow();
+  ImDrawList* draw_list = window->DrawList;
+  const int initial_vtx_size = draw_list->VtxBuffer.Size;
+  timeline_.DrawEventsForLevelBase(0, compacted_level_events, 0.05, 0, pos, max,
+                                   event_height, padding_bottom);
+  EXPECT_GT(draw_list->VtxBuffer.Size, initial_vtx_size);
+  ASSERT_GE(timeline_.selected_event_index(), 0);
+  EXPECT_EQ(
+      timeline_.timeline_data().entry_names[timeline_.selected_event_index()],
+      "ev_1");
+  ImGui::End();
+  ImGui::EndFrame();
+
+  // 2. When zoomed in such that SelectMipLevel returns -1 (px_per = 2.0,
+  // max_bin_width_us = 1.0 < bin_width_us ~ 20.0), a compacted level clamps
+  // selected_mip to 0 so coalesced [min_start, max_end] tile envelopes still
+  // render instead of leaving gaps from dropped non-dominant events.
+  timeline_.SetVisibleRange({0.0, 50.0});
+  ImGui::NewFrame();
+  io.MousePos = ImVec2(-100.0f, -100.0f);
+  io.MouseReleased[0] = false;
+  ImGui::SetNextWindowPos(ImVec2(0, 0));
+  ImGui::SetNextWindowSize(ImVec2(1000, 500));
+  ImGui::Begin(
+      "TestWindow", nullptr,
+      ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+  window = ImGui::GetCurrentWindow();
+  draw_list = window->DrawList;
+  const int zoomed_vtx_start = draw_list->VtxBuffer.Size;
+  timeline_.DrawEventsForLevelBase(0, compacted_level_events, 2.0, 0, pos, max,
+                                   event_height, padding_bottom);
+  EXPECT_GT(draw_list->VtxBuffer.Size, zoomed_vtx_start);
+  ImGui::End();
+  ImGui::EndFrame();
+}
 }  // namespace
 }  // namespace testing
 }  // namespace traceviewer

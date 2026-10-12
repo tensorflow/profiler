@@ -578,8 +578,11 @@ void Timeline::BackfillGroupLevelCount(FlameChartTimelineData& data) {
 }
 
 void Timeline::SetTimelineData(FlameChartTimelineData data) {
-  BackfillGroupLevelCount(data);
+  UpdateTimelineData([&]() { return std::move(data); });
+}
 
+void Timeline::UpdateTimelineData(
+    absl::FunctionRef<FlameChartTimelineData()> builder) {
   // Capture anchor track and local pixel offset prior to updating layout.
   GroupKey anchor_group_key = {};
   Pixel local_pixel_offset = 0.0f;
@@ -680,6 +683,10 @@ void Timeline::SetTimelineData(FlameChartTimelineData data) {
                        ? timeline_data_.entry_total_times[selected_event_index_]
                        : 0.0;
   }
+
+  ReleaseEntryMemory(timeline_data_);
+  FlameChartTimelineData data = builder();
+  BackfillGroupLevelCount(data);
 
   // Pre-calculate the level positions to avoid partial state and per-frame
   // layout recalculations before saving the newly arrived timeline_data.
@@ -830,6 +837,8 @@ void Timeline::SetTimelineData(FlameChartTimelineData data) {
     selected_event_index_ = -1;
   }
 
+  CompactTimelineDataToMipOverview();
+
   if (is_incremental_loading_) {
     should_restore_scroll_ = true;
   }
@@ -907,7 +916,11 @@ void Timeline::BuildLevelMipPyramids() {
     MipBuilderState states[LevelMipPyramid::kNumMipLevels];
     bool any_active = false;
     for (int m = 0; m < LevelMipPyramid::kNumMipLevels; ++m) {
-      const int num_bins = kMipBinCounts[m];
+      int num_bins = kMipBinCounts[m];
+      if (m == LevelMipPyramid::kNumMipLevels - 1 &&
+          static_cast<size_t>(num_bins) >= indices.size()) {
+        num_bins = std::max<int>(32, static_cast<int>(indices.size() / 2));
+      }
       if (static_cast<size_t>(num_bins) >= indices.size()) {
         continue;
       }
@@ -921,6 +934,7 @@ void Timeline::BuildLevelMipPyramids() {
       any_active = true;
     }
     if (!any_active) continue;
+    pyramid.has_pyramid = true;
 
     auto finalize_tile = [&](int m) {
       LevelMipLevel& mip = pyramid.levels[m];
@@ -1004,6 +1018,227 @@ void Timeline::BuildLevelMipPyramids() {
   }
 
   BuildProcessUtilizationPyramids();
+}
+
+void Timeline::ReleaseEntryMemory(FlameChartTimelineData& d) {
+  decltype(d.entry_start_times)().swap(d.entry_start_times);
+  decltype(d.entry_total_times)().swap(d.entry_total_times);
+  decltype(d.entry_self_times)().swap(d.entry_self_times);
+  decltype(d.entry_levels)().swap(d.entry_levels);
+  decltype(d.entry_names)().swap(d.entry_names);
+  decltype(d.entry_event_ids)().swap(d.entry_event_ids);
+  decltype(d.entry_serials)().swap(d.entry_serials);
+  decltype(d.entry_arg_flags)().swap(d.entry_arg_flags);
+  decltype(d.entry_hlo_module_ids)().swap(d.entry_hlo_module_ids);
+  decltype(d.entry_args)().swap(d.entry_args);
+  d.sparse_entry_group_ids.clear();
+  d.sparse_entry_args.clear();
+  decltype(d.level_offsets)().swap(d.level_offsets);
+  decltype(d.level_event_indices)().swap(d.level_event_indices);
+}
+
+void Timeline::CompactTimelineDataToMipOverview() {
+  // Only compact downsampled overviews (`is_compacted_`) when incremental
+  // refetching is enabled. Full-resolution loads (`!is_compacted_`) retain all
+  // raw events in memory so zoom-in does not lose non-dominant events.
+  if (!incremental_fetch_enabled_ || !is_compacted_) {
+    return;
+  }
+  const size_t old_n = timeline_data_.entry_start_times.size();
+  // Only compact huge traces (>200k events by default) where the raw entry
+  // arrays consume hundreds of megabytes of WASM linear memory.
+  if (old_n <= max_uncompacted_overview_entries_) {
+    is_compacted_ = false;
+    window_at_full_resolution_ = true;
+    return;
+  }
+
+  std::vector<uint8_t> keep(old_n, 0);
+  if (selected_event_index_ >= 0 &&
+      static_cast<size_t>(selected_event_index_) < old_n) {
+    keep[selected_event_index_] = 1;
+  }
+  for (int idx : matching_event_indices_) {
+    if (idx >= 0 && static_cast<size_t>(idx) < old_n) {
+      keep[idx] = 1;
+    }
+  }
+
+  const int total_lvls = timeline_data_.total_levels();
+  std::vector<uint8_t> level_compacted(total_lvls, 0);
+  for (int lvl = 0; lvl < total_lvls; ++lvl) {
+    const absl::Span<const int> indices = timeline_data_.level_events(lvl);
+    const bool has_mip =
+        static_cast<size_t>(lvl) < level_mip_pyramids_.size() &&
+        level_mip_pyramids_[lvl].has_pyramid;
+    if (!has_mip || indices.size() < 64) {
+      for (int idx : indices) {
+        if (idx >= 0 && static_cast<size_t>(idx) < old_n) {
+          keep[idx] = 1;
+        }
+      }
+    } else {
+      level_compacted[lvl] = 1;
+      for (int m = 0; m < LevelMipPyramid::kNumMipLevels; ++m) {
+        for (const auto& tile : level_mip_pyramids_[lvl].levels[m].tiles) {
+          if (tile.dominant_event_index >= 0 &&
+              static_cast<size_t>(tile.dominant_event_index) < old_n) {
+            keep[tile.dominant_event_index] = 1;
+          }
+        }
+      }
+      if (!indices.empty()) {
+        if (indices.front() >= 0 &&
+            static_cast<size_t>(indices.front()) < old_n) {
+          keep[indices.front()] = 1;
+        }
+        if (indices.back() >= 0 &&
+            static_cast<size_t>(indices.back()) < old_n) {
+          keep[indices.back()] = 1;
+        }
+      }
+    }
+  }
+
+  std::vector<int> old_to_new(old_n, -1);
+  size_t new_n = 0;
+  for (size_t i = 0; i < old_n; ++i) {
+    if (keep[i]) {
+      old_to_new[i] = static_cast<int>(new_n++);
+    }
+  }
+  if (new_n >= old_n) {
+    is_compacted_ = false;
+    window_at_full_resolution_ = true;
+    return;
+  }
+  for (int lvl = 0; lvl < total_lvls; ++lvl) {
+    if (level_compacted[lvl]) {
+      level_mip_pyramids_[lvl].raw_events_compacted = true;
+    }
+  }
+
+  auto compact_vec = [&](auto& vec) {
+    if (vec.size() != old_n) return;
+    using T = typename std::decay_t<decltype(vec)>::value_type;
+    std::vector<T> out;
+    out.reserve(new_n);
+    for (size_t i = 0; i < old_n; ++i) {
+      if (keep[i]) {
+        out.push_back(std::move(vec[i]));
+      }
+    }
+    vec.swap(out);
+  };
+
+  compact_vec(timeline_data_.entry_start_times);
+  compact_vec(timeline_data_.entry_total_times);
+  compact_vec(timeline_data_.entry_self_times);
+  compact_vec(timeline_data_.entry_levels);
+  compact_vec(timeline_data_.entry_names);
+  compact_vec(timeline_data_.entry_event_ids);
+  compact_vec(timeline_data_.entry_serials);
+  compact_vec(timeline_data_.entry_arg_flags);
+  compact_vec(timeline_data_.entry_hlo_module_ids);
+  compact_vec(timeline_data_.entry_args);
+  compact_vec(entry_colors_);
+
+  if (!timeline_data_.sparse_entry_group_ids.empty()) {
+    decltype(timeline_data_.sparse_entry_group_ids) new_sparse_group_ids;
+    for (const auto& [old_idx, group_id] :
+         timeline_data_.sparse_entry_group_ids) {
+      if (old_idx < old_n && old_to_new[old_idx] != -1) {
+        new_sparse_group_ids[static_cast<size_t>(old_to_new[old_idx])] =
+            group_id;
+      }
+    }
+    timeline_data_.sparse_entry_group_ids = std::move(new_sparse_group_ids);
+  }
+
+  if (!timeline_data_.sparse_entry_args.empty()) {
+    decltype(timeline_data_.sparse_entry_args) new_sparse;
+    for (auto& [old_idx, args_map] : timeline_data_.sparse_entry_args) {
+      if (old_idx < old_n && old_to_new[old_idx] != -1) {
+        new_sparse[static_cast<size_t>(old_to_new[old_idx])] =
+            std::move(args_map);
+      }
+    }
+    timeline_data_.sparse_entry_args = std::move(new_sparse);
+  }
+
+  std::vector<size_t> new_level_offsets(total_lvls + 1, 0);
+  std::vector<int> new_level_event_indices;
+  new_level_event_indices.reserve(new_n);
+  for (int lvl = 0; lvl < total_lvls; ++lvl) {
+    new_level_offsets[lvl] = new_level_event_indices.size();
+    for (int idx : timeline_data_.level_events(lvl)) {
+      if (idx >= 0 && static_cast<size_t>(idx) < old_n &&
+          old_to_new[idx] != -1) {
+        new_level_event_indices.push_back(old_to_new[idx]);
+      }
+    }
+  }
+  new_level_offsets[total_lvls] = new_level_event_indices.size();
+  timeline_data_.level_offsets.swap(new_level_offsets);
+  timeline_data_.level_event_indices.swap(new_level_event_indices);
+
+  for (auto& pyramid : level_mip_pyramids_) {
+    for (int m = 0; m < LevelMipPyramid::kNumMipLevels; ++m) {
+      for (auto& tile : pyramid.levels[m].tiles) {
+        if (tile.dominant_event_index >= 0 &&
+            static_cast<size_t>(tile.dominant_event_index) < old_n) {
+          tile.dominant_event_index = old_to_new[tile.dominant_event_index];
+        }
+      }
+    }
+  }
+
+  if (selected_event_index_ >= 0 &&
+      static_cast<size_t>(selected_event_index_) < old_n) {
+    selected_event_index_ = old_to_new[selected_event_index_];
+  } else {
+    selected_event_index_ = -1;
+  }
+
+  if (event_index_to_scroll_to_ >= 0 &&
+      static_cast<size_t>(event_index_to_scroll_to_) < old_n) {
+    event_index_to_scroll_to_ = old_to_new[event_index_to_scroll_to_];
+  } else {
+    event_index_to_scroll_to_ = -1;
+  }
+
+  if (!selected_event_indices_.empty()) {
+    std::vector<int> new_sel;
+    new_sel.reserve(selected_event_indices_.size());
+    for (int idx : selected_event_indices_) {
+      if (idx >= 0 && static_cast<size_t>(idx) < old_n &&
+          old_to_new[idx] != -1) {
+        new_sel.push_back(old_to_new[idx]);
+      }
+    }
+    selected_event_indices_.swap(new_sel);
+  }
+
+  if (!matching_event_indices_.empty()) {
+    absl::flat_hash_set<int> new_matching;
+    for (int idx : matching_event_indices_) {
+      if (idx >= 0 && static_cast<size_t>(idx) < old_n &&
+          old_to_new[idx] != -1) {
+        new_matching.insert(old_to_new[idx]);
+      }
+    }
+    matching_event_indices_ = std::move(new_matching);
+  }
+
+  for (auto& res : search_results_) {
+    if (res.loaded_index >= 0 &&
+        static_cast<size_t>(res.loaded_index) < old_n) {
+      res.loaded_index = old_to_new[res.loaded_index];
+    }
+  }
+  is_compacted_ = true;
+  full_trace_loaded_ = false;
+  window_at_full_resolution_ = false;
 }
 
 ImU32 Timeline::GetEventColor(int event_index) const {
@@ -2982,21 +3217,46 @@ void Timeline::DrawEventsForLevel(int group_index,
 
   const size_t visible_count =
       static_cast<size_t>(std::distance(first_visible_it, last_visible_it));
-  if (search_query_lower_.empty() &&
-      visible_count > kMinVisibleEventsForMipDraw && px_per_time_unit > 0.0 &&
+  if (search_query_lower_.empty() && px_per_time_unit > 0.0 &&
       !event_indices.empty()) {
     int global_level = -1;
-    const int sample_idx = event_indices.front();
-    if (sample_idx >= 0 &&
-        static_cast<size_t>(sample_idx) < timeline_data_.entry_levels.size()) {
-      global_level = timeline_data_.entry_levels[sample_idx];
+    if (group_index >= 0 &&
+        static_cast<size_t>(group_index) < timeline_data_.groups.size()) {
+      const int candidate =
+          timeline_data_.groups[group_index].start_level + level_in_group;
+      if (candidate >= 0 && candidate < timeline_data_.total_levels() &&
+          timeline_data_.level_events(candidate).data() ==
+              event_indices.data() &&
+          timeline_data_.level_events(candidate).size() ==
+              event_indices.size()) {
+        global_level = candidate;
+      }
+    }
+    if (global_level < 0) {
+      const int sample_idx = event_indices.front();
+      if (sample_idx >= 0 &&
+          static_cast<size_t>(sample_idx) <
+              timeline_data_.entry_levels.size()) {
+        global_level = timeline_data_.entry_levels[sample_idx];
+      }
     }
     if (global_level >= 0 &&
-        static_cast<size_t>(global_level) < level_mip_pyramids_.size()) {
+        static_cast<size_t>(global_level) < level_mip_pyramids_.size() &&
+        level_mip_pyramids_[global_level].has_pyramid &&
+        (level_mip_pyramids_[global_level].raw_events_compacted ||
+         visible_count > kMinVisibleEventsForMipDraw)) {
       const LevelMipPyramid& pyramid = level_mip_pyramids_[global_level];
       const Microseconds us_per_px = 1.0 / px_per_time_unit;
-      const int selected_mip =
+      int selected_mip =
           pyramid.SelectMipLevel(kMaxMipBinWidthPx * us_per_px);
+      if (selected_mip < 0 && pyramid.raw_events_compacted) {
+        for (int m = 0; m < LevelMipPyramid::kNumMipLevels; ++m) {
+          if (!pyramid.levels[m].tiles.empty()) {
+            selected_mip = m;
+            break;
+          }
+        }
+      }
       if (selected_mip >= 0) {
         const auto& tiles = pyramid.levels[selected_mip].tiles;
         auto tile_first =
@@ -3011,7 +3271,7 @@ void Timeline::DrawEventsForLevel(int group_index,
                              });
         const size_t visible_tiles =
             static_cast<size_t>(std::distance(tile_first, tile_last));
-        if (visible_tiles * 2 < visible_count) {
+        if (pyramid.raw_events_compacted || visible_tiles * 2 < visible_count) {
           const Pixel y_top =
               pos.y + level_in_group * (event_height + padding_bottom);
           const Pixel y_bottom = y_top + event_height;
@@ -4949,8 +5209,9 @@ void Timeline::InitializeLastFetchRequestRange(const TimeRange& visible_range) {
 }
 
 void Timeline::MaybeRequestData() {
-  // Don't request more data if a request is already in flight.
-  if (is_incremental_loading_) return;
+  // Don't request more data if a request is already in flight or if the entire
+  // trace is already loaded at full resolution in memory.
+  if (is_incremental_loading_ || (full_trace_loaded_ && !is_compacted_)) return;
 
   // Hosts whose backend always returns the full dataset opt out entirely.
   if (!incremental_fetch_enabled_) return;
@@ -4990,6 +5251,10 @@ void Timeline::MaybeRequestData() {
   const bool zoomed_in_too_much =
       (last_fetch_request_range_.duration() / fetch.duration() >
        kRefetchZoomRatio);
+  const bool needs_full_resolution_window =
+      is_compacted_ && !window_at_full_resolution_ &&
+      data_time_range_.duration() > 0 &&
+      fetch.duration() <= 0.85 * data_time_range_.duration();
 
   // Utilize the last fetch request range as a guard to prevent redundant
   // fetches only if we don't need higher resolution data.
@@ -4999,7 +5264,8 @@ void Timeline::MaybeRequestData() {
   // EXCEPT IF `zoomed_in_too_much` is true: in that case, even if we have the
   // range, the data density might be too low, so we MUST refetch to get
   // higher-resolution data.
-  if (!zoomed_in_too_much && last_fetch_request_range_.Contains(preserve)) {
+  if (!zoomed_in_too_much && !needs_full_resolution_window &&
+      last_fetch_request_range_.Contains(preserve)) {
     return;
   }
 

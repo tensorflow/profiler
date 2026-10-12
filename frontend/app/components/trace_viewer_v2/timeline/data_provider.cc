@@ -1465,10 +1465,13 @@ void DataProvider::ProcessTraceEvents(const ParsedTraceEvents& parsed_events,
   const std::vector<ProcessId> sorted_pids = GetSortedProcessIds(
       trace_info, known_threads_, known_counters_, known_async_tracks_);
 
-  timeline.SetTimelineData(CreateTimelineData(
-      trace_info, sorted_pids, GetTop5FlowCategories(flow_category_counts),
-      time_bounds, expanded_states, timeline.GetPalette(), max_observed_levels_,
-      known_threads_, known_counters_, known_async_tracks_));
+  timeline.UpdateTimelineData([&]() {
+    return CreateTimelineData(
+        trace_info, sorted_pids, GetTop5FlowCategories(flow_category_counts),
+        time_bounds, expanded_states, timeline.GetPalette(),
+        max_observed_levels_, known_threads_, known_counters_,
+        known_async_tracks_);
+  });
 
   // Don't need to check for max_time because the TimeRange constructor will
   // handle any potential issues with max_time.

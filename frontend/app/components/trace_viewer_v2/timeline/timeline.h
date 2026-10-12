@@ -14,6 +14,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/functional/any_invocable.h"
+#include "absl/functional/function_ref.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
@@ -480,7 +481,16 @@ class Timeline {
   const TimeRange& data_time_range() const { return data_time_range_; }
 
   void SetTimelineData(FlameChartTimelineData data);
+  void UpdateTimelineData(
+      absl::FunctionRef<FlameChartTimelineData()> builder);
   const FlameChartTimelineData& timeline_data() const { return timeline_data_; }
+
+  void set_max_uncompacted_overview_entries_for_test(size_t max_entries) {
+    max_uncompacted_overview_entries_ = max_entries;
+  }
+  size_t max_uncompacted_overview_entries() const {
+    return max_uncompacted_overview_entries_;
+  }
 
   int selected_event_index() const { return selected_event_index_; }
   int selected_group_index() const { return selected_group_index_; }
@@ -582,6 +592,18 @@ class Timeline {
   void set_is_incremental_loading(bool is_incremental_loading) {
     is_incremental_loading_ = is_incremental_loading;
   }
+  bool is_incremental_loading() const { return is_incremental_loading_; }
+
+  void set_full_trace_loaded(bool full_trace_loaded) {
+    full_trace_loaded_ = full_trace_loaded;
+  }
+  bool full_trace_loaded() const { return full_trace_loaded_; }
+  void set_is_compacted(bool is_compacted) { is_compacted_ = is_compacted; }
+  bool is_compacted() const { return is_compacted_; }
+  void set_window_at_full_resolution(bool window_at_full_resolution) {
+    window_at_full_resolution_ = window_at_full_resolution;
+  }
+  bool window_at_full_resolution() const { return window_at_full_resolution_; }
 
   // Whether MaybeRequestData() may emit `fetch_data` to refetch a time range at
   // higher resolution. Hosts whose backend ignores the requested range and
@@ -738,6 +760,11 @@ class Timeline {
   }
   void set_current_search_result_index_for_test(int idx) {
     current_search_result_index_ = idx;
+  }
+  bool is_level_raw_events_compacted_for_test(int level) const {
+    return level >= 0 &&
+           static_cast<size_t>(level) < level_mip_pyramids_.size() &&
+           level_mip_pyramids_[level].raw_events_compacted;
   }
 
  protected:
@@ -1002,6 +1029,8 @@ class Timeline {
 
   void RebuildEntryColors();
   void BuildLevelMipPyramids();
+  void CompactTimelineDataToMipOverview();
+  static void ReleaseEntryMemory(FlameChartTimelineData& d);
   ImU32 GetEventColor(int event_index) const;
 
   // Private static constants.
@@ -1051,6 +1080,8 @@ class Timeline {
   };
   struct LevelMipPyramid {
     static constexpr int kNumMipLevels = 3;
+    bool has_pyramid = false;
+    bool raw_events_compacted = false;
     LevelMipLevel levels[kNumMipLevels];
 
     int SelectMipLevel(Microseconds max_bin_width_us) const {
@@ -1223,6 +1254,10 @@ class Timeline {
   // Initialize to true to prevent sending request in the initial load where
   // JS side is already fetching the data.
   bool is_incremental_loading_ = true;
+  bool full_trace_loaded_ = false;
+  bool is_compacted_ = false;
+  bool window_at_full_resolution_ = false;
+  size_t max_uncompacted_overview_entries_ = 200000;
 
   bool incremental_fetch_enabled_ = true;
 
