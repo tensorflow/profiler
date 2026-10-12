@@ -81,6 +81,83 @@ class UlpTest(parameterized.TestCase):
     b = np.array([True, True, False])
     self.assertEqual(ulp.compute_ulp_distance(a, b, "bool").tolist(), [0, 1, 1])
 
+  def test_near_zero_does_not_depend_on_sign(self):
+    # float32 has 786,163,455 values between 0 and 1e-10. In a tensor whose
+    # largest value is 3, all three errors are far below eps * 3.
+    expected = np.array([3.0, 0.0, 0.0, 1e-10], dtype=np.float32)
+    actual = np.array([3.0, -1e-10, 1e-10, 2e-10], dtype=np.float32)
+    self.assertEqual(
+        ulp.compute_ulp_distance(actual, expected, "float32").tolist(),
+        [0, 1, 1, 1],
+    )
+
+  def test_near_zero_is_relative_to_the_reference_scale(self):
+    # Alone, 1e-10 vs 2e-10 is the whole tensor, so neither is near zero.
+    expected = np.array([1e-10], dtype=np.float32)
+    actual = np.array([2e-10], dtype=np.float32)
+    raw = int(
+        actual.view(np.int32).astype(np.int64)[0]
+        - expected.view(np.int32).astype(np.int64)[0]
+    )
+    self.assertEqual(
+        ulp.compute_ulp_distance(actual, expected, "float32").tolist(), [raw]
+    )
+    self.assertEqual(
+        ulp.compute_ulp_distance(
+            actual, expected, "float32", scale=3.0
+        ).tolist(),
+        [1],
+    )
+
+  def test_near_zero_error_above_contract_is_still_counted(self):
+    eps = float(np.finfo(np.float32).eps)
+    expected = np.array([2.0, 0.0], dtype=np.float32)
+    actual = np.array([2.0, 16 * eps * 2.0], dtype=np.float32)
+    self.assertEqual(
+        ulp.compute_ulp_distance(actual, expected, "float32").tolist(),
+        [0, 16],
+    )
+
+  def test_elements_above_the_floor_keep_their_raw_distance(self):
+    # A 17% error on a bfloat16 probability of 0.01 in a tensor whose largest
+    # value is 1. 0.01 is above 2**-8, so the error keeps its raw distance.
+    expected = np.array([1.0, 0.01], dtype=ml_dtypes.bfloat16)
+    actual = np.array([1.0, 0.0117], dtype=ml_dtypes.bfloat16)
+    raw = int(
+        actual.view(np.uint16).astype(np.int64)[1]
+        - expected.view(np.uint16).astype(np.int64)[1]
+    )
+    self.assertGreater(raw, ulp.get_contract("bfloat16")[1])
+    self.assertEqual(
+        ulp.compute_ulp_distance(actual, expected, "bfloat16").tolist(),
+        [0, raw],
+    )
+
+  def test_near_zero_scaling_can_be_disabled_and_needs_a_scale(self):
+    expected = np.array([3.0, 0.0], dtype=np.float32)
+    actual = np.array([3.0, 1e-10], dtype=np.float32)
+    raw = int(actual.view(np.int32)[1])
+    self.assertEqual(
+        ulp.compute_ulp_distance(
+            actual, expected, "float32", near_zero_fraction=0.0
+        ).tolist(),
+        [0, raw],
+    )
+    zeros = np.zeros(2, dtype=np.float32)
+    self.assertEqual(ulp.reference_scale(zeros), 0.0)
+    self.assertEqual(
+        ulp.compute_ulp_distance(
+            np.array([0.0, 1e-10], dtype=np.float32), zeros, "float32"
+        ).tolist(),
+        [0, raw],
+    )
+
+  def test_reference_scale_ignores_non_finite_values(self):
+    self.assertEqual(
+        ulp.reference_scale(np.array([np.nan, -np.inf, -4.0, 2.0])), 4.0
+    )
+    self.assertEqual(ulp.reference_scale(np.zeros(0, np.float32)), 0.0)
+
   @parameterized.named_parameters(
       ("bf16_alias", "bf16", (2, 8)),
       ("float32", "float32", (2, 4)),
@@ -105,8 +182,9 @@ class UlpTest(parameterized.TestCase):
     actual = np.array([0.0, -0.0, 1.0], dtype=dtype)
     expected = np.array([-0.0, -0.0, 1.0], dtype=dtype)
     self.assertEqual(
-        ulp.compute_ulp_distance(actual, expected, np.dtype(dtype).name)
-        .tolist(),
+        ulp.compute_ulp_distance(
+            actual, expected, np.dtype(dtype).name
+        ).tolist(),
         [0, 0, 0],
     )
     self.assertEqual(

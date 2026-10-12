@@ -9,6 +9,10 @@ against exactly the contracts that `numerical_validator` uses.
 
 Public API:
   compute_ulp_distance: Elementwise integer ULP distance between two arrays.
+  reference_scale: Largest finite magnitude of a reference, the scale that
+    near-zero elements are measured against.
+  NEAR_ZERO_FRACTION: Default fraction of that scale below which an element
+    counts as near zero.
   bitwise_mismatch_mask: Elements whose raw bit patterns differ.
   tolerance_ratio: Worst error as a multiple of an atol/rtol allowance.
   get_contract: (recommended, hard ceiling) ULP contract for a dtype.
@@ -19,7 +23,6 @@ Public API:
   DTYPE_TOLERANCES: The tables behind the functions above.
 """
 
-import functools
 import logging
 import types
 from typing import Any
@@ -245,8 +248,7 @@ def is_discrete_dtype(dtype_str: str) -> bool:
   return canonical == "bool" or canonical in INTEGER_DTYPES
 
 
-@functools.lru_cache(maxsize=None)
-def _magnitude_index(threshold: float, dtype_str: str) -> int:
+def _magnitude_index(magnitude: float, dtype_str: str) -> int:
   """Returns the sign-magnitude integer index of a positive scalar magnitude.
 
   Lets magnitude comparisons run in the integer domain against the same
@@ -254,32 +256,68 @@ def _magnitude_index(threshold: float, dtype_str: str) -> int:
   caller never has to materialize float64 copies of its tensors.
 
   Args:
-    threshold: A positive magnitude in real units.
+    magnitude: A positive magnitude in real units.
     dtype_str: Any spelling accepted by `resolve_canonical_dtype`.
 
   Returns:
-    The integer index corresponding to `threshold`. Values at or above this
-    index have magnitude at or above `threshold`.
+    The integer index of `magnitude` rounded to the dtype.
   """
-  scalar = np.asarray([abs(threshold)])
+  scalar = np.asarray([abs(magnitude)])
   return int(_sign_magnitude_to_continuous_int(scalar, dtype_str)[0])
+
+
+# Elements whose magnitudes are both below this fraction of the reference's
+# largest finite magnitude are near zero; see `compute_ulp_distance`.
+NEAR_ZERO_FRACTION = 2.0**-8
+
+
+def reference_scale(expected: Any) -> float:
+  """Returns the largest finite magnitude in `expected`, or 0.0 if none.
+
+  Args:
+    expected: The reference tensor.
+  """
+  exp = np.asarray(expected)
+  if exp.size == 0:
+    return 0.0
+  wide = np.float64 if exp.dtype.itemsize > 4 else np.float32
+  magnitude = np.abs(exp.astype(wide))
+  return float(np.max(magnitude, where=np.isfinite(magnitude), initial=0.0))
 
 
 def compute_ulp_distance(
     actual: np.ndarray,
     expected: np.ndarray,
     dtype_str: str = "bfloat16",
-    zero_threshold: float = 0.05,
+    near_zero_fraction: float = NEAR_ZERO_FRACTION,
+    scale: float | None = None,
 ) -> np.ndarray:
-  """Computes exact integer bitwise ULP distance with zero-crossing mitigation.
+  """Computes exact integer bitwise ULP distance, scaled near zero.
+
+  A ULP is relative to the value it is measured at, so near zero it shrinks
+  without bound: float32 has 786,163,455 representable values between 0 and
+  1e-10. An error that is negligible next to the rest of the tensor, such as
+  the rounding left by cancellation in a zero-mean output, then counts as
+  hundreds of millions of ULPs. Being close to zero causes this, whatever the
+  signs, so the treatment below does not depend on sign.
+
+  An element is near zero when both of its values are smaller in magnitude
+  than `near_zero_fraction * scale`, where `scale` defaults to the largest
+  finite magnitude in `expected`. A near-zero element is measured in units of
+  `eps * scale`, the dtype's epsilon at the tensor's own scale, instead of its
+  own ULP spacing: ceil(|actual - expected| / (eps * scale)), at least 1 and
+  never more than the raw distance. Every other element
+  keeps its raw distance. With no finite non-zero value in `expected` there
+  is no scale and every element keeps its raw distance.
 
   Args:
     actual: The candidate tensor.
     expected: The reference tensor.
     dtype_str: The data type string.
-    zero_threshold: Magnitude threshold below which opposite-sign values are
-      evaluated using scaled absolute difference to avoid sign-crossing ULP
-      singularities.
+    near_zero_fraction: The fraction of `scale` below which an element is near
+      zero. 0 disables the scaling.
+    scale: The magnitude that near-zero errors are measured against. None uses
+      `reference_scale(expected)`.
 
   Returns:
     An ndarray of bitwise ULP distances.
@@ -314,34 +352,26 @@ def compute_ulp_distance(
   int_exp = _sign_magnitude_to_continuous_int(expected, dtype_str)
   raw_ulp = np.abs(int_act - int_exp)
 
-  # Zero-crossing mitigation. Opposite-sign values whose magnitudes are both
-  # tiny sit on either side of the sign-magnitude discontinuity, where the raw
-  # bit distance jumps by ~2^(mantissa+exponent bits) despite the values being
-  # numerically adjacent.
-  #
-  # The predicate is ordered cheapest-first. A sign disagreement is necessary
-  # for mitigation and is a single pass over booleans, so testing it first
-  # lets the common case -- no element straddles zero -- skip the magnitude
-  # comparisons entirely.
-  sign_differs = (int_act < 0) != (int_exp < 0)
-  if not sign_differs.any():
+  if scale is None:
+    scale = reference_scale(expected)
+  scale = float(scale)
+  if not (near_zero_fraction > 0.0 and np.isfinite(scale) and scale > 0.0):
+    return raw_ulp
+  floor_idx = _magnitude_index(near_zero_fraction * scale, dtype_str)
+  if floor_idx <= 0:
     return raw_ulp
 
-  # Compare against the threshold's own bit pattern rather than calling
-  # np.abs, which would allocate a full int64 temporary per operand.
-  threshold_idx = _magnitude_index(zero_threshold, dtype_str)
-  mitigate_mask = (
-      sign_differs
-      & (int_act < threshold_idx)
-      & (int_act > -threshold_idx)
-      & (int_exp < threshold_idx)
-      & (int_exp > -threshold_idx)
-      # Only the sign-magnitude jump itself needs rescaling; a genuine small
-      # distance across zero is already correct.
-      & (raw_ulp > 10)
+  # Compare against the floor's own bit pattern rather than calling np.abs,
+  # which would allocate a full int64 temporary per operand. Inf and NaN sit
+  # above every finite index, so they are never near zero.
+  near_zero = (
+      (raw_ulp > 0)
+      & (int_act < floor_idx)
+      & (int_act > -floor_idx)
+      & (int_exp < floor_idx)
+      & (int_exp > -floor_idx)
   )
-
-  if not mitigate_mask.any():
+  if not near_zero.any():
     return raw_ulp
 
   canonical_d = resolve_canonical_dtype(dtype_str)
@@ -353,12 +383,14 @@ def compute_ulp_distance(
     eps = 1e-3
 
   # Restrict the float64 work to the affected elements.
-  idx = np.nonzero(mitigate_mask)
-  act_sel = np.asarray(actual, dtype=np.float64)[idx]
-  exp_sel = np.asarray(expected, dtype=np.float64)[idx]
-  scaled = np.ceil(np.abs(act_sel - exp_sel) / eps).astype(np.int64)
+  idx = np.nonzero(near_zero)
+  act_sel = np.asarray(actual)[idx].astype(np.float64)
+  exp_sel = np.asarray(expected)[idx].astype(np.float64)
+  scaled = np.maximum(
+      np.ceil(np.abs(act_sel - exp_sel) / (eps * scale)), 1.0
+  ).astype(np.int64)
   out = raw_ulp.copy()
-  out[idx] = scaled
+  out[idx] = np.minimum(raw_ulp[idx], scaled)
   return out
 
 
