@@ -3756,6 +3756,102 @@ TEST_F(MockTimelineImGuiFixture, DrawHideButton_Erase) {
   ImGui::EndFrame();
 }
 
+TEST_F(MockTimelineImGuiFixture,
+       DrawPinAndHideButtons_AlwaysDrawsProcessTrackBackground) {
+  FlameChartTimelineData data;
+  data.groups = {{.name = "expanded_group",
+                  .nesting_level = kProcessNestingLevel,
+                  .expanded = true},
+                 {.name = "collapsed_group",
+                  .nesting_level = kProcessNestingLevel,
+                  .expanded = false}};
+  timeline_.SetTimelineData(data);
+
+  ImGuiIO& io = ImGui::GetIO();
+  io.MousePos = ImVec2(-100.0f, -100.0f);
+
+  ImGui::NewFrame();
+  ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
+  ImGui::SetNextWindowSize(ImVec2(1000.0f, 1000.0f));
+  ImGui::Begin("TestWindow");
+  ImDrawList* draw_list = ImGui::GetWindowDrawList();
+  const Pixel icon_draw_size = ImGui::GetFontSize() * kIconSizeScale;
+
+  // 1. Unhovered and inactive Pin button on expanded process track draws only
+  // the 4 vertices of the expanded header background rectangle.
+  int vtx_before = draw_list->VtxBuffer.Size;
+  ImGui::SetCursorScreenPos(ImVec2(100.0f, 100.0f));
+  timeline_.CallDrawPinButton(0, kProcessTrackHeight, /*is_pinned=*/false);
+  ASSERT_EQ(draw_list->VtxBuffer.Size - vtx_before, 4);
+  EXPECT_EQ(draw_list->VtxBuffer[vtx_before].col, kProcessTrackExpandedColor);
+  EXPECT_FLOAT_EQ(draw_list->VtxBuffer[vtx_before].pos.x,
+                  100.0f - kButtonGap * 0.5f);
+  EXPECT_FLOAT_EQ(draw_list->VtxBuffer[vtx_before].pos.y, 100.0f);
+  EXPECT_FLOAT_EQ(draw_list->VtxBuffer[vtx_before + 2].pos.x,
+                  100.0f + icon_draw_size + kButtonGap * 0.5f);
+  EXPECT_FLOAT_EQ(draw_list->VtxBuffer[vtx_before + 2].pos.y,
+                  100.0f + kProcessTrackHeight);
+
+  // 2. Unhovered and inactive Hide button on collapsed process track draws only
+  // the 4 vertices of the collapsed header background rectangle.
+  vtx_before = draw_list->VtxBuffer.Size;
+  ImGui::SetCursorScreenPos(ImVec2(200.0f, 100.0f));
+  timeline_.CallDrawHideButton(1, kProcessTrackHeight,
+                               /*is_track_hidden=*/false);
+  ASSERT_EQ(draw_list->VtxBuffer.Size - vtx_before, 4);
+  EXPECT_EQ(draw_list->VtxBuffer[vtx_before].col, kProcessTrackCollapsedColor);
+  EXPECT_FLOAT_EQ(draw_list->VtxBuffer[vtx_before].pos.x,
+                  200.0f - kButtonGap * 0.5f);
+  EXPECT_FLOAT_EQ(draw_list->VtxBuffer[vtx_before].pos.y, 100.0f);
+  EXPECT_FLOAT_EQ(draw_list->VtxBuffer[vtx_before + 2].pos.x,
+                  200.0f + icon_draw_size + kButtonGap * 0.5f);
+  EXPECT_FLOAT_EQ(draw_list->VtxBuffer[vtx_before + 2].pos.y,
+                  100.0f + kProcessTrackHeight);
+
+  // 3. Active Pin and Hide buttons draw the background rectangle plus the icon
+  // vertices.
+  vtx_before = draw_list->VtxBuffer.Size;
+  ImGui::SetCursorScreenPos(ImVec2(100.0f, 100.0f));
+  timeline_.CallDrawPinButton(0, kProcessTrackHeight, /*is_pinned=*/true);
+  EXPECT_GT(draw_list->VtxBuffer.Size - vtx_before, 4);
+  EXPECT_EQ(draw_list->VtxBuffer[vtx_before].col, kProcessTrackExpandedColor);
+
+  vtx_before = draw_list->VtxBuffer.Size;
+  ImGui::SetCursorScreenPos(ImVec2(200.0f, 100.0f));
+  timeline_.CallDrawHideButton(1, kProcessTrackHeight,
+                               /*is_track_hidden=*/true);
+  EXPECT_GT(draw_list->VtxBuffer.Size - vtx_before, 4);
+  EXPECT_EQ(draw_list->VtxBuffer[vtx_before].col, kProcessTrackCollapsedColor);
+
+  ImGui::End();
+  ImGui::EndFrame();
+
+  // 4. Hovered row with inactive Pin and Hide buttons draws both the background
+  // rectangle and the icon vertices.
+  io.AddMousePosEvent(50.0f, 25.0f);
+  ImGui::NewFrame();
+  ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
+  ImGui::SetNextWindowSize(ImVec2(1000.0f, 1000.0f));
+  ImGui::Begin("TestWindow");
+  draw_list = ImGui::GetWindowDrawList();
+
+  vtx_before = draw_list->VtxBuffer.Size;
+  ImGui::SetCursorScreenPos(ImVec2(100.0f, 25.0f));
+  timeline_.CallDrawPinButton(0, kProcessTrackHeight, /*is_pinned=*/false);
+  EXPECT_GT(draw_list->VtxBuffer.Size - vtx_before, 4);
+  EXPECT_EQ(draw_list->VtxBuffer[vtx_before].col, kProcessTrackExpandedColor);
+
+  vtx_before = draw_list->VtxBuffer.Size;
+  ImGui::SetCursorScreenPos(ImVec2(200.0f, 25.0f));
+  timeline_.CallDrawHideButton(0, kProcessTrackHeight,
+                               /*is_track_hidden=*/false);
+  EXPECT_GT(draw_list->VtxBuffer.Size - vtx_before, 4);
+  EXPECT_EQ(draw_list->VtxBuffer[vtx_before].col, kProcessTrackExpandedColor);
+
+  ImGui::End();
+  ImGui::EndFrame();
+}
+
 // =============================================================================
 // Fixture: MockTimelineImGuiFixture
 // =============================================================================
@@ -9498,6 +9594,90 @@ TEST_F(RealTimelineImGuiFixture, ClickTrackLabelCopiesNameToClipboard) {
   const char* clipboard_text = ImGui::GetClipboardText();
   ASSERT_NE(clipboard_text, nullptr);
   EXPECT_STREQ(clipboard_text, "Test Group Name");
+}
+
+TEST_F(RealTimelineImGuiFixture,
+       ClickPinOrHideButtonDoesNotCopyProcessTrackLabel) {
+  timeline_.set_track_management_enabled(true);
+  const std::string kLongProcessName1 =
+      "Very Long Process Track Name That Extends Under Pin And Hide Buttons 1";
+  const std::string kLongProcessName2 =
+      "Very Long Process Track Name That Extends Under Pin And Hide Buttons 2";
+
+  FlameChartTimelineData data;
+  data.entry_levels = {0};
+  data.entry_total_times = {10.0};
+  data.entry_self_times = {10.0};
+  data.entry_start_times = {0.0};
+  data.entry_names = {"event"};
+  data.groups = {
+      {Group::Type::kFlame, kLongProcessName1, "", 0, kProcessNestingLevel,
+       true},
+      {Group::Type::kFlame, kLongProcessName2, "", 0, kProcessNestingLevel,
+       true},
+  };
+  data.level_offsets = {0, 1};
+  data.level_event_indices = {0};
+  timeline_.SetTimelineData(data);
+
+  ImGui::SetClipboardText("");
+  SimulateFrame();
+
+  const Pixel icon_draw_size = ImGui::GetFontSize() * kIconSizeScale;
+  const Pixel pin_center_x = timeline_.GetLabelWidth() - kSplitterOffset -
+                             icon_draw_size * 1.5f - kButtonGap;
+  const Pixel hide_center_x =
+      timeline_.GetLabelWidth() - kSplitterOffset - icon_draw_size * 0.5f;
+  // First process row in the "All" section sits below the ruler (24px) and the
+  // three virtual header rows ("Pinned", "Hidden", "All", 30px each = 90px).
+  const Pixel first_process_row_center_y =
+      kRulerHeight + 90.0f + kProcessTrackHeight * 0.5f;
+
+  ImGuiIO& io = ImGui::GetIO();
+
+  // 1. Click the Hide button on the first process row.
+  io.MousePos = ImVec2(hide_center_x, first_process_row_center_y);
+  SimulateFrame();
+  EXPECT_EQ(ImGui::GetMouseCursor(), ImGuiMouseCursor_Hand);
+
+  io.AddMouseButtonEvent(0, true);
+  SimulateFrame();
+  io.AddMouseButtonEvent(0, false);
+  SimulateFrame();
+
+  EXPECT_EQ(timeline_.get_copied_track_name_for_test(), "");
+  EXPECT_STREQ(ImGui::GetClipboardText(), "");
+
+  // 2. Click the Pin button on the remaining visible process row (now at the
+  // top of the "All" section).
+  io.MousePos = ImVec2(pin_center_x, first_process_row_center_y);
+  SimulateFrame();
+  EXPECT_EQ(ImGui::GetMouseCursor(), ImGuiMouseCursor_Hand);
+
+  io.AddMouseButtonEvent(0, true);
+  SimulateFrame();
+  io.AddMouseButtonEvent(0, false);
+  SimulateFrame();
+
+  EXPECT_EQ(timeline_.get_copied_track_name_for_test(), "");
+  EXPECT_STREQ(ImGui::GetClipboardText(), "");
+
+  // 3. Clicking the visible label text (to the left of the buttons) on the now
+  // pinned process row (below "Hidden" and "Pinned" headers = 60px) still
+  // copies the process track name.
+  const Pixel pinned_process_row_center_y =
+      kRulerHeight + 60.0f + kProcessTrackHeight * 0.5f;
+  io.MousePos = ImVec2(80.0f, pinned_process_row_center_y);
+  SimulateFrame();
+  EXPECT_EQ(ImGui::GetMouseCursor(), ImGuiMouseCursor_TextInput);
+
+  io.AddMouseButtonEvent(0, true);
+  SimulateFrame();
+  io.AddMouseButtonEvent(0, false);
+  SimulateFrame();
+
+  EXPECT_EQ(timeline_.get_copied_track_name_for_test(), kLongProcessName2);
+  EXPECT_STREQ(ImGui::GetClipboardText(), kLongProcessName2.c_str());
 }
 
 TEST_F(RealTimelineImGuiFixture,
