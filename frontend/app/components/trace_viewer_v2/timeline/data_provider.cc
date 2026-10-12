@@ -855,6 +855,7 @@ void PopulateCounterTrack(
   CounterData counter_data;
   if (!events.empty()) {
     counter_data.event_stats = events.front()->event_stats;
+    counter_data.unit = events.front()->unit;
   }
   counter_data.timestamps.reserve(total_entries);
   counter_data.values.reserve(total_entries);

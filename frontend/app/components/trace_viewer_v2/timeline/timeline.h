@@ -66,6 +66,7 @@ struct CounterData {
   double min_value = std::numeric_limits<double>::max();
   double max_value = std::numeric_limits<double>::lowest();
   std::string event_stats;
+  CounterUnit unit = CounterUnit::kNone;
 };
 
 // Represents a stable key for identifying a group/track across data reloads.

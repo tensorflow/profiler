@@ -30,9 +30,11 @@ namespace {
 using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::Eq;
+using ::testing::Field;
 using ::testing::Ge;
 using ::testing::IsEmpty;
 using ::testing::Not;
+using ::testing::Pair;
 using ::testing::SizeIs;
 using ::testing::UnorderedElementsAre;
 
@@ -1791,6 +1793,17 @@ TEST_F(DataProviderTest, ProcessCounterEventWithSingleValue) {
 
   EXPECT_DOUBLE_EQ(counter_data.min_value, 42.0);
   EXPECT_DOUBLE_EQ(counter_data.max_value, 42.0);
+}
+
+TEST_F(DataProviderTest, ProcessCounterEventPropagatesUnit) {
+  CounterEvent event = CreateCounterEvent(1, "Counter A", {10.0}, {0.75});
+  event.unit = CounterUnit::kFraction;
+
+  data_provider_.ProcessTraceEvents({{}, {event}}, timeline_);
+
+  EXPECT_THAT(
+      timeline_.timeline_data().counter_data_by_group_index,
+      Contains(Pair(1, Field(&CounterData::unit, CounterUnit::kFraction))));
 }
 
 TEST_F(DataProviderTest, ProcessCounterEventWithEmptyValues) {
