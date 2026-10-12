@@ -1,3 +1,100 @@
 {
-  "approved_diffs": {}
+  "approved_diffs": {
+    "compiler.graph_and_multihost_scale:00_overview_page": {
+      "decision": "INTENTIONAL",
+      "diff_hash": "654fab5735041e28",
+      "rationale": "Intended UI update: add a header accent bar to the Overview Page.",
+      "timestamp": "2026-10-12T07:00:48.339Z"
+    },
+    "compiler.graph_and_multihost_scale:05_goto_v6e-4-training/overview_page": {
+      "decision": "INTENTIONAL",
+      "diff_hash": "efdb5a0853608d83",
+      "rationale": "Intended UI update: add a header accent bar to the Overview Page.",
+      "timestamp": "2026-10-12T07:00:48.339Z"
+    },
+    "compiler.graph_and_multihost_scale:06_select_host_t1v-n-9bfa07b4-w-0": {
+      "decision": "INTENTIONAL",
+      "diff_hash": "f52c404248a00398",
+      "rationale": "Intended UI update: add a header accent bar to the Overview Page.",
+      "timestamp": "2026-10-12T07:00:48.339Z"
+    },
+    "compiler.graph_and_multihost_scale:08_switch_tool_Overview Page": {
+      "decision": "INTENTIONAL",
+      "diff_hash": "a5d63c0ce581b85d",
+      "rationale": "Intended UI update: add a header accent bar to the Overview Page.",
+      "timestamp": "2026-10-12T07:00:48.339Z"
+    },
+    "compute.op_profile_and_stats:00_overview_page": {
+      "decision": "INTENTIONAL",
+      "diff_hash": "2a5dfb4feee42297",
+      "rationale": "Intended UI update: add a header accent bar to the Overview Page.",
+      "timestamp": "2026-10-12T07:00:48.339Z"
+    },
+    "distributed.host_retention_and_trace:00_overview_page": {
+      "decision": "INTENTIONAL",
+      "diff_hash": "6c50167c04760a47",
+      "rationale": "Intended UI update: add a header accent bar to the Overview Page.",
+      "timestamp": "2026-10-12T07:00:48.339Z"
+    },
+    "distributed.host_retention_and_trace:01_select_host_t1v-n-9bfa07b4-w-0": {
+      "decision": "INTENTIONAL",
+      "diff_hash": "9d7bbe4aac0a14a8",
+      "rationale": "Intended UI update: add a header accent bar to the Overview Page.",
+      "timestamp": "2026-10-12T07:00:48.339Z"
+    },
+    "distributed.host_retention_and_trace:04_switch_tool_Overview Page": {
+      "decision": "INTENTIONAL",
+      "diff_hash": "f48606b24fcd3680",
+      "rationale": "Intended UI update: add a header accent bar to the Overview Page.",
+      "timestamp": "2026-10-12T07:00:48.339Z"
+    },
+    "full_spectrum.multimodal_endurance:00_overview_page": {
+      "decision": "INTENTIONAL",
+      "diff_hash": "b84a072afc71a6d4",
+      "rationale": "Intended UI update: add a header accent bar to the Overview Page.",
+      "timestamp": "2026-10-12T07:00:48.339Z"
+    },
+    "full_spectrum.multimodal_endurance:10_goto_v6e-4-training/overview_page": {
+      "decision": "INTENTIONAL",
+      "diff_hash": "236dc601f7d91c72",
+      "rationale": "Intended UI update: add a header accent bar to the Overview Page.",
+      "timestamp": "2026-10-12T07:00:48.339Z"
+    },
+    "memory.cross_hardware_tpu_to_v6e:00_overview_page": {
+      "decision": "INTENTIONAL",
+      "diff_hash": "404dcb9474686bab",
+      "rationale": "Intended UI update: add a header accent bar to the Overview Page.",
+      "timestamp": "2026-10-12T07:00:48.339Z"
+    },
+    "memory.cross_hardware_tpu_to_v6e:05_goto_v6e-4-training/overview_page": {
+      "decision": "INTENTIONAL",
+      "diff_hash": "10838194bf81e064",
+      "rationale": "Intended UI update: add a header accent bar to the Overview Page.",
+      "timestamp": "2026-10-12T07:00:48.339Z"
+    },
+    "memory.cross_hardware_tpu_to_v6e:09_goto_v6e-4-training/overview_page": {
+      "decision": "INTENTIONAL",
+      "diff_hash": "82e9957818ba215b",
+      "rationale": "Intended UI update: add a header accent bar to the Overview Page.",
+      "timestamp": "2026-10-12T07:00:48.339Z"
+    },
+    "routing.popstate_resilience_loop:00_overview_page": {
+      "decision": "INTENTIONAL",
+      "diff_hash": "704a1ebb55a5953c",
+      "rationale": "Intended UI update: add a header accent bar to the Overview Page.",
+      "timestamp": "2026-10-12T07:00:48.339Z"
+    },
+    "routing.popstate_resilience_loop:02_go_back_Overview Page": {
+      "decision": "INTENTIONAL",
+      "diff_hash": "a2a27ef5c61c1033",
+      "rationale": "Intended UI update: add a header accent bar to the Overview Page.",
+      "timestamp": "2026-10-12T07:00:48.339Z"
+    },
+    "triage.pipeline_and_hardware_bounds:00_overview_page": {
+      "decision": "INTENTIONAL",
+      "diff_hash": "8dcab5c86eb69089",
+      "rationale": "Intended UI update: add a header accent bar to the Overview Page.",
+      "timestamp": "2026-10-12T07:00:48.339Z"
+    }
+  }
 }
