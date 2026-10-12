@@ -56,6 +56,11 @@
       },
       {
         "action": "switch_tool",
+        "target": "Utilization Viewer",
+        "expected_selector": "utilization-viewer"
+      },
+      {
+        "action": "switch_tool",
         "target": "Trace Viewer",
         "expected_selector": "iframe"
       }
