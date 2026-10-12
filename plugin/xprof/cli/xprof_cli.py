@@ -1,6 +1,8 @@
 """CLI for XProf tools."""
 
+from collections.abc import Callable
 import functools
+import importlib
 import inspect
 import json
 import logging
@@ -14,33 +16,139 @@ from absl import app
 from absl import flags
 import fire
 
-from xprof import server
 from xprof.cli.internal import trace_selection
-from xprof.cli.internal import xprof_data
-from xprof.cli.internal.oss import hlo_tools
-from xprof.cli.internal.oss import xplane_tools
-from xprof.cli.internal.oss import xprof_client
-from xprof.cli.tools import check_host_boundness_tool
-from xprof.cli.tools import get_hlo_stats_tool
-from xprof.cli.tools import get_kernel_stats_tool
-from xprof.cli.tools import get_kpi_metrics_tool
-from xprof.cli.tools import get_llo_analysis_tool
-from xprof.cli.tools import get_llo_debug_string_tool
-from xprof.cli.tools import get_memory_profile_tool
-from xprof.cli.tools import get_overview_tool
-from xprof.cli.tools import get_peak_allocations_tool
-from xprof.cli.tools import get_perf_counters_tool
-from xprof.cli.tools import get_roofline_model_tool
-from xprof.cli.tools import get_step_trace_tool
-from xprof.cli.tools import get_top_hlo_ops_tool
-from xprof.cli.tools import get_utilization_viewer_tool
-from xprof.cli.tools import install_skills_tool
-from xprof.cli.tools.oss import diff_sessions_tool
-from xprof.cli.tools.oss import events_db_tool
-from xprof.cli.tools.oss import get_graph_viewer_tool
-from xprof.cli.tools.oss import get_kernel_utilization_tool
-from xprof.cli.tools.oss import llo_static_analysis_tool
-from xprof.cli.tools.oss import upload_trace_tool
+
+
+class _LazyTool:
+  """Lazy callable wrapper that defers importing the target module."""
+
+  def __init__(self, module_name: str, func_name: str):
+    self._module_name = module_name
+    self._func_name = func_name
+    self._target = None
+    self.__name__ = func_name
+
+  def _load(self):
+    if self._target is None:
+      module = importlib.import_module(self._module_name)
+      self._target = getattr(module, self._func_name)
+    return self._target
+
+  def __call__(self, *args, **kwargs):
+    return self._load()(*args, **kwargs)
+
+  @property
+  def __doc__(self):  # pyrefly: ignore[bad-override]
+    return getattr(self._load(), "__doc__", "")
+
+  @property
+  def __wrapped__(self):
+    return self._load()
+
+  @property
+  def __signature__(self):
+    return inspect.signature(self._load())
+
+
+class _LazyModuleProxy:
+  """Lazy module proxy that yields _LazyTool instances upon attribute access."""
+
+  def __init__(self, module_name: str):
+    self._module_name = module_name
+
+  def __getattr__(self, func_name: str) -> Any:
+    return _LazyTool(self._module_name, func_name)
+
+
+class _LazyWrappedTool:
+  """Defers _wrap_with_logdir until the subcommand is actually invoked or inspected."""
+
+  def __init__(
+      self,
+      tool_func: Callable[..., Any],
+      accepts_compiler_dump_dir: bool = False,
+  ):
+    self._tool_func = tool_func
+    self._accepts_compiler_dump_dir = accepts_compiler_dump_dir
+    self._wrapped = None
+    self.__name__ = getattr(tool_func, "__name__", "")
+
+  @property
+  def __doc__(self):  # pyrefly: ignore[bad-override]
+    return getattr(self._tool_func, "__doc__", "")
+
+  def _get_wrapped(self):
+    if self._wrapped is None:
+      self._wrapped = _wrap_with_logdir(
+          self._tool_func,
+          accepts_compiler_dump_dir=self._accepts_compiler_dump_dir,
+      )
+    return self._wrapped
+
+  def __call__(self, *args, **kwargs):
+    return self._get_wrapped()(*args, **kwargs)
+
+  @property
+  def __signature__(self):
+    return inspect.signature(self._get_wrapped())
+
+
+server = _LazyModuleProxy("xprof.server")
+xprof_data = _LazyModuleProxy("xprof.cli.internal.xprof_data")
+hlo_tools = _LazyModuleProxy("xprof.cli.internal.oss.hlo_tools")
+xplane_tools = _LazyModuleProxy("xprof.cli.internal.oss.xplane_tools")
+xprof_client = _LazyModuleProxy("xprof.cli.internal.oss.xprof_client")
+check_host_boundness_tool = _LazyModuleProxy(
+    "xprof.cli.tools.check_host_boundness_tool"
+)
+get_hlo_stats_tool = _LazyModuleProxy("xprof.cli.tools.get_hlo_stats_tool")
+get_kernel_stats_tool = _LazyModuleProxy(
+    "xprof.cli.tools.get_kernel_stats_tool"
+)
+get_kpi_metrics_tool = _LazyModuleProxy(
+    "xprof.cli.tools.get_kpi_metrics_tool"
+)
+get_llo_analysis_tool = _LazyModuleProxy(
+    "xprof.cli.tools.get_llo_analysis_tool"
+)
+get_llo_debug_string_tool = _LazyModuleProxy(
+    "xprof.cli.tools.get_llo_debug_string_tool"
+)
+get_memory_profile_tool = _LazyModuleProxy(
+    "xprof.cli.tools.get_memory_profile_tool"
+)
+get_overview_tool = _LazyModuleProxy("xprof.cli.tools.get_overview_tool")
+get_peak_allocations_tool = _LazyModuleProxy(
+    "xprof.cli.tools.get_peak_allocations_tool"
+)
+get_perf_counters_tool = _LazyModuleProxy(
+    "xprof.cli.tools.get_perf_counters_tool"
+)
+get_roofline_model_tool = _LazyModuleProxy(
+    "xprof.cli.tools.get_roofline_model_tool"
+)
+get_step_trace_tool = _LazyModuleProxy("xprof.cli.tools.get_step_trace_tool")
+get_top_hlo_ops_tool = _LazyModuleProxy(
+    "xprof.cli.tools.get_top_hlo_ops_tool"
+)
+get_utilization_viewer_tool = _LazyModuleProxy(
+    "xprof.cli.tools.get_utilization_viewer_tool"
+)
+install_skills_tool = _LazyModuleProxy("xprof.cli.tools.install_skills_tool")
+diff_sessions_tool = _LazyModuleProxy(
+    "xprof.cli.tools.oss.diff_sessions_tool"
+)
+events_db_tool = _LazyModuleProxy("xprof.cli.tools.oss.events_db_tool")
+get_graph_viewer_tool = _LazyModuleProxy(
+    "xprof.cli.tools.oss.get_graph_viewer_tool"
+)
+get_kernel_utilization_tool = _LazyModuleProxy(
+    "xprof.cli.tools.oss.get_kernel_utilization_tool"
+)
+llo_static_analysis_tool = _LazyModuleProxy(
+    "xprof.cli.tools.oss.llo_static_analysis_tool"
+)
+upload_trace_tool = _LazyModuleProxy("xprof.cli.tools.oss.upload_trace_tool")
 
 # Compiler dump directories produced by --xla_jf_dump_to contain only text
 # artifacts and never XPlane/XSpace protos, so `_wrap_with_logdir` must accept
@@ -141,7 +249,9 @@ def _is_oss() -> bool:
 _SPILL_THRESHOLD_BYTES = 10 * 1024 * 1024
 
 
-def _wrap_with_logdir(tool_func, accepts_compiler_dump_dir: bool = False):
+def _wrap_with_logdir(
+    tool_func: Callable[..., Any], accepts_compiler_dump_dir: bool = False
+):
   """Wraps a tool to natively accept logdir and bypass_cache in Fire.
 
   Args:
@@ -472,7 +582,7 @@ for _name, _tool in cli_main().items():
       XProfCli,
       _name,
       staticmethod(
-          _wrap_with_logdir(
+          _LazyWrappedTool(
               _tool,
               accepts_compiler_dump_dir=_name in _COMPILER_DUMP_TOOL_NAMES,
           )
@@ -483,9 +593,9 @@ for _name, _tool in cli_main().items():
 def _check_xprof_version() -> None:
   """Checks that the installed xprof package meets minimum version 2.23.0."""
   try:
-    import importlib.metadata  # pylint: disable=g-import-not-at-top
+    from importlib import metadata as importlib_metadata  # pylint: disable=g-import-not-at-top
 
-    version_str = importlib.metadata.version("xprof")
+    version_str = importlib_metadata.version("xprof")
     parts = [int(p) for p in version_str.split(".") if p.isdigit()]
     if len(parts) >= 2 and (parts[0], parts[1]) < (2, 23):
       sys.stderr.write(
