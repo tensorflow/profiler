@@ -1,13 +1,50 @@
-import {Component, inject, Input, OnChanges, OnDestroy, SimpleChanges, ChangeDetectionStrategy} from '@angular/core';
+import {AsyncPipe, NgFor, NgIf} from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  inject,
+  Input,
+  OnChanges,
+  OnDestroy,
+  SimpleChanges,
+} from '@angular/core';
+import {FormsModule} from '@angular/forms';
+import {MatOption} from '@angular/material/core';
+import {
+  MatExpansionPanel,
+  MatExpansionPanelHeader,
+  MatExpansionPanelTitle,
+} from '@angular/material/expansion';
+import {MatFormField, MatLabel} from '@angular/material/form-field';
+import {MatIcon} from '@angular/material/icon';
+import {MatProgressBar} from '@angular/material/progress-bar';
+import {MatSelect} from '@angular/material/select';
+import {MatTooltip} from '@angular/material/tooltip';
 import {Store} from '@ngrx/store';
-import {GRAPH_TYPE_DEFAULT, GRAPH_TYPE_ORIGINAL_HLO} from 'org_xprof/frontend/app/common/constants/constants';
+import {Observable, ReplaySubject} from 'rxjs';
+import {map, takeUntil} from 'rxjs/operators';
+import {
+  GRAPH_TYPE_DEFAULT,
+  GRAPH_TYPE_ORIGINAL_HLO,
+} from 'org_xprof/frontend/app/common/constants/constants';
 import {FileExtensionType} from 'org_xprof/frontend/app/common/constants/enums';
 import {ProfilerConfig} from 'org_xprof/frontend/app/common/interfaces/capture_profile';
-import {DATA_SERVICE_INTERFACE_TOKEN, DataServiceV2Interface} from 'org_xprof/frontend/app/services/data_service_v2/data_service_v2_interface';
-import {Address, Content} from 'org_xprof/frontend/app/services/source_code_service/source_code_service_interface';
-import {getProfilerConfig, getTagsState} from 'org_xprof/frontend/app/store/selectors';
-import {ReplaySubject} from 'rxjs';
-import {takeUntil} from 'rxjs/operators';
+import {
+  DATA_SERVICE_INTERFACE_TOKEN,
+  DataServiceV2Interface,
+} from 'org_xprof/frontend/app/services/data_service_v2/data_service_v2_interface';
+import {
+  Address,
+  Content,
+} from 'org_xprof/frontend/app/services/source_code_service/source_code_service_interface';
+import {
+  getProfilerConfig,
+  getTagsState,
+} from 'org_xprof/frontend/app/store/selectors';
+
+import {Message} from '../stack_trace_snippet/message';
+import {StackTraceSnippet} from '../stack_trace_snippet/stack_trace_snippet';
 
 import {CompilerPass, IrText} from './ir_text';
 
@@ -22,15 +59,36 @@ const CUSTOM_CALL_CATEGORY = 'custom-call';
  * TPU operations can be HLO or LLO.
  */
 @Component({
-  changeDetection: ChangeDetectionStrategy.Default,standalone: false,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
   selector: 'source-mapper',
   templateUrl: './source_mapper.ng.html',
   styleUrls: ['./source_mapper.scss'],
+  imports: [
+    AsyncPipe,
+    FormsModule,
+    MatExpansionPanel,
+    MatExpansionPanelHeader,
+    MatExpansionPanelTitle,
+    MatFormField,
+    MatIcon,
+    MatLabel,
+    MatOption,
+    MatProgressBar,
+    MatSelect,
+    MatTooltip,
+    Message,
+    NgFor,
+    NgIf,
+    StackTraceSnippet,
+  ],
 })
 export class SourceMapper implements OnDestroy, OnChanges {
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyed = new ReplaySubject<void>(1);
-  private readonly dataService: DataServiceV2Interface =
-      inject(DATA_SERVICE_INTERFACE_TOKEN);
+  private readonly dataService: DataServiceV2Interface = inject(
+      DATA_SERVICE_INTERFACE_TOKEN,
+  );
 
   /**
    * The source file and line number of the HLO op.
@@ -61,23 +119,21 @@ export class SourceMapper implements OnDestroy, OnChanges {
   selectedCompilerPass = CompilerPass.HLO_OPTIMIZED;
   sourceFileNames: string[] = [];
   selectedSourceFileName = '';
-  tags: string[] = [];
   // The prefix of the source file path if specified by users.
   srcPathPrefix = '';
 
+  protected readonly tags$: Observable<string[]>;
+  protected readonly srcPathPrefix$: Observable<string>;
+  protected readonly compilerPasses$: Observable<CompilerPass[]>;
+
   constructor(private readonly store: Store<{}>) {
-    this.store.select(getTagsState)
-        .pipe(takeUntil(this.destroyed))
-        .subscribe((tags: string[]) => {
-          if (!tags || tags.length === 0) return;
-          this.tags = tags;
-        });
-    this.store.select(getProfilerConfig)
-        .pipe(takeUntil(this.destroyed))
-        .subscribe((config: ProfilerConfig) => {
-          if (!config) return;
-          this.srcPathPrefix = config.srcPathPrefix;
-        });
+    this.tags$ = this.store.select(getTagsState);
+    this.srcPathPrefix$ =
+        this.store.select(getProfilerConfig)
+            .pipe(map((config: ProfilerConfig) => config?.srcPathPrefix || ''));
+    this.compilerPasses$ = this.tags$.pipe(
+        map((tags: string[]) => this.getCompilerPasses(tags || [])),
+    );
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -94,8 +150,9 @@ export class SourceMapper implements OnDestroy, OnChanges {
     }
     if (changes['opName'] &&
         changes['opName'].currentValue !== changes['opName'].previousValue) {
-      if (!this.compilerPasses.includes(this.selectedCompilerPass)) {
-        this.selectedCompilerPass = this.compilerPasses[0];
+      if (this.selectedCompilerPass === CompilerPass.MOSAIC_ORIGINAL &&
+          !this.isCustomCall) {
+        this.selectedCompilerPass = CompilerPass.HLO_OPTIMIZED;
       }
       this.update();
     }
@@ -135,29 +192,19 @@ export class SourceMapper implements OnDestroy, OnChanges {
     }
   }
 
-  get compilerPasses(): CompilerPass[] {
+  getCompilerPasses(tags: string[]): CompilerPass[] {
     const basePasses = [CompilerPass.HLO_OPTIMIZED];
-    if (this.hasUnoptimizedHloTag) {
+    if (tags.includes('has_original_hlo_proto')) {
       basePasses.push(CompilerPass.HLO_UNOPTIMIZED);
     }
     // llo_debug tag is identifier for llo debug proto captured.
     // the proto contains llo bundles for kernels, and source info for mosaic
     // passes.
-    if (this.hasLloDebugTag) {
+    if (tags.includes('llo_debug') && this.isCustomCall) {
       // CustomCall op category is identifier for a pallas kernel.
-      if (this.isCustomCall) {
-        basePasses.push(CompilerPass.MOSAIC_ORIGINAL);
-      }
+      basePasses.push(CompilerPass.MOSAIC_ORIGINAL);
     }
     return basePasses;
-  }
-
-  get hasLloDebugTag() {
-    return this.tags.includes('llo_debug');
-  }
-
-  get hasUnoptimizedHloTag() {
-    return this.tags.includes('has_original_hlo_proto');
   }
 
   get irFileName(): string {
@@ -206,8 +253,8 @@ export class SourceMapper implements OnDestroy, OnChanges {
   }
 
   get pallasKernelSourceFileAndLineNumber() {
-    return this.mosaicSourceFileAndLineNumberByKernelName.get(this.opName) ||
-        '';
+    return (
+        this.mosaicSourceFileAndLineNumberByKernelName.get(this.opName) || '');
   }
 
   // Not implemented yet.
@@ -315,6 +362,7 @@ export class SourceMapper implements OnDestroy, OnChanges {
                 new IrText(data as string, compilerPass),
             );
           }
+          this.cdr.markForCheck();
         });
   }
 
@@ -328,18 +376,14 @@ export class SourceMapper implements OnDestroy, OnChanges {
       return;
     }
     this.dataService
-        .getCustomCallText(
-            this.sessionId,
-            '',
-            this.opName,
-            this.programId,
-            )
+        .getCustomCallText(this.sessionId, '', this.opName, this.programId)
         .pipe(takeUntil(this.destroyed))
         .subscribe((data: string) => {
           if (data) {
             this.mosaicTextByKernelName.set(
                 this.opName, new IrText(data, CompilerPass.MOSAIC_ORIGINAL));
           }
+          this.cdr.markForCheck();
         });
   }
 
@@ -358,8 +402,11 @@ export class SourceMapper implements OnDestroy, OnChanges {
         .subscribe((sourceInfo) => {
           if (sourceInfo) {
             this.mosaicSourceFileAndLineNumberByKernelName.set(
-                this.opName, sourceInfo);
+                this.opName,
+                sourceInfo,
+            );
           }
+          this.cdr.markForCheck();
         });
   }
 
