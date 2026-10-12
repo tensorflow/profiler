@@ -16,7 +16,6 @@ limitations under the License.
 #include "xprof/convert/unified_trace_viewer_processor.h"
 
 #include <cstddef>
-#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -33,7 +32,6 @@ limitations under the License.
 #include "xprof/convert/file_utils.h"
 #include "xprof/convert/repository.h"
 #include "xprof/convert/tool_options.h"
-#include "xprof/convert/unified_profile_processor.h"
 #include "xprof/convert/unified_profile_processor_factory.h"
 #include "xprof/convert/unified_session_snapshot.h"
 #include "xprof/convert/unified_tools_registration.h"
@@ -73,12 +71,8 @@ TEST(UnifiedTraceViewerProcessorTest, InvalidArgument) {
 }
 
 TEST(UnifiedTraceViewerProcessorTest, ProcessSessionJsonSuccess) {
-  RegisterUnifiedToolRegistrations();
   ToolOptions options;
-  std::unique_ptr<UnifiedProfileProcessor> processor =
-      UnifiedProfileProcessorFactory::GetInstance().Create("trace_viewer",
-                                                           options);
-  ASSERT_NE(processor, nullptr);
+  UnifiedTraceViewerProcessor processor(options);
 
   std::string session_dir = tsl::io::JoinPath(
       testing::TempDir(), "unified_trace_viewer_processor_test_json");
@@ -93,33 +87,26 @@ TEST(UnifiedTraceViewerProcessorTest, ProcessSessionJsonSuccess) {
       SessionSnapshot session_snapshot,
       SessionSnapshot::Create(xspace_paths, /*xspaces=*/std::nullopt));
 
-  EXPECT_OK(processor->ProcessSession(session_snapshot, options));
-  EXPECT_EQ(processor->GetContentType(), "application/json");
-  EXPECT_THAT(processor->GetData(), Not(IsEmpty()));
+  EXPECT_OK(processor.ProcessSession(session_snapshot, options));
+  EXPECT_EQ(processor.GetContentType(), "application/json");
+  EXPECT_THAT(processor.GetData(), Not(IsEmpty()));
 
   ToolOptions mpmd_options;
   mpmd_options["mpmd_pipeline_view"] = true;
   mpmd_options["mpmd_single_device_per_stage"] = true;
-  std::unique_ptr<UnifiedProfileProcessor> mpmd_processor =
-      UnifiedProfileProcessorFactory::GetInstance().Create("trace_viewer",
-                                                           mpmd_options);
-  ASSERT_NE(mpmd_processor, nullptr);
-  EXPECT_OK(mpmd_processor->ProcessSession(session_snapshot, mpmd_options));
-  EXPECT_EQ(mpmd_processor->GetContentType(), "application/json");
-  const std::string& mpmd_data = mpmd_processor->GetData();
+  UnifiedTraceViewerProcessor mpmd_processor(mpmd_options);
+  EXPECT_OK(mpmd_processor.ProcessSession(session_snapshot, mpmd_options));
+  EXPECT_EQ(mpmd_processor.GetContentType(), "application/json");
+  const std::string& mpmd_data = mpmd_processor.GetData();
   EXPECT_THAT(
       mpmd_data,
       HasSubstr(R"({"name":"mpmd_single_device_per_stage","value":true})"));
 }
 
 TEST(UnifiedTraceViewerProcessorTest, ProcessSessionPbSuccess) {
-  RegisterUnifiedToolRegistrations();
   ToolOptions options;
   options["format"] = "pb";
-  std::unique_ptr<UnifiedProfileProcessor> processor =
-      UnifiedProfileProcessorFactory::GetInstance().Create("trace_viewer",
-                                                           options);
-  ASSERT_NE(processor, nullptr);
+  UnifiedTraceViewerProcessor processor(options);
 
   std::string session_dir = tsl::io::JoinPath(
       testing::TempDir(), "unified_trace_viewer_processor_test_pb");
@@ -134,9 +121,9 @@ TEST(UnifiedTraceViewerProcessorTest, ProcessSessionPbSuccess) {
       SessionSnapshot session_snapshot,
       SessionSnapshot::Create(xspace_paths, /*xspaces=*/std::nullopt));
 
-  EXPECT_OK(processor->ProcessSession(session_snapshot, options));
-  EXPECT_EQ(processor->GetContentType(), "application/octet-stream");
-  EXPECT_THAT(processor->GetData(), Not(IsEmpty()));
+  EXPECT_OK(processor.ProcessSession(session_snapshot, options));
+  EXPECT_EQ(processor.GetContentType(), "application/octet-stream");
+  EXPECT_THAT(processor.GetData(), Not(IsEmpty()));
 
   XSpace tpu_space;
   tensorflow::profiler::XPlane* tpu_plane = tpu_space.add_planes();
@@ -155,31 +142,35 @@ TEST(UnifiedTraceViewerProcessorTest, ProcessSessionPbSuccess) {
       SessionSnapshot tpu_session_snapshot,
       SessionSnapshot::Create(tpu_xspace_paths, /*xspaces=*/std::nullopt));
 
-  EXPECT_OK(processor->ProcessSession(tpu_session_snapshot, options));
-  EXPECT_EQ(processor->GetContentType(), "application/octet-stream");
-  EXPECT_THAT(processor->GetData(), Not(IsEmpty()));
+  EXPECT_OK(processor.ProcessSession(tpu_session_snapshot, options));
+  EXPECT_EQ(processor.GetContentType(), "application/octet-stream");
+  EXPECT_THAT(processor.GetData(), Not(IsEmpty()));
 
   ToolOptions mpmd_options;
   mpmd_options["format"] = "pb";
   mpmd_options["mpmd_pipeline_view"] = true;
   mpmd_options["mpmd_single_device_per_stage"] = true;
-  std::unique_ptr<UnifiedProfileProcessor> mpmd_processor =
-      UnifiedProfileProcessorFactory::GetInstance().Create("trace_viewer",
-                                                           mpmd_options);
-  ASSERT_NE(mpmd_processor, nullptr);
-  EXPECT_OK(mpmd_processor->ProcessSession(tpu_session_snapshot, mpmd_options));
-  EXPECT_EQ(mpmd_processor->GetContentType(), "application/octet-stream");
-  const std::string& mpmd_pb_data = mpmd_processor->GetData();
+  UnifiedTraceViewerProcessor mpmd_processor(mpmd_options);
+  EXPECT_OK(mpmd_processor.ProcessSession(tpu_session_snapshot, mpmd_options));
+  EXPECT_EQ(mpmd_processor.GetContentType(), "application/octet-stream");
+  const std::string& mpmd_pb_data = mpmd_processor.GetData();
   EXPECT_THAT(mpmd_pb_data, Not(IsEmpty()));
 }
 
-TEST(UnifiedTraceViewerProcessorTest, StreamingRegistration) {
+// Neither trace viewer tool may be served by UnifiedTraceViewerProcessor yet:
+// "trace_viewer" consumers parse the legacy serialized Trace proto while the
+// unified processor emits JSON, and "trace_viewer@" is a streaming protocol
+// (viewport, resolution, search, uid lookups) that it does not implement. An
+// unregistered tool makes the dispatcher fall back to the legacy processors.
+TEST(UnifiedTraceViewerProcessorTest, TraceViewerToolsAreNotRegistered) {
   RegisterUnifiedToolRegistrations();
   ToolOptions options;
-  std::unique_ptr<UnifiedProfileProcessor> processor =
-      UnifiedProfileProcessorFactory::GetInstance().Create("trace_viewer@",
-                                                           options);
-  ASSERT_NE(processor, nullptr);
+  EXPECT_EQ(UnifiedProfileProcessorFactory::GetInstance().Create("trace_viewer",
+                                                                 options),
+            nullptr);
+  EXPECT_EQ(UnifiedProfileProcessorFactory::GetInstance().Create(
+                "trace_viewer@", options),
+            nullptr);
 }
 
 }  // namespace
