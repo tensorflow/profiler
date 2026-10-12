@@ -219,6 +219,14 @@ std::string FormatHeaderText(absl::string_view name, int count) {
   return absl::StrCat(name, " (", count, ")");
 }
 
+ImU32 GetProcessTrackBackgroundColor(const Group& group,
+                                     const ColorPalette& palette) {
+  return group.expanded ? palette.GetColor(ColorPalette::Key::kExpandedHeader)
+                              .value_or(kProcessTrackExpandedColor)
+                        : palette.GetColor(ColorPalette::Key::kCollapsedHeader)
+                              .value_or(kProcessTrackCollapsedColor);
+}
+
 }  // namespace
 
 int Timeline::GetNextGroupStartLevel(const FlameChartTimelineData& data,
@@ -1621,7 +1629,18 @@ void Timeline::DrawTrackLabel(const Group& group, Pixel centereable_height) {
 
   ImGui::EndGroup();
 
-  if (ImGui::IsItemHovered()) {
+  bool is_label_hovered = ImGui::IsItemHovered();
+  if (is_label_hovered && track_management_enabled_ &&
+      group.nesting_level == kProcessNestingLevel) {
+    const Pixel icon_draw_size = ImGui::GetFontSize() * kIconSizeScale;
+    const Pixel buttons_min_x = tracks_start_screen_pos_.x + label_width_ -
+                                kSplitterOffset - icon_draw_size * 2.0f -
+                                kButtonGap * 1.5f;
+    if (ImGui::GetMousePos().x >= buttons_min_x) {
+      is_label_hovered = false;
+    }
+  }
+  if (is_label_hovered) {
     ImGui::SetMouseCursor(ImGuiMouseCursor_TextInput);
     if (ImGui::IsMouseClicked(0)) {
       ImGui::SetClipboardText(group.name.c_str());
@@ -1656,17 +1675,12 @@ bool Timeline::DrawTrackRow(int group_index, const ImVec2& tracks_start_pos,
   ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
   if (group.nesting_level == kProcessNestingLevel) {
-    ImU32 bg_color =
-        group.expanded ? palette_.GetColor(ColorPalette::Key::kExpandedHeader)
-                             .value_or(kProcessTrackExpandedColor)
-                       : palette_.GetColor(ColorPalette::Key::kCollapsedHeader)
-                             .value_or(kProcessTrackCollapsedColor);
     draw_list->AddRectFilled(
         ImVec2(tracks_start_screen_pos.x,
                tracks_start_screen_pos.y + group_offsets_[group_index]),
         ImVec2(tracks_start_screen_pos.x + content_region_avail_width,
                tracks_start_screen_pos.y + group_offsets_[group_index + 1]),
-        bg_color);
+        GetProcessTrackBackgroundColor(group, palette_));
   }
 
   // Push clip rect to prevent label text from bleeding into the track area
@@ -4306,6 +4320,12 @@ bool Timeline::DrawHideButton(int group_index, Pixel height,
       ImVec2(tracks_start_screen_pos_.x + content_region_avail_width,
              tracks_start_screen_pos_.y + group_offsets_[group_index + 1]));
 
+  draw_list->AddRectFilled(
+      ImVec2(p.x - kButtonGap * 0.5f, p.y),
+      ImVec2(p.x + kIconDrawSize + kButtonGap * 0.5f,
+             p.y + kButtonVisibleHeight),
+      GetProcessTrackBackgroundColor(group, palette_));
+
   if (is_row_hovered || is_track_hidden) {
     DrawHideIcon(draw_list, center_x, center_y, kIconDrawSize, icon_col,
                  is_track_hidden);
@@ -4356,6 +4376,12 @@ bool Timeline::DrawPinButton(int group_index, Pixel height, bool is_pinned) {
              tracks_start_screen_pos_.y + group_offsets_[group_index]),
       ImVec2(tracks_start_screen_pos_.x + content_region_avail_width,
              tracks_start_screen_pos_.y + group_offsets_[group_index + 1]));
+
+  draw_list->AddRectFilled(
+      ImVec2(p.x - kButtonGap * 0.5f, p.y),
+      ImVec2(p.x + kIconDrawSize + kButtonGap * 0.5f,
+             p.y + kButtonVisibleHeight),
+      GetProcessTrackBackgroundColor(group, palette_));
 
   if (is_row_hovered || is_pinned) {
     // Draw the icon using the same base size.
