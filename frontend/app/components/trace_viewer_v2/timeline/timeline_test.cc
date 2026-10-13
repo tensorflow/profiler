@@ -15950,6 +15950,102 @@ TEST(TimelineTest, CompactTimelineDataSkipsFullLoadsAndCompactsOverviews) {
   EXPECT_TRUE(fetch_requested);
 }
 
+TEST(TimelineTest,
+     StashAndRestoreFullOverviewPreservesExpandedStateWithoutRefetch) {
+  ColorPalette palette = ColorPalette::Default();
+  Timeline timeline(palette);
+  timeline.set_data_time_range({0.0, 10000.0});
+  timeline.set_fetched_data_time_range({0.0, 10000.0});
+  timeline.set_is_incremental_loading(false);
+
+  auto make_overview_data = [](bool cpu_expanded) {
+    FlameChartTimelineData data;
+    data.groups = {
+        {.name = "host1 TPU:0",
+         .start_level = 0,
+         .nesting_level = 0,
+         .expanded = true,
+         .level_count = 0},
+        {.name = "XLA Ops",
+         .start_level = 0,
+         .nesting_level = 1,
+         .expanded = true,
+         .level_count = 1},
+        {.name = "host1 CPU",
+         .start_level = 1,
+         .nesting_level = 0,
+         .expanded = cpu_expanded,
+         .level_count = 0},
+        {.name = "Main Thread",
+         .start_level = 1,
+         .nesting_level = 1,
+         .expanded = true,
+         .level_count = 1},
+    };
+    data.level_offsets = {0, 2, 3};
+    data.level_event_indices = {0, 1, 2};
+    data.entry_names = {"coarse_op_0", "coarse_op_1", "coarse_cpu_op"};
+    data.entry_levels = {0, 0, 1};
+    data.entry_start_times = {0.0, 5000.0, 0.0};
+    data.entry_total_times = {4000.0, 4000.0, 9000.0};
+    data.entry_self_times = {4000.0, 4000.0, 9000.0};
+    data.entry_event_ids = {1, 2, 3};
+    return data;
+  };
+
+  timeline.SetTimelineData(make_overview_data(/*cpu_expanded=*/false));
+  timeline.MarkCurrentDataAsFullOverview();
+  EXPECT_FALSE(timeline.HasSavedFullOverview());
+  EXPECT_EQ(timeline.timeline_data().entry_start_times.size(), 3u);
+
+  int fetch_count = 0;
+  timeline.set_event_callback(
+      [&](absl::string_view type, const EventData&) {
+        if (type == kFetchData) {
+          ++fetch_count;
+          // Simulate serving a narrow zoomed-in slice where "host1 CPU" is
+          // subsequently expanded by the user.
+          FlameChartTimelineData zoomed_data =
+              make_overview_data(/*cpu_expanded=*/true);
+          zoomed_data.entry_names.push_back("fine_op_2");
+          zoomed_data.entry_levels.push_back(0);
+          zoomed_data.entry_start_times.push_back(100.0);
+          zoomed_data.entry_total_times.push_back(50.0);
+          zoomed_data.entry_self_times.push_back(50.0);
+          zoomed_data.entry_event_ids.push_back(4);
+          zoomed_data.level_offsets = {0, 3, 4};
+          zoomed_data.level_event_indices = {0, 3, 1, 2};
+          timeline.UpdateTimelineData(
+              [&]() { return std::move(zoomed_data); });
+          timeline.set_fetched_data_time_range({0.0, 1000.0});
+          timeline.set_is_incremental_loading(false);
+        }
+      });
+
+  // 1. Zoom in to [0, 300]: PrepareForFilteredRefetch() stashes the full
+  // overview when UpdateTimelineData runs.
+  timeline.SetVisibleRange({0.0, 300.0}, /*animate=*/false);
+  timeline.MaybeRequestData();
+  EXPECT_EQ(fetch_count, 1);
+  EXPECT_TRUE(timeline.HasSavedFullOverview());
+  EXPECT_EQ(timeline.timeline_data().entry_start_times.size(), 4u);
+  EXPECT_EQ(timeline.fetched_data_time_range(), TimeRange(0.0, 1000.0));
+  ASSERT_EQ(timeline.timeline_data().groups.size(), 4u);
+  EXPECT_TRUE(timeline.timeline_data().groups[2].expanded);
+
+  // 2. Zoom back out to [0, 10000]: RestoreSavedFullOverview() restores the
+  // stashed full overview without emitting another kFetchData event, and
+  // preserves the expanded state of "host1 CPU".
+  timeline.SetVisibleRange({0.0, 10000.0}, /*animate=*/false);
+  timeline.MaybeRequestData();
+  EXPECT_EQ(fetch_count, 1);
+  EXPECT_FALSE(timeline.HasSavedFullOverview());
+  EXPECT_EQ(timeline.timeline_data().entry_start_times.size(), 3u);
+  EXPECT_EQ(timeline.fetched_data_time_range(), TimeRange(0.0, 10000.0));
+  ASSERT_EQ(timeline.timeline_data().groups.size(), 4u);
+  EXPECT_TRUE(timeline.timeline_data().groups[2].expanded);
+}
+
 TEST_F(MockTimelineImGuiFixture,
        DrawEventsForLevel_CompactedOverviewUsesMipTilesWhenRawEventsCompacted) {
   FlameChartTimelineData data;

@@ -1465,6 +1465,10 @@ void DataProvider::ProcessTraceEvents(const ParsedTraceEvents& parsed_events,
   const std::vector<ProcessId> sorted_pids = GetSortedProcessIds(
       trace_info, known_threads_, known_counters_, known_async_tracks_);
 
+  const bool was_initial_overview_load =
+      (timeline.visible_range() == TimeRange::Zero() &&
+       !parsed_events.visible_range_from_url.has_value());
+
   timeline.UpdateTimelineData([&]() {
     return CreateTimelineData(
         trace_info, sorted_pids, GetTop5FlowCategories(flow_category_counts),
@@ -1508,6 +1512,14 @@ void DataProvider::ProcessTraceEvents(const ParsedTraceEvents& parsed_events,
     timeline.set_data_time_range({start, end});
   } else {
     timeline.set_data_time_range(timeline.fetched_data_time_range());
+  }
+
+  if (was_initial_overview_load ||
+      (timeline.data_time_range().duration() > 0 &&
+       timeline.last_fetch_request_range().duration() >=
+           0.9 * timeline.data_time_range().duration())) {
+    timeline.ClearSavedFullOverview();
+    timeline.MarkCurrentDataAsFullOverview();
   }
 }
 

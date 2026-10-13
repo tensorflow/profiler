@@ -495,6 +495,20 @@ class Timeline {
     return max_uncompacted_overview_entries_;
   }
 
+  void MarkCurrentDataAsFullOverview() { is_full_overview_data_ = true; }
+  void PrepareForFilteredRefetch() {
+    if (is_full_overview_data_ && !saved_full_overview_.has_value()) {
+      stash_full_overview_on_next_update_ = true;
+    }
+  }
+  bool HasSavedFullOverview() const { return saved_full_overview_.has_value(); }
+  bool RestoreSavedFullOverview();
+  void ClearSavedFullOverview() {
+    saved_full_overview_.reset();
+    is_full_overview_data_ = false;
+    stash_full_overview_on_next_update_ = false;
+  }
+
   int selected_event_index() const { return selected_event_index_; }
   int selected_group_index() const { return selected_group_index_; }
   int selected_counter_index() const { return selected_counter_index_; }
@@ -1136,6 +1150,18 @@ class Timeline {
                                           Microseconds proc_span, int num_bins,
                                           ProcessUtilizationMip& pmip) const;
   std::vector<ProcessUtilizationPyramid> process_utilization_pyramids_;
+
+  struct SavedFullOverview {
+    FlameChartTimelineData data;
+    std::vector<ImU32> entry_colors;
+    uint64_t cached_trace_colors_version = std::numeric_limits<uint64_t>::max();
+    std::vector<LevelMipPyramid> level_mip_pyramids;
+    std::vector<ProcessUtilizationPyramid> process_utilization_pyramids;
+    TimeRange fetched_data_time_range = TimeRange::Zero();
+  };
+  std::optional<SavedFullOverview> saved_full_overview_;
+  bool is_full_overview_data_ = false;
+  bool stash_full_overview_on_next_update_ = false;
 
   // TODO - b/444026851: Set the label width based on the real screen width.
   Pixel label_width_ = kDefaultLabelWidth;

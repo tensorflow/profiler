@@ -726,7 +726,24 @@ void Timeline::UpdateTimelineData(
                        : 0.0;
   }
 
-  ReleaseEntryMemory(timeline_data_);
+  if ((stash_full_overview_on_next_update_ || is_full_overview_data_) &&
+      !saved_full_overview_.has_value() &&
+      !timeline_data_.entry_start_times.empty()) {
+    saved_full_overview_ = SavedFullOverview{
+        .data = std::move(timeline_data_),
+        .entry_colors = std::move(entry_colors_),
+        .cached_trace_colors_version = cached_trace_colors_version_,
+        .level_mip_pyramids = std::move(level_mip_pyramids_),
+        .process_utilization_pyramids =
+            std::move(process_utilization_pyramids_),
+        .fetched_data_time_range = fetched_data_time_range_,
+    };
+  } else {
+    ReleaseEntryMemory(timeline_data_);
+  }
+  stash_full_overview_on_next_update_ = false;
+  is_full_overview_data_ = false;
+
   FlameChartTimelineData data = builder();
   BackfillGroupLevelCount(data);
 
@@ -1281,6 +1298,60 @@ void Timeline::CompactTimelineDataToMipOverview() {
   is_compacted_ = true;
   full_trace_loaded_ = false;
   window_at_full_resolution_ = false;
+}
+
+bool Timeline::RestoreSavedFullOverview() {
+  if (!saved_full_overview_.has_value()) {
+    return false;
+  }
+
+  absl::flat_hash_map<GroupKey, bool> current_expanded;
+  for (size_t i = 0; i < timeline_data_.groups.size(); ++i) {
+    const Group& g = timeline_data_.groups[i];
+    std::string parent_name =
+        (g.parent_index >= 0 &&
+         g.parent_index < static_cast<int>(timeline_data_.groups.size()))
+            ? timeline_data_.groups[g.parent_index].name
+            : "";
+    current_expanded[GroupKey{g.nesting_level, g.name, parent_name}] =
+        g.expanded;
+  }
+  auto& restored_groups = saved_full_overview_->data.groups;
+  for (size_t i = 0; i < restored_groups.size(); ++i) {
+    Group& g = restored_groups[i];
+    std::string parent_name =
+        (g.parent_index >= 0 &&
+         g.parent_index < static_cast<int>(restored_groups.size()))
+            ? restored_groups[g.parent_index].name
+            : "";
+    if (auto it = current_expanded.find(
+            GroupKey{g.nesting_level, g.name, parent_name});
+        it != current_expanded.end()) {
+      g.expanded = it->second;
+    }
+  }
+
+  UpdateLevelPositions(saved_full_overview_->data);
+  ReleaseEntryMemory(timeline_data_);
+  timeline_data_ = std::move(saved_full_overview_->data);
+  entry_colors_ = std::move(saved_full_overview_->entry_colors);
+  cached_trace_colors_version_ =
+      saved_full_overview_->cached_trace_colors_version;
+  level_mip_pyramids_ = std::move(saved_full_overview_->level_mip_pyramids);
+  process_utilization_pyramids_ =
+      std::move(saved_full_overview_->process_utilization_pyramids);
+  fetched_data_time_range_ = saved_full_overview_->fetched_data_time_range;
+  saved_full_overview_.reset();
+  is_full_overview_data_ = true;
+  stash_full_overview_on_next_update_ = false;
+  selected_event_index_ = -1;
+  selected_event_indices_.clear();
+  matching_event_indices_.clear();
+  if (data_time_range_.duration() > 0) {
+    last_fetch_request_range_ = data_time_range_;
+  }
+  if (redraw_callback_) redraw_callback_();
+  return true;
 }
 
 ImU32 Timeline::GetEventColor(int event_index) const {
@@ -5311,6 +5382,17 @@ void Timeline::MaybeRequestData() {
   if (!zoomed_in_too_much && !needs_full_resolution_window &&
       last_fetch_request_range_.Contains(preserve)) {
     return;
+  }
+
+  if (saved_full_overview_.has_value() && data_time_range_.duration() > 0 &&
+      fetch.duration() >= 0.9 * data_time_range_.duration()) {
+    RestoreSavedFullOverview();
+    return;
+  }
+
+  if (data_time_range_.duration() > 0 &&
+      fetch.duration() < 0.9 * data_time_range_.duration()) {
+    PrepareForFilteredRefetch();
   }
 
   EventData event_data;
