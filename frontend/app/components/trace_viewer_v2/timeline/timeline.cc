@@ -3089,7 +3089,9 @@ void Timeline::DrawEvent(int group_index, int event_index,
       if (event_tooltip_enabled_) {
         ImGui::SetTooltip(
             "%s (%s)", event_name.c_str(),
-            FormatTime(timeline_data_.entry_total_times[event_index]).c_str());
+            FormatDuration(timeline_data_.entry_total_times[event_index],
+                           time_axis_unit_)
+                .c_str());
       }
 
       // ImGui uses 0 to represent the left mouse button, as defined in the

@@ -9,6 +9,10 @@ namespace traceviewer {
 
 std::string FormatTime(Microseconds time_us);
 
+// Formats a duration along the x-axis: FormatTime() on a time axis, a count
+// of positions ("1 bundle", "32 bundles") on a unitless one.
+std::string FormatDuration(Microseconds duration, TimeAxisUnit unit);
+
 // Converts milliseconds to microseconds.
 Microseconds MillisToMicros(double time_ms);
 

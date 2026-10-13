@@ -6,6 +6,7 @@
 #include <gtest/gtest.h>
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "frontend/app/components/trace_viewer_v2/trace_helper/trace_event.h"
 
 namespace traceviewer {
 namespace {
@@ -40,6 +41,24 @@ TEST(TimeFormatterTest, FormatTimeNotFiniteOrNegative) {
   EXPECT_EQ(FormatTime(std::numeric_limits<double>::quiet_NaN()), "-");
   EXPECT_EQ(FormatTime(-0.5), "-");
   EXPECT_EQ(FormatTime(-100.0), "-");
+}
+
+TEST(TimeFormatterTest, FormatDurationOnTimeAxisMatchesFormatTime) {
+  EXPECT_EQ(FormatDuration(1234.567, TimeAxisUnit::kTime),
+            TimeWithUnit("1.235", "ms"));
+  EXPECT_EQ(FormatDuration(0.0, TimeAxisUnit::kTime), "0");
+}
+
+TEST(TimeFormatterTest, FormatDurationOnUnitlessAxisCountsBundles) {
+  EXPECT_EQ(FormatDuration(1.0, TimeAxisUnit::kUnitless),
+            TimeWithUnit("1", "bundle"));
+  EXPECT_EQ(FormatDuration(32.0, TimeAxisUnit::kUnitless),
+            TimeWithUnit("32", "bundles"));
+  EXPECT_EQ(FormatDuration(0.0, TimeAxisUnit::kUnitless),
+            TimeWithUnit("0", "bundles"));
+  // Durations are integers on this axis; stray fractions round.
+  EXPECT_EQ(FormatDuration(2.6, TimeAxisUnit::kUnitless),
+            TimeWithUnit("3", "bundles"));
 }
 
 TEST(TimeFormatterTest, CalculateNiceInterval) {

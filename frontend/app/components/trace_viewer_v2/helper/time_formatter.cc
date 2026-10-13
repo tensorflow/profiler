@@ -1,8 +1,10 @@
 #include "frontend/app/components/trace_viewer_v2/helper/time_formatter.h"
 
 #include <cmath>
+#include <cstdint>
 #include <string>
 
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "frontend/app/components/trace_viewer_v2/trace_helper/trace_event.h"
@@ -22,6 +24,13 @@ constexpr absl::string_view kNanosecondsFormat = "%.4g\xc2\xa0ns";
 constexpr absl::string_view kMicrosecondsFormat = "%.4g\xc2\xa0us";
 constexpr absl::string_view kMillisecondsFormat = "%.4g\xc2\xa0ms";
 constexpr absl::string_view kSecondsFormat = "%.4g\xc2\xa0s";
+
+// Wording for a unitless x-axis. The only producer of such traces today is the
+// static kernel schedule, whose positions are compiler-scheduled bundles; this
+// is the one place that spells that out.
+constexpr absl::string_view kNonBreakingSpace = "\xc2\xa0";
+constexpr absl::string_view kUnitlessSingular = "bundle";
+constexpr absl::string_view kUnitlessPlural = "bundles";
 
 }  // namespace
 
@@ -45,6 +54,19 @@ std::string FormatTime(Microseconds time_us) {
   } else {  // >= 1 second
     return absl::StrFormat(kSecondsFormat, time_us / kMicrosPerSecond);
   }
+}
+
+std::string FormatDuration(Microseconds duration, TimeAxisUnit unit) {
+  switch (unit) {
+    case TimeAxisUnit::kUnitless: {
+      const int64_t count = std::llround(duration);
+      return absl::StrCat(count, kNonBreakingSpace,
+                          count == 1 ? kUnitlessSingular : kUnitlessPlural);
+    }
+    case TimeAxisUnit::kTime:
+      break;
+  }
+  return FormatTime(duration);
 }
 
 Microseconds MillisToMicros(double time_ms) {
