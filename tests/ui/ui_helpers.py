@@ -153,6 +153,11 @@ def _select_sidenav_dropdown_option(
   )
 
 
+def select_session(page: sync_api.Page, session_name: str) -> None:
+  """Opens the navigation drawer and selects a profile run from dropdown."""
+  _select_sidenav_dropdown_option(page, "Sessions", session_name)
+
+
 def switch_tool(page: sync_api.Page, tool_name: str) -> None:
   """Opens the navigation drawer and switches tools via dropdown."""
   _select_sidenav_dropdown_option(page, "Tools", tool_name)
@@ -209,7 +214,9 @@ def plot_graph_node(page: sync_api.Page, node_text: str) -> None:
   sync_api.expect(chip).to_be_visible(timeout=15000)
   chip.click()
   sync_api.expect(page).to_have_url(
-      re.compile(rf"[?&]node_name=[^&#]*{re.escape(node_text)}"),
+      re.compile(
+          rf"(?=.*[?&]run=[^&#]+).*[?&]node_name=[^&#]*{re.escape(node_text)}"
+      ),
       timeout=20000,
   )
   graph_node = (
