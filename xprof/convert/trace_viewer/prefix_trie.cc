@@ -1,5 +1,6 @@
 #include "xprof/convert/trace_viewer/prefix_trie.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -7,6 +8,7 @@
 #include <vector>
 
 #include "absl/container/btree_map.h"
+#include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -22,9 +24,36 @@
 #include "xla/tsl/platform/env.h"
 #include "xla/tsl/platform/errors.h"
 #include "xla/tsl/platform/file_system.h"
+#include "plugin/xprof/protobuf/prefix_trie_node.pb.h"
 
 namespace tensorflow {
 namespace profiler {
+
+namespace {
+
+// Field 1 (terminal_key_ids) of PrefixTrieNodeProto, wire type 2
+// (length-delimited): (1 << 3) | 2.
+constexpr char kTerminalKeyIdsTag = 0x0A;
+
+void AppendVarint(uint64_t value, std::string* out) {
+  while (value >= 0x80) {
+    out->push_back(static_cast<char>(value | 0x80));
+    value >>= 7;
+  }
+  out->push_back(static_cast<char>(value));
+}
+
+// Reads a varint starting at `*pos` in `data` and advances `*pos` past it.
+uint64_t ReadVarint(absl::string_view data, size_t* pos) {
+  uint64_t value = 0;
+  for (int shift = 0;; shift += 7) {
+    const uint8_t byte = static_cast<uint8_t>(data[(*pos)++]);
+    value |= static_cast<uint64_t>(byte & 0x7F) << shift;
+    if ((byte & 0x80) == 0) return value;
+  }
+}
+
+}  // namespace
 
 PrefixTrieNode::~PrefixTrieNode() {
   std::vector<std::unique_ptr<PrefixTrieNode>> children_to_delete;
@@ -49,14 +78,28 @@ PrefixTrieNode::~PrefixTrieNode() {
   }
 }
 
-PrefixTrieNodeProto PrefixTrieNode::ToProto() const {
-  PrefixTrieNodeProto proto;
-  proto.mutable_terminal_key_ids()->Add(terminal_key_ids.begin(),
-                                        terminal_key_ids.end());
-  return proto;
+void PrefixTrieNode::AddTerminalKeyId(absl::string_view id) {
+  AppendVarint(id.size(), &packed_terminal_key_ids);
+  packed_terminal_key_ids.append(id);
+}
+
+void PrefixTrieNode::AppendSerializedProto(std::string* out) const {
+  // Each packed entry is [varint length][bytes], which is exactly the payload
+  // of one length-delimited field, so the wire format of the proto is each
+  // entry preceded by the field tag.
+  const absl::string_view packed = packed_terminal_key_ids;
+  size_t pos = 0;
+  while (pos < packed.size()) {
+    const size_t entry_start = pos;
+    const uint64_t length = ReadVarint(packed, &pos);
+    pos += length;
+    out->push_back(kTerminalKeyIdsTag);
+    out->append(packed.substr(entry_start, pos - entry_start));
+  }
 }
 
 void PrefixTrie::Insert(absl::string_view key, absl::string_view id) {
+  DCHECK(!saved_) << "PrefixTrie::Insert called after SaveAsLevelDbTable.";
   PrefixTrieNode* node = &root_;
   for (const char c : key) {
     auto& child = node->children[c];
@@ -65,20 +108,25 @@ void PrefixTrie::Insert(absl::string_view key, absl::string_view id) {
     }
     node = child.get();
   }
-  node->terminal_key_ids.emplace_back(id);
+  node->AddTerminalKeyId(id);
 }
 
 void IterateTrieAndSaveToLevelDbTable(PrefixTrieNode* node, std::string key,
                                       tsl::table::TableBuilder& builder) {
   std::vector<std::pair<PrefixTrieNode*, std::string>> stack;
   stack.push_back({node, std::move(key)});
+  std::string value;
 
   while (!stack.empty()) {
-    auto [node, key] = stack.back();
+    auto [node, key] = std::move(stack.back());
     stack.pop_back();
 
-    auto proto = node->ToProto();
-    builder.Add(key, proto.SerializeAsString());
+    value.clear();
+    node->AppendSerializedProto(&value);
+    builder.Add(key, value);
+    // The ids are no longer needed once written; free them right away so the
+    // trie shrinks while it is being saved.
+    std::string().swap(node->packed_terminal_key_ids);
     for (auto it = node->children.rbegin(); it != node->children.rend(); ++it) {
       stack.push_back(
           {it->second.get(), absl::StrCat(key, std::string(1, it->first))});
@@ -87,6 +135,8 @@ void IterateTrieAndSaveToLevelDbTable(PrefixTrieNode* node, std::string key,
 }
 
 absl::Status PrefixTrie::SaveAsLevelDbTable(tsl::WritableFile* file) {
+  DCHECK(!saved_) << "PrefixTrie::SaveAsLevelDbTable called twice.";
+  saved_ = true;
   tsl::table::Options options;
   options.block_size = 20 * 1024 * 1024;
   options.compression = tsl::table::kSnappyCompression;

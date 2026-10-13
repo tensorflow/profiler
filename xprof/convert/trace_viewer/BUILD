@@ -235,6 +235,7 @@ cc_library(
         "//plugin/xprof/protobuf:prefix_trie_node_proto_cc",
         "@com_google_absl//absl/container:btree",
         "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
@@ -264,10 +265,14 @@ cc_test(
     srcs = ["prefix_trie_test.cc"],
     deps = [
         ":prefix_trie",
+        "//plugin/xprof/protobuf:prefix_trie_node_proto_cc",
+        "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",
+        "@xla//xla/tsl/lib/io:block",
+        "@xla//xla/tsl/lib/io:table_options",
         "@xla//xla/tsl/platform:env",
     ],
 )
