@@ -1035,8 +1035,8 @@ export class KernelEventTooltip implements AfterViewInit, OnDestroy {
     ) {
       this.animateCard(
         [
-          {opacity: 0, transform: 'translate3d(0, 4px, 0) scale(0.97)'},
-          {opacity: 1, transform: 'translate3d(0, 0, 0) scale(1)'},
+          {'opacity': 0, 'transform': 'translate3d(0, 4px, 0) scale(0.97)'},
+          {'opacity': 1, 'transform': 'translate3d(0, 0, 0) scale(1)'},
         ],
         150,
       );
@@ -1112,8 +1112,8 @@ export class KernelEventTooltip implements AfterViewInit, OnDestroy {
           const dy = Math.max(-48, Math.min(48, prevTop - top));
           this.animateCard(
             [
-              {transform: `translate3d(${dx}px, ${dy}px, 0)`},
-              {transform: 'translate3d(0, 0, 0)'},
+              {'transform': `translate3d(${dx}px, ${dy}px, 0)`},
+              {'transform': 'translate3d(0, 0, 0)'},
             ],
             160,
           );

@@ -4,10 +4,13 @@ package(default_visibility = ["//frontend:internal"])
 
 ts_library(
     name = "testing",
+    testonly = True,
     srcs = [
         "testing.ts",
     ],
     deps = [
+        "//:node_modules/safevalues",
+        "//third_party/javascript/safevalues/dom",
         "@org_xprof//frontend/app/common/constants:testing",
     ],
 )
