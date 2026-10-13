@@ -176,6 +176,10 @@ struct FlameChartTimelineData {
   static constexpr uint8_t kEntryArgHasUid = 1 << 0;
   static constexpr uint8_t kEntryArgHasGroupId = 1 << 1;
   static constexpr uint8_t kEntryArgHloOpFromName = 1 << 2;
+  // Indicates whether the original TraceEvent::args map explicitly contained
+  // `hlo_op` or `hlo_module` before synthetic arg enrichment.
+  static constexpr uint8_t kEntryArgHadRawHloOp = 1 << 6;
+  static constexpr uint8_t kEntryArgHadRawHloModule = 1 << 7;
   std::vector<uint64_t> entry_serials;
   std::vector<uint8_t> entry_arg_flags;
   std::vector<uint32_t> entry_hlo_module_ids;

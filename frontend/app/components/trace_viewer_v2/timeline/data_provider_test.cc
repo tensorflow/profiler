@@ -6363,5 +6363,222 @@ TEST_F(DataProviderTest, SelectedEventSurvivesProcessTraceEventsUpdate) {
             static_cast<int>(timeline_.timeline_data().entry_names.size()));
   EXPECT_EQ(timeline_.timeline_data().entry_names[new_selected_idx], "op_beta");
 }
+
+TraceEvent MakeSpan(Phase ph, EventId event_id, ProcessId pid, ThreadId tid,
+                    absl::string_view name, Microseconds ts, Microseconds dur) {
+  return {.ph = ph,
+          .event_id = event_id,
+          .pid = pid,
+          .tid = tid,
+          .name = std::string(name),
+          .ts = ts,
+          .dur = dur};
+}
+
+void ExpectTimelineDataMatches(const FlameChartTimelineData& actual,
+                               const FlameChartTimelineData& expected) {
+  ASSERT_EQ(actual.groups.size(), expected.groups.size());
+  for (size_t i = 0; i < actual.groups.size(); ++i) {
+    EXPECT_EQ(actual.groups[i].name, expected.groups[i].name);
+    EXPECT_EQ(actual.groups[i].expanded, expected.groups[i].expanded);
+    EXPECT_EQ(actual.groups[i].start_level, expected.groups[i].start_level);
+    EXPECT_EQ(actual.groups[i].level_count, expected.groups[i].level_count);
+  }
+  EXPECT_EQ(actual.entry_names, expected.entry_names);
+  EXPECT_EQ(actual.entry_start_times, expected.entry_start_times);
+  EXPECT_EQ(actual.entry_total_times, expected.entry_total_times);
+  EXPECT_EQ(actual.entry_self_times, expected.entry_self_times);
+  EXPECT_EQ(actual.entry_levels, expected.entry_levels);
+  EXPECT_EQ(actual.entry_event_ids, expected.entry_event_ids);
+  EXPECT_EQ(actual.level_offsets, expected.level_offsets);
+  EXPECT_EQ(actual.level_event_indices, expected.level_event_indices);
+  for (size_t i = 0; i < actual.entry_names.size(); ++i) {
+    EXPECT_EQ(actual.GetEntryArgs(i), expected.GetEntryArgs(i))
+        << "Mismatch in entry args at index " << i << " ("
+        << actual.entry_names[i] << ")";
+  }
+}
+
+TEST_F(DataProviderTest, AppendTraceEventsIncrementalMatchesSinglePass) {
+  ParsedTraceEvents batch1;
+  batch1.flame_events = {
+      CreateProcessEvent(1, "host:0 /device:TPU:0"),
+      CreateSortIndexMetadataEvent(kProcessSortIndex, 1, 0, "1"),
+      CreateThreadEvent(1, 1, "XLA Modules"),
+      CreateSortIndexMetadataEvent(kThreadSortIndex, 1, 1, "1"),
+      MakeSpan(Phase::kComplete, 0, 1, 1, "jit_train(1)", 10.0, 90.0),
+      CreateThreadEvent(1, 2, "XLA Ops"),
+      CreateSortIndexMetadataEvent(kThreadSortIndex, 1, 2, "2"),
+      MakeSpan(Phase::kComplete, 0, 1, 2, "fusion.1", 20.0, 30.0),
+  };
+
+  ParsedTraceEvents batch2;
+  batch2.flame_events = {
+      CreateProcessEvent(2, "host:0 /device:TPU:1"),
+      CreateSortIndexMetadataEvent(kProcessSortIndex, 2, 0, "2"),
+      CreateThreadEvent(2, 1, "XLA Ops"),
+      CreateSortIndexMetadataEvent(kThreadSortIndex, 2, 1, "1"),
+      MakeSpan(Phase::kComplete, 0, 2, 1, "all-reduce.1", 5.0, 120.0),
+  };
+
+  ParsedTraceEvents combined;
+  combined.flame_events.insert(combined.flame_events.end(),
+                               batch1.flame_events.begin(),
+                               batch1.flame_events.end());
+  combined.flame_events.insert(combined.flame_events.end(),
+                               batch2.flame_events.begin(),
+                               batch2.flame_events.end());
+
+  Timeline single_timeline(palette_);
+  DataProvider single_provider;
+  single_provider.ProcessTraceEvents(combined, single_timeline);
+
+  data_provider_.BeginIncrementalLoad(timeline_);
+  data_provider_.AppendTraceEventsIncremental(std::move(batch1), timeline_);
+  EXPECT_THAT(timeline_.timeline_data().groups, SizeIs(3));
+  data_provider_.AppendTraceEventsIncremental(std::move(batch2), timeline_);
+  data_provider_.FinishIncrementalLoad();
+
+  ExpectTimelineDataMatches(timeline_.timeline_data(),
+                            single_timeline.timeline_data());
+  EXPECT_EQ(timeline_.visible_range(), single_timeline.visible_range());
+}
+
+TEST_F(DataProviderTest, OverlappingBatchPreservesFormattedHloModuleArg) {
+  TraceEvent parent = MakeSpan(Phase::kComplete, 0, /*pid=*/1, /*tid=*/2,
+                               "fusion.1", /*ts=*/10.0, /*dur=*/90.0);
+  parent.args = {{"hlo_module", "jit_train"}, {"program_id", "42"}};
+
+  ParsedTraceEvents batch1;
+  batch1.flame_events = {
+      CreateProcessEvent(1, "host:0 /device:TPU:0"),
+      CreateThreadEvent(1, 2, "XLA Ops"),
+      parent,
+  };
+
+  ParsedTraceEvents batch2;
+  batch2.flame_events = {
+      MakeSpan(Phase::kComplete, 1, /*pid=*/1, /*tid=*/2, "add.1",
+               /*ts=*/20.0, /*dur=*/30.0),
+  };
+
+  data_provider_.BeginIncrementalLoad(timeline_);
+  data_provider_.AppendTraceEventsIncremental(std::move(batch1), timeline_);
+  ASSERT_EQ(timeline_.timeline_data().entry_names.size(), 1);
+  EXPECT_EQ(timeline_.timeline_data().GetEntryArgs(0).at("hlo_module"),
+            "jit_train(42)");
+
+  data_provider_.AppendTraceEventsIncremental(std::move(batch2), timeline_);
+  data_provider_.FinishIncrementalLoad();
+
+  ASSERT_EQ(timeline_.timeline_data().entry_names.size(), 2);
+  EXPECT_EQ(timeline_.timeline_data().GetEntryArgs(0).at("hlo_module"),
+            "jit_train(42)");
+}
+
+TEST_F(DataProviderTest,
+       AppendTraceEventsIncremental_ExtendsOpenSpansAcrossChunks) {
+  // Single-pass reference:
+  // - XLA Modules: jit_train(1) from ts=10.0, dur=290.0 (ends at 300.0)
+  // - XLA Ops:
+  //   - Level 0: while.747 from ts=10.0, dur=290.0 (ends at 300.0), id=9003
+  //   - Level 1: region.15431 from ts=10.0, dur=290.0 (ends at 300.0), id=8003
+  //   - Level 2: fusion.1 [20, 50], fusion.2 [120, 160], fusion.3 [220, 270]
+  ParsedTraceEvents single_pass;
+  single_pass.flame_events = {
+      CreateProcessEvent(1, "host:0 /device:TPU:0"),
+      CreateSortIndexMetadataEvent(kProcessSortIndex, 1, 0, "1"),
+      CreateThreadEvent(1, 1, "XLA Modules"),
+      CreateSortIndexMetadataEvent(kThreadSortIndex, 1, 1, "1"),
+      MakeSpan(Phase::kComplete, 7003, 1, 1, "jit_train(1)", 10.0, 290.0),
+      CreateThreadEvent(1, 2, "XLA Ops"),
+      CreateSortIndexMetadataEvent(kThreadSortIndex, 1, 2, "2"),
+      MakeSpan(Phase::kComplete, 9003, 1, 2, "while.747", 10.0, 290.0),
+      MakeSpan(Phase::kComplete, 8003, 1, 2, "region.15431", 10.0, 290.0),
+      MakeSpan(Phase::kComplete, 101, 1, 2, "fusion.1", 20.0, 30.0),
+      MakeSpan(Phase::kComplete, 102, 1, 2, "fusion.2", 120.0, 40.0),
+      MakeSpan(Phase::kComplete, 103, 1, 2, "fusion.3", 220.0, 50.0),
+  };
+
+  Timeline single_timeline(palette_);
+  DataProvider single_provider;
+  single_provider.ProcessTraceEvents(single_pass, single_timeline);
+
+  // Chunk 1: spans [10.0, 100.0] (open at 100.0 -> kDurationBegin with dur=90)
+  ParsedTraceEvents chunk1;
+  chunk1.flame_events = {
+      CreateProcessEvent(1, "host:0 /device:TPU:0"),
+      CreateSortIndexMetadataEvent(kProcessSortIndex, 1, 0, "1"),
+      CreateThreadEvent(1, 1, "XLA Modules"),
+      CreateSortIndexMetadataEvent(kThreadSortIndex, 1, 1, "1"),
+      MakeSpan(Phase::kDurationBegin, 7001, 1, 1, "jit_train(1)", 10.0, 90.0),
+      CreateThreadEvent(1, 2, "XLA Ops"),
+      CreateSortIndexMetadataEvent(kThreadSortIndex, 1, 2, "2"),
+      MakeSpan(Phase::kDurationBegin, 9001, 1, 2, "while.747", 10.0, 90.0),
+      MakeSpan(Phase::kDurationBegin, 8001, 1, 2, "region.15431", 10.0, 90.0),
+      MakeSpan(Phase::kComplete, 101, 1, 2, "fusion.1", 20.0, 30.0),
+  };
+
+  // Chunk 2: spans [10.0, 200.0] (still open at 200.0 -> kDurationBegin with
+  // dur=190)
+  ParsedTraceEvents chunk2;
+  chunk2.flame_events = {
+      MakeSpan(Phase::kDurationBegin, 7002, 1, 1, "jit_train(1)", 10.0, 190.0),
+      MakeSpan(Phase::kDurationBegin, 9002, 1, 2, "while.747", 10.0, 190.0),
+      MakeSpan(Phase::kDurationBegin, 8002, 1, 2, "region.15431", 10.0, 190.0),
+      MakeSpan(Phase::kComplete, 102, 1, 2, "fusion.2", 120.0, 40.0),
+  };
+
+  // Chunk 3: closes at 300.0 -> kDurationEnd with dur=290
+  ParsedTraceEvents chunk3;
+  chunk3.flame_events = {
+      MakeSpan(Phase::kDurationEnd, 7003, 1, 1, "jit_train(1)", 10.0, 290.0),
+      MakeSpan(Phase::kDurationEnd, 9003, 1, 2, "while.747", 10.0, 290.0),
+      MakeSpan(Phase::kDurationEnd, 8003, 1, 2, "region.15431", 10.0, 290.0),
+      MakeSpan(Phase::kComplete, 103, 1, 2, "fusion.3", 220.0, 50.0),
+  };
+
+  data_provider_.BeginIncrementalLoad(timeline_);
+  data_provider_.AppendTraceEventsIncremental(std::move(chunk1), timeline_);
+  // After chunk 1: 4 entries total (jit_train(1), while.747, region.15431,
+  // fusion.1).
+  EXPECT_THAT(timeline_.timeline_data().entry_names, SizeIs(4));
+
+  data_provider_.AppendTraceEventsIncremental(std::move(chunk2), timeline_);
+  // After chunk 2: open spans extended in-place, only fusion.2 added -> 5
+  // entries.
+  EXPECT_THAT(timeline_.timeline_data().entry_names, SizeIs(5));
+
+  data_provider_.AppendTraceEventsIncremental(std::move(chunk3), timeline_);
+  data_provider_.FinishIncrementalLoad();
+
+  ExpectTimelineDataMatches(timeline_.timeline_data(),
+                            single_timeline.timeline_data());
+}
+
+TEST_F(
+    DataProviderTest,
+    UniformTrackBudgetPreservesHighEventCountTracksWithoutDevicePidHeuristics) {
+  ParsedTraceEvents batch;
+  batch.flame_events = {
+      CreateMetadataEvent(std::string(kProcessName), 1, 0, "/device:TPU:0"),
+      CreateMetadataEvent(std::string(kThreadName), 1, 1, "XLA Ops"),
+      CreateMetadataEvent(std::string(kProcessName), 701, 0, "/host:CPU"),
+      CreateMetadataEvent(std::string(kThreadName), 701, 1, "thread_0"),
+      MakeSpan(Phase::kComplete, 1, 1, 1, "tpu_op", 10.0, 5.0),
+  };
+  for (int i = 0; i < 70000; ++i) {
+    batch.flame_events.push_back(
+        MakeSpan(Phase::kComplete, static_cast<size_t>(10 + i), 701, 1,
+                 "host_op", static_cast<Microseconds>(i * 2), 1.0));
+  }
+
+  data_provider_.BeginIncrementalLoad(timeline_);
+  data_provider_.AppendTraceEventsIncremental(std::move(batch), timeline_,
+                                              TimelineFlushMode::kAutoFlush);
+  EXPECT_FALSE(data_provider_.was_compacted());
+  EXPECT_EQ(timeline_.timeline_data().entry_names.size(), 70001u);
+  data_provider_.FinishIncrementalLoad();
+}
 }  // namespace
 }  // namespace traceviewer
