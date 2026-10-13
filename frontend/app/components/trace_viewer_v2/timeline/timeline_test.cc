@@ -3075,15 +3075,95 @@ TEST(TimelineTest, SetSearchQuery) {
 
   timeline.SetSearchQuery("an");
   EXPECT_EQ(timeline.get_search_results_count(),
-            0);  // "banana" does not start with "an"
+            1);  // "banana" contains "an"
+  timeline.SetSearchResults(ParsedTraceEvents{});
+  EXPECT_EQ(timeline.get_search_results_count(), 1);
 
-  timeline.SetSearchQuery("a");
+  timeline.SetSearchQuery("A");
   EXPECT_EQ(timeline.get_search_results_count(),
-            1);  // only "apple" starts with "a"
+            2);  // both "apple" and "banana" contain "a" (case-insensitive)
 
   timeline.SetSearchQuery("xyz");
   EXPECT_EQ(timeline.get_search_results_count(), 0);
   EXPECT_EQ(timeline.get_current_search_result_index(), -1);
+}
+
+TEST(TimelineTest, SetSearchQueryMatchesEntryArgsAndSparseEntryArgs) {
+  ColorPalette palette = ColorPalette::Default();
+  Timeline timeline(palette);
+  FlameChartTimelineData data;
+  data.groups.push_back({.name = "Group 1",
+                         .start_level = 0,
+                         .nesting_level = kThreadNestingLevel,
+                         .expanded = true,
+                         .pid = 1});
+  data.level_offsets = {0, 4};
+  data.level_event_indices = {0, 1, 2, 3};
+  data.entry_names = {"1", "2", "3", "4"};
+  data.entry_levels = {0, 0, 0, 0};
+  data.entry_start_times = {100.0, 200.0, 300.0, 400.0};
+  data.entry_total_times = {10.0, 10.0, 10.0, 10.0};
+  data.entry_event_ids = {1, 2, 3, 4};
+  data.entry_args.push_back(
+      {{"custom_key", "CustomValue_Alpha"}, {"hlo_module", "default"}});
+  data.sparse_entry_args[1] = {
+      {"tpu_data",
+       "timestamp: 0x0000000000002a10\ntc {\n  sflag {\n    sync_flag_number: "
+       "12\n  }\n}\n"},
+      {"hlo_module", "default"}};
+  data.sparse_entry_args[2] = {{"hlo_module", "default"}};
+  // Event 3 uses the columnar fast path (entry_arg_flags, entry_serials,
+  // sparse_entry_group_ids, entry_hlo_module_ids / hlo_module_names).
+  data.entry_arg_flags = {
+      0, 0, 0,
+      static_cast<uint8_t>(FlameChartTimelineData::kEntryArgHasUid |
+                           FlameChartTimelineData::kEntryArgHasGroupId)};
+  data.entry_serials = {0, 0, 0, 987654};
+  data.sparse_entry_group_ids[3] = 4242;
+  data.hlo_module_names = {"jit_train_step_module"};
+  data.entry_hlo_module_ids = {0, 0, 0, 1};
+  timeline.SetTimelineData(std::move(data));
+  timeline.set_data_time_range({0.0, 1000.0});
+  timeline.SetVisibleRange({0.0, 100.0});
+
+  // Match via entry_args value (case-insensitive substring).
+  timeline.SetSearchQuery("value_alpha");
+  EXPECT_EQ(timeline.get_search_results_count(), 1);
+  timeline.NavigateToNextSearchResult();
+  EXPECT_EQ(timeline.selected_event_index(), 0);
+
+  // Match via sparse_entry_args value.
+  timeline.SetSearchQuery("SYNC_FLAG_NUMBER: 12");
+  EXPECT_EQ(timeline.get_search_results_count(), 1);
+  timeline.NavigateToNextSearchResult();
+  EXPECT_EQ(timeline.selected_event_index(), 1);
+
+  // Match via sparse_entry_args hex substring.
+  timeline.SetSearchQuery("0x0000000000002A10");
+  EXPECT_EQ(timeline.get_search_results_count(), 1);
+
+  // Match via sparse_entry_args key.
+  timeline.SetSearchQuery("TPU_DATA");
+  EXPECT_EQ(timeline.get_search_results_count(), 1);
+
+  // Match via columnar fast-path args (uid, group_id, and hlo_module).
+  timeline.SetSearchQuery("987654");
+  EXPECT_EQ(timeline.get_search_results_count(), 1);
+  timeline.NavigateToNextSearchResult();
+  EXPECT_EQ(timeline.selected_event_index(), 3);
+
+  timeline.SetSearchQuery("4242");
+  EXPECT_EQ(timeline.get_search_results_count(), 1);
+
+  timeline.SetSearchQuery("TRAIN_STEP_MODULE");
+  EXPECT_EQ(timeline.get_search_results_count(), 1);
+  // Backend prefix search returning empty results preserves local args matches.
+  timeline.SetSearchResults(ParsedTraceEvents{});
+  EXPECT_EQ(timeline.get_search_results_count(), 1);
+
+  // Synthetic default hlo_module should not trigger false matches.
+  timeline.SetSearchQuery("default");
+  EXPECT_EQ(timeline.get_search_results_count(), 0);
 }
 
 TEST(TimelineTest, SetSearchQueryCallsRedrawCallback) {

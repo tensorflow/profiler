@@ -219,6 +219,48 @@ std::string FormatHeaderText(absl::string_view name, int count) {
   return absl::StrCat(name, " (", count, ")");
 }
 
+// Returns true if any argument key or value in `args` contains `query`
+// (case-insensitive), ignoring synthetic default HLO module entries.
+bool MatchesArgsMap(const absl::flat_hash_map<std::string, std::string>& args,
+                    absl::string_view query) {
+  for (const auto& [key, value] : args) {
+    if (key == kHloModule && value == kHloModuleDefault) {
+      continue;
+    }
+    if (absl::StrContainsIgnoreCase(key, query) ||
+        absl::StrContainsIgnoreCase(value, query)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Returns true if the event at `index` in `data` matches `query` by event name,
+// dense `entry_args`, `sparse_entry_args`, or columnar event args
+// (case-insensitive).
+bool MatchesSearchQuery(const FlameChartTimelineData& data, int index,
+                        absl::string_view query) {
+  if (index < 0 || index >= data.entry_names.size()) {
+    return false;
+  }
+  if (absl::StrContainsIgnoreCase(data.entry_names[index], query)) {
+    return true;
+  }
+  const size_t idx = static_cast<size_t>(index);
+  if (idx < data.entry_args.size()) {
+    return MatchesArgsMap(data.entry_args[idx], query);
+  }
+  if (const auto it = data.sparse_entry_args.find(idx);
+      it != data.sparse_entry_args.end()) {
+    return MatchesArgsMap(it->second, query);
+  }
+  if (data.HasEntryArgs(idx) &&
+      (data.entry_arg_flags[idx] != 0 || data.entry_hlo_module_ids[idx] != 0)) {
+    return MatchesArgsMap(data.GetEntryArgs(idx), query);
+  }
+  return false;
+}
+
 }  // namespace
 
 int Timeline::GetNextGroupStartLevel(const FlameChartTimelineData& data,
@@ -5308,17 +5350,17 @@ void Timeline::SetSearchQuery(absl::string_view query) {
 void Timeline::RecomputeSearchResults() {
   const int num_entries = timeline_data_.entry_names.size();
   for (int i = 0; i < num_entries; ++i) {
-    const std::string& name = timeline_data_.entry_names[i];
-    if (absl::StartsWithIgnoreCase(name, search_query_lower_)) {
+    if (MatchesSearchQuery(timeline_data_, i, search_query_lower_)) {
+      const std::string& name = timeline_data_.entry_names[i];
       const EventId event_id = timeline_data_.entry_event_ids[i];
       const int level = timeline_data_.entry_levels[i];
       const Microseconds start_time = timeline_data_.entry_start_times[i];
       const Microseconds total_time = timeline_data_.entry_total_times[i];
       ProcessId pid = 0;
       ThreadId tid = 0;
-      if (const Group* grp = timeline_data_.FindGroupForLevel(level)) {
-        pid = grp->pid;
-        tid = grp->tid;
+      if (const Group* group = timeline_data_.FindGroupForLevel(level)) {
+        pid = group->pid;
+        tid = group->tid;
       }
       search_results_.push_back(SearchResult{.event_id = event_id,
                                              .level = level,
@@ -5408,6 +5450,51 @@ void Timeline::SetSearchResults(const ParsedTraceEvents& search_results) {
                                            .loaded_index = loaded_index});
     if (loaded_index != -1) {
       matching_event_indices_.insert(loaded_index);
+    }
+  }
+
+  // Merge local loaded events that match by substring or event arguments, which
+  // backend prefix search does not return.
+  const int num_entries = timeline_data_.entry_names.size();
+  for (int i = 0; i < num_entries; ++i) {
+    if (matching_event_indices_.contains(i) ||
+        absl::StartsWithIgnoreCase(timeline_data_.entry_names[i],
+                                   search_query_lower_)) {
+      continue;
+    }
+    if (MatchesSearchQuery(timeline_data_, i, search_query_lower_)) {
+      const EventId event_id =
+          (i < static_cast<int>(timeline_data_.entry_event_ids.size()))
+              ? timeline_data_.entry_event_ids[i]
+              : 0;
+      const int level =
+          (i < static_cast<int>(timeline_data_.entry_levels.size()))
+              ? timeline_data_.entry_levels[i]
+              : -1;
+      const Microseconds start_time =
+          (i < static_cast<int>(timeline_data_.entry_start_times.size()))
+              ? timeline_data_.entry_start_times[i]
+              : 0.0;
+      const Microseconds total_time =
+          (i < static_cast<int>(timeline_data_.entry_total_times.size()))
+              ? timeline_data_.entry_total_times[i]
+              : 0.0;
+      ProcessId pid = 0;
+      ThreadId tid = 0;
+      if (const Group* group = timeline_data_.FindGroupForLevel(level)) {
+        pid = group->pid;
+        tid = group->tid;
+      }
+      search_results_.push_back(
+          SearchResult{.event_id = event_id,
+                       .level = level,
+                       .start_time = start_time,
+                       .duration = total_time,
+                       .pid = pid,
+                       .tid = tid,
+                       .name = timeline_data_.entry_names[i],
+                       .loaded_index = i});
+      matching_event_indices_.insert(i);
     }
   }
 
