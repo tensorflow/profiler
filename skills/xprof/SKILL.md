@@ -109,8 +109,9 @@ multi-host, vLLM/Ray ranks, Pathways client and workers).
     pass it a file path to pick a host/rank.
 -   `get_memory_profile`, `get_kernel_utilization` / `compute_utilization`,
     `get_utilization_viewer`, `get_llo_analysis`, `get_llo_debug_string`,
-    `get_xspace_proto`, and `create_events_db` need exactly one trace. On a
-    multi-trace directory they fail and list the files.
+    `get_llo_static_analysis`, `get_xspace_proto`, and `create_events_db` need
+    exactly one trace. On a multi-trace directory they fail and list the files
+    (`get_llo_static_analysis` instead uses the first file in sorted order).
 
 For local traces, every JSON result carries a `capture` block (other outputs
 print it to stderr as one `xprof-capture: {...}` line):
@@ -169,7 +170,8 @@ analysis:
 > ⚠️ **EXPERIMENTAL FEATURE**: Low Level Optimizer (LLO) analysis and custom
 > call profiling are **experimental**. To access these features and all CLI
 > subcommands (`get_kernel_stats`,
-> `get_llo_analysis`, `get_llo_debug_string`), users **MUST install
+> `get_llo_analysis`, `get_llo_debug_string`, `get_llo_static_analysis`),
+> users **MUST install
 > `xprof-nightly`** (`pip install xprof-nightly` or `uv pip install
 > xprof-nightly 'jax[tpu]'`), as the main `xprof` PyPI release (2.23.1) lacks
 > these subcommands.
@@ -244,6 +246,12 @@ Pallas or Mosaic):
     *   `xprof get_llo_debug_string <logdir_or_session_id>`: Disassembles Low
         Level Optimizer (LLO) instructions (inner loops appear as `// Loop body
         not available in lite proto`).
+    *   `xprof get_llo_static_analysis <trace> --mode=<mode>
+        [--hlo_op=<kernel>]`: Static schedule analyses of one kernel (region
+        tree, per-bundle utilization, opcode mix, register pressure, spills,
+        BDI codes, target info, bundle-to-source mapping). Start with
+        `--mode=list_ops`. Results are modelled, not measured. See
+        [get_llo_static_analysis](references/get_llo_static_analysis.md).
     *   `xprof get_kernel_stats <logdir_or_session_id>`: Provides kernel
         latency. *(Note: `get_roofline_model` and `get_overview` will report 0.0
         GFLOP/s and 0% MXU for `tpu_custom_call` because XLA has no cost model
@@ -306,6 +314,9 @@ Pallas or Mosaic):
 -   **[Diff Sessions](references/diff_session.md)**: Compare performance, kernel
     execution times, top operations, and HLO graphs between baseline and
     candidate sessions.
+-   **[LLO Static Analysis](references/get_llo_static_analysis.md)**: Inspect a
+    custom kernel's static LLO schedule: bundle utilization, register pressure,
+    spills, BDI codes, and bundle-to-source mapping.
 -   **[Custom Call & LLO Profiling][custom-call-doc]**: Trace custom kernel
     execution, instruction metrics, and register LLO debug info.
 

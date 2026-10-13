@@ -291,6 +291,7 @@ pytype_strict_contrib_test(
         "//plugin/xprof/cli/tools/oss:get_kernel_utilization_tool",
         "@absl_py//absl/testing:absltest",
         "@absl_py//absl/testing:parameterized",
+        "@tsl//tsl/profiler/protobuf:xplane_proto_py_proto",
     ],
 )
 
@@ -373,7 +374,6 @@ py_test(
         "//plugin/xprof/cli/tools/oss:upload_trace_tool",
         "@absl_py//absl/testing:absltest",
         "@absl_py//absl/testing:parameterized",
-        "@org_xprof//xprof/embedded/llo_analysis:llo_lite_py_pb2",
         "@org_xprof//xprof/pywrap:_pywrap_profiler_plugin",
         "@tsl//tsl/profiler/protobuf:xplane_proto_py_proto",
     ],

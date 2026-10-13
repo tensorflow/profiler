@@ -566,118 +566,29 @@ if built_with_embedded():
   _lib.FreeLloAnalysis.restype = None
 
 
-def _run_llo_static_analysis_py(
-    xspace_filename: str,
-    mode: str = "region_tree",
-    hlo_op: str = "",
-    bundle: int = 0,
-) -> str:
-  """Runs LLO static analysis using the pure-Python llo_static_analysis library."""
-  try:
-    from xprof.cli.internal.llo_static_analysis import bdi_stalls  # pylint: disable=g-import-not-at-top
-    from xprof.cli.internal.llo_static_analysis import llo_allocations  # pylint: disable=g-import-not-at-top
-    from xprof.cli.internal.llo_static_analysis import llo_bundle_utilization  # pylint: disable=g-import-not-at-top
-    from xprof.cli.internal.llo_static_analysis import llo_opcode_stats  # pylint: disable=g-import-not-at-top
-    from xprof.cli.internal.llo_static_analysis import llo_region_tree  # pylint: disable=g-import-not-at-top
-    from xprof.cli.internal.llo_static_analysis import llo_source_map  # pylint: disable=g-import-not-at-top
-    from xprof.cli.internal.llo_static_analysis import register_pressure  # pylint: disable=g-import-not-at-top
-    from xprof.cli.internal.llo_static_analysis import target_info  # pylint: disable=g-import-not-at-top
-    from xprof.cli.internal.llo_static_analysis import xspace_llo_reader  # pylint: disable=g-import-not-at-top
-  except ImportError as exc:
-    return json.dumps({
-        "status": "ERROR",
-        "semantics": "static_modelled_schedule",
-        "mode": mode,
-        "error": f"llo_static_analysis library unavailable: {exc}",
-    })
+def _llo_static_analysis_unavailable(mode: str) -> str:
+  """Returns the envelope for builds without the embedded LLO analysis API.
 
-  valid_modes = (
-      "list_ops",
-      "region_tree",
-      "bundle_util",
-      "opcodes",
-      "register_pressure",
-      "spills",
-      "bdi_stalls",
-      "target_info",
-      "source_for_bundle",
-  )
-  if mode not in valid_modes:
-    return json.dumps({
-        "status": "ERROR",
-        "semantics": "static_modelled_schedule",
-        "mode": mode,
-        "error": (
-            f"Unknown mode '{mode}'. Valid modes: {', '.join(valid_modes)}."
-        ),
-    })
+  The static analyses read the `LloModuleProto` with a schema that ships only
+  inside the embedded C++ extension, so there is nothing to fall back to.
+  `UNAVAILABLE` (rather than `ERROR`) tells the caller that the analysis is
+  absent from this build, not that it ran and failed.
 
-  try:
-    xspace = xspace_llo_reader.load_xspace(xspace_filename)
-  except Exception as exc:  # pylint: disable=broad-exception-caught
-    return json.dumps({
-        "status": "ERROR",
-        "semantics": "static_modelled_schedule",
-        "mode": mode,
-        "error": str(exc),
-    })
+  Args:
+    mode: The analysis mode that was requested.
 
-  if mode == "list_ops":
-    names = xspace_llo_reader.list_hlo_op_names(xspace)
-    return json.dumps({
-        "status": "OK",
-        "semantics": "static_modelled_schedule",
-        "semantics_note": (
-            "Static / modelled compiler schedule estimate (NOT measured"
-            " hardware counters)"
-        ),
-        "mode": mode,
-        "data": {"ops": names},
-    })
-
-  matched = (
-      xspace_llo_reader.find_llo_modules_for_op(xspace, hlo_op)
-      if hlo_op
-      else list(xspace_llo_reader.iter_llo_modules(xspace))
-  )
-  if not matched:
-    return json.dumps({
-        "status": "ERROR",
-        "semantics": "static_modelled_schedule",
-        "mode": mode,
-        "error": "No LLO module found matching filter",
-    })
-  module = matched[0]
-
-  if mode == "region_tree":
-    raw = llo_region_tree.render_tree_json(module)
-  elif mode == "bundle_util":
-    paths = llo_region_tree.build_bundle_to_region_path(module)
-    raw = llo_bundle_utilization.render_bundle_util_json(
-        module, region_path_map=paths
-    )
-  elif mode == "opcodes":
-    raw = llo_opcode_stats.render_opcode_stats_json(module)
-  elif mode == "register_pressure":
-    raw = register_pressure.render_register_pressure_json(module)
-  elif mode == "spills":
-    raw = llo_allocations.render_allocations_json(module)
-  elif mode == "bdi_stalls":
-    raw = bdi_stalls.render_bdi_stalls_json(module)
-  elif mode == "target_info":
-    raw = target_info.render_target_info_json(module)
-  else:
-    raw = llo_source_map.render_source_for_bundle(module, int(bundle))
-
+  Returns:
+    A JSON string with `status` set to `UNAVAILABLE`.
+  """
   return json.dumps({
-      "status": "OK",
+      "status": "UNAVAILABLE",
       "semantics": "static_modelled_schedule",
-      "semantics_note": (
-          "Static / modelled compiler schedule estimate (NOT measured hardware"
-          " counters)"
-      ),
       "mode": mode,
-      "data": json.loads(raw),
+      "reason": "LLO_STATIC_ANALYSIS_UNSUPPORTED_IN_BUILD",
+      "error": (
+          "LLO static analysis is not supported in this build (requires a"
+          " profiler binary with embedded LLO analysis support)."
+      ),
   })
 
 
@@ -718,9 +629,7 @@ if built_with_embedded():
   ) -> str:
     """Gets static analysis JSON for an LLO file."""
     if not hasattr(_lib, "GetLloStaticAnalysisJson"):
-      return _run_llo_static_analysis_py(
-          xspace_filename, mode=mode, hlo_op=hlo_op, bundle=bundle
-      )
+      return _llo_static_analysis_unavailable(mode)
     handle = _lib.CreateLloAnalysis(xspace_filename.encode("utf-8"))
     if not handle:
       return json.dumps({
@@ -773,9 +682,8 @@ else:
       hlo_op: str = "",
       bundle: int = 0,
   ) -> str:
-    return _run_llo_static_analysis_py(
-        xspace_filename, mode=mode, hlo_op=hlo_op, bundle=bundle
-    )
+    del xspace_filename, hlo_op, bundle
+    return _llo_static_analysis_unavailable(mode)
 
   def get_llo_debug_string(xspace_filename: str) -> str:
     del xspace_filename

@@ -1,10 +1,9 @@
 """OSS xprof_cli tool exposing LLO static-schedule analyses.
 
-The 1P counterpart (`cli/tools/google/llo_static_analysis_tool.py`) renders the
-analyses in Python from the `LloModuleProto` embedded in an XSpace. OSS builds
-delegate instead to the C API in the profiler plugin pywrap binding, which is
-only compiled when embedded features are enabled; without them the binding
-raises `NotImplementedError`, which is surfaced here as a structured error.
+The analyses are served by the C API in the profiler plugin pywrap binding,
+which is only compiled when embedded features are enabled. Builds without them
+get a structured payload with `status: UNAVAILABLE` from the binding, which is
+returned unchanged.
 """
 
 import glob

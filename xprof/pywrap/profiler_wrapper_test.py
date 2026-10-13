@@ -159,55 +159,27 @@ class ProfilerSessionTest(parameterized.TestCase):
     self.assertNotIn("source_map", no_match)
     self.assertNotIn("source_map_by_kernel", no_match)
 
-  def test_run_llo_static_analysis_py_fallback(self):
-    """The pure-Python fallback resolves its imports and serves every mode.
+  def test_llo_static_analysis_unavailable_envelope(self):
+    res = json.loads(
+        profiler_wrapper_plugin._llo_static_analysis_unavailable("region_tree")
+    )
+    self.assertEqual(res["status"], "UNAVAILABLE")
+    self.assertEqual(res["mode"], "region_tree")
+    self.assertEqual(res["semantics"], "static_modelled_schedule")
+    self.assertEqual(res["reason"], "LLO_STATIC_ANALYSIS_UNSUPPORTED_IN_BUILD")
+    self.assertNotIn("data", res)
 
-    `_run_llo_static_analysis_py` backs `get_llo_static_analysis_json` on builds
-    without embedded features. Its imports are lazy and wrapped in
-    `except ImportError`, so a missing BUILD dependency degrades silently into
-    an "llo_static_analysis library unavailable" payload instead of failing the
-    build. Call it directly so the check runs regardless of how this test
-    binary was configured.
-    """
-    test_file = self.create_tempfile(
-        content=_create_multi_module_llo_xspace_bytes()
-    ).full_path
+  def test_get_llo_static_analysis_json_unavailable_without_embedded(self):
+    if profiler_wrapper_plugin.built_with_embedded():
+      self.skipTest("LLO static analysis is supported in this build")
 
     res = json.loads(
-        profiler_wrapper_plugin._run_llo_static_analysis_py(
-            test_file, mode="list_ops"
+        profiler_wrapper_plugin.get_llo_static_analysis_json(
+            self.create_tempfile().full_path, mode="bdi_stalls"
         )
     )
-    self.assertEqual(res["status"], "OK", msg=res.get("error"))
-    self.assertEqual(res["data"]["ops"], ["custom-call.a", "custom-call.b"])
-
-    for mode in (
-        "region_tree",
-        "bundle_util",
-        "opcodes",
-        "register_pressure",
-        "spills",
-        "bdi_stalls",
-        "target_info",
-        "source_for_bundle",
-    ):
-      res = json.loads(
-          profiler_wrapper_plugin._run_llo_static_analysis_py(
-              test_file, mode=mode, hlo_op="custom-call.a"
-          )
-      )
-      self.assertEqual(res["status"], "OK", msg=f"{mode}: {res.get('error')}")
-      self.assertIn("data", res)
-      self.assertNotIn("markdown", res)
-
-  def test_run_llo_static_analysis_py_rejects_unknown_mode(self):
-    res = json.loads(
-        profiler_wrapper_plugin._run_llo_static_analysis_py(
-            self.create_tempfile().full_path, mode="not_a_mode"
-        )
-    )
-    self.assertEqual(res["status"], "ERROR")
-    self.assertIn("Unknown mode", res["error"])
+    self.assertEqual(res["status"], "UNAVAILABLE")
+    self.assertEqual(res["mode"], "bdi_stalls")
 
   def test_utilization_viewer_conversion(self):
     """Tests that utilization_viewer is supported via fallback."""
