@@ -141,6 +141,7 @@ export interface KernelSelectionContent {
   readonly sourceStack?: readonly SourceFrameItem[];
   readonly extraAttributes?: readonly ExtraAttributeItem[];
   readonly bundleStrip?: readonly BundleLaneCell[];
+  readonly hasLargeBundleCounts?: boolean;
   readonly activeLanesSummary?: string;
   readonly bundleEvents?: readonly BundleEventItem[];
   readonly utilizationBars?: readonly UtilizationBar[];
@@ -495,12 +496,14 @@ export function buildKernelSelectionFromEvent(
   const activeLanes = tooltip.bundleStrip
     ? tooltip.bundleStrip.filter((cell) => cell.active).length
     : 0;
+  const hasLargeBundleCounts =
+    tooltip.bundleStrip?.some((cell) => cell.count >= 10) ?? false;
   const totalOpsInBundle = tooltip.bundleStrip
     ? tooltip.bundleStrip.reduce((sum, cell) => sum + cell.count, 0)
     : (bundleEvents?.length ?? 0);
   const activeLanesSummary =
     totalOpsInBundle > 0 && tooltip.bundleStrip
-      ? `${totalOpsInBundle} ${totalOpsInBundle === 1 ? 'op' : 'ops'} · ${activeLanes}/${tooltip.bundleStrip.length} lanes active`
+      ? `${BUNDLE_FORMAT.format(totalOpsInBundle)} ${totalOpsInBundle === 1 ? 'op' : 'ops'} · ${activeLanes}/${tooltip.bundleStrip.length} lanes active`
       : undefined;
 
   const utilizationBars =
@@ -578,6 +581,7 @@ export function buildKernelSelectionFromEvent(
     ...(sourceStack ? {sourceStack} : {}),
     ...(extraAttributes.length > 0 ? {extraAttributes} : {}),
     ...(tooltip.bundleStrip ? {bundleStrip: tooltip.bundleStrip} : {}),
+    ...(hasLargeBundleCounts ? {hasLargeBundleCounts: true} : {}),
     ...(activeLanesSummary ? {activeLanesSummary} : {}),
     ...(bundleEvents ? {bundleEvents} : {}),
     ...(utilizationBars ? {utilizationBars} : {}),

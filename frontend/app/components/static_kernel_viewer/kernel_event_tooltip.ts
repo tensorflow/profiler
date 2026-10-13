@@ -24,6 +24,7 @@ export interface FunctionalUnit {
 export interface BundleLaneCell {
   readonly unit: FunctionalUnit;
   readonly count: number;
+  readonly formattedCount: string;
   readonly active: boolean;
 }
 
@@ -400,12 +401,22 @@ export function buildBundleStrip(
   }
   const cells: BundleLaneCell[] = BUNDLE_STRIP_UNITS.map((unit) => {
     const count = Math.max(0, Math.round(bundleCounts[unit.label] ?? 0));
-    return {unit, count, active: count > 0};
+    return {
+      unit,
+      count,
+      formattedCount: BUNDLE_FORMAT.format(count),
+      active: count > 0,
+    };
   });
   const otherUnit = FUNCTIONAL_UNITS_BY_LANE.get('Other');
   const otherCount = Math.max(0, Math.round(bundleCounts['Other'] ?? 0));
   if (otherUnit && otherCount > 0) {
-    cells.push({unit: otherUnit, count: otherCount, active: true});
+    cells.push({
+      unit: otherUnit,
+      count: otherCount,
+      formattedCount: BUNDLE_FORMAT.format(otherCount),
+      active: true,
+    });
   }
   return cells;
 }

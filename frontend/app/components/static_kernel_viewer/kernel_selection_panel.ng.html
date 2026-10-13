@@ -332,7 +332,7 @@
         >
           <div *ngIf="c.unit" class="kv-row">
             <span class="kv-key">Functional unit</span>
-            <span class="kv-value">{{ c.unit.label }} — {{ c.unit.description }}</span>
+            <span class="kv-value">{{ c.unit.label }}{{ c.unit.description ? ' — ' + c.unit.description : '' }}</span>
           </div>
           <div class="kv-row">
             <span class="kv-key">{{ c.bundlesLabel }}</span>
@@ -358,27 +358,35 @@
       </div>
 
       <div class="card-section-body">
-        <div *ngIf="c.bundleStrip as strip" class="bundle-strip" role="list" aria-label="VLIW lane occupancy">
+        <div
+          *ngIf="c.bundleStrip as strip"
+          class="bundle-strip"
+          [class.expanded-strip]="c.hasLargeBundleCounts"
+          role="list"
+          aria-label="VLIW lane occupancy"
+        >
           <span
             *ngFor="let cell of strip"
             role="listitem"
             class="bundle-cell"
             [class.active]="cell.active"
+            [class.has-count]="cell.count > 1"
             [style.--unit-color]="cell.unit.color"
             [matTooltip]="
               cell.unit.label +
-              ' (' +
-              cell.unit.description +
-              '): ' +
-              cell.count +
+              (cell.unit.description ? ' (' + cell.unit.description + ')' : '') +
+              ': ' +
+              cell.formattedCount +
               (cell.count === 1 ? ' instruction' : ' instructions') +
-              ' in bundle ' +
+              ' in ' +
+              (c.bundlesLabel | lowercase) +
+              ' ' +
               c.bundles
             "
             matTooltipPosition="above"
           >
             <span class="bundle-cell-unit">{{ cell.unit.label }}</span>
-            <span *ngIf="cell.count > 1" class="bundle-cell-count">×{{ cell.count }}</span>
+            <span *ngIf="cell.count > 1" class="bundle-cell-count">×{{ cell.formattedCount }}</span>
           </span>
         </div>
 
@@ -416,9 +424,51 @@
           </button>
         </div>
         <ng-template #noBundleEvents>
-          <div class="empty-hint">
-            Single instruction scheduled in bundle {{ c.bundles }}.
+          <div
+            *ngIf="c.topInstructions && c.topInstructions.length > 0; else singleBundleHint"
+            class="top-instructions-list"
+          >
+            <button
+              *ngFor="let item of c.topInstructions"
+              type="button"
+              class="top-instruction-row"
+              [style.--row-unit-color]="item.unit?.color ?? c.accentColor"
+              [style.--share-pct]="item.sharePercent + '%'"
+              (click)="item.firstEventIndex >= 0 ? onSelectEventIndex(item.firstEventIndex) : onSearchText(item.name)"
+              [matTooltip]="
+                (item.firstEventIndex >= 0 ? 'Jump to first ' : 'Highlight ') +
+                item.name +
+                ' (' +
+                (item.count | number) +
+                ' occurrences · ' +
+                item.totalBundlesLabel +
+                ')'
+              "
+              matTooltipPosition="above"
+            >
+              <span
+                *ngIf="item.trackName"
+                class="row-unit-tag"
+                [style.--unit-color]="item.unit?.color ?? c.accentColor"
+              >
+                <span class="unit-dot" aria-hidden="true"></span>
+                {{ item.trackName }}
+              </span>
+              <span class="row-mnemonic">{{ item.name }}</span>
+              <span class="row-count">×{{ item.count | number }}</span>
+              <span class="row-share">{{ item.formattedShare }}</span>
+            </button>
           </div>
+          <ng-template #singleBundleHint>
+            <div class="empty-hint">
+              <ng-container *ngIf="c.totalInstructions > 1; else oneInstructionHint">
+                {{ c.totalInstructions | number }} instructions scheduled across {{ c.bundlesLabel | lowercase }} {{ c.bundles }}.
+              </ng-container>
+              <ng-template #oneInstructionHint>
+                Single instruction scheduled in bundle {{ c.bundles }}.
+              </ng-template>
+            </div>
+          </ng-template>
         </ng-template>
       </div>
     </section>
@@ -440,9 +490,8 @@
             [class.highlighted]="bar.highlighted"
             [matTooltip]="
               bar.unit.label +
-              ' (' +
-              bar.unit.description +
-              '): ' +
+              (bar.unit.description ? ' (' + bar.unit.description + ')' : '') +
+              ': ' +
               bar.formattedPercent +
               ' static utilization'
             "
@@ -515,9 +564,8 @@
               [style.background-color]="item.unit.color"
               [matTooltip]="
                 item.unit.label +
-                ' (' +
-                item.unit.description +
-                ') — ' +
+                (item.unit.description ? ' (' + item.unit.description + ')' : '') +
+                ' — ' +
                 (item.count | number) +
                 ' instr · ' +
                 item.formattedPercent +
@@ -604,9 +652,8 @@
             [class.highlighted]="bar.highlighted"
             [matTooltip]="
               bar.unit.label +
-              ' (' +
-              bar.unit.description +
-              '): ' +
+              (bar.unit.description ? ' (' + bar.unit.description + ')' : '') +
+              ': ' +
               bar.formattedPercent +
               ' mean utilization'
             "

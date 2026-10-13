@@ -1011,6 +1011,34 @@
   grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 3px;
   flex-shrink: 0;
+
+  &.expanded-strip {
+    grid-template-columns: repeat(4, minmax(min-content, 1fr));
+    gap: 4px;
+
+    .bundle-cell {
+      min-width: 0;
+      height: 22px;
+      padding: 0 6px;
+      gap: 4px;
+      box-sizing: border-box;
+      overflow: hidden;
+
+      &.has-count {
+        justify-content: space-between;
+      }
+    }
+
+    .bundle-cell-count {
+      font-family: 'Roboto Mono', 'Google Sans Mono', monospace;
+      font-weight: 600;
+      color: color-mix(
+        in srgb,
+        var(--unit-color) 55%,
+        var(--mat-sys-on-surface, #1f1f1f)
+      );
+    }
+  }
 }
 
 .bundle-cell {
@@ -1040,9 +1068,14 @@
   }
 }
 
+.bundle-cell-unit {
+  flex-shrink: 0;
+}
+
 .bundle-cell-count {
   font-variant-numeric: tabular-nums;
   font-size: 9px;
+  flex-shrink: 0;
 }
 
 .bundle-events-list,
