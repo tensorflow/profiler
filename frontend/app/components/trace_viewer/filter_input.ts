@@ -1,22 +1,28 @@
+import {CommonModule} from '@angular/common';
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   ElementRef,
-  EventEmitter,
-  Input,
+  inject,
+  input,
   OnChanges,
-  Output,
+  output,
   SimpleChange,
   SimpleChanges,
-  ViewChild,
+  viewChild,
 } from '@angular/core';
+import {FormsModule} from '@angular/forms';
 import {
   MAT_AUTOCOMPLETE_DEFAULT_OPTIONS,
   MatAutocomplete,
+  MatAutocompleteModule,
   MatAutocompleteSelectedEvent,
   MatAutocompleteTrigger,
 } from '@angular/material/autocomplete';
+import {MatButtonModule} from '@angular/material/button';
+import {MatCheckboxModule} from '@angular/material/checkbox';
 import {BehaviorSubject} from 'rxjs';
 import {FILTER_FIELDS, FILTER_OPERATORS} from './constants';
 import {
@@ -33,8 +39,15 @@ import {filterFieldKey, lookupFilterOperator} from './utils';
  * Component to display input field for adding a new filter.
  */
 @Component({
-  changeDetection: ChangeDetectionStrategy.Default,
-  standalone: false,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatAutocompleteModule,
+    MatButtonModule,
+    MatCheckboxModule,
+  ],
   selector: 'filter-input',
   viewProviders: [
     {
@@ -92,15 +105,18 @@ import {filterFieldKey, lookupFilterOperator} from './utils';
   styleUrls: ['./trace_viewer.scss'],
 })
 export class FilterInput implements AfterViewInit, OnChanges {
-  @ViewChild('inputEl') inputEl!: ElementRef;
-  @ViewChild('filterOptionsAuto') filterOptionsAuto!: MatAutocomplete;
-  @ViewChild('optionTrigger') optionTrigger!: MatAutocompleteTrigger;
+  readonly inputEl = viewChild.required<ElementRef>('inputEl');
+  readonly filterOptionsAuto =
+    viewChild.required<MatAutocomplete>('filterOptionsAuto');
+  readonly optionTrigger =
+    viewChild.required<MatAutocompleteTrigger>('optionTrigger');
 
-  @Output() readonly filterAdded = new EventEmitter<FilterEntry>();
-  @Input() validFilterFields: FilterField[] = [];
-  @Input() hosts: string[] = [];
-  @Input() processes: string[] = [];
+  readonly filterAdded = output<FilterEntry>();
+  readonly validFilterFields = input<FilterField[]>([]);
+  readonly hosts = input<string[]>([]);
+  readonly processes = input<string[]>([]);
 
+  private readonly cdr = inject(ChangeDetectorRef);
   isEditing = false;
   private filterInputInternal = '';
   /**
@@ -119,14 +135,14 @@ export class FilterInput implements AfterViewInit, OnChanges {
   autoFilterOptions = new BehaviorSubject<FilterOption[]>(FILTER_FIELDS);
   autoFilterFields = new BehaviorSubject<FilterField[]>(FILTER_FIELDS);
 
-  get autoFilterValues() {
-    return new BehaviorSubject<FilterValue[]>(this.autoFilterOptions.value);
+  get autoFilterValues(): BehaviorSubject<FilterValue[]> {
+    return this.autoFilterOptions as unknown as BehaviorSubject<FilterValue[]>;
   }
 
   get fieldValueOptions(): {[key: string]: string[]} {
     const valueOptions: {[key: string]: string[]} = {};
-    valueOptions[FilterFieldCategory.HOST] = this.hosts;
-    valueOptions[FilterFieldCategory.PROCESS] = this.processes;
+    valueOptions[FilterFieldCategory.HOST] = this.hosts();
+    valueOptions[FilterFieldCategory.PROCESS] = this.processes();
     return valueOptions;
   }
 
@@ -148,7 +164,9 @@ export class FilterInput implements AfterViewInit, OnChanges {
   }
 
   get allOptionsSelected() {
-    return this.autoFilterValues.value.every((option) => option.checked);
+    return (this.autoFilterOptions.value as FilterValue[]).every(
+      (option) => option.checked,
+    );
   }
 
   get allOptionsLabel() {
@@ -159,14 +177,14 @@ export class FilterInput implements AfterViewInit, OnChanges {
 
   ngOnChanges(changes: SimpleChanges) {
     if (this.validFilterFieldsChanged(changes['validFilterFields'])) {
-      this.autoFilterFields.next(this.validFilterFields);
-      this.updateFilterOptions();
+      this.autoFilterFields.next(this.validFilterFields());
+      this.updateFilterOptions(this.filterInput);
     }
   }
 
   ngAfterViewInit() {
-    if (!(this.optionTrigger instanceof MatAutocompleteTrigger)) {
-      throw new Error('@ViewChild "trigger" is required');
+    if (!(this.optionTrigger() instanceof MatAutocompleteTrigger)) {
+      throw new Error('viewChild "trigger" is required');
     }
   }
 
@@ -243,7 +261,7 @@ export class FilterInput implements AfterViewInit, OnChanges {
     let currentOptions: FilterOption[] = [];
     switch (this.filterStep) {
       case 0:
-        const filteredNameOptions = this.validFilterFields.filter(
+        const filteredNameOptions = this.validFilterFields().filter(
           (field: FilterField) =>
             field.displayName
               .toLowerCase()
@@ -273,14 +291,20 @@ export class FilterInput implements AfterViewInit, OnChanges {
           }
         } else {
           currentOptions = [];
-          this.optionTrigger.closePanel();
+          this.optionTrigger()?.closePanel();
         }
         break;
       default:
         currentOptions = [];
         break;
     }
-    this.autoFilterOptions.next(currentOptions);
+    const previousOptions = this.autoFilterOptions.value;
+    if (
+      previousOptions.length !== currentOptions.length ||
+      previousOptions.some((opt, i) => opt.value !== currentOptions[i]?.value)
+    ) {
+      this.autoFilterOptions.next(currentOptions);
+    }
   }
 
   updateCurrentFilterStep() {
@@ -308,7 +332,7 @@ export class FilterInput implements AfterViewInit, OnChanges {
   // Returns filter name if the string matches one of the display names
   // Otherwise returns undefined.
   private lookupFilterField(fieldValue: string): FilterField | undefined {
-    return this.validFilterFields.find(
+    return this.validFilterFields().find(
       (filterField: FilterField) =>
         filterFieldKey(filterField).toLowerCase() ===
           fieldValue.trim().toLowerCase() ||
@@ -347,16 +371,18 @@ export class FilterInput implements AfterViewInit, OnChanges {
   startEditing() {
     this.isEditing = true;
     setTimeout(() => {
-      this.inputEl?.nativeElement.focus();
-      this.optionTrigger?.openPanel();
+      this.inputEl()?.nativeElement.focus();
+      this.optionTrigger()?.openPanel();
+      this.cdr.markForCheck();
     }, 0);
   }
 
   onBlur() {
     setTimeout(() => {
-      if (!this.filterInput && !this.optionTrigger?.panelOpen) {
+      if (!this.filterInput && !this.optionTrigger()?.panelOpen) {
         this.isEditing = false;
       }
+      this.cdr.markForCheck();
     }, 200);
   }
 
@@ -369,8 +395,9 @@ export class FilterInput implements AfterViewInit, OnChanges {
   focus() {
     this.isEditing = true;
     setTimeout(() => {
-      this.inputEl.nativeElement.focus();
-      this.optionTrigger?.openPanel();
+      this.inputEl().nativeElement.focus();
+      this.optionTrigger()?.openPanel();
+      this.cdr.markForCheck();
     }, 100);
   }
 
@@ -391,7 +418,7 @@ export class FilterInput implements AfterViewInit, OnChanges {
   }
 
   onInputChange() {
-    this.filterInput = this.inputEl.nativeElement.value;
+    this.filterInput = this.inputEl().nativeElement.value;
   }
 
   isValidOperator(field: FilterField, operator: string) {
@@ -412,7 +439,7 @@ export class FilterInput implements AfterViewInit, OnChanges {
         value,
         operator: lookupFilterOperator(operator),
       };
-      this.filterAdded.next(filter);
+      this.filterAdded.emit(filter);
       this.reset();
       return true;
     }
@@ -423,6 +450,6 @@ export class FilterInput implements AfterViewInit, OnChanges {
     this.filterInput = '';
     this.filterStep = 0;
     this.isEditing = false;
-    this.optionTrigger?.closePanel();
+    this.optionTrigger()?.closePanel();
   }
 }

@@ -17,7 +17,7 @@
     <div class="progress-container" *ngIf="loading">
       <div class="loading-message">{{loadingMessage}}</div>
       <!-- TODO(go/progressbar-aria): Replace the aria-label with a better description, e.g. "Fetching user data" -->
-      <mat-progress-bar color="primary" mode="indeterminate" aria-label="Loading"></mat-progress-bar>
+      <mat-progress-bar color="primary" mode="indeterminate" aria-label="Loading" />
     </div>
       <div class="hlo-text-load-status" *ngIf="hloText && !loading">{{ getDownloadStatusMessage() }}</div>
       <textarea [hidden]="!loading && !hloText" readonly class="hlo-text-area"  aria-label="hlo text area">{{hloText}}</textarea>

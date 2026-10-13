@@ -1,4 +1,4 @@
-<div [hidden]="!hasHostOpTables">
+<div [hidden]="!hasHostOpTables()">
   <div class="mat-headline">Host-vs-TPU step analysis</div>
   <table>
     <tr>
@@ -34,6 +34,6 @@
       </td>
     </tr>
   </table>
-  <chart chartType="ScatterChart" [dataInfo]="dataInfo" [hidden]="!showChart"></chart>
-  <mat-divider></mat-divider>
+  <chart chartType="ScatterChart" [dataInfo]="dataInfo" [hidden]="!showChart" />
+  <mat-divider />
 </div>

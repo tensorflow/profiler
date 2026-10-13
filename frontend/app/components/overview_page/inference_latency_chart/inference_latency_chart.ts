@@ -1,46 +1,51 @@
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   ElementRef,
-  EventEmitter,
   HostListener,
-  Input,
+  inject,
+  input,
   OnChanges,
-  Output,
+  output,
   SimpleChanges,
-  ViewChild,
+  viewChild,
 } from '@angular/core';
+import {MatCard, MatCardContent, MatCardTitle} from '@angular/material/card';
 import {type SimpleDataTable} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 const MAX_CHART_WIDTH = 800;
 
 /** An inference latency chart view component. */
 @Component({
-  changeDetection: ChangeDetectionStrategy.Default,standalone: false,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
   selector: 'inference-latency-chart',
   templateUrl: './inference_latency_chart.ng.html',
   styleUrls: ['./inference_latency_chart.scss'],
+  imports: [MatCard, MatCardContent, MatCardTitle],
 })
 export class InferenceLatencyChart implements AfterViewInit, OnChanges {
   /** The inference latency data. */
-  @Input() inferenceLatencyData?: SimpleDataTable;
+  readonly inferenceLatencyData = input<SimpleDataTable>();
 
-  @ViewChild('chart', {static: false}) chartRef!: ElementRef;
-  @Output() readonly ready = new EventEmitter<void>();
+  readonly chartRef = viewChild<ElementRef>('chart');
+  readonly ready = output<void>();
+  private readonly cdr = inject(ChangeDetectorRef);
 
   title = 'Inference Session Latency Breakdown';
   height = 300;
   width = 0;
   chart: google.visualization.ColumnChart | null = null;
 
-  ngAfterViewInit() {
-    this.loadGoogleChart();
-  }
-
   ngOnChanges(changes: SimpleChanges) {
     this.width = 0;
     this.drawChart();
+  }
+
+  ngAfterViewInit() {
+    this.loadGoogleChart();
   }
 
   @HostListener('window:resize')
@@ -49,23 +54,20 @@ export class InferenceLatencyChart implements AfterViewInit, OnChanges {
   }
 
   drawChart() {
-    if (!this.chartRef) {
+    const chartEl = this.chartRef()?.nativeElement;
+    if (!chartEl) {
       return;
     }
 
-    const newWidth = Math.min(
-      MAX_CHART_WIDTH,
-      this.chartRef.nativeElement.offsetWidth,
-    );
+    const newWidth = Math.min(MAX_CHART_WIDTH, chartEl.offsetWidth);
 
-    if (!this.chart || !this.inferenceLatencyData || this.width === newWidth) {
+    const inferenceLatencyData = this.inferenceLatencyData();
+    if (!this.chart || !inferenceLatencyData || this.width === newWidth) {
       return;
     }
     this.width = newWidth;
 
-    const dataTable = new google.visualization.DataTable(
-      this.inferenceLatencyData,
-    );
+    const dataTable = new google.visualization.DataTable(inferenceLatencyData);
     const dataView = new google.visualization.DataView(dataTable);
     dataView.setColumns([
       0,
@@ -110,18 +112,21 @@ export class InferenceLatencyChart implements AfterViewInit, OnChanges {
     if (!google || !google.charts) {
       setTimeout(() => {
         this.loadGoogleChart();
+        this.cdr.markForCheck();
       }, 100);
     }
 
     google.charts.safeLoad({'packages': ['corechart']});
     google.charts.setOnLoadCallback(() => {
-      this.chart = new google.visualization.ColumnChart(
-        this.chartRef.nativeElement,
-      );
+      const chartEl = this.chartRef()?.nativeElement;
+      if (!chartEl) return;
+      this.chart = new google.visualization.ColumnChart(chartEl);
       google.visualization.events.addListener(this.chart, 'ready', () => {
         this.ready.emit();
+        this.cdr.markForCheck();
       });
       this.drawChart();
+      this.cdr.markForCheck();
     });
   }
 }

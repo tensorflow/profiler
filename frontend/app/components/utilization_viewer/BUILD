@@ -8,7 +8,6 @@ xprof_ng_module(
     name = "utilization_viewer",
     srcs = [
         "utilization_viewer.ts",
-        "utilization_viewer_module.ts",
     ],
     assets = [
         ":utilization_viewer_css",
@@ -56,6 +55,29 @@ xprof_ng_module(
         "@org_xprof//frontend/app/common/utils:testing",
         "@org_xprof//frontend/app/components/chart:data_processor",
         "@org_xprof//frontend/app/services/data_service_v2",
+        "@org_xprof//frontend/app/services/data_service_v2:data_service_v2_interface",
+        "@org_xprof//frontend/app/store",
+    ],
+)
+
+xprof_ng_module(
+    name = "screenshot_tests",
+    testonly = True,
+    srcs = [
+        "utilization_viewer_screenshot_test.ts",
+    ],
+    deps = [
+        ":utilization_viewer",
+        "//javascript/angular2/testing/catalyst/async",
+        # ksf,
+        "@org_xprof//frontend/app/common/angular:angular_platform-browser_animation",
+        "//:node_modules/@angular/router",
+        "//:node_modules/rxjs",
+        "//:node_modules/safevalues",
+        "//third_party/javascript/safevalues/dom",
+        "//third_party/javascript/typings/jasmine",
+        "@org_xprof//frontend/app/common/interfaces",
+        "@org_xprof//frontend/app/common/utils:testing",
         "@org_xprof//frontend/app/services/data_service_v2:data_service_v2_interface",
         "@org_xprof//frontend/app/store",
     ],

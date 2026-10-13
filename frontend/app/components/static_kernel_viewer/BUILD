@@ -46,7 +46,6 @@ xprof_ng_module(
         "kernel_event_tooltip.ts",
         "kernel_selection_panel.ts",
         "static_kernel_viewer.ts",
-        "static_kernel_viewer_module.ts",
     ],
     assets = [
         ":kernel_event_tooltip_css",

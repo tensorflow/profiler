@@ -17,7 +17,7 @@
       </div>
     </div>
     <div class="flex-space"></div>
-    <export-as-csv [sessionId]="sessionId" [tool]="tool" [host]="host"></export-as-csv>
+    <export-as-csv [sessionId]="sessionId" [tool]="tool" [host]="host" />
   </div>
 
   <br>
@@ -33,15 +33,15 @@
     <div class="row">
       <div class="pie-chart">
         <div class="mat-title">Time per HLO category</div>
-        <chart chartType="PieChart" [dataInfo]="dataInfoCategoryChart"></chart>
+        <chart chartType="PieChart" [dataInfo]="dataInfoCategoryChart" />
       </div>
       <div class="pie-chart">
         <div class="mat-title">Time per HLO operation</div>
-        <chart chartType="PieChart" [dataInfo]="dataInfoOpChart"></chart>
+        <chart chartType="PieChart" [dataInfo]="dataInfoOpChart" />
       </div>
       <div class="pie-chart">
         <div class="mat-title" matTooltip="Time spent on rematerialization in HLO or Framework Ops">Time spent on rematerialization</div>
-        <chart chartType="PieChart" [dataInfo]="dataInfoRematerializationChart"></chart>
+        <chart chartType="PieChart" [dataInfo]="dataInfoRematerializationChart" />
       </div>
       <div class="pie-chart" *ngIf="communicationOps.size">
         <div class="mat-title">Time per HLO by Replica Groups</div>
@@ -50,23 +50,22 @@
           {{op}}
           </mat-option>
         </mat-select>
-        <chart chartType="PieChart" [dataInfo]="dataInfoOpReplicaGroupChart"></chart>
+        <chart chartType="PieChart" [dataInfo]="dataInfoOpReplicaGroupChart" />
       </div>
     </div>
 
     <div class="row">
       <div class="pie-chart">
         <div class="mat-title">Time spent on rematerialization per HLO category</div>
-        <chart chartType="PieChart" [dataInfo]="dataInfoRematerializationCategoryChart"></chart>
+        <chart chartType="PieChart" [dataInfo]="dataInfoRematerializationCategoryChart" />
       </div>
       <div class="pie-chart">
         <div class="mat-title">Time spent on outside compilation</div>
-        <chart chartType="PieChart" [dataInfo]="dataInfoOutsideCompilationChart"></chart>
+        <chart chartType="PieChart" [dataInfo]="dataInfoOutsideCompilationChart" />
       </div>
 
       <flop-rate-chart [data]="data" [xColumn]="flopRateChartXColumn"
-                       [yColumn]="flopRateChartYColumn" [opType]="opType">
-      </flop-rate-chart>
+                       [yColumn]="flopRateChartYColumn" [opType]="opType" />
     </div>
   </mat-expansion-panel>
 </div>
@@ -82,22 +81,17 @@
       </mat-form-field>
     </div>
     <category-filter [dataTable]="dataTable" column="category"
-                     all="All" (changed)="updateFilters($event)">
-    </category-filter>
+                     all="All" (changed)="updateFilters($event)" />
     <string-filter [dataTable]="dataTable" column="program_id"
       [value]="programIdSelected"
-      all="All" (changed)="updateFilters($event)">
-    </string-filter>
+      all="All" (changed)="updateFilters($event)" />
     <string-filter [dataTable]="dataTable" column="hlo_op_name"
       [value]="hloOpNameSelected" [exactMatch]="true" [matchToggle]="true"
-      all="All" (changed)="updateFilters($event)">
-    </string-filter>
+      all="All" (changed)="updateFilters($event)" />
     <string-filter [dataTable]="dataTable" column="hlo_op_expression"
-                   all="All" (changed)="updateFilters($event)">
-    </string-filter>
+                   all="All" (changed)="updateFilters($event)" />
     <string-filter [dataTable]="dataTable" column="tf_op_name"
-                   all="All" (changed)="updateFilters($event)">
-    </string-filter>
+                   all="All" (changed)="updateFilters($event)" />
     <div class="control" *ngIf="sourceCodeServiceIsAvailable">
       <div class="control-title">Show Source Code
         <mat-icon
@@ -122,8 +116,7 @@
     <chart #table
           chartType="Table"
           class="table"
-          [dataInfo]="dataInfoForTable">
-    </chart>
+          [dataInfo]="dataInfoForTable" />
   </div>
 
   <div class="row" *ngIf="hasSparseCoreData">
@@ -133,8 +126,7 @@
     <chart #sparseCoreTable
           chartType="Table"
           class="table"
-          [dataInfo]="dataInfoForSparseCoreTable">
-    </chart>
+          [dataInfo]="dataInfoForSparseCoreTable" />
   </div>
 </div>
 

@@ -60,7 +60,7 @@
 
       <div class="rail-body" (scroll)="onRailScroll()">
         <div *ngIf="loadingKernels" class="rail-state" role="status">
-          <mat-spinner diameter="20"></mat-spinner>
+          <mat-spinner diameter="20" />
           <span class="rail-state-text">Loading kernels…</span>
         </div>
         <div *ngIf="!loadingKernels && loadFailed" class="rail-state error" role="alert">
@@ -251,17 +251,17 @@
         canvasTopBar
         (visibleRangeChange)="onVisibleRangeChange($event)"
         (selectEvent)="onSelectTimelineEvent($event)"
-      ></kernel-minimap>
+      />
       <kernel-event-tooltip
         *ngIf="enableEventTooltip"
         canvasOverlay
-      ></kernel-event-tooltip>
+      />
       <kernel-selection-panel
         drawerOverlay
         (openChange)="onSelectionPanelOpenChange($event)"
         (selectEvent)="onSelectTimelineEvent($event)"
         (searchQuery)="onSearchTimelineQuery($event)"
-      ></kernel-selection-panel>
+      />
     </trace-viewer-container>
   </div>
 

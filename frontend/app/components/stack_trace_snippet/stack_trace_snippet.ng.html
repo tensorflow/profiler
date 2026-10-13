@@ -1,19 +1,15 @@
 <mat-accordion class="stack-trace-snippet" multi="true">
   <ng-container *ngIf="sourceCodeSnippetAddresses && sourceCodeSnippetAddresses.length > 0; else emptyState">
     <!-- We assume that the top of the stack is the first element in the list. -->
-    <stack-frame-snippet
-      *ngFor="let addr of sourceCodeSnippetAddresses; let isFirst = first; trackBy: trackByIndex"
+    <stack-frame-snippet *ngFor="let addr of sourceCodeSnippetAddresses; let isFirst = first; trackBy: trackByIndex"
       [sourceCodeSnippetAddress]="addr"
       [topOfStack]="isFirst"
       [usingSourceFileAndLineNumber]="usingSourceFileAndLineNumber"
-      [srcPathPrefix]="srcPathPrefix">
-    </stack-frame-snippet>
+      [srcPathPrefix]="srcPathPrefix()" />
   </ng-container>
 
   <ng-template #emptyState>
-    <message
-      title="Stack Trace Not Found"
-      content="Please select an HLO operation with stacktrace.">
-    </message>
+    <message title="Stack Trace Not Found"
+      content="Please select an HLO operation with stacktrace." />
   </ng-template>
 </mat-accordion>

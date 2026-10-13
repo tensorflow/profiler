@@ -4,7 +4,7 @@
     </mat-panel-title>
   </mat-expansion-panel-header>
   <div class="progress-smart-suggestion-view" *ngIf="shouldShow && loading">
-    <mat-spinner class="loading-spinner" mode="indeterminate" diameter="40"></mat-spinner>
+    <mat-spinner class="loading-spinner" mode="indeterminate" diameter="40" />
     <div class="loading-message">Analyzing the trace to provide performance improvement recommendations...</div>
   </div>
   <div *ngIf="!loading">

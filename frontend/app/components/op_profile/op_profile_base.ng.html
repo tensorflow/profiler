@@ -1,6 +1,6 @@
 <mat-sidenav-container>
   <mat-sidenav mode="side" opened>
-    <ng-content select="[opDetails]"></ng-content>
+    <ng-content select="[opDetails]" />
   </mat-sidenav>
   <mat-sidenav-content>
     <as-split direction="vertical">
@@ -32,7 +32,7 @@
           <div class="control">
           <mat-form-field appearance="outline">
             <mat-label>Group by</mat-label>
-            <mat-select [value]="groupBy" (selectionChange)="updateGroupBy($event.value)">
+            <mat-select [value]="groupBy()" (selectionChange)="updateGroupBy($event.value)">
               <mat-option *ngFor="let rule of GROUP_BY_RULES" [value]="rule">{{rule | titlecase}}</mat-option>
             </mat-select>
           </mat-form-field>
@@ -47,7 +47,7 @@
               info
             </mat-icon>
           </div>
-          <mat-slide-toggle [checked]="byWasted" (toggleChange)="updateByWasted()" matTooltip="Order by Time% by default."></mat-slide-toggle>
+          <mat-slide-toggle [checked]="byWasted" (toggleChange)="updateByWasted()" matTooltip="Order by Time% by default." />
         </div>
         <div class="control" *ngIf="hasValidTimeScaleMultiplier()">
           <div class="control-title">
@@ -59,7 +59,7 @@
               info
             </mat-icon>
           </div>
-          <mat-slide-toggle [checked]="applyScalingFactor" (toggleChange)="toggleScalingFactor()"></mat-slide-toggle>
+          <mat-slide-toggle [checked]="applyScalingFactor" (toggleChange)="toggleScalingFactor()" />
         </div>
         <div class="control">
           <div class="control-title">Top 90%
@@ -70,11 +70,11 @@
               info
             </mat-icon>
           </div>
-          <mat-slide-toggle [checked]="showP90" (toggleChange)="updateShowP90()"></mat-slide-toggle>
+          <mat-slide-toggle [checked]="showP90" (toggleChange)="updateShowP90()" />
         </div>
         <div class="control">
           <div class="control-title">Exclude Idle</div>
-          <mat-slide-toggle [checked]="excludeIdle" (toggleChange)="updateExcludeIdle()"></mat-slide-toggle>
+          <mat-slide-toggle [checked]="excludeIdle" (toggleChange)="updateExcludeIdle()" />
         </div>
         <div class="control" *ngIf="sourceCodeServiceIsAvailable">
           <div class="control-title">Show Source Code
@@ -104,19 +104,17 @@
       </div>
     </div>
 
-    <op-table
-      #opTable
+    <op-table #opTable
       [rootNode]="rootNode"
       [byWasted]="byWasted"
       [showP90]="showP90"
-      [childrenCount]="childrenCount">
-    </op-table>
+      [childrenCount]="childrenCount" />
     </as-split-area>
     <as-split-area [size]="20" *ngIf="sourceCodeServiceIsAvailable && showStackTrace">
       <source-mapper
         [sourceFileAndLineNumber]="sourceFileAndLineNumber"
         [stackTrace]="stackTrace"
-        [sessionId]="sessionId"
+        [sessionId]="sessionId()"
         [programId]="focusedOpProgramId"
         [opName]="focusedOpName"
         [opCategory]="focusedOpCategory"/>

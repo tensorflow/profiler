@@ -36,24 +36,24 @@
         </rack-navigation-group>
       </rack-navigation-drawer>
     }
-    <sidenav [hidden]="isNewNavEnabled"></sidenav>
+    <sidenav [hidden]="isNewNavEnabled" />
   </mat-sidenav>
   <mat-sidenav-content
     [class.new-nav-content]="isNewNavEnabled"
     [style.margin-left.px]="isNewNavEnabled ? (isSideNavOpen ? 240 : 64) : null">
-    <diagnostics-view [diagnostics]="diagnostics"></diagnostics-view>
+    <diagnostics-view [diagnostics]="diagnostics" />
     <div class="progress-container" *ngIf="loading">
       <div class="loading-message">{{loadingMessage}}</div>
       <!-- TODO(go/progressbar-aria): Replace the aria-label with a better description, e.g. "Fetching user data" -->
-      <mat-progress-bar color="primary" mode="indeterminate" aria-label="Loading"></mat-progress-bar>
+      <mat-progress-bar color="primary" mode="indeterminate" aria-label="Loading" />
     </div>
     <div class="progress-container" *ngIf="!navigationReady">
       <div class="loading-message">Navigating. First-time session loads may take up to a few minutes.</div>
       <!-- TODO(go/progressbar-aria): Replace the aria-label with a better description, e.g. "Fetching user data" -->
-      <mat-progress-bar color="primary" mode="indeterminate" aria-label="Loading"></mat-progress-bar>
+      <mat-progress-bar color="primary" mode="indeterminate" aria-label="Loading" />
     </div>
     <div [className]="(loading || !navigationReady) ? 'hidden-content' : 'full-height'">
-      <router-outlet></router-outlet>
+      <router-outlet />
     </div>
   </mat-sidenav-content>
 </mat-sidenav-container>

@@ -7,7 +7,6 @@ xprof_ng_module(
     srcs = [
         "pod_viewer.ts",
         "pod_viewer_common.ts",
-        "pod_viewer_module.ts",
     ],
     assets = [
         ":pod_viewer_css",
@@ -45,6 +44,29 @@ xprof_ng_module(
         "//javascript/angular2/testing/catalyst/fake_async",
         "//third_party/javascript/typings/jasmine",
         "@org_xprof//frontend/app/common/angular:angular_platform-browser_animation",
+        "@org_xprof//frontend/app/common/interfaces",
+        "@org_xprof//frontend/app/common/utils:testing",
+        "@org_xprof//frontend/app/services/data_service_v2:data_service_v2_interface",
+        "@org_xprof//frontend/app/store",
+    ],
+)
+
+xprof_ng_module(
+    name = "screenshot_tests",
+    testonly = True,
+    srcs = [
+        "pod_viewer_screenshot_test.ts",
+    ],
+    deps = [
+        ":pod_viewer",
+        "//javascript/angular2/testing/catalyst/async",
+        # ksf,
+        "@org_xprof//frontend/app/common/angular:angular_platform-browser_animation",
+        "//:node_modules/@angular/router",
+        "//:node_modules/rxjs",
+        "//:node_modules/safevalues",
+        "//third_party/javascript/safevalues/dom",
+        "//third_party/javascript/typings/jasmine",
         "@org_xprof//frontend/app/common/interfaces",
         "@org_xprof//frontend/app/common/utils:testing",
         "@org_xprof//frontend/app/services/data_service_v2:data_service_v2_interface",

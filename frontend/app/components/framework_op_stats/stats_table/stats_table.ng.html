@@ -29,11 +29,11 @@
   Note: To avoid sluggishness, only the 1000 most time-consuming operations out of the total
   {{totalOperations}} operations are shown in the table below.
 </div>
-<br *ngIf="totalOperations && hasDiff">
-<div *ngIf="hasDiff">
+<br *ngIf="totalOperations && hasDiff()">
+<div *ngIf="hasDiff()">
   Note: For diff tool, the main table is pre-ordered by the Avg. self-time absolute difference (hidden column) in descending order.
   Each entry is shown as baseline(difference), while difference is converted to percentage w.r.t baseline if applicable.
   Each numeric column can be sorted against the baseline.
 </div>
 <br>
-<chart class="table" chartType="Table" [dataInfo]="dataInfo"></chart>
+<chart class="table" chartType="Table" [dataInfo]="dataInfo" />

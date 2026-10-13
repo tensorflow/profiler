@@ -52,16 +52,15 @@
           </div>
         </div>
         <div class="export-button-container">
-          <export-as-csv [tool]="tool" [sessionId]="sessionId" [host]="host"></export-as-csv>
+          <export-as-csv [tool]="tool" [sessionId]="sessionId" [host]="host" />
         </div>
       </div>
 
-      <diagnostics-view [diagnostics]="diagnostics"></diagnostics-view>
+      <diagnostics-view [diagnostics]="diagnostics" />
 
       <div>
         <chart chartType="Table"
-               [dataInfo]="dataInfo">
-        </chart>
+               [dataInfo]="dataInfo" />
       </div>
     </mat-expansion-panel>
   </mat-accordion>
