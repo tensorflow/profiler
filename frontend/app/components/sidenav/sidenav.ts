@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  inject,
   OnDestroy,
   OnInit,
 } from '@angular/core';
@@ -17,6 +18,7 @@ import {CommunicationService} from 'org_xprof/frontend/app/services/communicatio
 import {DataServiceV2} from 'org_xprof/frontend/app/services/data_service_v2/data_service_v2';
 import {
   setCurrentRunAction,
+  setErrorMessageStateAction,
   setProfilerConfigAction,
   updateRunToolsMapAction,
 } from 'org_xprof/frontend/app/store/actions';
@@ -142,15 +144,16 @@ export class SideNav implements OnInit, OnDestroy {
 
   hideCaptureProfileButton = false;
   enableTabNameLabel = false;
+  private hasNavigated = false;
 
-  constructor(
-    private readonly router: Router,
-    // Using DataServiceV2 because methods used in sidenav is not defined in
-    // the interface. (b/423713470)
-    private readonly dataService: DataServiceV2,
-    private readonly communicationService: CommunicationService,
-    private readonly store: Store<{}>,
-  ) {
+  private readonly router = inject(Router);
+  // Using DataServiceV2 because methods used in sidenav is not defined in
+  // the interface. (b/423713470)
+  private readonly dataService = inject(DataServiceV2);
+  private readonly communicationService = inject(CommunicationService);
+  private readonly store: Store<{}> = inject(Store);
+
+  constructor() {
     this.runToolsMap$ = this.store
       .select(getRunToolsMap)
       .pipe(takeUntil(this.destroyed));
@@ -271,6 +274,7 @@ export class SideNav implements OnInit, OnDestroy {
     const standaloneRoute = this.getStandaloneNonSidenavRoute(url);
     if (standaloneRoute) {
       this.selectedTagInternal = standaloneRoute;
+      this.hasNavigated = false;
       // Standalone sub-pages manage their own data loading and router lifecycle.
       // Return early to prevent SideNav from parsing tool route params, triggering
       // sidebar tool data fetches, or redirecting away from the standalone sub-page.
@@ -296,7 +300,8 @@ export class SideNav implements OnInit, OnDestroy {
 
     const isHostsEqual = this.isMultiHostsEnabled
       ? this.selectedHostsInternal.join(',') === hostsParam
-      : this.selectedHostInternal === host;
+      : this.selectedHostInternal === host ||
+        (this.hasNavigated && this.selectedHost === host);
 
     // Guard to prevent infinite navigation loops on identical route params.
     // In Angular 18, navigating to the same route triggers NavigationEnd because
@@ -308,8 +313,12 @@ export class SideNav implements OnInit, OnDestroy {
     // navigations, and an ActivatedRoute queryParams subscription handles all
     // state syncs and data fetches. See xprof_angular_routing_refactor_proposal.md.
     if (
-      this.selectedRunInternal === run &&
-      this.selectedTagInternal === tag &&
+      (this.hasNavigated || (!run && !this.selectedRunInternal)) &&
+      (this.selectedRunInternal === run ||
+        (this.hasNavigated && this.selectedRun === run)) &&
+      !STANDALONE_NON_SIDENAV_ROUTES.includes(this.selectedTagInternal) &&
+      (this.selectedTagInternal === tag ||
+        (this.hasNavigated && this.selectedTag === tag)) &&
       this.selectedModuleInternal === moduleName &&
       this.runPathInternal === runPath &&
       this.sessionPathInternal === sessionPath &&
@@ -320,6 +329,8 @@ export class SideNav implements OnInit, OnDestroy {
     ) {
       return;
     }
+    this.hasNavigated = true;
+    this.store.dispatch(setErrorMessageStateAction({errorMessage: ''}));
     this.navigationParams['firstLoad'] = true;
     if (opName) {
       this.navigationParams['opName'] = opName;
@@ -367,7 +378,9 @@ export class SideNav implements OnInit, OnDestroy {
 
   async fetchProfilerConfig() {
     const config = await firstValueFrom(
-      this.dataService.getConfig().pipe(takeUntil(this.destroyed), defaultIfEmpty(null)),
+      this.dataService
+        .getConfig()
+        .pipe(takeUntil(this.destroyed), defaultIfEmpty(null)),
     );
     if (config) {
       this.store.dispatch(setProfilerConfigAction({config}));
@@ -483,6 +496,7 @@ export class SideNav implements OnInit, OnDestroy {
   }
 
   onRunSelectionChange(run: string) {
+    this.store.dispatch(setErrorMessageStateAction({errorMessage: ''}));
     this.selectedRunInternal = run;
     this.afterUpdateRun();
   }
@@ -501,10 +515,24 @@ export class SideNav implements OnInit, OnDestroy {
     if (!this.tags.length) {
       this.tags = ((await this.getToolsForSelectedRun()) || []) as string[];
     }
+    if (
+      this.selectedTagInternal &&
+      this.tags.length > 0 &&
+      !STANDALONE_NON_SIDENAV_ROUTES.includes(this.selectedTagInternal) &&
+      !this.tags.some((validTag) =>
+        validTag.startsWith(this.selectedTagInternal),
+      )
+    ) {
+      this.selectedTagInternal = this.tags[0];
+      this.selectedModuleInternal = '';
+      delete this.navigationParams['opName'];
+      delete this.navigationParams['moduleName'];
+    }
     this.afterUpdateTag();
   }
 
   async onTagSelectionChange(tag: string) {
+    this.store.dispatch(setErrorMessageStateAction({errorMessage: ''}));
     const previousSelectedTag = this.selectedTagInternal;
     this.selectedTagInternal = tag;
 
@@ -586,6 +614,7 @@ export class SideNav implements OnInit, OnDestroy {
   }
 
   onHostSelectionChange(selection: string) {
+    this.store.dispatch(setErrorMessageStateAction({errorMessage: ''}));
     this.selectedHostInternal = selection;
     this.navigateTools();
   }
@@ -609,6 +638,7 @@ export class SideNav implements OnInit, OnDestroy {
   }
 
   onSubmitHosts() {
+    this.store.dispatch(setErrorMessageStateAction({errorMessage: ''}));
     if (this.selectedHostsPending.length > 10) {
       alert(
         'Warning: Maximum 10 selected hosts allowed. Loading the first 10 hosts in alphabetical order.',
@@ -621,6 +651,7 @@ export class SideNav implements OnInit, OnDestroy {
   }
 
   onModuleSelectionChange(module: string) {
+    this.store.dispatch(setErrorMessageStateAction({errorMessage: ''}));
     this.selectedModuleInternal = module;
     this.navigateTools();
   }
@@ -629,8 +660,17 @@ export class SideNav implements OnInit, OnDestroy {
     this.navigateTools();
   }
 
-  updateUrlHistory(): void {
+  /**
+   * Copies the navigation parameters into the embedding page's URL.
+   *
+   * @param replace Replaces the current history entry instead of adding one.
+   */
+  updateUrlHistory(replace = false): void {
     try {
+      // Standalone, the router records the URL in this same history.
+      if (window.parent === window) {
+        return;
+      }
       const navigationEvent = this.getNavigationEvent();
       const queryParams: {
         [key: string]: string | string[] | boolean | undefined;
@@ -654,7 +694,11 @@ export class SideNav implements OnInit, OnDestroy {
       const queryString = serializeQueryParams(queryParams);
       const url = pathname + queryString;
 
-      window.parent?.history?.pushState({}, '', url);
+      if (replace) {
+        window.parent?.history?.replaceState({}, '', url);
+      } else {
+        window.parent?.history?.pushState({}, '', url);
+      }
     } catch (error) {
       console.error('Failed to update URL history:', error);
     }
@@ -664,7 +708,11 @@ export class SideNav implements OnInit, OnDestroy {
     const navigationEvent = this.getNavigationEvent();
     this.communicationService.onNavigateReady(navigationEvent);
 
-    this.updateUrlHistory();
+    // navigateWithUrl() sets firstLoad when it syncs the view to the URL: on
+    // the first load, browser back and forward, or a link. That URL already has
+    // a history entry, so replace it; adding one would drop the forward entries.
+    const replaceUrl = this.navigationParams['firstLoad'] === true;
+    this.updateUrlHistory(replaceUrl);
     // This router.navigate call remains, as it's responsible for Angular
     // routing
     // TODO - b/401596855: Deprecate the navigationEvent in route.params as we
@@ -672,10 +720,12 @@ export class SideNav implements OnInit, OnDestroy {
     if (STANDALONE_NON_SIDENAV_ROUTES.includes(this.selectedTagInternal)) {
       this.router.navigate([this.selectedTagInternal, this.selectedRun], {
         queryParams: navigationEvent,
+        replaceUrl,
       });
     } else {
       this.router.navigate([this.selectedTag || 'empty'], {
         queryParams: navigationEvent,
+        replaceUrl,
       });
     }
     delete this.navigationParams['firstLoad'];

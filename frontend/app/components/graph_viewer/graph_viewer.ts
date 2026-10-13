@@ -121,13 +121,13 @@ export class GraphViewer implements OnDestroy {
   programIdForSourceMapper = '';
   opCategoryForSourceMapper = '';
 
-  constructor(
-    public zone: NgZone,
-    private readonly route: ActivatedRoute,
-    private readonly store: Store<{}>,
-    private readonly router: Router,
-    private readonly snackBar: MatSnackBar,
-  ) {
+  zone: NgZone = inject(NgZone);
+  private readonly route: ActivatedRoute = inject(ActivatedRoute);
+  private readonly store: Store<{}> = inject(Store);
+  private readonly router: Router = inject(Router);
+  private readonly snackBar: MatSnackBar = inject(MatSnackBar);
+
+  constructor() {
     combineLatest([this.route.params, this.route.queryParams])
       .pipe(takeUntil(this.destroyed))
       .subscribe(async ([params, queryParams]) => {
@@ -739,12 +739,16 @@ export class GraphViewer implements OnDestroy {
     const searchParams = this.dataService.getSearchParams();
     const sessionPath = searchParams.get('session_path');
     const runPath = searchParams.get('run_path');
+    const run = this.sessionId || searchParams.get('run');
     const host = searchParams.get('host');
     if (sessionPath) {
       queryParams.session_path = sessionPath;
     }
     if (runPath) {
       queryParams.run_path = runPath;
+    }
+    if (run) {
+      queryParams.run = run;
     }
     queryParams.tag = 'graph_viewer';
     if (host) {
@@ -760,10 +764,9 @@ export class GraphViewer implements OnDestroy {
         this.tryRenderGraphvizHtml(searchParams);
       }
     }, 200);
-    this.graphvizUri = this.dataService.getGraphVizUri(
-      this.sessionId,
-      searchParams,
-    ) || 'about:blank';
+    this.graphvizUri =
+      this.dataService.getGraphVizUri(this.sessionId, searchParams) ||
+      'about:blank';
     if (iframe?.contentWindow?.location) {
       locationReplace(iframe.contentWindow?.location, this.graphvizUri!);
     }

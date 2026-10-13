@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  HostListener,
   inject,
   OnDestroy,
 } from '@angular/core';
@@ -45,6 +46,7 @@ export class MainPage implements OnDestroy {
   loading = true;
   loadingMessage = '';
   isSideNavOpen = true;
+  isSmallScreen = window.innerWidth < 960;
   navigationReady = false;
   errorMessages: string[] = [];
   /** The version string of the XProf plugin. */
@@ -115,7 +117,11 @@ export class MainPage implements OnDestroy {
       .select(getErrorMessage)
       .pipe(takeUntil(this.destroyed))
       .subscribe((errorMessage: string) => {
-        if (!errorMessage || this.errorMessages.includes(errorMessage)) {
+        if (!errorMessage) {
+          this.errorMessages = [];
+          return;
+        }
+        if (this.errorMessages.includes(errorMessage)) {
           return;
         }
         this.errorMessages.push(errorMessage);
@@ -188,6 +194,10 @@ export class MainPage implements OnDestroy {
     });
   }
 
+  @HostListener('window:resize')
+  onResize() {
+    this.isSmallScreen = window.innerWidth < 960;
+  }
   get diagnostics(): Diagnostics {
     return {
       errors: this.errorMessages,

@@ -1,19 +1,29 @@
-import {Component, NgModule, OnDestroy, ChangeDetectionStrategy} from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  NgModule,
+  OnDestroy,
+} from '@angular/core';
 import {ActivatedRoute, Params} from '@angular/router';
 import {Store} from '@ngrx/store';
 import {DataRequestType} from 'org_xprof/frontend/app/common/constants/enums';
-import {setCurrentToolStateAction, setDataRequestStateAction} from 'org_xprof/frontend/app/store/actions';
-import {ReplaySubject} from 'rxjs';
+import {
+  setCurrentToolStateAction,
+  setDataRequestStateAction,
+} from 'org_xprof/frontend/app/store/actions';
+import {combineLatest, ReplaySubject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 
 import {KernelStatsModule} from './kernel_stats_module';
 
 /** A kernel stats adapter component. */
 @Component({
-  changeDetection: ChangeDetectionStrategy.Default,standalone: false,
+  changeDetection: ChangeDetectionStrategy.Default,
+  standalone: false,
   selector: 'kernel-stats-adapter',
   template:
-      '<kernel-stats [sessionId]="sessionId" [tool]="tool" [host]="host"></kernel-stats>',
+    '<kernel-stats [sessionId]="sessionId" [tool]="tool" [host]="host"></kernel-stats>',
 })
 export class KernelStatsAdapter implements OnDestroy {
   /** Handles on-destroy Subject, used to unsubscribe. */
@@ -22,11 +32,19 @@ export class KernelStatsAdapter implements OnDestroy {
   sessionId = '';
   host = '';
 
-  constructor(route: ActivatedRoute, private readonly store: Store<{}>) {
-    route.params.pipe(takeUntil(this.destroyed)).subscribe((params) => {
-      this.processQuery(params);
-      this.update();
-    });
+  private readonly route: ActivatedRoute = inject(ActivatedRoute);
+  private readonly store: Store<{}> = inject(Store);
+
+  constructor() {
+    combineLatest([this.route.params, this.route.queryParams])
+      .pipe(takeUntil(this.destroyed))
+      .subscribe(([params, queryParams]) => {
+        if (queryParams['tag'] && queryParams['tag'] !== this.tool) {
+          return;
+        }
+        this.processQuery({...params, ...queryParams});
+        this.update();
+      });
     this.store.dispatch(setCurrentToolStateAction({currentTool: this.tool}));
   }
 
@@ -41,8 +59,11 @@ export class KernelStatsAdapter implements OnDestroy {
       tool: this.tool,
       host: this.host,
     };
-    this.store.dispatch(setDataRequestStateAction(
-        {dataRequest: {type: DataRequestType.KERNEL_STATS, params}}));
+    this.store.dispatch(
+      setDataRequestStateAction({
+        dataRequest: {type: DataRequestType.KERNEL_STATS, params},
+      }),
+    );
   }
 
   ngOnDestroy() {
@@ -55,7 +76,6 @@ export class KernelStatsAdapter implements OnDestroy {
 @NgModule({
   declarations: [KernelStatsAdapter],
   imports: [KernelStatsModule],
-  exports: [KernelStatsAdapter]
+  exports: [KernelStatsAdapter],
 })
-export class KernelStatsAdapterModule {
-}
+export class KernelStatsAdapterModule {}

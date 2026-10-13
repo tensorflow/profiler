@@ -69,6 +69,8 @@ xprof_ng_module(
     ],
     deps = [
         ":chart",
+        ":chart_options",
+        ":default_data_provider",
         ":utils",
         "//javascript/angular2/testing/catalyst/fake_async",
         "//third_party/javascript/typings/jasmine",
