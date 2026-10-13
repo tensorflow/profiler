@@ -9,14 +9,11 @@ import {getProfilerConfig, getTagsState} from 'org_xprof/frontend/app/store/sele
 import {ReplaySubject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 
-const CUSTOM_CALL_CATEGORY = 'custom-call';
+import {CompilerPass, IrText} from './ir_text';
 
-/** Definitions for the current compiler pass used to generate IR. */
-export enum CompilerPass {
-  HLO_OPTIMIZED = 'HLO(optimized)',
-  HLO_UNOPTIMIZED = 'HLO(original)',
-  MOSAIC_ORIGINAL = 'Mosaic(original)',
-}
+export {CompilerPass, IrText};
+
+const CUSTOM_CALL_CATEGORY = 'custom-call';
 
 /**
  * A source mapper component.
@@ -57,9 +54,9 @@ export class SourceMapper implements OnDestroy, OnChanges {
   @Input() opCategory = '';
 
   sourceCodeSnippetAddresses: readonly Address[] = [];
-  hloTextByProgramId = new Map<string, string>();
-  hloUnoptimizedTextByProgramId = new Map<string, string>();
-  mosaicTextByKernelName = new Map<string, string>();
+  hloTextByProgramId = new Map<string, IrText>();
+  hloUnoptimizedTextByProgramId = new Map<string, IrText>();
+  mosaicTextByKernelName = new Map<string, IrText>();
   mosaicSourceFileAndLineNumberByKernelName = new Map<string, string>();
   selectedCompilerPass = CompilerPass.HLO_OPTIMIZED;
   sourceFileNames: string[] = [];
@@ -183,21 +180,25 @@ export class SourceMapper implements OnDestroy, OnChanges {
     return 'The IR text is truncated, click to view entire text in a new tab.';
   }
 
-  get irText() {
+  get currentIrText(): IrText | undefined {
     switch (this.selectedCompilerPass) {
       case CompilerPass.HLO_OPTIMIZED:
-        return this.hloTextByProgramId.get(this.programId) || '';
+        return this.hloTextByProgramId.get(this.programId);
       case CompilerPass.HLO_UNOPTIMIZED:
-        return this.hloUnoptimizedTextByProgramId.get(this.programId) || '';
+        return this.hloUnoptimizedTextByProgramId.get(this.programId);
       case CompilerPass.MOSAIC_ORIGINAL:
-        return this.mosaicTextByKernelName.get(this.opName) || '';
+        return this.mosaicTextByKernelName.get(this.opName);
       default:
-        return '';
+        return undefined;
     }
   }
 
-  get irTextLines() {
-    return this.irText.split('\n');
+  get irText(): string {
+    return this.currentIrText?.text || '';
+  }
+
+  get irTextLines(): string[] {
+    return this.currentIrText?.lines || [''];
   }
 
   get isCustomCall() {
@@ -224,92 +225,30 @@ export class SourceMapper implements OnDestroy, OnChanges {
   }
 
   get irTextFocusLineIndex(): number {
-    let index = 0;
-    switch (this.selectedCompilerPass) {
-      case CompilerPass.HLO_OPTIMIZED:
-        index = this.irTextLines.findIndex(
-                   (line: string) => line.includes(`${this.opName} =`));
-        break;
-      case CompilerPass.MOSAIC_ORIGINAL:
-        // Assumptions: the MLIR text contains the key word kernel in the kernel
-        // definition line.
-        index = this.irTextLines.findIndex(
-                   (line: string) => line.includes('kernel'));
-        break;
-      case CompilerPass.HLO_UNOPTIMIZED:
-      default:
-        index = 0;
-        break;
-    }
-    return index !== -1 ? index : 0;
+    return this.currentIrText?.getFocusLineIndex(this.opName) ?? 0;
   }
 
   get irTextLinesForDisplay(): string[] {
-    // Return the entire HLO text for HLO unoptimized pass, as the mapping from
-    // the selected HLO op to its original text line is not implemented yet.
-    if (this.selectedCompilerPass === CompilerPass.HLO_UNOPTIMIZED) {
-      return this.irTextLines;
-    }
-    const minLineIndex =
-        Math.max(0, this.irTextFocusLineIndex - this.sourceContextWindow / 2);
-    const maxLineIndex = Math.min(
-        this.irTextLines.length - 1,
-        this.irTextFocusLineIndex + this.sourceContextWindow / 2,
+    return (
+      this.currentIrText?.getLinesForDisplay(
+        this.opName,
+        this.sourceContextWindow,
+      ) || ['']
     );
-    return this.irTextLines.slice(minLineIndex, maxLineIndex + 1);
   }
 
-  private lastIrTextForFrame = '';
-  private lastFocusLineIndex: number = -1;
-  private lastContextWindow: number = -1;
-  private irTextFrameCache: Content | undefined = undefined;
-  private focusLineIndexForDisplayCache: number | undefined = undefined;
-
   get irTextFrame(): Content | undefined {
-    this.updateFrameCacheIfNeeded();
-    return this.irTextFrameCache;
+    return this.currentIrText?.getDisplayFrame(
+      this.opName,
+      this.sourceContextWindow,
+    );
   }
 
   get focusLineIndexForDisplay(): number | undefined {
-    this.updateFrameCacheIfNeeded();
-    return this.focusLineIndexForDisplayCache;
-  }
-
-  /**
-   * Caches the computed frame object to preserve object identity across Angular
-   * digest cycles. Without caching, returning a new object literal would cause
-   * the child `source-code-editor` component to detect an input reference change
-   * and unnecessarily destroy/recreate the heavy Monaco editor instance.
-   */
-  private updateFrameCacheIfNeeded(): void {
-    const currentIrText = this.irText;
-    const currentFocus = this.irTextFocusLineIndex;
-    if (
-      this.lastIrTextForFrame !== currentIrText ||
-      this.lastFocusLineIndex !== currentFocus ||
-      this.lastContextWindow !== this.sourceContextWindow
-    ) {
-      this.lastIrTextForFrame = currentIrText;
-      this.lastFocusLineIndex = currentFocus;
-      this.lastContextWindow = this.sourceContextWindow;
-
-      const lines = this.irTextLinesForDisplay;
-
-      const minLineIndex = Math.max(
-        0,
-        currentFocus - this.sourceContextWindow / 2,
-      );
-      this.focusLineIndexForDisplayCache = currentFocus - minLineIndex + 1;
-
-      const address = new Address(
-        'ir_text',
-        this.focusLineIndexForDisplayCache,
-        this.focusLineIndexForDisplayCache - 1, // Lines before this makes firstLine = 1
-        Math.max(0, lines.length - this.focusLineIndexForDisplayCache) // Lines after
-      );
-
-      this.irTextFrameCache = new Content(address, lines, []);
-    }
+    return this.currentIrText?.getFocusLineNumberForDisplay(
+      this.opName,
+      this.sourceContextWindow,
+    );
   }
 
   trackByIndex(index: number, item: string): number {
@@ -332,9 +271,10 @@ export class SourceMapper implements OnDestroy, OnChanges {
     if (!this.programId || this.programId === '0' || this.sessionId === '') {
       return;
     }
+    const compilerPass = this.selectedCompilerPass;
     let hloTextCache = null;
     let hloGraphType = GRAPH_TYPE_DEFAULT;
-    switch (this.selectedCompilerPass) {
+    switch (compilerPass) {
       case CompilerPass.HLO_OPTIMIZED:
         hloTextCache = this.hloTextByProgramId;
         hloGraphType = GRAPH_TYPE_DEFAULT;
@@ -367,7 +307,13 @@ export class SourceMapper implements OnDestroy, OnChanges {
         .pipe(takeUntil(this.destroyed))
         .subscribe((data) => {
           if (data) {
-            hloTextCache.set(this.programId, data as string);
+            // TODO: b/573298011 - Consolidate HLO caches using a combined
+            // (programId, compilerPass) key and capture programId before the
+            // async request.
+            hloTextCache.set(
+                this.programId,
+                new IrText(data as string, compilerPass),
+            );
           }
         });
   }
@@ -391,7 +337,8 @@ export class SourceMapper implements OnDestroy, OnChanges {
         .pipe(takeUntil(this.destroyed))
         .subscribe((data: string) => {
           if (data) {
-            this.mosaicTextByKernelName.set(this.opName, data);
+            this.mosaicTextByKernelName.set(
+                this.opName, new IrText(data, CompilerPass.MOSAIC_ORIGINAL));
           }
         });
   }

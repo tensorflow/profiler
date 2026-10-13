@@ -5,6 +5,7 @@ package(default_visibility = ["//frontend:internal"])
 xprof_ng_module(
     name = "source_mapper",
     srcs = [
+        "ir_text.ts",
         "source_mapper.ts",
         "source_mapper_module.ts",
     ],
@@ -37,6 +38,7 @@ xprof_ng_module(
     name = "tests",
     testonly = True,
     srcs = [
+        "ir_text_test.ts",
         "source_mapper_test.ts",
     ],
     deps = [
