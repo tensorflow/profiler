@@ -39,6 +39,20 @@ TimeAxisUnit ParseTimeAxisUnit(const emscripten::val& value) {
   return TimeAxisUnit::kTime;
 }
 
+// Optional string key of a counter event declaring how its values are shown.
+// Missing or unrecognized values mean plain numbers.
+constexpr char kCounterUnit[] = "unit";
+constexpr absl::string_view kCounterUnitFraction = "fraction";
+constexpr absl::string_view kCounterUnitBytes = "bytes";
+
+CounterUnit ParseCounterUnit(const emscripten::val& value) {
+  if (!value.isString()) return CounterUnit::kNone;
+  const std::string unit = value.as<std::string>();
+  if (unit == kCounterUnitFraction) return CounterUnit::kFraction;
+  if (unit == kCounterUnitBytes) return CounterUnit::kBytes;
+  return CounterUnit::kNone;
+}
+
 // Helper function to convert emscripten::val to TraceEvent
 // Processes trace data from a JSON object.
 // The JSON object is expected to have a top-level key "traceEvents", which is
@@ -67,6 +81,9 @@ TimeAxisUnit ParseTimeAxisUnit(const emscripten::val& value) {
 //       [1000000.0, 1.0],
 //       [1000001.0, 2.0]
 //     ]
+// - "unit": Optional. How the values are displayed: "fraction" (ratios in
+//     [0, 1], shown as percentages) or "bytes". Anything else shows plain
+//     numbers.
 void ParseFlowField(const emscripten::val& event, const char* field_name,
                     const TraceEvent& ev, Phase ph,
                     std::vector<TraceEvent>& flow_events) {
@@ -119,6 +136,9 @@ void ParseAndAppend(const emscripten::val& event, ParsedTraceEvents& result,
     if (event.hasOwnProperty("name")) ev.name = event["name"].as<std::string>();
     if (event.hasOwnProperty("event_stats"))
       ev.event_stats = event["event_stats"].as<std::string>();
+    if (event.hasOwnProperty(kCounterUnit)) {
+      ev.unit = ParseCounterUnit(event[kCounterUnit]);
+    }
 
     emscripten::val entries = event["entries"];
     // Avoid converting the entry to a vector or intermediate objects to

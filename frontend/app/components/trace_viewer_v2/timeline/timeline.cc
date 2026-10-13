@@ -32,6 +32,7 @@
 #include "frontend/app/components/trace_viewer_v2/event_data.h"
 #include "frontend/app/components/trace_viewer_v2/fonts/fonts.h"
 #include "frontend/app/components/trace_viewer_v2/helper/clipboard.h"
+#include "frontend/app/components/trace_viewer_v2/helper/counter_formatter.h"
 #include "frontend/app/components/trace_viewer_v2/helper/time_formatter.h"
 #include "frontend/app/components/trace_viewer_v2/timeline/constants.h"
 #include "frontend/app/components/trace_viewer_v2/timeline/draw_helpers.h"
@@ -3473,8 +3474,9 @@ void Timeline::DrawCounterTooltip(int group_index, const CounterData& data,
     draw_list->AddCircle(ImVec2(x, y), kPointRadius, kBlackColor);
 
     // Draw tooltip for current counter point's value and timestamp
-    ImGui::SetTooltip(kCounterTooltipFormat, FormatTime(mouse_time).c_str(),
-                      val);
+    ImGui::SetTooltip(
+        "%s", FormatCounterTooltip(time_axis_unit_, mouse_time, val, data.unit)
+                  .c_str());
     if (!event_tooltip_enabled_ && hovered_event_index_ == -1 &&
         mouse_time >= 0.0) {
       hovered_group_index_ = group_index;

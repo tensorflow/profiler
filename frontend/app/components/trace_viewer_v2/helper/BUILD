@@ -36,3 +36,26 @@ cc_test(
         "@org_xprof//frontend/app/components/trace_viewer_v2/trace_helper:trace_event",
     ],
 )
+
+cc_library(
+    name = "counter_formatter",
+    srcs = ["counter_formatter.cc"],
+    hdrs = ["counter_formatter.h"],
+    deps = [
+        ":time_formatter",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
+        "@org_xprof//frontend/app/components/trace_viewer_v2/trace_helper:trace_event",
+    ],
+)
+
+cc_test(
+    name = "counter_formatter_test",
+    srcs = ["counter_formatter_test.cc"],
+    deps = [
+        ":counter_formatter",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest_main",
+        "@org_xprof//frontend/app/components/trace_viewer_v2/trace_helper:trace_event",
+    ],
+)

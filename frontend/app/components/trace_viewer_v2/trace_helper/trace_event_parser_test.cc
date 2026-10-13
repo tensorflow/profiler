@@ -5,11 +5,15 @@
 #include <string>
 #include <vector>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "frontend/app/components/trace_viewer_v2/trace_helper/trace_event.h"
 
 namespace traceviewer {
 namespace {
+
+using ::testing::ElementsAre;
+using ::testing::Field;
 
 emscripten::val ParseJson(const std::string& json_str) {
   return emscripten::val::global("JSON").call<emscripten::val>(
@@ -246,6 +250,32 @@ TEST(TraceEventParserTest, CounterEventParsesEventStats) {
   EXPECT_DOUBLE_EQ(result.counter_events[0].values[1], 75.0);
   EXPECT_EQ(result.counter_events[1].name, "Uncategorized Counter");
   EXPECT_EQ(result.counter_events[1].event_stats, "");
+}
+
+TEST(TraceEventParserTest, CounterEventUnit) {
+  emscripten::val trace_data = ParseJson(R"({
+    "traceEvents": [
+      {"ph": "C", "pid": 1, "name": "no unit", "entries": [[0, 1]]},
+      {"ph": "C", "pid": 1, "name": "fraction", "unit": "fraction",
+       "entries": [[0, 0.5]]},
+      {"ph": "C", "pid": 1, "name": "bytes", "unit": "bytes",
+       "entries": [[0, 1024]]},
+      {"ph": "C", "pid": 1, "name": "unknown", "unit": "furlongs",
+       "entries": [[0, 1]]},
+      {"ph": "C", "pid": 1, "name": "not a string", "unit": 7,
+       "entries": [[0, 1]]}
+    ]
+  })");
+
+  ParsedTraceEvents result =
+      ParseTraceEvents(trace_data, emscripten::val::null());
+
+  EXPECT_THAT(result.counter_events,
+              ElementsAre(Field(&CounterEvent::unit, CounterUnit::kNone),
+                          Field(&CounterEvent::unit, CounterUnit::kFraction),
+                          Field(&CounterEvent::unit, CounterUnit::kBytes),
+                          Field(&CounterEvent::unit, CounterUnit::kNone),
+                          Field(&CounterEvent::unit, CounterUnit::kNone)));
 }
 
 }  // namespace

@@ -61,6 +61,30 @@ TEST(TimeFormatterTest, FormatDurationOnUnitlessAxisCountsBundles) {
             TimeWithUnit("3", "bundles"));
 }
 
+TEST(TimeFormatterTest, AxisPositionLabel) {
+  EXPECT_EQ(AxisPositionLabel(TimeAxisUnit::kTime), "Time");
+  EXPECT_EQ(AxisPositionLabel(TimeAxisUnit::kUnitless), "Bundle");
+}
+
+TEST(TimeFormatterTest, FormatAxisPosition) {
+  EXPECT_EQ(FormatAxisPosition(1234.567, TimeAxisUnit::kTime),
+            TimeWithUnit("1.235", "ms"));
+  // Each unitless position spans [n, n + 1): a fractional coordinate names
+  // the position it falls in, not the nearest one.
+  EXPECT_EQ(FormatAxisPosition(1234.7, TimeAxisUnit::kUnitless), "1234");
+  EXPECT_EQ(FormatAxisPosition(1234.0, TimeAxisUnit::kUnitless), "1234");
+  EXPECT_EQ(FormatAxisPosition(0.2, TimeAxisUnit::kUnitless), "0");
+  EXPECT_EQ(FormatAxisPosition(std::numeric_limits<double>::infinity(),
+                               TimeAxisUnit::kUnitless),
+            "-");
+  EXPECT_EQ(FormatAxisPosition(-std::numeric_limits<double>::infinity(),
+                               TimeAxisUnit::kUnitless),
+            "-");
+  EXPECT_EQ(FormatAxisPosition(std::numeric_limits<double>::quiet_NaN(),
+                               TimeAxisUnit::kUnitless),
+            "-");
+}
+
 TEST(TimeFormatterTest, CalculateNiceInterval) {
   EXPECT_DOUBLE_EQ(CalculateNiceInterval(0.0), 1.0);
   EXPECT_DOUBLE_EQ(CalculateNiceInterval(-1.0), 1.0);

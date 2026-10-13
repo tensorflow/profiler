@@ -78,10 +78,25 @@ struct TraceEvent {
   bool is_async = false;
 };
 
+// How a counter's values are displayed. An XProf extension of the `C` event,
+// declared as `"unit": "fraction" | "bytes"` next to `"entries"`. The unit is a
+// rendering hint only: it never changes the stored values, so other consumers
+// of the same numbers (e.g. the Kernel Viewer's hover card) keep reading them
+// unchanged.
+enum class CounterUnit {
+  // No unit; values are shown as plain numbers.
+  kNone = 0,
+  // Values are ratios in [0, 1], rendered as percentages (0.75 -> "75%").
+  kFraction = 1,
+  // Values are byte counts.
+  kBytes = 2,
+};
+
 struct CounterEvent {
   ProcessId pid = 0;
   std::string name;
   std::string event_stats;
+  CounterUnit unit = CounterUnit::kNone;
   std::vector<Microseconds> timestamps;
   std::vector<double> values;
   double min_value = std::numeric_limits<double>::infinity();

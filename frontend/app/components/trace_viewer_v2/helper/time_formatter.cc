@@ -31,6 +31,8 @@ constexpr absl::string_view kSecondsFormat = "%.4g\xc2\xa0s";
 constexpr absl::string_view kNonBreakingSpace = "\xc2\xa0";
 constexpr absl::string_view kUnitlessSingular = "bundle";
 constexpr absl::string_view kUnitlessPlural = "bundles";
+constexpr absl::string_view kUnitlessPositionLabel = "Bundle";
+constexpr absl::string_view kTimePositionLabel = "Time";
 
 }  // namespace
 
@@ -67,6 +69,31 @@ std::string FormatDuration(Microseconds duration, TimeAxisUnit unit) {
       break;
   }
   return FormatTime(duration);
+}
+
+absl::string_view AxisPositionLabel(TimeAxisUnit unit) {
+  switch (unit) {
+    case TimeAxisUnit::kUnitless:
+      return kUnitlessPositionLabel;
+    case TimeAxisUnit::kTime:
+      break;
+  }
+  return kTimePositionLabel;
+}
+
+std::string FormatAxisPosition(Microseconds position, TimeAxisUnit unit) {
+  switch (unit) {
+    case TimeAxisUnit::kUnitless:
+      if (!std::isfinite(position)) {
+        return "-";
+      }
+      // Positions are integers and each one spans [n, n + 1), so the position
+      // under a fractional coordinate is its floor.
+      return absl::StrCat(static_cast<int64_t>(std::floor(position)));
+    case TimeAxisUnit::kTime:
+      break;
+  }
+  return FormatTime(position);
 }
 
 Microseconds MillisToMicros(double time_ms) {
