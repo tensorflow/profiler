@@ -9167,6 +9167,7 @@ TEST_F(TimelineMouseModeSelectTestSuite, FindSelectedEventsSelectsCounters) {
       {Group::Type::kCounter, "counter_group", "subtitle", 0, 0, true}};
 
   CounterData counter_data;
+  counter_data.event_stats = "percentage";
   counter_data.timestamps = {10.0, 20.0, 30.0};
   counter_data.values = {1.0, 2.0, 3.0};
   counter_data.min_value = 1.0;
@@ -9197,6 +9198,8 @@ TEST_F(TimelineMouseModeSelectTestSuite, FindSelectedEventsSelectsCounters) {
   EXPECT_FALSE(captured_payload.empty());
   EXPECT_THAT(captured_payload, ::testing::HasSubstr("counters"));
   EXPECT_THAT(captured_payload, ::testing::HasSubstr("counter_group"));
+  EXPECT_THAT(captured_payload,
+              ::testing::HasSubstr("\"series\":\"percentage\""));
 }
 
 // =============================================================================

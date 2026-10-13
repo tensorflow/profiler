@@ -213,5 +213,40 @@ TEST(TraceEventParserTest, EdgeCaseFlowInWithoutMatchingFlowOut) {
   EXPECT_EQ(result.flow_events[0].id, "unmatched_999");
 }
 
+TEST(TraceEventParserTest, CounterEventParsesEventStats) {
+  emscripten::val trace_data = ParseJson(R"({
+    "traceEvents": [
+      {
+        "ph": "C",
+        "name": "COUNT_MXU_BUSY_0",
+        "pid": 1,
+        "event_stats": "percentage",
+        "entries": [[10.0, 25.0], [20.0, 75.0]]
+      },
+      {
+        "ph": "C",
+        "name": "Uncategorized Counter",
+        "pid": 1,
+        "entries": [[10.0, 1.0], [20.0, 2.0]]
+      }
+    ]
+  })");
+
+  ParsedTraceEvents result =
+      ParseTraceEvents(trace_data, emscripten::val::null());
+
+  ASSERT_EQ(result.counter_events.size(), 2);
+  EXPECT_EQ(result.counter_events[0].name, "COUNT_MXU_BUSY_0");
+  EXPECT_EQ(result.counter_events[0].event_stats, "percentage");
+  ASSERT_EQ(result.counter_events[0].timestamps.size(), 2);
+  EXPECT_DOUBLE_EQ(result.counter_events[0].timestamps[0], 10.0);
+  EXPECT_DOUBLE_EQ(result.counter_events[0].timestamps[1], 20.0);
+  ASSERT_EQ(result.counter_events[0].values.size(), 2);
+  EXPECT_DOUBLE_EQ(result.counter_events[0].values[0], 25.0);
+  EXPECT_DOUBLE_EQ(result.counter_events[0].values[1], 75.0);
+  EXPECT_EQ(result.counter_events[1].name, "Uncategorized Counter");
+  EXPECT_EQ(result.counter_events[1].event_stats, "");
+}
+
 }  // namespace
 }  // namespace traceviewer
