@@ -470,6 +470,17 @@ export class TraceViewerContainer
     return this.eventDetailColumns.length <= 2;
   }
 
+  showMetricsTable(): boolean {
+    return this.metricsDataSource.data.length > 0;
+  }
+
+  activeMultiEventTableCount(): number {
+    let count =
+      (this.showMetricsTable() ? 1 : 0) +
+      (this.countersDataSource.data.length > 0 ? 1 : 0);
+    return count;
+  }
+
   getColumnHeader(col: string): string {
     if (this.isSingleEventTable()) {
       return '';
@@ -603,7 +614,6 @@ export class TraceViewerContainer
   @Input() set rawEvents(data: RawEventItem[] | null | undefined) {
     this.rawEventsDataSource.data = data ?? [];
   }
-  @Input() tool?: string;
   @Input() customDrawerOpen = false;
 
   get isDrawerVisible(): boolean {
@@ -656,6 +666,9 @@ export class TraceViewerContainer
   @ViewChild(MatSort) set sort(matSort: MatSort | undefined) {
     if (matSort) {
       this.selectedEventPropertiesDataSource.sort = matSort;
+      this.metricsDataSource.sort = matSort;
+      this.countersDataSource.sort = matSort;
+      this.rawEventsDataSource.sort = matSort;
     }
   }
 

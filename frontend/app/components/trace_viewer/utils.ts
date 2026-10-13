@@ -347,10 +347,9 @@ export function parseEventDetails(
  * Returns the args of an event to show in the details panel: the raw args with
  * the resolved stack trace under `STACK_TRACE_ARG_KEY`.
  */
-export function getEventDetailsArgs({
-  rawEvent,
-  stackTrace,
-}: EventDetails): {[key: string]: string} {
+export function getEventDetailsArgs({rawEvent, stackTrace}: EventDetails): {
+  [key: string]: string;
+} {
   const args = {...rawEvent.args};
   if (stackTrace !== undefined) {
     args[STACK_TRACE_ARG_KEY] = stackTrace;
