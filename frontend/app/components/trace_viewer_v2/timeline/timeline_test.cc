@@ -16444,6 +16444,86 @@ TEST_F(MockTimelineImGuiFixture,
   ImGui::End();
   ImGui::EndFrame();
 }
+
+TEST_F(RealTimelineImGuiFixture,
+       WebGpuInstancedFlameBatchesReduceImGuiVerticesInMipAndRawPaths) {
+  FlameChartTimelineData data;
+  data.groups.push_back({.type = Group::Type::kFlame,
+                         .name = "Process 1",
+                         .start_level = 0,
+                         .nesting_level = kProcessNestingLevel,
+                         .expanded = true,
+                         .has_children = true,
+                         .pid = 1});
+  data.groups.push_back({.type = Group::Type::kFlame,
+                         .name = "Thread 1",
+                         .start_level = 0,
+                         .nesting_level = 1,
+                         .expanded = true,
+                         .pid = 1});
+
+  constexpr int kNumEvents = 2000;
+  data.level_offsets = {0, kNumEvents};
+  data.level_event_indices.reserve(kNumEvents);
+  for (int i = 0; i < kNumEvents; ++i) {
+    data.level_event_indices.push_back(i);
+    data.entry_names.push_back("kernel_op");
+    data.entry_levels.push_back(0);
+    data.entry_start_times.push_back(static_cast<double>(i) * 10.0);
+    data.entry_total_times.push_back(8.0);
+    data.entry_args.push_back({});
+  }
+
+  timeline_.set_data_time_range({0.0, 20000.0});
+  timeline_.SetVisibleRange({0.0, 20000.0});
+  timeline_.SetTimelineData(std::move(data));
+  EXPECT_GT(timeline_.gpu_flame_instances_count_for_test(),
+            static_cast<size_t>(kNumEvents));
+
+  // 1. Overview (MIP level path): compare CPU fallback vs. GPU instanced mode.
+  timeline_.set_force_gpu_flame_batch_mode_for_test(false);
+  ImGui::NewFrame();
+  timeline_.Draw();
+  ImGui::Render();
+  const int cpu_overview_vtx = ImGui::GetDrawData()->TotalVtxCount;
+  const int cpu_overview_idx = ImGui::GetDrawData()->TotalIdxCount;
+  EXPECT_TRUE(timeline_.emitted_gpu_flame_batches_for_test().empty());
+
+  timeline_.set_force_gpu_flame_batch_mode_for_test(true);
+  ImGui::NewFrame();
+  timeline_.Draw();
+  ImGui::Render();
+  const int gpu_overview_vtx = ImGui::GetDrawData()->TotalVtxCount;
+  const int gpu_overview_idx = ImGui::GetDrawData()->TotalIdxCount;
+  ASSERT_EQ(timeline_.emitted_gpu_flame_batches_for_test().size(), 1u);
+  EXPECT_GT(timeline_.emitted_gpu_flame_batches_for_test()[0].instance_count,
+            0u);
+  EXPECT_LT(gpu_overview_vtx, cpu_overview_vtx);
+  EXPECT_LT(gpu_overview_idx, cpu_overview_idx);
+
+  // 2. Zoomed-in (raw event path, 100 visible events): compare CPU vs. GPU.
+  timeline_.SetVisibleRange({0.0, 1000.0});
+  timeline_.set_force_gpu_flame_batch_mode_for_test(false);
+  ImGui::NewFrame();
+  timeline_.Draw();
+  ImGui::Render();
+  const int cpu_zoomed_vtx = ImGui::GetDrawData()->TotalVtxCount;
+  const int cpu_zoomed_idx = ImGui::GetDrawData()->TotalIdxCount;
+
+  timeline_.set_force_gpu_flame_batch_mode_for_test(true);
+  ImGui::NewFrame();
+  timeline_.Draw();
+  ImGui::Render();
+  const int gpu_zoomed_vtx = ImGui::GetDrawData()->TotalVtxCount;
+  const int gpu_zoomed_idx = ImGui::GetDrawData()->TotalIdxCount;
+  ASSERT_EQ(timeline_.emitted_gpu_flame_batches_for_test().size(), 1u);
+  EXPECT_EQ(timeline_.emitted_gpu_flame_batches_for_test()[0].instance_count,
+            101u);
+  // 101 flame rectangles * 4 vertices = 404 fewer vertices and 606 fewer
+  // indices in the ImGui CPU draw list.
+  EXPECT_LE(gpu_zoomed_vtx + 400, cpu_zoomed_vtx);
+  EXPECT_LE(gpu_zoomed_idx + 600, cpu_zoomed_idx);
+}
 }  // namespace
 }  // namespace testing
 }  // namespace traceviewer

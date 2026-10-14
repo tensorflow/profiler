@@ -812,6 +812,35 @@ class Timeline {
            level_mip_pyramids_[level].raw_events_compacted;
   }
 
+  struct GpuFlameBatch {
+    uint32_t first_instance = 0;
+    uint32_t instance_count = 0;
+    double visible_start_us = 0.0;
+    float px_per_us = 0.0f;
+    float screen_x_offset = 0.0f;
+    float timeline_width = 0.0f;
+    float y_top = 0.0f;
+    float y_bottom = 0.0f;
+    float min_width_px = 1.0f;
+    float padding_right_px = 0.5f;
+    float alpha_multiplier = 1.0f;
+  };
+  void set_force_gpu_flame_batch_mode_for_test(bool enabled) {
+    force_gpu_flame_batch_mode_for_test_ = enabled;
+  }
+  const std::vector<GpuFlameBatch>& emitted_gpu_flame_batches_for_test() const {
+    return emitted_gpu_flame_batches_;
+  }
+  size_t gpu_flame_instances_count_for_test() const {
+    return gpu_flame_instances_.size();
+  }
+  void ExpandAllGroupsForTest() {
+    for (Group& group : timeline_data_.groups) {
+      group.expanded = true;
+    }
+    UpdateLevelPositions(timeline_data_);
+  }
+
  protected:
   // Virtual method to allow mocking in tests.
   virtual ImVec2 GetTextSize(absl::string_view text) const {
@@ -967,6 +996,8 @@ class Timeline {
   void DrawEventName(absl::string_view event_name, const EventRect& rect,
                      ImDrawList* absl_nonnull draw_list,
                      ImU32 text_color) const;
+  void DrawEventTextOnly(int event_index, const EventRect& rect,
+                         ImDrawList* absl_nonnull draw_list) const;
 
   void DrawCounterTooltip(int group_index, const CounterData& counter_data,
                           double px_per_time_unit_val, const ImVec2& pos,
@@ -1088,6 +1119,9 @@ class Timeline {
   void BuildLevelMipPyramids();
   void CompactTimelineDataToMipOverview();
   static void ReleaseEntryMemory(FlameChartTimelineData& d);
+  void UploadGpuFlameInstances();
+  bool HasGpuFlameInstanceBuffer() const;
+  void AddGpuFlameBatch(ImDrawList* draw_list, const GpuFlameBatch& batch);
   ImU32 GetEventColor(int event_index) const;
 
   // Private static constants.
@@ -1134,12 +1168,14 @@ class Timeline {
   struct LevelMipLevel {
     Microseconds bin_width_us = 0.0;
     std::vector<LevelMipTile> tiles;
+    uint32_t gpu_instance_offset = 0;
   };
   struct LevelMipPyramid {
     static constexpr int kNumMipLevels = 3;
     bool has_pyramid = false;
     bool raw_events_compacted = false;
     LevelMipLevel levels[kNumMipLevels];
+    uint32_t raw_gpu_instance_offset = UINT32_MAX;
 
     int SelectMipLevel(Microseconds max_bin_width_us) const {
       for (int m = kNumMipLevels - 1; m >= 0; --m) {
@@ -1191,12 +1227,23 @@ class Timeline {
                                           ProcessUtilizationMip& pmip) const;
   std::vector<ProcessUtilizationPyramid> process_utilization_pyramids_;
 
+  struct CachedGpuFlameInstance {
+    float start_hi = 0.0f;
+    float start_lo = 0.0f;
+    float duration = 0.0f;
+    uint32_t color = 0;
+  };
+  std::vector<CachedGpuFlameInstance> gpu_flame_instances_;
+  std::vector<GpuFlameBatch> emitted_gpu_flame_batches_;
+  bool force_gpu_flame_batch_mode_for_test_ = false;
+
   struct SavedFullOverview {
     FlameChartTimelineData data;
     std::vector<ImU32> entry_colors;
     uint64_t cached_trace_colors_version = std::numeric_limits<uint64_t>::max();
     std::vector<LevelMipPyramid> level_mip_pyramids;
     std::vector<ProcessUtilizationPyramid> process_utilization_pyramids;
+    std::vector<CachedGpuFlameInstance> gpu_flame_instances;
     TimeRange fetched_data_time_range = TimeRange::Zero();
   };
   std::optional<SavedFullOverview> saved_full_overview_;

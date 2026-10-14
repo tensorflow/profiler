@@ -126,6 +126,7 @@ wasm_cc_library(
     name = "imgui_webgpu_backend",
     srcs = ["imgui_webgpu_backend.cc"],
     hdrs = ["imgui_webgpu_backend.h"],
+    visibility = ["@org_xprof//frontend/app/components/trace_viewer_v2:__subpackages__"],
     deps = [
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
