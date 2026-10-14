@@ -82,9 +82,12 @@ std::vector<int> FindClosestEventsByName(const FlameChartTimelineData& data,
 
 EventDependencies ResolveEventDependencies(
     const FlameChartTimelineData& data, int selected_event_index,
-    absl::Span<const std::string> operand_names,
-    absl::Span<const std::string> consumer_names) {
-  EventDependencies dependencies = {.event_index = selected_event_index};
+    std::vector<std::string> operand_names,
+    std::vector<std::string> consumer_names) {
+  EventDependencies dependencies = {
+      .event_index = selected_event_index,
+      .operand_names = std::move(operand_names),
+      .consumer_names = std::move(consumer_names)};
   if (selected_event_index < 0 ||
       selected_event_index >= static_cast<int>(data.entry_levels.size()) ||
       selected_event_index >= static_cast<int>(data.entry_start_times.size())) {
@@ -99,12 +102,12 @@ EventDependencies ResolveEventDependencies(
   const int end_level = group->start_level + group->level_count;
   const Microseconds start_time = data.entry_start_times[selected_event_index];
   // An op runs after its operands and before its consumers.
-  dependencies.producer_indices =
-      FindClosestEventsByName(data, group->start_level, end_level,
-                              operand_names, start_time, /*before=*/true);
-  dependencies.consumer_indices =
-      FindClosestEventsByName(data, group->start_level, end_level,
-                              consumer_names, start_time, /*before=*/false);
+  dependencies.producer_indices = FindClosestEventsByName(
+      data, group->start_level, end_level, dependencies.operand_names,
+      start_time, /*before=*/true);
+  dependencies.consumer_indices = FindClosestEventsByName(
+      data, group->start_level, end_level, dependencies.consumer_names,
+      start_time, /*before=*/false);
   return dependencies;
 }
 

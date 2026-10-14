@@ -4,16 +4,16 @@
 #include <string>
 #include <vector>
 
-#include "absl/types/span.h"
-
 namespace traceviewer {
 
 struct FlameChartTimelineData;
 
-// The events that the HLO operands and consumers of the event at `event_index`
-// resolved to.
+// The HLO operands and consumers of the event at `event_index`, and the events
+// they resolved to.
 struct EventDependencies {
   int event_index = -1;
+  std::vector<std::string> operand_names;
+  std::vector<std::string> consumer_names;
   std::vector<int> producer_indices;
   std::vector<int> consumer_indices;
 };
@@ -22,7 +22,8 @@ struct EventDependencies {
 // `selected_event_index` to events with those names on the same track. An
 // operand resolves to the closest such event that starts before the selected
 // event, and a consumer to the closest one that starts after it. Nothing is
-// resolved if `selected_event_index` is out of range.
+// resolved if `selected_event_index` is out of range. The names are kept in
+// the result, so that they can be resolved again in new timeline data.
 //
 // The names come from the HLO graph, which is the source of truth for which
 // ops are the operands and users of an op (the graph viewer's `adj_nodes`
@@ -35,8 +36,8 @@ struct EventDependencies {
 //   another module or step is closer.
 EventDependencies ResolveEventDependencies(
     const FlameChartTimelineData& data, int selected_event_index,
-    absl::Span<const std::string> operand_names,
-    absl::Span<const std::string> consumer_names);
+    std::vector<std::string> operand_names,
+    std::vector<std::string> consumer_names);
 
 }  // namespace traceviewer
 

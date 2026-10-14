@@ -121,6 +121,7 @@ cc_test(
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:span",
         "@com_google_googletest//:gtest_main",
+        "@org_xprof//frontend/app/components/trace_viewer_v2:event_data",
         "@org_xprof//frontend/app/components/trace_viewer_v2/color:colors",
         "@org_xprof//frontend/app/components/trace_viewer_v2/trace_helper:trace_event",
     ],

@@ -727,6 +727,8 @@ void Timeline::UpdateTimelineData(
                        ? timeline_data_.entry_total_times[selected_event_index_]
                        : 0.0;
   }
+  const bool had_selected_event_dependencies =
+      had_selected_event && dependencies_.event_index == selected_event_index_;
 
   if ((stash_full_overview_on_next_update_ || is_full_overview_data_) &&
       !saved_full_overview_.has_value() &&
@@ -753,8 +755,9 @@ void Timeline::UpdateTimelineData(
   // layout recalculations before saving the newly arrived timeline_data.
   UpdateLevelPositions(data);
   timeline_data_ = std::move(data);
-  // Resolved event indices do not apply to the new data.
-  dependencies_ = {};
+  // Resolved event indices do not apply to the new data. The names are
+  // resolved again below if the same op stays selected.
+  EventDependencies old_dependencies = std::exchange(dependencies_, {});
   RebuildEntryColors();
   BuildLevelMipPyramids();
 
@@ -901,6 +904,19 @@ void Timeline::UpdateTimelineData(
   }
 
   CompactTimelineDataToMipOverview();
+
+  // Resolves the dependencies again if the same op is still selected, unless a
+  // selection handler already set them for the new selection during
+  // `ZoomEvent`. This runs after the compaction above, so the resolved event
+  // indices refer to the events that are kept.
+  if (had_selected_event_dependencies && dependencies_.event_index == -1 &&
+      selected_event_index_ >= 0 &&
+      selected_event_index_ <
+          static_cast<int>(timeline_data_.entry_names.size()) &&
+      timeline_data_.entry_names[selected_event_index_] == selected_name) {
+    SetSelectedEventDependencies(std::move(old_dependencies.operand_names),
+                                 std::move(old_dependencies.consumer_names));
+  }
 
   if (is_incremental_loading_) {
     should_restore_scroll_ = true;
@@ -2370,11 +2386,12 @@ void Timeline::EmitEventSelected(int event_index) {
 }
 
 void Timeline::SetSelectedEventDependencies(
-    absl::Span<const std::string> operand_names,
-    absl::Span<const std::string> consumer_names) {
+    std::vector<std::string> operand_names,
+    std::vector<std::string> consumer_names) {
   if (!hlo_dependency_arrows_enabled_) return;
   dependencies_ = ResolveEventDependencies(
-      timeline_data_, selected_event_index_, operand_names, consumer_names);
+      timeline_data_, selected_event_index_, std::move(operand_names),
+      std::move(consumer_names));
 }
 
 void Timeline::EmitEventHovered(int event_index, float mouse_x, float mouse_y) {

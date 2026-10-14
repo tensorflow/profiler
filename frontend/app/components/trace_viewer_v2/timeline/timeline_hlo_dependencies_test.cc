@@ -12,6 +12,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 #include "frontend/app/components/trace_viewer_v2/color/colors.h"
+#include "frontend/app/components/trace_viewer_v2/event_data.h"
 #include "frontend/app/components/trace_viewer_v2/timeline/constants.h"
 #include "frontend/app/components/trace_viewer_v2/timeline/timeline.h"
 #include "frontend/app/components/trace_viewer_v2/trace_helper/trace_event.h"
@@ -364,7 +365,88 @@ TEST(TimelineTest, SelectedEventDependenciesAreHiddenAfterSelectionChange) {
   EXPECT_THAT(timeline.consumer_event_indices(), IsEmpty());
 }
 
-TEST(TimelineTest, SelectedEventDependenciesAreResetBySetTimelineData) {
+TEST(TimelineTest, SelectedEventDependenciesAreResolvedAgainBySetTimelineData) {
+  ColorPalette palette = ColorPalette::Default();
+  Timeline timeline(palette);
+  timeline.set_hlo_dependency_arrows_enabled(true);
+  // before:  operand   selected   consumer             (indices 0, 1, 2)
+  // after:   earlier   operand    selected   consumer  (indices 0, 1, 2, 3)
+  timeline.SetTimelineData(MakeDependencyTestData({
+      {.name = "operand", .start = 10.0, .dur = 10.0, .level = 0, .id = 1},
+      {.name = "selected", .start = 40.0, .dur = 10.0, .level = 0, .id = 2},
+      {.name = "consumer", .start = 60.0, .dur = 10.0, .level = 0, .id = 3},
+  }));
+  timeline.set_selected_event_index_for_test(1);
+  timeline.SetSelectedEventDependencies({"operand"}, {"consumer"});
+
+  // The new data has an earlier event, which shifts all event indices.
+  timeline.SetTimelineData(MakeDependencyTestData({
+      {.name = "earlier", .start = 0.0, .dur = 5.0, .level = 0, .id = 4},
+      {.name = "operand", .start = 10.0, .dur = 10.0, .level = 0, .id = 1},
+      {.name = "selected", .start = 40.0, .dur = 10.0, .level = 0, .id = 2},
+      {.name = "consumer", .start = 60.0, .dur = 10.0, .level = 0, .id = 3},
+  }));
+
+  EXPECT_EQ(timeline.selected_event_index(), 2);
+  EXPECT_THAT(timeline.producer_event_indices(), ElementsAre(1));
+  EXPECT_THAT(timeline.consumer_event_indices(), ElementsAre(3));
+}
+
+TEST(TimelineTest, SelectedEventDependenciesPickUpEventsLoadedByRefetch) {
+  ColorPalette palette = ColorPalette::Default();
+  Timeline timeline(palette);
+  timeline.set_hlo_dependency_arrows_enabled(true);
+  // before:  operand             selected
+  // after:   operand   operand   selected   consumer
+  //                    ^ closer now         ^ new
+  timeline.SetTimelineData(MakeDependencyTestData({
+      {.name = "operand", .start = 0.0, .dur = 10.0, .level = 0, .id = 1},
+      {.name = "selected", .start = 40.0, .dur = 10.0, .level = 0, .id = 2},
+  }));
+  timeline.set_selected_event_index_for_test(1);
+  timeline.SetSelectedEventDependencies({"operand"}, {"consumer"});
+
+  // The refetched data has a closer `operand` and a `consumer` that were not
+  // loaded before, e.g. after zooming in.
+  timeline.SetTimelineData(MakeDependencyTestData({
+      {.name = "operand", .start = 0.0, .dur = 10.0, .level = 0, .id = 1},
+      {.name = "operand", .start = 20.0, .dur = 10.0, .level = 0, .id = 3},
+      {.name = "selected", .start = 40.0, .dur = 10.0, .level = 0, .id = 2},
+      {.name = "consumer", .start = 60.0, .dur = 10.0, .level = 0, .id = 4},
+  }));
+
+  EXPECT_EQ(timeline.selected_event_index(), 2);
+  EXPECT_THAT(timeline.producer_event_indices(), ElementsAre(1));
+  EXPECT_THAT(timeline.consumer_event_indices(), ElementsAre(3));
+}
+
+TEST(TimelineTest, SelectedEventDependenciesDropEventsMissingAfterRefetch) {
+  ColorPalette palette = ColorPalette::Default();
+  Timeline timeline(palette);
+  timeline.set_hlo_dependency_arrows_enabled(true);
+  // before:  operand   selected   consumer
+  // after:             selected   consumer
+  timeline.SetTimelineData(MakeDependencyTestData({
+      {.name = "operand", .start = 0.0, .dur = 10.0, .level = 0, .id = 1},
+      {.name = "selected", .start = 40.0, .dur = 10.0, .level = 0, .id = 2},
+      {.name = "consumer", .start = 60.0, .dur = 10.0, .level = 0, .id = 3},
+  }));
+  timeline.set_selected_event_index_for_test(1);
+  timeline.SetSelectedEventDependencies({"operand"}, {"consumer"});
+
+  // The refetched data no longer has the `operand`, e.g. at a coarser
+  // resolution.
+  timeline.SetTimelineData(MakeDependencyTestData({
+      {.name = "selected", .start = 40.0, .dur = 10.0, .level = 0, .id = 2},
+      {.name = "consumer", .start = 60.0, .dur = 10.0, .level = 0, .id = 3},
+  }));
+
+  EXPECT_EQ(timeline.selected_event_index(), 0);
+  EXPECT_THAT(timeline.producer_event_indices(), IsEmpty());
+  EXPECT_THAT(timeline.consumer_event_indices(), ElementsAre(1));
+}
+
+TEST(TimelineTest, SelectedEventDependenciesSurviveRepeatedRefetches) {
   ColorPalette palette = ColorPalette::Default();
   Timeline timeline(palette);
   timeline.set_hlo_dependency_arrows_enabled(true);
@@ -378,10 +460,115 @@ TEST(TimelineTest, SelectedEventDependenciesAreResetBySetTimelineData) {
   timeline.SetSelectedEventDependencies({"operand"}, {"consumer"});
 
   timeline.SetTimelineData(data);
+  timeline.SetTimelineData(data);
 
   EXPECT_EQ(timeline.selected_event_index(), 1);
+  EXPECT_THAT(timeline.producer_event_indices(), ElementsAre(0));
+  EXPECT_THAT(timeline.consumer_event_indices(), ElementsAre(2));
+}
+
+TEST(TimelineTest,
+     SelectedEventDependenciesOfPreviousSelectionAreNotResolvedAgain) {
+  ColorPalette palette = ColorPalette::Default();
+  Timeline timeline(palette);
+  timeline.set_hlo_dependency_arrows_enabled(true);
+  const FlameChartTimelineData data = MakeDependencyTestData({
+      {.name = "operand", .start = 0.0, .dur = 10.0, .level = 0, .id = 1},
+      {.name = "selected", .start = 40.0, .dur = 10.0, .level = 0, .id = 2},
+      {.name = "consumer", .start = 60.0, .dur = 10.0, .level = 0, .id = 3},
+  });
+  timeline.SetTimelineData(data);
+  timeline.set_selected_event_index_for_test(1);
+  timeline.SetSelectedEventDependencies({"operand"}, {"consumer"});
+  timeline.set_selected_event_index_for_test(2);
+
+  timeline.SetTimelineData(data);
+
+  EXPECT_EQ(timeline.selected_event_index(), 2);
   EXPECT_THAT(timeline.producer_event_indices(), IsEmpty());
   EXPECT_THAT(timeline.consumer_event_indices(), IsEmpty());
+}
+
+TEST(TimelineTest, SelectedEventDependenciesAreNotResolvedAgainForAnotherOp) {
+  ColorPalette palette = ColorPalette::Default();
+  Timeline timeline(palette);
+  timeline.set_hlo_dependency_arrows_enabled(true);
+  const FlameChartTimelineData data = MakeDependencyTestData({
+      {.name = "operand", .start = 0.0, .dur = 10.0, .level = 0, .id = 1},
+      {.name = "selected", .start = 40.0, .dur = 10.0, .level = 0, .id = 2},
+      {.name = "consumer", .start = 60.0, .dur = 10.0, .level = 0, .id = 3},
+  });
+  timeline.SetTimelineData(data);
+  timeline.set_selected_event_index_for_test(1);
+  timeline.SetSelectedEventDependencies({"operand"}, {"consumer"});
+  // Makes `SetTimelineData` select the active search result instead.
+  timeline.set_search_results_for_test({{.event_id = 3, .name = "consumer"}});
+  timeline.set_current_search_result_index_for_test(0);
+
+  timeline.SetTimelineData(data);
+
+  EXPECT_EQ(timeline.selected_event_index(), 2);
+  EXPECT_THAT(timeline.producer_event_indices(), IsEmpty());
+  EXPECT_THAT(timeline.consumer_event_indices(), IsEmpty());
+}
+
+TEST(TimelineTest,
+     SelectedEventDependenciesAreClearedWhenSelectedEventIsNotRefetched) {
+  ColorPalette palette = ColorPalette::Default();
+  Timeline timeline(palette);
+  timeline.set_hlo_dependency_arrows_enabled(true);
+  // before:  operand   selected   consumer
+  // after:   operand              consumer
+  timeline.SetTimelineData(MakeDependencyTestData({
+      {.name = "operand", .start = 0.0, .dur = 10.0, .level = 0, .id = 1},
+      {.name = "selected", .start = 40.0, .dur = 10.0, .level = 0, .id = 2},
+      {.name = "consumer", .start = 60.0, .dur = 10.0, .level = 0, .id = 3},
+  }));
+  timeline.set_selected_event_index_for_test(1);
+  timeline.SetSelectedEventDependencies({"operand"}, {"consumer"});
+
+  timeline.SetTimelineData(MakeDependencyTestData({
+      {.name = "operand", .start = 0.0, .dur = 10.0, .level = 0, .id = 1},
+      {.name = "consumer", .start = 60.0, .dur = 10.0, .level = 0, .id = 3},
+  }));
+
+  EXPECT_EQ(timeline.selected_event_index(), -1);
+  EXPECT_THAT(timeline.producer_event_indices(), IsEmpty());
+  EXPECT_THAT(timeline.consumer_event_indices(), IsEmpty());
+}
+
+TEST(TimelineTest, SelectedEventDependenciesSetDuringRefetchAreKept) {
+  ColorPalette palette = ColorPalette::Default();
+  Timeline timeline(palette);
+  timeline.set_hlo_dependency_arrows_enabled(true);
+  // level 0:  operand   selected   new_operand   selected
+  //                     ^ before                 ^ navigated to in the refetch
+  const FlameChartTimelineData data = MakeDependencyTestData({
+      {.name = "operand", .start = 0.0, .dur = 10.0, .level = 0, .id = 1},
+      {.name = "selected", .start = 20.0, .dur = 10.0, .level = 0, .id = 2},
+      {.name = "new_operand", .start = 40.0, .dur = 10.0, .level = 0, .id = 3},
+      {.name = "selected", .start = 60.0, .dur = 10.0, .level = 0, .id = 4},
+  });
+  timeline.SetTimelineData(data);
+  timeline.set_data_time_range({0.0, 100.0});
+  timeline.set_selected_event_index_for_test(1);
+  timeline.SetSelectedEventDependencies({"operand"}, {});
+  // Makes `SetTimelineData` navigate to another event with the same name,
+  // whose selection handler sets new dependencies.
+  timeline.set_search_results_for_test({{.event_id = 4, .name = "selected"}});
+  timeline.set_current_search_result_index_for_test(0);
+  timeline.set_pending_navigation_event_id_for_test(4);
+  timeline.set_event_callback(
+      [&timeline](absl::string_view type, const EventData&) {
+        if (type == kEventSelected) {
+          timeline.SetSelectedEventDependencies({"new_operand"}, {});
+        }
+      });
+
+  timeline.SetTimelineData(data);
+
+  EXPECT_EQ(timeline.selected_event_index(), 3);
+  EXPECT_THAT(timeline.producer_event_indices(), ElementsAre(2));
 }
 
 }  // namespace

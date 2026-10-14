@@ -593,11 +593,11 @@ class Timeline {
 
   // Resolves the HLO operands and consumers of the selected event to events
   // on its track, see ResolveEventDependencies() in
-  // timeline_hlo_dependencies.h. Does nothing unless HLO dependency arrows are
-  // enabled.
-  void SetSelectedEventDependencies(
-      absl::Span<const std::string> operand_names,
-      absl::Span<const std::string> consumer_names);
+  // timeline_hlo_dependencies.h. The names are resolved again when new
+  // timeline data is set while the same op stays selected. Does nothing unless
+  // HLO dependency arrows are enabled.
+  void SetSelectedEventDependencies(std::vector<std::string> operand_names,
+                                    std::vector<std::string> consumer_names);
 
   // The events that the operands and consumers of the selected event resolved
   // to. Empty if they were set while another event was selected.
