@@ -1,4 +1,4 @@
-import {Location} from '@angular/common';
+import {CommonModule, Location} from '@angular/common';
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
@@ -8,12 +8,19 @@ import {
   inject,
   OnDestroy,
   OnInit,
-  ViewChild,
+  viewChild,
 } from '@angular/core';
+import {MatButtonModule} from '@angular/material/button';
+import {MatIconModule} from '@angular/material/icon';
+import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
+import {MatTooltipModule} from '@angular/material/tooltip';
 import {ActivatedRoute, Params} from '@angular/router';
 import {Store} from '@ngrx/store';
 import {DEFAULT_HOST} from 'org_xprof/frontend/app/common/constants/constants';
+import {KernelEventTooltip} from 'org_xprof/frontend/app/components/static_kernel_viewer/kernel_event_tooltip';
+import {KernelMinimap} from 'org_xprof/frontend/app/components/static_kernel_viewer/kernel_minimap';
 import {KernelSelectionPanel} from 'org_xprof/frontend/app/components/static_kernel_viewer/kernel_selection_panel';
+import {TraceViewerContainer} from 'org_xprof/frontend/app/components/trace_viewer_container/trace_viewer_container';
 import {
   LOADING_STATUS_UPDATE_EVENT_NAME,
   shutdownTraceViewerV2,
@@ -582,8 +589,19 @@ function writeRailPinned(pinned: boolean) {
  * can be pinned open. Kernels open in tabs above the timeline.
  */
 @Component({
-  changeDetection: ChangeDetectionStrategy.Default,
-  standalone: false,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    CommonModule,
+    KernelEventTooltip,
+    KernelMinimap,
+    KernelSelectionPanel,
+    MatButtonModule,
+    MatIconModule,
+    MatProgressSpinnerModule,
+    MatTooltipModule,
+    TraceViewerContainer,
+  ],
   selector: 'static-kernel-viewer',
   templateUrl: './static_kernel_viewer.ng.html',
   styleUrls: ['./static_kernel_viewer.scss'],
@@ -631,8 +649,8 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
   traceViewerModule: TraceViewerV2Module | null = null;
   isSelectionPanelOpen = false;
 
-  @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
-  @ViewChild(KernelSelectionPanel) selectionPanel?: KernelSelectionPanel;
+  readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
+  readonly selectionPanel = viewChild(KernelSelectionPanel);
 
   private readonly collapsedModules = new Set<string>();
   private listKey = '';
@@ -709,6 +727,7 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
       .pipe(takeUntil(this.destroyed))
       .subscribe(([params, queryParams]: [Params, Params]) => {
         this.onRouteChange(params, queryParams);
+        this.changeDetectorRef.markForCheck();
       });
   }
 
@@ -842,7 +861,11 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
         activeIndex + 1 + this.backgroundTabCount,
         this.tabs.length,
       );
-      this.tabs.splice(index, 0, tab);
+      this.tabs = [
+        ...this.tabs.slice(0, index),
+        tab,
+        ...this.tabs.slice(index),
+      ];
       if (background) {
         this.backgroundTabCount++;
       }
@@ -875,7 +898,7 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
     this.hideCard();
-    this.tabs.splice(index, 1);
+    this.tabs = this.tabs.filter((_, i) => i !== index);
     if (tab === this.activeTab) {
       this.activeTab = undefined;
       this.activateTab(this.tabs[index] ?? this.tabs[index - 1]);
@@ -1100,8 +1123,8 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
   focusSearch(): void {
     this.hideCard();
     this.setRailPeeking(true, 0);
-    this.searchInput?.nativeElement.focus();
-    this.searchInput?.nativeElement.select();
+    this.searchInput()?.nativeElement.focus();
+    this.searchInput()?.nativeElement.select();
   }
 
   /** Copies the current browser URL to the clipboard. */
@@ -1241,7 +1264,7 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
   }
   /** Loads the trace of `entry` into the timeline. */
   private showEntry(entry: KernelEntry): void {
-    this.selectionPanel?.close();
+    this.selectionPanel()?.close();
     this.collapsedModules.delete(entry.module);
     this.updateUrlQueryParams();
     const queryParamsMap = new Map<string, string>([
@@ -1396,7 +1419,7 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
 
   private dismissRail(): void {
     this.isFocusInRail = false;
-    this.searchInput?.nativeElement.blur();
+    this.searchInput()?.nativeElement.blur();
     this.clearFilter();
     clearTimeout(this.railTimer);
     this.isRailPeeking = false;
@@ -1530,7 +1553,7 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
       this.focusSearch();
       this.changeDetectorRef.markForCheck();
     } else if (event.key === 'Escape' && this.isSelectionPanelOpen) {
-      this.selectionPanel?.close();
+      this.selectionPanel()?.close();
       this.changeDetectorRef.markForCheck();
     }
   }

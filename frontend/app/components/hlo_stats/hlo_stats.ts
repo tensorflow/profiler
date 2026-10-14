@@ -1,5 +1,7 @@
+import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   ElementRef,
   inject,
@@ -7,9 +9,16 @@ import {
   NgZone,
   OnDestroy,
   Renderer2,
-  ViewChild,
+  viewChild,
 } from '@angular/core';
-import {FormControl} from '@angular/forms';
+import {FormControl, FormsModule, ReactiveFormsModule} from '@angular/forms';
+import {MatDividerModule} from '@angular/material/divider';
+import {MatExpansionModule} from '@angular/material/expansion';
+import {MatFormFieldModule} from '@angular/material/form-field';
+import {MatIconModule} from '@angular/material/icon';
+import {MatSelectModule} from '@angular/material/select';
+import {MatSlideToggleModule} from '@angular/material/slide-toggle';
+import {MatTooltipModule} from '@angular/material/tooltip';
 import {ActivatedRoute, Params} from '@angular/router';
 import {Store} from '@ngrx/store';
 import {Throbber} from 'org_xprof/frontend/app/common/classes/throbber';
@@ -30,6 +39,11 @@ import {
   DefaultDataProvider,
   ReplicaGroupDataProvider,
 } from 'org_xprof/frontend/app/components/chart/default_data_provider';
+import {CategoryFilter} from 'org_xprof/frontend/app/components/controls/category_filter/category_filter';
+import {ExportAsCsv} from 'org_xprof/frontend/app/components/controls/export_as_csv/export_as_csv';
+import {StringFilter} from 'org_xprof/frontend/app/components/controls/string_filter/string_filter';
+import {FlopRateChart} from 'org_xprof/frontend/app/components/framework_op_stats/flop_rate_chart/flop_rate_chart';
+import {StackTraceSnippet} from 'org_xprof/frontend/app/components/stack_trace_snippet/stack_trace_snippet';
 import {
   DATA_SERVICE_INTERFACE_TOKEN,
   DataServiceV2Interface,
@@ -60,8 +74,26 @@ const VDD_ENERGY_ID = 'vdd_energy';
 
 /** A Hlo Stats component. */
 @Component({
-  changeDetection: ChangeDetectionStrategy.Default,
-  standalone: false,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    Chart,
+    CommonModule,
+    FlopRateChart,
+    CategoryFilter,
+    ExportAsCsv,
+    StringFilter,
+    MatDividerModule,
+    MatSelectModule,
+    MatExpansionModule,
+    MatTooltipModule,
+    MatFormFieldModule,
+    FormsModule,
+    ReactiveFormsModule,
+    MatIconModule,
+    MatSlideToggleModule,
+    StackTraceSnippet,
+  ],
   selector: 'hlo-stats',
   templateUrl: './hlo_stats.ng.html',
   styleUrls: ['./hlo_stats.scss'],
@@ -78,6 +110,7 @@ export class HloStats extends Dashboard implements OnDestroy {
   private readonly diffService = inject(BaseDiffService);
   private readonly zone = inject(NgZone);
   /** Handles on-destroy Subject, used to unsubscribe. */
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyed = new ReplaySubject<void>(1);
   private isDestroyed = false;
   private readonly throbber = new Throbber(this.tool);
@@ -157,18 +190,12 @@ export class HloStats extends Dashboard implements OnDestroy {
   tableColumns: Array<{index: number; label: string}> = [];
   hasSparseCoreData = false;
 
-  // We add a listener to `chart` and manipulate multiple elements of
-  // `chartElement`. Knowing that `Chart.elementRef` is private, we use
-  // `ViewChild` twice to access both. See `addSourceInfoClickListener` for
-  // more details.
-  @ViewChild('table', {read: Chart, static: false})
-  chartRef: Chart | undefined = undefined;
-  @ViewChild('table', {read: ElementRef, static: false})
-  chartElementRef: ElementRef | undefined = undefined;
-  @ViewChild('sparseCoreTable', {read: Chart, static: false})
-  sparseCoreChartRef: Chart | undefined = undefined;
-  @ViewChild('sparseCoreTable', {read: ElementRef, static: false})
-  sparseCoreChartElementRef: ElementRef | undefined = undefined;
+  readonly chartRef = viewChild('table', {read: Chart});
+  readonly chartElementRef = viewChild('table', {read: ElementRef});
+  readonly sparseCoreChartRef = viewChild('sparseCoreTable', {read: Chart});
+  readonly sparseCoreChartElementRef = viewChild('sparseCoreTable', {
+    read: ElementRef,
+  });
   private readonly renderer: Renderer2 = inject(Renderer2);
   sourceFileAndLineNumber = '';
   stackTrace = '';
@@ -204,11 +231,15 @@ export class HloStats extends Dashboard implements OnDestroy {
         if (hasChanged) {
           this.update();
         }
+        this.cdr.markForCheck();
       });
     this.store.dispatch(setCurrentToolStateAction({currentTool: this.tool}));
-    this.tableColumnsControl.valueChanges.subscribe((newValue) => {
-      this.updateTableColumns(newValue || []);
-    });
+    this.tableColumnsControl.valueChanges
+      .pipe(takeUntil(this.destroyed))
+      .subscribe((newValue) => {
+        this.updateTableColumns(newValue || []);
+        this.cdr.markForCheck();
+      });
 
     // We don't need the source code service to be persistently available.
     // We temporarily use the service to check if it is available and show
@@ -229,6 +260,7 @@ export class HloStats extends Dashboard implements OnDestroy {
             this.sparseCoreChartElementRef,
           );
         }
+        this.cdr.markForCheck();
       });
   }
 
@@ -262,6 +294,7 @@ export class HloStats extends Dashboard implements OnDestroy {
             this.data = this.mergeTables(active, baseline);
             this.process(this.data);
             this.onCheckInputParams();
+            this.cdr.markForCheck();
           });
         },
       );
@@ -643,11 +676,11 @@ export class HloStats extends Dashboard implements OnDestroy {
    * cells with class `source-info-cell`.
    */
   private addSourceInfoClickListener(
-    chartRef: Chart | undefined,
-    chartElementRef: ElementRef | undefined,
+    chartRef: () => Chart | undefined,
+    chartElementRef: () => ElementRef | undefined,
   ) {
-    const chart = chartRef?.chart;
-    const chartElement = chartElementRef?.nativeElement;
+    const chart = chartRef()?.chart;
+    const chartElement = chartElementRef()?.nativeElement;
     if (!chart || !chartElement) {
       // TODO: b/429036372 - Using setTimeout to detect change is inefficient.
       setTimeout(() => {
@@ -663,6 +696,7 @@ export class HloStats extends Dashboard implements OnDestroy {
             this.zone.run(() => {
               this.sourceFileAndLineNumber = target.textContent || '';
               this.stackTrace = target.getAttribute('title') || '';
+              this.cdr.markForCheck();
             });
           }
         }
@@ -698,17 +732,17 @@ export class HloStats extends Dashboard implements OnDestroy {
 
     let tensorCoreBaselineData: SimpleDataTable | null = null;
     if (this.baselineData && this.baselineData.cols && this.baselineData.rows) {
-      const baselineCoreTypeIdx =
-        this.baselineData.cols.findIndex((col) => col.id === CORE_TYPE_ID);
+      const baselineCoreTypeIdx = this.baselineData.cols.findIndex(
+        (col) => col.id === CORE_TYPE_ID,
+      );
       let tensorCoreBaselineRows = this.baselineData.rows;
       if (baselineCoreTypeIdx !== -1) {
-        tensorCoreBaselineRows =
-          this.baselineData.rows.filter(
-            (row) =>
-              row.c &&
-              row.c[baselineCoreTypeIdx] &&
-              row.c[baselineCoreTypeIdx]!.v !== SPARSE_CORE_VALUE,
-          );
+        tensorCoreBaselineRows = this.baselineData.rows.filter(
+          (row) =>
+            row.c &&
+            row.c[baselineCoreTypeIdx] &&
+            row.c[baselineCoreTypeIdx]!.v !== SPARSE_CORE_VALUE,
+        );
       }
       tensorCoreBaselineData = {
         ...this.baselineData,
@@ -779,6 +813,7 @@ export class HloStats extends Dashboard implements OnDestroy {
 
   processTableColumns(dataTable: google.visualization.DataTable) {
     this.tableColumns = [];
+    const tableColumns: Array<{index: number; label: string}> = [];
     const numColumns = dataTable.getNumberOfColumns();
     const defaultVisibleColumns = [];
     const defaultVisibleColumnIds = new Set([
@@ -802,7 +837,7 @@ export class HloStats extends Dashboard implements OnDestroy {
     for (let i = 0; i < numColumns; i++) {
       const colId = dataTable.getColumnId(i);
       if (colId === CORE_TYPE_ID) continue;
-      this.tableColumns.push({
+      tableColumns.push({
         index: i,
         label: dataTable.getColumnLabel(i),
       });
@@ -810,6 +845,7 @@ export class HloStats extends Dashboard implements OnDestroy {
         defaultVisibleColumns.push(i);
       }
     }
+    this.tableColumns = tableColumns;
     if (this.tableColumnsControl?.value?.length === 0) {
       this.tableColumnsControl.setValue(defaultVisibleColumns);
     }
@@ -857,24 +893,23 @@ export class HloStats extends Dashboard implements OnDestroy {
 
     const filtersForRemat = [{column: hloRematIndex, value: 'Yes'}];
 
-    this.dataInfoCategoryChart.customChartDataProcessor =
-      this.tensorCoreBaselineData
-        ? new CategoryDiffTableDataProcessor(
-            this.tensorCoreBaselineData,
-            [],
-            opCategoryIndex,
-            selfTimeIndex,
-          )
-        : new CategoryTableDataProcessor([], opCategoryIndex, selfTimeIndex);
-    this.dataInfoOpChart.customChartDataProcessor =
-      this.tensorCoreBaselineData
-        ? new CategoryDiffTableDataProcessor(
-            this.tensorCoreBaselineData,
-            [],
-            hloOpNameIndex,
-            selfTimeIndex,
-          )
-        : new CategoryTableDataProcessor([], hloOpNameIndex, selfTimeIndex);
+    this.dataInfoCategoryChart.customChartDataProcessor = this
+      .tensorCoreBaselineData
+      ? new CategoryDiffTableDataProcessor(
+          this.tensorCoreBaselineData,
+          [],
+          opCategoryIndex,
+          selfTimeIndex,
+        )
+      : new CategoryTableDataProcessor([], opCategoryIndex, selfTimeIndex);
+    this.dataInfoOpChart.customChartDataProcessor = this.tensorCoreBaselineData
+      ? new CategoryDiffTableDataProcessor(
+          this.tensorCoreBaselineData,
+          [],
+          hloOpNameIndex,
+          selfTimeIndex,
+        )
+      : new CategoryTableDataProcessor([], hloOpNameIndex, selfTimeIndex);
     this.dataInfoRematerializationChart.customChartDataProcessor =
       new CategoryTableDataProcessor([], hloRematIndex, selfTimeIndex, false);
     this.dataInfoRematerializationCategoryChart.customChartDataProcessor =

@@ -1,13 +1,12 @@
-import {CommonModule} from '@angular/common';
+import {NgIf} from '@angular/common';
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
-  EventEmitter,
   inject,
-  Input,
-  NgModule,
+  input,
   OnDestroy,
-  Output,
+  output,
 } from '@angular/core';
 import {ActivatedRoute, Params} from '@angular/router';
 import {Store} from '@ngrx/store';
@@ -23,11 +22,11 @@ import {
   parseDiagnosticsDataTable,
   setLoadingState,
 } from 'org_xprof/frontend/app/common/utils/utils';
-import {DiagnosticsViewModule} from 'org_xprof/frontend/app/components/diagnostics_view/diagnostics_view_module';
-import {InferenceLatencyChartModule} from 'org_xprof/frontend/app/components/overview_page/inference_latency_chart/inference_latency_chart_module';
-import {PerformanceSummaryModule} from 'org_xprof/frontend/app/components/overview_page/performance_summary/performance_summary_module';
-import {RunEnvironmentViewModule} from 'org_xprof/frontend/app/components/overview_page/run_environment_view/run_environment_view_module';
-import {StepTimeGraphModule} from 'org_xprof/frontend/app/components/overview_page/step_time_graph/step_time_graph_module';
+import {DiagnosticsView} from 'org_xprof/frontend/app/components/diagnostics_view/diagnostics_view';
+import {InferenceLatencyChart} from 'org_xprof/frontend/app/components/overview_page/inference_latency_chart/inference_latency_chart';
+import {PerformanceSummary} from 'org_xprof/frontend/app/components/overview_page/performance_summary/performance_summary';
+import {RunEnvironmentView} from 'org_xprof/frontend/app/components/overview_page/run_environment_view/run_environment_view';
+import {StepTimeGraph} from 'org_xprof/frontend/app/components/overview_page/step_time_graph/step_time_graph';
 import {SmartSuggestionView} from 'org_xprof/frontend/app/components/smart_suggestion/smart_suggestion_view';
 import {
   DATA_SERVICE_INTERFACE_TOKEN,
@@ -46,22 +45,37 @@ const DISAGGREGATED_SERVING_LATENCY_INDEX = 8;
 
 /** An overview page component. */
 @Component({
-  changeDetection: ChangeDetectionStrategy.Default,
-  standalone: false,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
   selector: 'overview-page',
   templateUrl: './overview_page.ng.html',
   styleUrls: ['./overview_page.scss'],
+  imports: [
+    DiagnosticsView,
+    InferenceLatencyChart,
+    NgIf,
+    PerformanceSummary,
+    RunEnvironmentView,
+    SmartSuggestionView,
+    StepTimeGraph,
+  ],
 })
 export class OverviewPage implements OnDestroy {
-  @Input() darkTheme = false;
-  @Output()
-  readonly onDataLoaded = new EventEmitter<OverviewPageDataTuple | null>();
-  @Output() readonly ready = new EventEmitter<void>();
+  readonly darkTheme = input(false);
+  readonly onDataLoaded = output<OverviewPageDataTuple | null>();
+  readonly ready = output<void>();
 
   diagnostics: Diagnostics = {info: [], warnings: [], errors: []};
   generalAnalysis: GeneralAnalysis | null = null;
   inputPipelineAnalysis: InputPipelineAnalysis | null = null;
-  runEnvironment: RunEnvironment | null = null;
+  private runEnvironmentInternal: RunEnvironment | null = null;
+  get runEnvironment(): RunEnvironment | null {
+    return this.runEnvironmentInternal;
+  }
+  set runEnvironment(value: RunEnvironment | null) {
+    this.runEnvironmentInternal = value;
+    this.cdr.markForCheck();
+  }
   inferenceLatencyData: SimpleDataTable | null = null;
   disaggregatedServingLatencyData: SimpleDataTable | null = null;
 
@@ -81,6 +95,7 @@ export class OverviewPage implements OnDestroy {
   isLoaded = false;
   enableSmartSuggestion = false;
   /** Handles on-destroy Subject, used to unsubscribe. */
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyed = new ReplaySubject<void>(1);
 
   private readonly readyChartsCount = new BehaviorSubject<number>(0);
@@ -91,6 +106,7 @@ export class OverviewPage implements OnDestroy {
   constructor() {
     this.readyChartsCount.pipe(takeUntil(this.destroyed)).subscribe(() => {
       this.checkReady();
+      this.cdr.markForCheck();
     });
     combineLatest([this.route.params, this.route.queryParams])
       .pipe(takeUntil(this.destroyed))
@@ -112,6 +128,7 @@ export class OverviewPage implements OnDestroy {
         if (hasChanged) {
           this.update();
         }
+        this.cdr.markForCheck();
       });
   }
 
@@ -177,10 +194,12 @@ export class OverviewPage implements OnDestroy {
             this.clearBaselineData();
           }
           this.isLoaded = true;
+          this.cdr.markForCheck();
         },
         error: () => {
           setLoadingState(false, this.store);
           this.isLoaded = true;
+          this.cdr.markForCheck();
         },
       });
   }
@@ -246,19 +265,3 @@ export class OverviewPage implements OnDestroy {
     this.destroyed.complete();
   }
 }
-
-/** An overview page module. */
-@NgModule({
-  declarations: [OverviewPage],
-  imports: [
-    CommonModule,
-    DiagnosticsViewModule,
-    PerformanceSummaryModule,
-    RunEnvironmentViewModule,
-    StepTimeGraphModule,
-    InferenceLatencyChartModule,
-    SmartSuggestionView,
-  ],
-  exports: [OverviewPage],
-})
-export class OverviewPageModule {}

@@ -24,7 +24,6 @@ xprof_ng_module(
     name = "framework_op_stats",
     srcs = [
         "framework_op_stats.ts",
-        "framework_op_stats_module.ts",
     ],
     assets = [
         ":framework_op_stats_css",
@@ -35,6 +34,7 @@ xprof_ng_module(
         "//:node_modules/@angular/core",
         "//:node_modules/@ngrx/store",
         "//:node_modules/@types/google.visualization",
+        "//:node_modules/rxjs",
         "@org_xprof//frontend/app/common/angular:angular_material_button",
         "@org_xprof//frontend/app/common/angular:angular_material_divider",
         "@org_xprof//frontend/app/common/angular:angular_material_icon",
@@ -75,6 +75,29 @@ xprof_ng_module(
         "@org_xprof//frontend/app/common/constants",
         "@org_xprof//frontend/app/common/utils:testing",
         "@org_xprof//frontend/app/services/data_service_v2",
+        "@org_xprof//frontend/app/services/data_service_v2:data_service_v2_interface",
+        "@org_xprof//frontend/app/store",
+        "@org_xprof//frontend/app/store/framework_op_stats",
+    ],
+)
+
+xprof_ng_module(
+    name = "screenshot_tests",
+    testonly = True,
+    srcs = [
+        "framework_op_stats_screenshot_test.ts",
+    ],
+    deps = [
+        ":framework_op_stats",
+        "//javascript/angular2/testing/catalyst/async",
+        # ksf,
+        "@org_xprof//frontend/app/common/angular:angular_platform-browser_animation",
+        "//:node_modules/@ngrx/store",
+        "//:node_modules/safevalues",
+        "//third_party/javascript/safevalues/dom",
+        "//third_party/javascript/typings/jasmine",
+        "@org_xprof//frontend/app/common/interfaces",
+        "@org_xprof//frontend/app/common/utils:testing",
         "@org_xprof//frontend/app/services/data_service_v2:data_service_v2_interface",
         "@org_xprof//frontend/app/store",
         "@org_xprof//frontend/app/store/framework_op_stats",
