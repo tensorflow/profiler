@@ -592,26 +592,6 @@ $card-width: 320px;
     color 150ms var(--motion-easing-standard);
 }
 
-// Flags kernels that spill vector registers while the rail is collapsed. The
-// expanded rail shows a warning icon instead.
-.kernel-row.has-spills .kernel-monogram::after {
-  content: '';
-  position: absolute;
-  top: -3px;
-  inset-inline-end: -3px;
-  width: 9px;
-  height: 9px;
-  box-sizing: border-box;
-  border: 2px solid var(--mat-sys-surface-container);
-  border-radius: 50%;
-  background: var(--mat-sys-warning);
-  transition: opacity 100ms var(--motion-easing-standard);
-
-  .kernel-rail.expanded & {
-    opacity: 0;
-  }
-}
-
 .kernel-name {
   @include reveal-when-expanded;
   flex: 0 1 auto;
@@ -628,14 +608,6 @@ $card-width: 320px;
   align-items: center;
   gap: 6px;
   margin-inline-start: auto;
-}
-
-.spill-icon {
-  flex: none;
-  width: 15px;
-  height: 15px;
-  color: var(--mat-sys-warning);
-  font-size: 15px;
 }
 
 .unit-chip {
