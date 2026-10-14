@@ -77,6 +77,11 @@ class XProfCliTest(parameterized.TestCase):
     self.cli.aggregate_xplane_events('session_123', '.*', '.*')
     mock_agg_events.assert_called_with('session_123', '.*', '.*')
 
+  @mock.patch.object(xprof_cli.XProfCli, 'analyze_async_overlap')
+  def test_analyze_async_overlap(self, mock_analyze_overlap):
+    self.cli.analyze_async_overlap('session_123')
+    mock_analyze_overlap.assert_called_with('session_123')
+
   @mock.patch.object(xprof_cli.XProfCli, 'get_xspace_proto')
   def test_get_xspace_proto(self, mock_get_xspace):
     self.cli.get_xspace_proto('session_123')

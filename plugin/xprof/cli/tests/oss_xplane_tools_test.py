@@ -228,6 +228,28 @@ class InspectCaptureTest(absltest.TestCase):
 
     self.assertTrue(res["capture_valid_for_llo_analysis"])
 
+  def test_iter_timeline_events_filters_and_converts_ns_to_ps(self):
+    fake_plane = _FakePlane(
+        "/device:TPU:0",
+        lines=[
+            _FakeLine(
+                "Async XLA Ops",
+                events=[_FakeEvent("copy-start.1", start_ns=5, duration_ns=2)],
+            ),
+            _FakeLine("XLA Modules", events=[_FakeEvent("mod", start_ns=1)]),
+        ],
+    )
+    with mock.patch.object(
+        xplane_tools, "iter_planes", return_value=[fake_plane]
+    ):
+      events = xplane_tools.iter_timeline_events("sess_oss_tl")
+    self.assertLen(events, 1)
+    self.assertEqual(events[0].plane, "/device:TPU:0")
+    self.assertEqual(events[0].line, "Async XLA Ops")
+    self.assertEqual(events[0].name, "copy-start.1")
+    self.assertEqual(events[0].start_ps, 5000)
+    self.assertEqual(events[0].duration_ps, 2000)
+
 
 if __name__ == "__main__":
   absltest.main()

@@ -38,3 +38,8 @@ pytype_strict_library(
     srcs = ["trace_selection.py"],
     deps = ["@pypi//fire"],
 )
+
+pytype_strict_library(
+    name = "async_overlap",
+    srcs = ["async_overlap.py"],
+)
