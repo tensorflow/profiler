@@ -23,13 +23,21 @@ genrule(
 imgui_font_headers(
     name = "font_headers_fileset",
     srcs = [":roboto_ttf"],
-    args = ["-base85"],
+    # Embed the raw (uncompressed) TTF bytes so that the font atlas can
+    # reference them in place without decompressing a heap copy at runtime.
+    args = [
+        "-u8",
+        "-nocompress",
+    ],
 )
 
 imgui_font_headers(
     name = "trace_viewer_icons_header",
     srcs = ["trace_viewer_icons.ttf"],
-    args = ["-base85"],
+    args = [
+        "-u8",
+        "-nocompress",
+    ],
 )
 
 wasm_cc_library(

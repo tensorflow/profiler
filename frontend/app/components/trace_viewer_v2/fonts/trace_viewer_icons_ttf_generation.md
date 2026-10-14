@@ -102,31 +102,39 @@ python3 svg_to_font.py \
 
 1.  **Build-Time Header Generation (`fonts/BUILD` & `fonts/font_rules.bzl`)**:
     The `imgui_font_headers` Starlark rule runs Dear ImGui's
-    `binary_to_compressed_c -base85` on `trace_viewer_icons.ttf`:
+    `binary_to_compressed_c -u8 -nocompress` on `trace_viewer_icons.ttf`:
 
     ```python
     imgui_font_headers(
         name = "trace_viewer_icons_header",
         srcs = ["trace_viewer_icons.ttf"],
-        args = ["-base85"],
+        args = [
+            "-u8",
+            "-nocompress",
+        ],
     )
     ```
 
-    This produces `trace_viewer_icons.h`, exposing
-    `trace_viewer_icons_compressed_data_base85`.
+    This produces `trace_viewer_icons.h`, exposing the raw TTF bytes as
+    `trace_viewer_icons_data` and their size as `trace_viewer_icons_size`.
 
 2.  **Runtime Font Atlas Merging (`fonts/fonts.cc`)**: Inside `LoadFonts()`,
-    after loading each Roboto font size (`body_large`, `label_large`,
-    `label_medium`, `label_small`, `title_small`), the icon font is merged into
-    the same `ImFont` instance:
+    after loading each Roboto font (`body_large`, `label_large`,
+    `label_medium`, `label_medium_strong`, `label_small`, `title_small`,
+    `title_small_strong`), the icon font is merged into the same `ImFont`
+    instance. All fonts reference the embedded TTF data in place
+    (`FontDataOwnedByAtlas = false`), so no per-font copy is allocated:
 
     ```cpp
     ImFontConfig icons_config = *font_config;
     icons_config.MergeMode = true;
     icons_config.PixelSnapH = true;
+    // The icon font is not a variable font, so it has no named instances.
+    icons_config.FontNo = 0;
     static const ImWchar icons_ranges[] = {0xe000, 0xe050, 0};
-    io.Fonts->AddFontFromMemoryCompressedBase85TTF(
-        trace_viewer_icons_compressed_data_base85, base_size, &icons_config,
+    io.Fonts->AddFontFromMemoryTTF(
+        EmbeddedFontData(trace_viewer_icons_data),
+        static_cast<int>(trace_viewer_icons_size), base_size, &icons_config,
         icons_ranges);
     ```
 

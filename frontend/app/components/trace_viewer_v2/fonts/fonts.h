@@ -10,8 +10,16 @@ extern ImFont* body_large;
 extern ImFont* caption;
 extern ImFont* label_large;
 extern ImFont* label_medium;
+// Same size as `label_medium`, using the Medium (wght 500) weight when the font
+// loader can select variable-font instances (FreeType). With stb_truetype it
+// renders at the regular weight.
+extern ImFont* label_medium_strong;
 extern ImFont* label_small;
 extern ImFont* title_small;
+// Same size as `title_small`, using the Medium (wght 500) weight when the font
+// loader can select variable-font instances (FreeType). With stb_truetype it
+// renders at the regular weight.
+extern ImFont* title_small_strong;
 
 }  // namespace traceviewer::fonts
 
