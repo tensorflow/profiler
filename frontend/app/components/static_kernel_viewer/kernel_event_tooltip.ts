@@ -196,6 +196,9 @@ export interface KernelEventTooltipContent {
 /** Name of the lane of code regions, such as loops and branches. */
 const REGIONS_TRACK_NAME = 'Regions';
 
+/** Counter track unit classification in the Static Kernel Viewer. */
+export type CounterMetricKind = 'utilization' | 'bytes' | 'registers';
+
 /** Suffix of per-unit static utilization counter tracks. */
 const UTILIZATION_SUFFIX = ' utilization';
 
@@ -376,7 +379,10 @@ function buildInstructionOutput(
   };
 }
 
-function unitForCounterTrack(trackName: string): FunctionalUnit | undefined {
+/** Resolves the functional unit corresponding to a counter track name, if any. */
+export function unitForCounterTrack(
+  trackName: string,
+): FunctionalUnit | undefined {
   const direct = FUNCTIONAL_UNITS_BY_LANE.get(trackName);
   if (direct) {
     return direct;
@@ -386,6 +392,70 @@ function unitForCounterTrack(trackName: string): FunctionalUnit | undefined {
     return FUNCTIONAL_UNITS_BY_LANE.get(label);
   }
   return undefined;
+}
+
+/** Classifies a counter track into utilization (%), memory (bytes), or registers. */
+export function classifyCounterTrack(trackName: string): CounterMetricKind {
+  if (/\bvmem\b|\bbytes?\b|\bmemory\b/i.test(trackName)) {
+    return 'bytes';
+  }
+  if (/\breg(ister)?s?\b/i.test(trackName)) {
+    return 'registers';
+  }
+  return 'utilization';
+}
+
+/** Formats a byte count with human-readable binary units (B, KiB, MiB). */
+export function formatBytesValue(bytes: number): string {
+  const clamped = Math.max(0, bytes);
+  if (clamped < 1024) {
+    return `${BUNDLE_FORMAT.format(Math.round(clamped))} B`;
+  }
+  if (clamped < 1024 * 1024) {
+    return `${DENSITY_FORMAT.format(clamped / 1024)} KiB`;
+  }
+  return `${DENSITY_FORMAT.format(clamped / (1024 * 1024))} MiB`;
+}
+
+/** Formats a counter value according to its counter track classification. */
+export function formatCounterTrackValue(
+  value: number,
+  kind: CounterMetricKind,
+): string {
+  if (kind === 'bytes') {
+    return formatBytesValue(value);
+  }
+  if (kind === 'registers') {
+    const count = Math.max(0, Math.round(value));
+    return `${BUNDLE_FORMAT.format(count)} ${count === 1 ? 'reg' : 'regs'}`;
+  }
+  return `${clampPercent(value * 100)}%`;
+}
+
+/** Returns the accent color for a counter track. */
+export function accentColorForCounterTrack(
+  trackName: string,
+  unit?: FunctionalUnit,
+): string {
+  if (unit) {
+    return unit.color;
+  }
+  if (/spill/i.test(trackName)) {
+    return '#d93025';
+  }
+  if (classifyCounterTrack(trackName) === 'bytes') {
+    return '#00a3bf';
+  }
+  if (/scalar/i.test(trackName)) {
+    return '#1e8e3e';
+  }
+  if (/predicate/i.test(trackName)) {
+    return '#f29900';
+  }
+  if (/mask/i.test(trackName)) {
+    return '#7c4dff';
+  }
+  return DEFAULT_ACCENT_COLOR;
 }
 
 function clampPercent(percent: number): number {
@@ -627,11 +697,21 @@ export function buildKernelEventTooltip(
   const unit = isCounter
     ? unitForCounterTrack(event.trackName)
     : FUNCTIONAL_UNITS_BY_LANE.get(event.trackName);
-  const accentColor = unit?.color ?? DEFAULT_ACCENT_COLOR;
+  const counterKind = isCounter
+    ? classifyCounterTrack(event.trackName)
+    : undefined;
+  const accentColor = isCounter
+    ? accentColorForCounterTrack(event.trackName, unit)
+    : (unit?.color ?? DEFAULT_ACCENT_COLOR);
 
   let description: string | undefined = undefined;
   if (isCounter) {
-    description = 'Static unit utilization';
+    description =
+      counterKind === 'bytes'
+        ? 'Static memory footprint'
+        : counterKind === 'registers'
+          ? 'Live register pressure'
+          : 'Static unit utilization';
   } else if (isProcess) {
     description = 'Bundle activity across all functional unit lanes';
   } else if (!unit && !isRegion && event.trackName) {
@@ -709,10 +789,22 @@ export function buildKernelEventTooltip(
 
   let counterGauge: CounterGauge | undefined = undefined;
   if (isCounter && event.counterValue !== undefined) {
-    const percent = clampPercent(event.counterValue * 100);
+    const k = counterKind ?? 'utilization';
+    const percent =
+      k === 'utilization'
+        ? clampPercent(event.counterValue * 100)
+        : k === 'registers'
+          ? clampPercent((event.counterValue / 64) * 100)
+          : event.counterValue > 0
+            ? Math.min(
+                100,
+                Math.max(12, Math.round(Math.log2(event.counterValue + 1) * 6)),
+              )
+            : 0;
     counterGauge = {
-      label: 'Current',
-      formattedValue: `${percent}%`,
+      label:
+        k === 'bytes' ? 'Allocated' : k === 'registers' ? 'Live' : 'Current',
+      formattedValue: formatCounterTrackValue(event.counterValue, k),
       percent,
       color: accentColor,
     };

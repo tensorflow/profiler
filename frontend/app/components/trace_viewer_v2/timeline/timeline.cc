@@ -3245,6 +3245,7 @@ void Timeline::DrawEvent(int group_index, int event_index,
             selected_event_index_ = event_index;
             // Deselect any selected counter event.
             selected_counter_index_ = -1;
+            selected_counter_bundle_ = -1;
 
             EmitEventSelected(event_index);
           }
@@ -3611,10 +3612,15 @@ void Timeline::DrawCounterTooltip(int group_index, const CounterData& data,
       }
       if (is_click) {
         event_clicked_this_frame_ = true;
+        const int64_t clicked_bundle =
+            static_cast<int64_t>(std::floor(std::max(0.0, mouse_time)));
         if (selected_group_index_ != group_index ||
-            selected_counter_index_ != index) {
+            selected_counter_index_ != static_cast<int>(index) ||
+            (!event_tooltip_enabled_ &&
+             selected_counter_bundle_ != clicked_bundle)) {
           selected_group_index_ = group_index;
           selected_counter_index_ = index;
+          selected_counter_bundle_ = clicked_bundle;
           // Deselect any selected flame event.
           selected_event_index_ = -1;
 
@@ -3627,8 +3633,9 @@ void Timeline::DrawCounterTooltip(int group_index, const CounterData& data,
           event_data.try_emplace(kEventSelectedIndex, -1);
           event_data.try_emplace(kEventSelectedName, name);
           if (!event_tooltip_enabled_) {
-            PopulateCounterSelectedScheduleDetails(group_index, index,
-                                                   event_data);
+            PopulateCounterSelectedScheduleDetails(
+                group_index, index, static_cast<Microseconds>(clicked_bundle),
+                event_data);
           }
 
           event_callback_(kEventSelected, event_data);
@@ -3767,6 +3774,18 @@ void Timeline::DrawCounterTrack(int group_index, const CounterData& data,
   if (selected_group_index_ == group_index && selected_counter_index_ != -1 &&
       selected_counter_index_ < data.timestamps.size()) {
     Microseconds ts = data.timestamps[selected_counter_index_];
+    if (!event_tooltip_enabled_ && selected_counter_bundle_ >= 0) {
+      const Microseconds next_ts =
+          (static_cast<size_t>(selected_counter_index_ + 1) <
+           data.timestamps.size())
+              ? data.timestamps[selected_counter_index_ + 1]
+              : GetScheduleEndBundle();
+      const Microseconds bundle_ts =
+          static_cast<Microseconds>(selected_counter_bundle_);
+      if (bundle_ts >= ts && bundle_ts < next_ts) {
+        ts = bundle_ts;
+      }
+    }
     double val = data.values[selected_counter_index_];
     Pixel x = TimeToScreenX(ts, pos.x, px_per_time_unit_val);
     Pixel y = pos.y + height - (val - data.min_value) * y_ratio;
@@ -5011,6 +5030,7 @@ void Timeline::HandleEventDeselection() {
         selected_event_index_ = -1;
         selected_group_index_ = -1;
         selected_counter_index_ = -1;
+        selected_counter_bundle_ = -1;
 
         EventData event_data;
         event_data.try_emplace(kEventSelectedIndex, -1);
@@ -5850,6 +5870,35 @@ void Timeline::FindSelectedEvents(const ImRect& selection_rect) {
 
         if (selection_rect.Contains(ImVec2(x, y))) {
           selected_counter_points_.push_back({group_index, i});
+        }
+      }
+      if (!event_tooltip_enabled_ &&
+          selection_end_time > selection_start_time &&
+          !counter_data.timestamps.empty()) {
+        auto it_active = std::upper_bound(counter_data.timestamps.begin(),
+                                          counter_data.timestamps.end(),
+                                          selection_start_time);
+        size_t first_idx =
+            (it_active == counter_data.timestamps.begin())
+                ? 0
+                : static_cast<size_t>(std::distance(
+                      counter_data.timestamps.begin(), std::prev(it_active)));
+        const Microseconds schedule_end = GetScheduleEndBundle();
+        for (size_t i = first_idx; i < counter_data.timestamps.size() &&
+                                   i < counter_data.values.size();
+             ++i) {
+          const Microseconds seg_start = counter_data.timestamps[i];
+          if (seg_start > selection_end_time) break;
+          const Microseconds seg_end =
+              (i + 1 < counter_data.timestamps.size())
+                  ? counter_data.timestamps[i + 1]
+                  : std::max(seg_start + 1.0, schedule_end);
+          if (seg_end <= selection_start_time) continue;
+          const std::pair<int, int> pt(static_cast<int>(group_index),
+                                       static_cast<int>(i));
+          if (!absl::c_linear_search(selected_counter_points_, pt)) {
+            selected_counter_points_.push_back(pt);
+          }
         }
       }
     }

@@ -1490,3 +1490,221 @@
   color: var(--mat-sys-on-surface-variant, #5f6368);
   padding: 6px 2px;
 }
+
+// Counter & Utilization Single-Click Inspection Styles
+.counter-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.counter-kpi-box {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: var(--mat-sys-surface-container-low, #f8f9fa);
+  border: 1px solid var(--mat-sys-outline-variant, #dadce0);
+  min-width: 0;
+
+  &.primary-kpi {
+    background: color-mix(in srgb, var(--accent-color) 11%, transparent);
+    border-color: color-mix(in srgb, var(--accent-color) 34%, transparent);
+  }
+}
+
+.kpi-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--mat-sys-on-surface-variant, #5f6368);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kpi-value {
+  font-family: 'Roboto Mono', 'Google Sans Mono', monospace;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--mat-sys-on-surface, #1f1f1f);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kpi-sub {
+  font-family: 'Roboto Mono', 'Google Sans Mono', monospace;
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--mat-sys-on-surface-variant, #5f6368);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.counter-comparison-gauge {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 7px 6px;
+  border-radius: 6px;
+  background: var(--mat-sys-surface-container-low, #f8f9fa);
+  border: 1px solid var(--mat-sys-outline-variant, #dadce0);
+}
+
+.comparison-gauge-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 9.5px;
+}
+
+.comparison-gauge-caption {
+  font-weight: 600;
+  color: var(--mat-sys-on-surface-variant, #5f6368);
+}
+
+.comparison-gauge-bounds {
+  font-family: 'Roboto Mono', 'Google Sans Mono', monospace;
+  font-size: 9.5px;
+  color: var(--mat-sys-on-surface-variant, #5f6368);
+  font-variant-numeric: tabular-nums;
+}
+
+.comparison-gauge-track {
+  position: relative;
+  display: block;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--mat-sys-surface-container-highest, #dee1e5);
+}
+
+.comparison-gauge-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 160ms ease;
+}
+
+.comparison-mean-marker {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--mat-sys-on-surface, #1f1f1f);
+  box-shadow: 0 0 0 1px var(--mat-sys-surface, #fff);
+  transform: translateX(-50%);
+}
+
+// Range Utilization & Resource Counter Metrics
+.range-util-metrics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.range-util-metric-row {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+
+  &.highlighted {
+    font-weight: 700;
+  }
+}
+
+.dual-util-track {
+  position: relative;
+}
+
+.util-peak-ghost {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  border-radius: 999px;
+  opacity: 0.26;
+}
+
+.range-util-stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'Roboto Mono', 'Google Sans Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.util-peak-tag {
+  font-size: 9px;
+  font-weight: 500;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--mat-sys-surface-container-high, #e8eaed);
+  color: var(--mat-sys-on-surface-variant, #5f6368);
+}
+
+.resource-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.resource-metric-card {
+  --rm-color: #00a3bf;
+
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 3px 6px;
+  border-radius: 5px;
+  background: var(--mat-sys-surface-container-low, #f8f9fa);
+  border: 1px solid var(--mat-sys-outline-variant, #dadce0);
+  min-width: 0;
+}
+
+.rm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.rm-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--mat-sys-on-surface, #1f1f1f);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rm-mean {
+  font-family: 'Roboto Mono', 'Google Sans Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--mat-sys-on-surface, #1f1f1f);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.rm-sub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  font-family: 'Roboto Mono', 'Google Sans Mono', monospace;
+  font-size: 9px;
+  color: var(--mat-sys-on-surface-variant, #5f6368);
+}

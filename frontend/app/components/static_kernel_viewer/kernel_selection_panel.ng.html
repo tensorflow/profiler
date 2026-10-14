@@ -191,162 +191,231 @@
 
   <!-- MODE 1: SINGLE INSTRUCTION / COUNTER / PROCESS BUNDLE INSPECTION -->
   <div *ngIf="c.mode === 'single'" class="panel-grid single-mode-grid">
-    <!-- Column 1: Dataflow & Hardware Properties -->
+    <!-- Column 1: Counter Insights (when kind === 'counter') OR Dataflow & Hardware Properties -->
     <section class="panel-card">
       <div class="card-section-header">
-        <span class="section-title">Dataflow &amp; Properties</span>
+        <span class="section-title">
+          {{ c.kind === 'counter' ? 'Counter & Track Insights' : 'Dataflow & Properties' }}
+        </span>
         <span *ngIf="c.registerTypeLabel" class="section-badge">{{ c.registerTypeLabel }}</span>
+        <span
+          *ngIf="c.kind === 'counter' && c.counterDetails?.deltaFromMeanLabel as delta"
+          class="section-badge highlight-badge"
+        >
+          {{ delta }}
+        </span>
       </div>
 
       <div class="card-section-body">
-        <div *ngIf="c.counterGauge as gauge" class="dataflow-row">
-          <span class="dataflow-label">{{ gauge.label }}</span>
-          <div class="gauge-row">
-            <span class="gauge-track" aria-hidden="true">
+        <!-- Revamped Single-Click Counter / Utilization Details View -->
+        <ng-container *ngIf="c.kind === 'counter' && c.counterDetails as cd; else standardSingleCol1">
+          <div class="counter-kpi-grid">
+            <div class="counter-kpi-box primary-kpi">
+              <span class="kpi-label">At Bundle {{ c.bundles }}</span>
+              <span class="kpi-value">{{ cd.formattedCurrent }}</span>
+            </div>
+            <div *ngIf="cd.formattedMean" class="counter-kpi-box">
+              <span class="kpi-label">Kernel Mean</span>
+              <span class="kpi-value">{{ cd.formattedMean }}</span>
+            </div>
+            <div *ngIf="cd.formattedPeak" class="counter-kpi-box">
+              <span class="kpi-label">Kernel Peak</span>
+              <span class="kpi-value">
+                {{ cd.formattedPeak }}
+                <span *ngIf="cd.peakBundleLabel" class="kpi-sub">{{ cd.peakBundleLabel }}</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="counter-comparison-gauge">
+            <div class="comparison-gauge-header">
+              <span class="comparison-gauge-caption">Bundle vs. Kernel Range</span>
+              <span *ngIf="cd.formattedMin && cd.formattedPeak" class="comparison-gauge-bounds">
+                {{ cd.formattedMin }} – {{ cd.formattedPeak }}
+              </span>
+            </div>
+            <span class="comparison-gauge-track" aria-hidden="true">
               <span
-                class="gauge-fill"
-                [style.width.%]="gauge.percent"
-                [style.background-color]="gauge.color"
+                class="comparison-gauge-fill"
+                [style.width.%]="cd.currentPercentOfPeak"
+                [style.background-color]="c.accentColor"
+              ></span>
+              <span
+                *ngIf="cd.meanPercentOfPeak !== undefined"
+                class="comparison-mean-marker"
+                [style.left.%]="cd.meanPercentOfPeak"
+                [matTooltip]="'Kernel Mean: ' + (cd.formattedMean ?? '')"
+                matTooltipPosition="above"
               ></span>
             </span>
-            <span class="gauge-value">{{ gauge.formattedValue }}</span>
           </div>
-        </div>
 
-        <div
-          *ngIf="c.output || c.operands || c.consumers || c.spillsLabel || c.sourceInfo || c.sourceStack || c.extraAttributes"
-          class="dataflow-grid"
-        >
-          <div *ngIf="c.output as out" class="dataflow-row">
-            <span class="dataflow-label">{{ out.rowLabel }}</span>
-            <div class="llo-badges">
-              <button
-                *ngIf="out.register"
-                type="button"
-                class="register-pill interactive-pill"
-                [attr.data-kind]="out.registerKind"
-                (click)="onSearchText(out.register)"
-                [matTooltip]="'Search ' + out.register + ' in timeline'"
-                matTooltipPosition="above"
-              >
-                {{ out.register }}
-              </button>
-              <span *ngIf="out.memorySpace" class="memory-pill">{{ out.memorySpace }}</span>
-              <span *ngIf="out.metadata" class="metadata-pill">{{ out.metadata }}</span>
-              <span *ngIf="out.throughput" class="throughput-pill">{{ out.throughput }}</span>
+          <div class="kv-grid counter-meta-grid">
+            <div class="kv-row">
+              <span class="kv-key">Step hold interval</span>
+              <span class="kv-value">{{ cd.stepRangeLabel }} · {{ cd.stepDurationLabel }}</span>
+            </div>
+            <div *ngIf="cd.activeCoverageLabel" class="kv-row">
+              <span class="kv-key">Active coverage</span>
+              <span class="kv-value">{{ cd.activeCoverageLabel }}</span>
+            </div>
+            <div *ngIf="cd.sampleCount !== undefined" class="kv-row">
+              <span class="kv-key">Track samples</span>
+              <span class="kv-value">{{ cd.sampleCount | number }} changes</span>
+            </div>
+          </div>
+        </ng-container>
+
+        <ng-template #standardSingleCol1>
+          <div *ngIf="c.counterGauge as gauge" class="dataflow-row">
+            <span class="dataflow-label">{{ gauge.label }}</span>
+            <div class="gauge-row">
+              <span class="gauge-track" aria-hidden="true">
+                <span
+                  class="gauge-fill"
+                  [style.width.%]="gauge.percent"
+                  [style.background-color]="gauge.color"
+                ></span>
+              </span>
+              <span class="gauge-value">{{ gauge.formattedValue }}</span>
             </div>
           </div>
 
-          <div *ngIf="c.operands as operands" class="dataflow-row">
-            <span class="dataflow-label">Operands ({{ operands.length }})</span>
-            <div class="operand-list">
+          <div
+            *ngIf="c.output || c.operands || c.consumers || c.spillsLabel || c.sourceInfo || c.sourceStack || c.extraAttributes"
+            class="dataflow-grid"
+          >
+            <div *ngIf="c.output as out" class="dataflow-row">
+              <span class="dataflow-label">{{ out.rowLabel }}</span>
+              <div class="llo-badges">
+                <button
+                  *ngIf="out.register"
+                  type="button"
+                  class="register-pill interactive-pill"
+                  [attr.data-kind]="out.registerKind"
+                  (click)="onSearchText(out.register)"
+                  [matTooltip]="'Search ' + out.register + ' in timeline'"
+                  matTooltipPosition="above"
+                >
+                  {{ out.register }}
+                </button>
+                <span *ngIf="out.memorySpace" class="memory-pill">{{ out.memorySpace }}</span>
+                <span *ngIf="out.metadata" class="metadata-pill">{{ out.metadata }}</span>
+                <span *ngIf="out.throughput" class="throughput-pill">{{ out.throughput }}</span>
+              </div>
+            </div>
+
+            <div *ngIf="c.operands as operands" class="dataflow-row">
+              <span class="dataflow-label">Operands ({{ operands.length }})</span>
+              <div class="operand-list">
+                <div
+                  *ngFor="let op of operands"
+                  class="operand-item"
+                  [matTooltip]="'Operand ' + op.index + ': ' + op.text"
+                  matTooltipPosition="above"
+                >
+                  <span class="operand-index">{{ op.index }}</span>
+                  <span class="operand-text">{{ op.text }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="c.consumers as consumers" class="dataflow-row">
+              <span class="dataflow-label">Consumers ({{ consumers.length }})</span>
+              <div class="consumer-list">
+                <button
+                  *ngFor="let consumer of consumers"
+                  type="button"
+                  class="consumer-chip interactive-chip"
+                  (click)="onSearchText(consumer)"
+                  [matTooltip]="'Search ' + consumer + ' in timeline'"
+                  matTooltipPosition="above"
+                >
+                  <span class="consumer-arrow" aria-hidden="true">→</span>
+                  <span class="consumer-text">{{ consumer }}</span>
+                </button>
+              </div>
+            </div>
+
+            <div *ngIf="c.spillsLabel as spills" class="dataflow-row">
+              <span class="dataflow-label">Vector spills</span>
+              <div class="llo-badges">
+                <span class="spill-pill" [class.warn]="c.hasSpills">
+                  <mat-icon *ngIf="c.hasSpills" class="spill-pill-icon" aria-hidden="true">warning</mat-icon>
+                  <span>{{ spills }}</span>
+                </span>
+              </div>
+            </div>
+
+            <div *ngIf="c.sourceInfo as src" class="dataflow-row">
+              <span class="dataflow-label">Source</span>
               <div
-                *ngFor="let op of operands"
-                class="operand-item"
-                [matTooltip]="'Operand ' + op.index + ': ' + op.text"
+                class="source-pill"
+                [matTooltip]="src.raw"
                 matTooltipPosition="above"
               >
-                <span class="operand-index">{{ op.index }}</span>
-                <span class="operand-text">{{ op.text }}</span>
+                <mat-icon class="source-pill-icon" aria-hidden="true">code</mat-icon>
+                <span class="source-pill-file">{{ src.shortLocation }}</span>
+                <span *ngIf="src.directory" class="source-pill-dir">{{ src.directory }}</span>
+              </div>
+            </div>
+
+            <div *ngIf="c.sourceStack as stack" class="dataflow-row">
+              <span class="dataflow-label">Stack ({{ stack.length }})</span>
+              <div class="source-stack-list" role="list" aria-label="Source call stack">
+                <div
+                  *ngFor="let frame of stack"
+                  role="listitem"
+                  class="source-stack-frame"
+                  [class.innermost-frame]="frame.isInnermost"
+                  [matTooltip]="frame.raw"
+                  matTooltipPosition="above"
+                >
+                  <span class="frame-index">{{ frame.index }}</span>
+                  <span class="frame-file">{{ frame.shortLocation }}</span>
+                  <span *ngIf="frame.directory" class="frame-dir">{{ frame.directory }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="c.extraAttributes as attrs" class="dataflow-row">
+              <span class="dataflow-label">Attributes</span>
+              <div class="attr-chip-list">
+                <span
+                  *ngFor="let attr of attrs"
+                  class="attr-chip"
+                  [matTooltip]="attr.key + ': ' + attr.value"
+                  matTooltipPosition="above"
+                >
+                  <span class="attr-chip-key">{{ attr.key }}:</span>
+                  <span class="attr-chip-val">{{ attr.value }}</span>
+                </span>
               </div>
             </div>
           </div>
 
-          <div *ngIf="c.consumers as consumers" class="dataflow-row">
-            <span class="dataflow-label">Consumers ({{ consumers.length }})</span>
-            <div class="consumer-list">
-              <button
-                *ngFor="let consumer of consumers"
-                type="button"
-                class="consumer-chip interactive-chip"
-                (click)="onSearchText(consumer)"
-                [matTooltip]="'Search ' + consumer + ' in timeline'"
-                matTooltipPosition="above"
-              >
-                <span class="consumer-arrow" aria-hidden="true">→</span>
-                <span class="consumer-text">{{ consumer }}</span>
-              </button>
+          <div
+            *ngIf="!c.output && !c.operands && !c.consumers && !c.spillsLabel && !c.sourceInfo && !c.sourceStack && !c.extraAttributes && !c.counterGauge"
+            class="kv-grid"
+          >
+            <div *ngIf="c.unit" class="kv-row">
+              <span class="kv-key">Functional unit</span>
+              <span class="kv-value">{{ c.unit.label }}{{ c.unit.description ? ' — ' + c.unit.description : '' }}</span>
+            </div>
+            <div class="kv-row">
+              <span class="kv-key">{{ c.bundlesLabel }}</span>
+              <span class="kv-value">{{ c.bundles }} {{ c.hexBundle ?? '' }}</span>
+            </div>
+            <div *ngIf="c.length" class="kv-row">
+              <span class="kv-key">Duration</span>
+              <span class="kv-value">{{ c.length }}</span>
+            </div>
+            <div *ngIf="c.schedulePosition as pos" class="kv-row">
+              <span class="kv-key">Schedule offset</span>
+              <span class="kv-value">{{ pos.formattedPercent }} of {{ pos.totalBundles }} bundles</span>
             </div>
           </div>
-
-          <div *ngIf="c.spillsLabel as spills" class="dataflow-row">
-            <span class="dataflow-label">Vector spills</span>
-            <div class="llo-badges">
-              <span class="spill-pill" [class.warn]="c.hasSpills">
-                <mat-icon *ngIf="c.hasSpills" class="spill-pill-icon" aria-hidden="true">warning</mat-icon>
-                <span>{{ spills }}</span>
-              </span>
-            </div>
-          </div>
-
-          <div *ngIf="c.sourceInfo as src" class="dataflow-row">
-            <span class="dataflow-label">Source</span>
-            <div
-              class="source-pill"
-              [matTooltip]="src.raw"
-              matTooltipPosition="above"
-            >
-              <mat-icon class="source-pill-icon" aria-hidden="true">code</mat-icon>
-              <span class="source-pill-file">{{ src.shortLocation }}</span>
-              <span *ngIf="src.directory" class="source-pill-dir">{{ src.directory }}</span>
-            </div>
-          </div>
-
-          <div *ngIf="c.sourceStack as stack" class="dataflow-row">
-            <span class="dataflow-label">Stack ({{ stack.length }})</span>
-            <div class="source-stack-list" role="list" aria-label="Source call stack">
-              <div
-                *ngFor="let frame of stack"
-                role="listitem"
-                class="source-stack-frame"
-                [class.innermost-frame]="frame.isInnermost"
-                [matTooltip]="frame.raw"
-                matTooltipPosition="above"
-              >
-                <span class="frame-index">{{ frame.index }}</span>
-                <span class="frame-file">{{ frame.shortLocation }}</span>
-                <span *ngIf="frame.directory" class="frame-dir">{{ frame.directory }}</span>
-              </div>
-            </div>
-          </div>
-
-          <div *ngIf="c.extraAttributes as attrs" class="dataflow-row">
-            <span class="dataflow-label">Attributes</span>
-            <div class="attr-chip-list">
-              <span
-                *ngFor="let attr of attrs"
-                class="attr-chip"
-                [matTooltip]="attr.key + ': ' + attr.value"
-                matTooltipPosition="above"
-              >
-                <span class="attr-chip-key">{{ attr.key }}:</span>
-                <span class="attr-chip-val">{{ attr.value }}</span>
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div
-          *ngIf="!c.output && !c.operands && !c.consumers && !c.spillsLabel && !c.sourceInfo && !c.sourceStack && !c.extraAttributes && !c.counterGauge"
-          class="kv-grid"
-        >
-          <div *ngIf="c.unit" class="kv-row">
-            <span class="kv-key">Functional unit</span>
-            <span class="kv-value">{{ c.unit.label }}{{ c.unit.description ? ' — ' + c.unit.description : '' }}</span>
-          </div>
-          <div class="kv-row">
-            <span class="kv-key">{{ c.bundlesLabel }}</span>
-            <span class="kv-value">{{ c.bundles }} {{ c.hexBundle ?? '' }}</span>
-          </div>
-          <div *ngIf="c.length" class="kv-row">
-            <span class="kv-key">Duration</span>
-            <span class="kv-value">{{ c.length }}</span>
-          </div>
-          <div *ngIf="c.schedulePosition as pos" class="kv-row">
-            <span class="kv-key">Schedule offset</span>
-            <span class="kv-value">{{ pos.formattedPercent }} of {{ pos.totalBundles }} bundles</span>
-          </div>
-        </div>
+        </ng-template>
       </div>
     </section>
 
@@ -628,10 +697,16 @@
       </div>
     </section>
 
-    <!-- Column 2: Mean Static Utilization & Region Hierarchy -->
+    <!-- Column 2: Mean Static Utilization, Counter Metrics & Region Hierarchy -->
     <section class="panel-card">
       <div class="card-section-header">
-        <span class="section-title">Mean Utilization</span>
+        <span class="section-title">
+          {{
+            c.utilizationMetrics || c.resourceCounterMetrics
+              ? 'Utilization & Counter Metrics'
+              : 'Mean Utilization'
+          }}
+        </span>
         <span
           *ngIf="c.meanUtilization?.boundUnit as boundUnit"
           class="section-badge highlight-badge"
@@ -641,40 +716,125 @@
       </div>
 
       <div class="card-section-body">
-        <div
-          *ngIf="c.utilizationBars as bars"
-          class="util-bars-list"
-          [class.compact-util-grid]="!!c.parentRegion || !!c.childRegions"
-        >
+        <!-- Enhanced Range Utilization Metrics (Mean + Peak + Active Coverage) -->
+        <div *ngIf="c.utilizationMetrics as uMetrics; else standardUtilBars" class="range-util-metrics-list">
           <div
-            *ngFor="let bar of bars"
-            class="util-bar-row"
-            [class.highlighted]="bar.highlighted"
+            *ngFor="let item of uMetrics"
+            class="range-util-metric-row"
+            [class.highlighted]="item.highlighted"
             [matTooltip]="
-              bar.unit.label +
-              (bar.unit.description ? ' (' + bar.unit.description + ')' : '') +
-              ': ' +
-              bar.formattedPercent +
-              ' mean utilization'
+              item.unit.label +
+              ': Mean ' +
+              item.formattedMean +
+              ' · Peak ' +
+              item.formattedPeak +
+              (item.peakBundleLabel ? ' (' + item.peakBundleLabel + ')' : '') +
+              ' · ' +
+              item.formattedActiveShare
             "
             matTooltipPosition="above"
           >
             <span class="util-unit-label">
               <span
                 class="unit-dot"
-                [style.background-color]="bar.unit.color"
+                [style.background-color]="item.unit.color"
                 aria-hidden="true"
               ></span>
-              {{ bar.unit.label }}
+              {{ item.unit.label }}
             </span>
-            <span class="util-track" aria-hidden="true">
+            <span class="util-track dual-util-track" aria-hidden="true">
+              <span
+                class="util-peak-ghost"
+                [style.width.%]="item.peakPercent"
+                [style.background-color]="item.unit.color"
+              ></span>
               <span
                 class="util-fill"
-                [style.width.%]="bar.percent"
-                [style.background-color]="bar.unit.color"
+                [style.width.%]="item.meanPercent"
+                [style.background-color]="item.unit.color"
               ></span>
             </span>
-            <span class="util-pct">{{ bar.formattedPercent }}</span>
+            <span class="range-util-stats">
+              <span class="util-pct">{{ item.formattedMean }}</span>
+              <span class="util-peak-tag">pk {{ item.formattedPeak }}</span>
+            </span>
+          </div>
+        </div>
+
+        <ng-template #standardUtilBars>
+          <div
+            *ngIf="c.utilizationBars as bars"
+            class="util-bars-list"
+            [class.compact-util-grid]="!!c.parentRegion || !!c.childRegions"
+          >
+            <div
+              *ngFor="let bar of bars"
+              class="util-bar-row"
+              [class.highlighted]="bar.highlighted"
+              [matTooltip]="
+                bar.unit.label +
+                (bar.unit.description ? ' (' + bar.unit.description + ')' : '') +
+                ': ' +
+                bar.formattedPercent +
+                ' mean utilization'
+              "
+              matTooltipPosition="above"
+            >
+              <span class="util-unit-label">
+                <span
+                  class="unit-dot"
+                  [style.background-color]="bar.unit.color"
+                  aria-hidden="true"
+                ></span>
+                {{ bar.unit.label }}
+              </span>
+              <span class="util-track" aria-hidden="true">
+                <span
+                  class="util-fill"
+                  [style.width.%]="bar.percent"
+                  [style.background-color]="bar.unit.color"
+                ></span>
+              </span>
+              <span class="util-pct">{{ bar.formattedPercent }}</span>
+            </div>
+          </div>
+        </ng-template>
+
+        <!-- Range Memory & Register Pressure Counter Metrics -->
+        <div *ngIf="c.resourceCounterMetrics as rMetrics" class="hierarchy-block">
+          <div class="hierarchy-header-row">
+            <span class="footer-label">Memory &amp; Register Pressure</span>
+            <span class="hierarchy-count">{{ rMetrics.length }} tracks</span>
+          </div>
+          <div class="resource-metrics-grid">
+            <div
+              *ngFor="let rm of rMetrics"
+              class="resource-metric-card"
+              [style.--rm-color]="rm.accentColor"
+              [matTooltip]="
+                rm.trackName +
+                ' — Mean: ' +
+                rm.formattedMean +
+                ' · Peak: ' +
+                rm.formattedPeak +
+                (rm.peakBundleLabel ? ' (' + rm.peakBundleLabel + ')' : '') +
+                ' · Min: ' +
+                rm.formattedMin
+              "
+              matTooltipPosition="above"
+            >
+              <div class="rm-header">
+                <span class="rm-title">
+                  <span class="unit-dot" [style.background-color]="rm.accentColor" aria-hidden="true"></span>
+                  {{ rm.shortLabel }}
+                </span>
+                <span class="rm-mean">{{ rm.formattedMean }}</span>
+              </div>
+              <div class="rm-sub">
+                <span>Peak {{ rm.formattedPeak }}</span>
+                <span *ngIf="rm.peakBundleLabel">{{ rm.peakBundleLabel }}</span>
+              </div>
+            </div>
           </div>
         </div>
 

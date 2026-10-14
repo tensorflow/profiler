@@ -276,6 +276,9 @@ class Timeline {
   std::vector<int>& selected_event_indices_for_test() {
     return selected_event_indices_;
   }
+  std::vector<std::pair<int, int>>& selected_counter_points_for_test() {
+    return selected_counter_points_;
+  }
   void SetPlaybackState(bool is_playing, double current_progress_us,
                         double play_speed) {
     if (!timeline_player_enabled_) return;
@@ -860,6 +863,7 @@ class Timeline {
                                             EventData& event_data) const;
   void PopulateCounterSelectedScheduleDetails(int group_index,
                                               size_t counter_index,
+                                              Microseconds clicked_bundle,
                                               EventData& event_data) const;
   void PopulateEventHoveredScheduleDetails(int event_index,
                                            EventData& event_data) const;
@@ -1211,6 +1215,7 @@ class Timeline {
   // The index of the currently selected counter event in the counter data, or
   // -1 if no counter event is selected.
   int selected_counter_index_ = -1;
+  int64_t selected_counter_bundle_ = -1;
   bool should_restore_scroll_ = false;
   float last_scroll_y_ = 0.0f;
 

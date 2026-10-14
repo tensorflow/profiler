@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/container/flat_hash_set.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
@@ -77,6 +78,64 @@ std::vector<EventData> BuildTopInstructionEventData(
   return top_instructions;
 }
 
+struct CounterRangeSummary {
+  double mean = 0.0;
+  double min = 0.0;
+  double max = 0.0;
+  Microseconds peak_bundle = 0.0;
+  Microseconds active_bundles = 0.0;
+  int sample_count = 0;
+};
+
+CounterRangeSummary ComputeCounterRangeSummary(const CounterData& counter_data,
+                                               Microseconds start,
+                                               Microseconds end) {
+  CounterRangeSummary summary;
+  const Microseconds dur = end - start;
+  if (dur <= 0.0 || counter_data.timestamps.empty() ||
+      counter_data.values.empty()) {
+    return summary;
+  }
+  const auto& ts = counter_data.timestamps;
+  const auto& vals = counter_data.values;
+  double weighted_sum = 0.0;
+  double min_val = std::numeric_limits<double>::infinity();
+  double max_val = -std::numeric_limits<double>::infinity();
+  Microseconds peak_bundle = std::floor(start);
+  Microseconds active_bundles = 0.0;
+  int samples = 0;
+
+  auto it = std::upper_bound(ts.begin(), ts.end(), start);
+  size_t i = (it == ts.begin()) ? 0 : std::distance(ts.begin(), std::prev(it));
+  for (; i < ts.size() && i < vals.size(); ++i) {
+    const Microseconds seg_start = std::max(start, ts[i]);
+    if (seg_start >= end) break;
+    const Microseconds seg_end =
+        (i + 1 < ts.size()) ? std::min(end, ts[i + 1]) : end;
+    const Microseconds seg_dur = seg_end - seg_start;
+    if (seg_dur > 0.0) {
+      const double v = vals[i];
+      weighted_sum += v * seg_dur;
+      if (v < min_val) min_val = v;
+      if (v > max_val) {
+        max_val = v;
+        peak_bundle = std::floor(seg_start);
+      }
+      if (v > 0.0) {
+        active_bundles += seg_dur;
+      }
+      ++samples;
+    }
+  }
+  summary.mean = weighted_sum / dur;
+  summary.min = std::isfinite(min_val) ? min_val : 0.0;
+  summary.max = std::isfinite(max_val) ? max_val : 0.0;
+  summary.peak_bundle = peak_bundle;
+  summary.active_bundles = active_bundles;
+  summary.sample_count = samples;
+  return summary;
+}
+
 void PopulateMeanCounterUtilization(const FlameChartTimelineData& timeline_data,
                                     Microseconds start, Microseconds end,
                                     EventData& event_data) {
@@ -89,22 +148,9 @@ void PopulateMeanCounterUtilization(const FlameChartTimelineData& timeline_data,
         counter_data.timestamps.empty() || counter_data.values.empty()) {
       continue;
     }
-    const auto& ts = counter_data.timestamps;
-    const auto& vals = counter_data.values;
-    double weighted_sum = 0.0;
-    auto it = std::upper_bound(ts.begin(), ts.end(), start);
-    size_t i =
-        (it == ts.begin()) ? 0 : std::distance(ts.begin(), std::prev(it));
-    for (; i < ts.size() && i < vals.size(); ++i) {
-      const Microseconds seg_start = std::max(start, ts[i]);
-      if (seg_start >= end) break;
-      const Microseconds seg_end =
-          (i + 1 < ts.size()) ? std::min(end, ts[i + 1]) : end;
-      if (seg_end > seg_start) {
-        weighted_sum += vals[i] * (seg_end - seg_start);
-      }
-    }
-    mean_util.try_emplace(timeline_data.groups[g_idx].name, weighted_sum / dur);
+    const CounterRangeSummary s =
+        ComputeCounterRangeSummary(counter_data, start, end);
+    mean_util.try_emplace(timeline_data.groups[g_idx].name, s.mean);
   }
   if (!mean_util.empty()) {
     event_data.try_emplace("utilization", std::move(mean_util));
@@ -155,7 +201,8 @@ void Timeline::PopulateEventSelectedScheduleDetails(
 }
 
 void Timeline::PopulateCounterSelectedScheduleDetails(
-    int group_index, size_t counter_index, EventData& event_data) const {
+    int group_index, size_t counter_index, Microseconds clicked_bundle,
+    EventData& event_data) const {
   if (group_index < 0 ||
       static_cast<size_t>(group_index) >= timeline_data_.groups.size()) {
     return;
@@ -168,16 +215,44 @@ void Timeline::PopulateCounterSelectedScheduleDetails(
     return;
   }
   const std::string& name = timeline_data_.groups[group_index].name;
-  const Microseconds bundle = std::floor(data.timestamps[counter_index]);
+  const Microseconds total_bundles = GetScheduleEndBundle();
+  const Microseconds step_start_bundle =
+      std::floor(data.timestamps[counter_index]);
+  const Microseconds step_end_bundle =
+      (counter_index + 1 < data.timestamps.size())
+          ? std::floor(data.timestamps[counter_index + 1])
+          : std::max(step_start_bundle + 1.0, total_bundles);
+  const Microseconds bundle =
+      (clicked_bundle >= step_start_bundle && clicked_bundle < step_end_bundle)
+          ? std::floor(clicked_bundle)
+          : step_start_bundle;
   event_data.try_emplace("trackName", name);
   event_data.try_emplace("trackType", std::string("counter"));
   event_data.try_emplace(kEventSelectedStart, bundle);
   event_data.try_emplace(kEventSelectedDuration, 1.0);
   event_data.try_emplace("counterValue", data.values[counter_index]);
-  const Microseconds total_bundles = GetScheduleEndBundle();
+  event_data.try_emplace("stepStartBundle", step_start_bundle);
+  event_data.try_emplace("stepEndBundle",
+                         std::max(step_start_bundle + 1.0, step_end_bundle));
+  event_data.try_emplace("stepDurationBundles",
+                         std::max(1.0, step_end_bundle - step_start_bundle));
   if (total_bundles > 0.0) {
     event_data.try_emplace("totalBundles", total_bundles);
   }
+  const Microseconds summary_end =
+      total_bundles > 0.0
+          ? total_bundles
+          : std::max(step_end_bundle, std::floor(data.timestamps.back()) + 1.0);
+  const CounterRangeSummary stats =
+      ComputeCounterRangeSummary(data, 0.0, summary_end);
+  EventData counter_stats;
+  counter_stats.try_emplace("mean", stats.mean);
+  counter_stats.try_emplace("min", stats.min);
+  counter_stats.try_emplace("max", stats.max);
+  counter_stats.try_emplace("peakBundle", stats.peak_bundle);
+  counter_stats.try_emplace("activeBundles", stats.active_bundles);
+  counter_stats.try_emplace("sampleCount", stats.sample_count);
+  event_data.try_emplace("counterStats", std::move(counter_stats));
   PopulateBundleScheduleDetails(bundle, event_data);
   PopulateBundleEvents(bundle, -1, event_data);
 }
@@ -794,6 +869,59 @@ void Timeline::PopulateMultiSelectionScheduleDetails(
     summary.total_bundles += timeline_data_.entry_total_times[idx];
   }
 
+  // When a range is selected across Utilization/Memory counter tracks without
+  // directly box-selecting instruction flame tracks, aggregate the schedule
+  // instructions executing inside [range_start, range_end).
+  if (total_instructions == 0 && range_dur > 0.0) {
+    for (size_t g_idx = 0; g_idx < timeline_data_.groups.size(); ++g_idx) {
+      const Group& g = timeline_data_.groups[g_idx];
+      if (g.type != Group::Type::kFlame ||
+          (g.nesting_level == kProcessNestingLevel && g.has_children) ||
+          IsScopeOrRegionFlameGroup(g.name)) {
+        continue;
+      }
+      const int start_lvl = std::max(0, g.start_level);
+      const int end_lvl =
+          std::min(GetNextGroupStartLevel(timeline_data_, g_idx), total_levels);
+      for (int lvl = start_lvl; lvl < end_lvl; ++lvl) {
+        absl::Span<const int> indices = timeline_data_.level_events(lvl);
+        auto first_it = std::lower_bound(
+            indices.begin(), indices.end(), range_start,
+            [this, num_entries](int idx, Microseconds t) {
+              if (idx < 0 || static_cast<size_t>(idx) >= num_entries) {
+                return false;
+              }
+              return timeline_data_.entry_start_times[idx] +
+                         timeline_data_.entry_total_times[idx] <=
+                     t;
+            });
+        for (auto it = first_it; it != indices.end(); ++it) {
+          const int idx = *it;
+          if (idx < 0 || static_cast<size_t>(idx) >= num_entries) continue;
+          const Microseconds s = timeline_data_.entry_start_times[idx];
+          if (s >= range_end) break;
+          if (s + timeline_data_.entry_total_times[idx] <= range_start) {
+            continue;
+          }
+          if (sorted_indices.size() < 100) {
+            sorted_indices.push_back(idx);
+          }
+          unit_counts[g.name]++;
+          total_instructions++;
+          const std::string& instr_name = timeline_data_.entry_names[idx];
+          auto& summary = instruction_map[{g.name, instr_name}];
+          if (summary.count == 0) {
+            summary.track_name = g.name;
+            summary.name = instr_name;
+            summary.first_event_index = idx;
+          }
+          summary.count++;
+          summary.total_bundles += timeline_data_.entry_total_times[idx];
+        }
+      }
+    }
+  }
+
   EventData bundle_counts;
   for (const auto& [unit, count] : unit_counts) {
     bundle_counts.try_emplace(unit, count);
@@ -830,6 +958,46 @@ void Timeline::PopulateMultiSelectionScheduleDetails(
 
   PopulateMeanCounterUtilization(timeline_data_, range_start, range_end,
                                  event_data);
+
+  // Populate detailed per-counter-track range metrics (mean, min, max, peak
+  // bundle, active bundles, kernel mean, and whether directly box-selected).
+  if (range_dur > 0.0 && !timeline_data_.counter_data_by_group_index.empty()) {
+    absl::flat_hash_set<int> selected_counter_groups;
+    for (const auto& [g_idx, _] : selected_counter_points_) {
+      selected_counter_groups.insert(g_idx);
+    }
+    const Microseconds kernel_end =
+        total_bundles > 0.0 ? total_bundles : range_end;
+    std::vector<EventData> counter_metrics;
+    counter_metrics.reserve(timeline_data_.counter_data_by_group_index.size());
+    for (const auto& [g_idx, counter_data] :
+         timeline_data_.counter_data_by_group_index) {
+      if (g_idx < 0 ||
+          g_idx >= static_cast<int>(timeline_data_.groups.size()) ||
+          counter_data.timestamps.empty() || counter_data.values.empty()) {
+        continue;
+      }
+      const CounterRangeSummary range_summary =
+          ComputeCounterRangeSummary(counter_data, range_start, range_end);
+      const CounterRangeSummary kernel_summary =
+          ComputeCounterRangeSummary(counter_data, 0.0, kernel_end);
+      EventData cm;
+      cm.try_emplace("trackName", timeline_data_.groups[g_idx].name);
+      cm.try_emplace("mean", range_summary.mean);
+      cm.try_emplace("min", range_summary.min);
+      cm.try_emplace("max", range_summary.max);
+      cm.try_emplace("peakBundle", range_summary.peak_bundle);
+      cm.try_emplace("activeBundles", range_summary.active_bundles);
+      cm.try_emplace("sampleCount", range_summary.sample_count);
+      cm.try_emplace("kernelMean", kernel_summary.mean);
+      cm.try_emplace("kernelMax", kernel_summary.max);
+      cm.try_emplace("selected", selected_counter_groups.contains(g_idx));
+      counter_metrics.push_back(std::move(cm));
+    }
+    if (!counter_metrics.empty()) {
+      event_data.try_emplace("counterMetrics", std::move(counter_metrics));
+    }
+  }
 }
 
 void Timeline::SyncMinimapState() {

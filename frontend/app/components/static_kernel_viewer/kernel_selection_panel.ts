@@ -14,18 +14,23 @@ import {MatButtonModule} from '@angular/material/button';
 import {MatIconModule} from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {
+  accentColorForCounterTrack,
   buildInstructionMix,
   buildKernelEventTooltip,
   buildUtilizationBars,
   BUNDLE_FORMAT,
+  classifyCounterTrack,
   classifyRegister,
   DEFAULT_ACCENT_COLOR,
   DENSITY_FORMAT,
+  formatCounterTrackValue,
   FUNCTIONAL_UNITS_BY_LANE,
   readHoveredEvent,
   readNumberRecord,
+  unitForCounterTrack,
   type BundleLaneCell,
   type CounterGauge,
+  type CounterMetricKind,
   type FunctionalUnit,
   type InstructionMixItem,
   type InstructionOutput,
@@ -111,6 +116,53 @@ export interface SourceFrameItem {
   readonly isInnermost: boolean;
 }
 
+/** Rich counter track statistics for single-click counter inspection. */
+export interface CounterSelectionDetails {
+  readonly kind: CounterMetricKind;
+  readonly formattedCurrent: string;
+  readonly stepRangeLabel: string;
+  readonly stepDurationLabel: string;
+  readonly formattedMean?: string;
+  readonly formattedPeak?: string;
+  readonly formattedMin?: string;
+  readonly peakBundleLabel?: string;
+  readonly activeCoverageLabel?: string;
+  readonly deltaFromMeanLabel?: string;
+  readonly isAtPeak?: boolean;
+  readonly currentPercentOfPeak: number;
+  readonly meanPercentOfPeak?: number;
+  readonly sampleCount?: number;
+}
+
+/** Per-unit utilization summary (mean, peak, active coverage) across a selected range. */
+export interface RangeUtilizationMetricItem {
+  readonly unit: FunctionalUnit;
+  readonly meanPercent: number;
+  readonly formattedMean: string;
+  readonly peakPercent: number;
+  readonly formattedPeak: string;
+  readonly peakBundleLabel?: string;
+  readonly minPercent: number;
+  readonly formattedMin: string;
+  readonly activeBundles: number;
+  readonly activeSharePercent: number;
+  readonly formattedActiveShare: string;
+  readonly highlighted: boolean;
+}
+
+/** Memory or register counter summary across a selected range. */
+export interface RangeResourceMetricItem {
+  readonly trackName: string;
+  readonly shortLabel: string;
+  readonly kind: 'bytes' | 'registers';
+  readonly accentColor: string;
+  readonly formattedMean: string;
+  readonly formattedPeak: string;
+  readonly formattedMin: string;
+  readonly peakBundleLabel?: string;
+  readonly meanRatioOfPeak: number;
+}
+
 /** View model for the Static Kernel Viewer bottom selection panel. */
 export interface KernelSelectionContent {
   readonly mode: 'single' | 'range';
@@ -147,6 +199,9 @@ export interface KernelSelectionContent {
   readonly utilizationBars?: readonly UtilizationBar[];
   readonly peakUtilizationLabel?: string;
   readonly counterGauge?: CounterGauge;
+  readonly counterDetails?: CounterSelectionDetails;
+  readonly utilizationMetrics?: readonly RangeUtilizationMetricItem[];
+  readonly resourceCounterMetrics?: readonly RangeResourceMetricItem[];
   readonly regions?: readonly string[];
   readonly regionBreadcrumbs?: readonly RegionBreadcrumbItem[];
   readonly regionRowLabel?: string;
@@ -207,6 +262,10 @@ const REGISTER_TYPE_LABELS: Readonly<
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function clampPercent(percent: number): number {
+  return Math.max(0, Math.min(100, Math.round(percent)));
 }
 
 function formatBundleRange(start: number, duration: number): string {
@@ -430,6 +489,250 @@ function parseSourceStack(
   );
 }
 
+function buildCounterSelectionDetails(
+  detail: Record<string, unknown>,
+  trackName: string,
+  startBundle: number,
+  counterValue: number | undefined,
+  totalBundles: number | undefined,
+): CounterSelectionDetails | undefined {
+  const kind = classifyCounterTrack(trackName);
+  const currentVal = counterValue ?? 0;
+  const formattedCurrent = formatCounterTrackValue(currentVal, kind);
+
+  const stepStart =
+    typeof detail['stepStartBundle'] === 'number'
+      ? Math.max(0, Math.floor(detail['stepStartBundle']))
+      : Math.max(0, Math.floor(startBundle));
+  const stepDuration =
+    typeof detail['stepDurationBundles'] === 'number' &&
+    detail['stepDurationBundles'] > 0
+      ? Math.round(detail['stepDurationBundles'])
+      : 1;
+  const stepRangeLabel =
+    stepDuration <= 1
+      ? `Bundle ${BUNDLE_FORMAT.format(stepStart)}`
+      : `Bundles ${formatBundleRange(stepStart, stepDuration)}`;
+  const stepDurationLabel = `${BUNDLE_FORMAT.format(stepDuration)} ${stepDuration === 1 ? 'bundle' : 'bundles'}`;
+
+  const rawStats = isRecord(detail['counterStats'])
+    ? detail['counterStats']
+    : undefined;
+  const meanVal =
+    typeof rawStats?.['mean'] === 'number' && Number.isFinite(rawStats['mean'])
+      ? rawStats['mean']
+      : undefined;
+  const maxVal =
+    typeof rawStats?.['max'] === 'number' && Number.isFinite(rawStats['max'])
+      ? rawStats['max']
+      : undefined;
+  const minVal =
+    typeof rawStats?.['min'] === 'number' && Number.isFinite(rawStats['min'])
+      ? rawStats['min']
+      : undefined;
+  const peakBundle =
+    typeof rawStats?.['peakBundle'] === 'number' &&
+    Number.isFinite(rawStats['peakBundle'])
+      ? Math.max(0, Math.floor(rawStats['peakBundle']))
+      : undefined;
+  const activeBundles =
+    typeof rawStats?.['activeBundles'] === 'number' &&
+    Number.isFinite(rawStats['activeBundles'])
+      ? Math.max(0, Math.round(rawStats['activeBundles']))
+      : undefined;
+  const sampleCount =
+    typeof rawStats?.['sampleCount'] === 'number' &&
+    Number.isFinite(rawStats['sampleCount'])
+      ? Math.max(0, Math.round(rawStats['sampleCount']))
+      : undefined;
+
+  const formattedMean =
+    meanVal !== undefined ? formatCounterTrackValue(meanVal, kind) : undefined;
+  const formattedPeak =
+    maxVal !== undefined ? formatCounterTrackValue(maxVal, kind) : undefined;
+  const formattedMin =
+    minVal !== undefined ? formatCounterTrackValue(minVal, kind) : undefined;
+  const peakBundleLabel =
+    peakBundle !== undefined
+      ? `@ Bundle ${BUNDLE_FORMAT.format(peakBundle)}`
+      : undefined;
+
+  let activeCoverageLabel: string | undefined = undefined;
+  if (activeBundles !== undefined) {
+    if (totalBundles !== undefined && totalBundles > 0) {
+      const pct = clampPercent((activeBundles / totalBundles) * 100);
+      activeCoverageLabel = `${BUNDLE_FORMAT.format(activeBundles)} / ${BUNDLE_FORMAT.format(totalBundles)} bundles (${pct}%)`;
+    } else {
+      activeCoverageLabel = `${BUNDLE_FORMAT.format(activeBundles)} active ${activeBundles === 1 ? 'bundle' : 'bundles'}`;
+    }
+  }
+
+  const isAtPeak =
+    maxVal !== undefined &&
+    maxVal > 0 &&
+    Math.abs(currentVal - maxVal) <= Math.max(1e-4, maxVal * 0.005);
+
+  let deltaFromMeanLabel: string | undefined = undefined;
+  if (isAtPeak) {
+    deltaFromMeanLabel = 'At Kernel Peak';
+  } else if (meanVal !== undefined) {
+    if (kind === 'utilization') {
+      const diffPct = Math.round((currentVal - meanVal) * 100);
+      if (diffPct > 0) {
+        deltaFromMeanLabel = `+${diffPct}% vs mean`;
+      } else if (diffPct < 0) {
+        deltaFromMeanLabel = `${diffPct}% vs mean`;
+      } else {
+        deltaFromMeanLabel = 'At mean';
+      }
+    } else if (meanVal > 0) {
+      const ratio = currentVal / meanVal;
+      deltaFromMeanLabel = `${DENSITY_FORMAT.format(ratio)}× mean`;
+    }
+  }
+
+  const currentPercentOfPeak =
+    kind === 'utilization'
+      ? clampPercent(currentVal * 100)
+      : maxVal !== undefined && maxVal > 0
+        ? clampPercent((currentVal / maxVal) * 100)
+        : currentVal > 0
+          ? 65
+          : 0;
+  const meanPercentOfPeak =
+    meanVal !== undefined
+      ? kind === 'utilization'
+        ? clampPercent(meanVal * 100)
+        : maxVal !== undefined && maxVal > 0
+          ? clampPercent((meanVal / maxVal) * 100)
+          : undefined
+      : undefined;
+
+  return {
+    kind,
+    formattedCurrent,
+    stepRangeLabel,
+    stepDurationLabel,
+    ...(formattedMean ? {formattedMean} : {}),
+    ...(formattedPeak ? {formattedPeak} : {}),
+    ...(formattedMin ? {formattedMin} : {}),
+    ...(peakBundleLabel ? {peakBundleLabel} : {}),
+    ...(activeCoverageLabel ? {activeCoverageLabel} : {}),
+    ...(deltaFromMeanLabel ? {deltaFromMeanLabel} : {}),
+    ...(isAtPeak ? {isAtPeak} : {}),
+    currentPercentOfPeak,
+    ...(meanPercentOfPeak !== undefined ? {meanPercentOfPeak} : {}),
+    ...(sampleCount !== undefined ? {sampleCount} : {}),
+  };
+}
+
+function readRangeCounterMetrics(
+  raw: unknown,
+  rangeExtent: number,
+): {
+  utilizationMetrics?: readonly RangeUtilizationMetricItem[];
+  resourceCounterMetrics?: readonly RangeResourceMetricItem[];
+} {
+  if (!Array.isArray(raw)) {
+    return {};
+  }
+  const rawUtilItems: Array<Omit<RangeUtilizationMetricItem, 'highlighted'>> =
+    [];
+  const resourceItems: RangeResourceMetricItem[] = [];
+
+  for (const entry of raw) {
+    if (!isRecord(entry)) continue;
+    const trackName =
+      typeof entry['trackName'] === 'string' ? entry['trackName'].trim() : '';
+    if (!trackName) continue;
+    const mean =
+      typeof entry['mean'] === 'number' && Number.isFinite(entry['mean'])
+        ? entry['mean']
+        : 0;
+    const max =
+      typeof entry['max'] === 'number' && Number.isFinite(entry['max'])
+        ? entry['max']
+        : mean;
+    const min =
+      typeof entry['min'] === 'number' && Number.isFinite(entry['min'])
+        ? entry['min']
+        : 0;
+    const peakBundle =
+      typeof entry['peakBundle'] === 'number' &&
+      Number.isFinite(entry['peakBundle'])
+        ? Math.max(0, Math.floor(entry['peakBundle']))
+        : undefined;
+    const activeBundles =
+      typeof entry['activeBundles'] === 'number' &&
+      Number.isFinite(entry['activeBundles'])
+        ? Math.max(0, Math.round(entry['activeBundles']))
+        : 0;
+
+    const unit = unitForCounterTrack(trackName);
+    const kind = classifyCounterTrack(trackName);
+    if (unit && kind === 'utilization') {
+      const meanPercent = clampPercent(mean * 100);
+      const peakPercent = clampPercent(max * 100);
+      const minPercent = clampPercent(min * 100);
+      const activeSharePercent =
+        rangeExtent > 0 ? clampPercent((activeBundles / rangeExtent) * 100) : 0;
+      if (meanPercent > 0 || peakPercent > 0 || activeBundles > 0) {
+        rawUtilItems.push({
+          unit,
+          meanPercent,
+          formattedMean: `${meanPercent}%`,
+          peakPercent,
+          formattedPeak: `${peakPercent}%`,
+          ...(peakBundle !== undefined
+            ? {peakBundleLabel: `@ ${BUNDLE_FORMAT.format(peakBundle)}`}
+            : {}),
+          minPercent,
+          formattedMin: `${minPercent}%`,
+          activeBundles,
+          activeSharePercent,
+          formattedActiveShare: `${activeSharePercent}% active`,
+        });
+      }
+    } else if (kind === 'bytes' || kind === 'registers') {
+      if (mean > 0 || max > 0 || activeBundles > 0) {
+        resourceItems.push({
+          trackName,
+          shortLabel: trackName,
+          kind,
+          accentColor: accentColorForCounterTrack(trackName, unit),
+          formattedMean: formatCounterTrackValue(mean, kind),
+          formattedPeak: formatCounterTrackValue(max, kind),
+          formattedMin: formatCounterTrackValue(min, kind),
+          ...(peakBundle !== undefined
+            ? {peakBundleLabel: `@ ${BUNDLE_FORMAT.format(peakBundle)}`}
+            : {}),
+          meanRatioOfPeak: max > 0 ? clampPercent((mean / max) * 100) : 0,
+        });
+      }
+    }
+  }
+
+  rawUtilItems.sort(
+    (a, b) => b.meanPercent - a.meanPercent || b.peakPercent - a.peakPercent,
+  );
+  const topMean = rawUtilItems[0]?.meanPercent ?? 0;
+  const topPeak = rawUtilItems[0]?.peakPercent ?? 0;
+  const utilizationMetrics: RangeUtilizationMetricItem[] | undefined =
+    rawUtilItems.length > 0
+      ? rawUtilItems.map((item, idx) => ({
+          ...item,
+          highlighted: idx === 0 && (topMean > 0 || topPeak > 0),
+        }))
+      : undefined;
+
+  return {
+    ...(utilizationMetrics ? {utilizationMetrics} : {}),
+    ...(resourceItems.length > 0
+      ? {resourceCounterMetrics: resourceItems}
+      : {}),
+  };
+}
+
 /**
  * Builds the bottom selection panel content from an `eventselected` detail
  * payload. Returns `undefined` when deselected (`eventIndex === -1` and not a
@@ -463,15 +766,27 @@ export function buildKernelSelectionFromEvent(
 
   const isRegion = tooltip.kind === 'region';
   const mode: KernelSelectionContent['mode'] = isRegion ? 'range' : 'single';
+  const counterKind =
+    tooltip.kind === 'counter'
+      ? classifyCounterTrack(hovered.trackName)
+      : undefined;
   const badgeLabel = isRegion
     ? 'Region'
     : tooltip.kind === 'counter'
-      ? 'Counter'
+      ? counterKind === 'bytes'
+        ? 'Memory Counter'
+        : counterKind === 'registers'
+          ? 'Register Pressure'
+          : 'Utilization'
       : (tooltip.unit?.label ?? 'Instruction');
   const badgeIcon = isRegion
     ? 'account_tree'
     : tooltip.kind === 'counter'
-      ? 'monitoring'
+      ? counterKind === 'bytes'
+        ? 'storage'
+        : counterKind === 'registers'
+          ? 'developer_board'
+          : 'monitoring'
       : 'memory';
 
   const sourceStack = parseSourceStack(hovered.args?.['source_stack']);
@@ -534,6 +849,16 @@ export function buildKernelSelectionFromEvent(
     detail['topInstructions'],
     totalInstructions,
   );
+  const counterDetails =
+    tooltip.kind === 'counter'
+      ? buildCounterSelectionDetails(
+          detail,
+          hovered.trackName,
+          hovered.start,
+          hovered.counterValue,
+          hovered.totalBundles,
+        )
+      : undefined;
 
   const subtitleChips = [...(tooltip.subtitleChips ?? [])];
   if (isRegion && totalInstructions > 0) {
@@ -587,6 +912,7 @@ export function buildKernelSelectionFromEvent(
     ...(utilizationBars ? {utilizationBars} : {}),
     ...(peakUtilizationLabel ? {peakUtilizationLabel} : {}),
     ...(tooltip.counterGauge ? {counterGauge: tooltip.counterGauge} : {}),
+    ...(counterDetails ? {counterDetails} : {}),
     ...(tooltip.regions
       ? {regions: tooltip.regions, regionRowLabel: tooltip.regionRowLabel}
       : {}),
@@ -645,10 +971,17 @@ export function buildKernelSelectionFromRange(
         ? Math.max(0, Math.round(parsedJson['selectionExtentUs']))
         : undefined;
 
+  const rangeStart = start ?? 0;
+  const rangeExtent = extent && extent > 0 ? extent : 1;
+
   const bundleCounts = readNumberRecord(detail['bundleCounts']);
   const utilization = readNumberRecord(detail['utilization']);
   const mixResult = buildInstructionMix(bundleCounts);
   const utilizationBars = buildUtilizationBars(utilization);
+  const {utilizationMetrics, resourceCounterMetrics} = readRangeCounterMetrics(
+    detail['counterMetrics'],
+    rangeExtent,
+  );
 
   const selectedEvents =
     readSelectedRangeEvents(detail['selectedEvents']) ??
@@ -671,7 +1004,10 @@ export function buildKernelSelectionFromRange(
     totalSelectedEvents <= 0 &&
     totalInstructions <= 0 &&
     !selectedEvents &&
-    !parsedJson?.['metrics']
+    !parsedJson?.['metrics'] &&
+    !utilizationBars &&
+    !utilizationMetrics &&
+    !resourceCounterMetrics
   ) {
     return undefined;
   }
@@ -680,8 +1016,6 @@ export function buildKernelSelectionFromRange(
     readTopInstructions(detail['topInstructions'], totalInstructions) ??
     readTopInstructions(parsedJson?.['metrics'], totalInstructions);
 
-  const rangeStart = start ?? 0;
-  const rangeExtent = extent && extent > 0 ? extent : 1;
   const bundles = formatBundleRange(rangeStart, rangeExtent);
   const length = `${BUNDLE_FORMAT.format(rangeExtent)} ${rangeExtent === 1 ? 'bundle' : 'bundles'}`;
 
@@ -709,6 +1043,20 @@ export function buildKernelSelectionFromRange(
     meanUtilization = {
       items: utilizationBars,
       ...(top.percent >= 20 ? {boundUnit: top.unit.label} : {}),
+    };
+  } else if (utilizationMetrics && utilizationMetrics.length > 0) {
+    const top = utilizationMetrics[0];
+    const synthesizedBars: UtilizationBar[] = utilizationMetrics.map(
+      (item) => ({
+        unit: item.unit,
+        percent: item.meanPercent,
+        formattedPercent: item.formattedMean,
+        highlighted: item.highlighted,
+      }),
+    );
+    meanUtilization = {
+      items: synthesizedBars,
+      ...(top.meanPercent >= 20 ? {boundUnit: top.unit.label} : {}),
     };
   }
 
@@ -739,6 +1087,8 @@ export function buildKernelSelectionFromRange(
     totalInstructions,
     ...(meanUtilization ? {meanUtilization} : {}),
     ...(utilizationBars ? {utilizationBars} : {}),
+    ...(utilizationMetrics ? {utilizationMetrics} : {}),
+    ...(resourceCounterMetrics ? {resourceCounterMetrics} : {}),
     ...(density ? {density} : {}),
     ...(topInstructions ? {topInstructions} : {}),
     ...(selectedEvents ? {selectedEvents} : {}),
@@ -947,6 +1297,17 @@ export class KernelSelectionPanel implements AfterViewInit, OnDestroy {
     }
     if (c.sourceInfo) {
       lines.push(`Source: ${c.sourceInfo.raw}`);
+    }
+    if (c.counterDetails) {
+      lines.push(`Value: ${c.counterDetails.formattedCurrent}`);
+      if (c.counterDetails.formattedMean) {
+        lines.push(`Kernel Mean: ${c.counterDetails.formattedMean}`);
+      }
+      if (c.counterDetails.formattedPeak) {
+        lines.push(
+          `Kernel Peak: ${c.counterDetails.formattedPeak}${c.counterDetails.peakBundleLabel ? ' ' + c.counterDetails.peakBundleLabel : ''}`,
+        );
+      }
     }
     if (c.density) {
       lines.push(`Density: ${c.density}`);
