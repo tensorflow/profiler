@@ -27,6 +27,21 @@ wasm_cc_library(
 )
 
 wasm_cc_library(
+    name = "motion",
+    srcs = ["motion.cc"],
+    hdrs = ["motion.h"],
+)
+
+cc_test(
+    name = "motion_test",
+    srcs = ["motion_test.cc"],
+    deps = [
+        ":motion",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+wasm_cc_library(
     name = "time_range",
     srcs = ["time_range.cc"],
     hdrs = ["time_range.h"],
