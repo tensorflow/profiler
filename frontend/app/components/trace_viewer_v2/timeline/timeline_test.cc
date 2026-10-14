@@ -9282,6 +9282,52 @@ TEST_F(TimelineMouseModeSelectTestSuite, FindSelectedEventsSelectsCounters) {
               ::testing::HasSubstr("\"series\":\"percentage\""));
 }
 
+TEST_F(TimelineMouseModeSelectTestSuite,
+       ClickEventInSelectModeSelectsEventWithoutOverwritingWithEmptyRange) {
+  ImGuiIO& io = ImGui::GetIO();
+  std::vector<std::string> emitted_types;
+  int last_selected_event_index = -1;
+  timeline_.set_event_callback(
+      [&](absl::string_view event_type, const EventData& data) {
+        emitted_types.push_back(std::string(event_type));
+        if (event_type == kEventSelected) {
+          auto it = data.find(std::string(kEventSelectedIndex));
+          if (it != data.end()) {
+            last_selected_event_index = std::any_cast<int>(it->second);
+          }
+        }
+      });
+
+  SimulateFrame();
+
+  // First, perform a drag selection to populate multi-selection state.
+  io.MousePos = ImVec2(GetTimelineStartX() + 200.0f, 39.0f);
+  io.AddMouseButtonEvent(0, true);
+  SimulateFrame();
+  SimulateFrame();
+  io.MousePos = ImVec2(GetTimelineStartX(), 150.0f);
+  SimulateFrame();
+  io.AddMouseButtonEvent(0, false);
+  SimulateFrame();
+
+  EXPECT_EQ(timeline_.selected_event_index(), -1);
+  emitted_types.clear();
+
+  // Now click directly on event1 while still in MouseMode::kSelect.
+  io.MousePos = ImVec2(GetTimelineStartX() + 50.0f, kFirstEventY);
+  io.AddMouseButtonEvent(0, true);
+  SimulateFrame();
+  io.AddMouseButtonEvent(0, false);
+  SimulateFrame();
+
+  EXPECT_EQ(timeline_.selected_event_index(), 0);
+  EXPECT_EQ(last_selected_event_index, 0);
+  EXPECT_THAT(emitted_types, ::testing::Contains(std::string(kEventSelected)));
+  EXPECT_THAT(
+      emitted_types,
+      ::testing::Not(::testing::Contains(std::string(kEventsSelected))));
+}
+
 // =============================================================================
 // Fixture: TimelineImGuiFixture
 // =============================================================================

@@ -3240,7 +3240,12 @@ void Timeline::DrawEvent(int group_index, int event_index,
             }
           }
 
-          if (selected_event_index_ != event_index) {
+          const bool had_multi_selection = !selected_event_indices_.empty() ||
+                                           !selected_counter_points_.empty();
+          selected_event_indices_.clear();
+          selected_counter_points_.clear();
+
+          if (selected_event_index_ != event_index || had_multi_selection) {
             selected_group_index_ = group_index;
             selected_event_index_ = event_index;
             // Deselect any selected counter event.
@@ -3600,7 +3605,7 @@ void Timeline::DrawCounterTooltip(int group_index, const CounterData& data,
 
     // ImGui uses 0 to represent the left mouse button, as defined in the
     // ImGuiMouseButton enum. We check if the left mouse button was clicked.
-    if (ImGui::IsMouseReleased(0) && mouse_mode_ != MouseMode::kSelect) {
+    if (ImGui::IsMouseReleased(0)) {
       bool is_click = true;
       if (selection_start_pos_) {
         const float dx = ImGui::GetIO().MousePos.x - selection_start_pos_->x;
@@ -3614,10 +3619,15 @@ void Timeline::DrawCounterTooltip(int group_index, const CounterData& data,
         event_clicked_this_frame_ = true;
         const int64_t clicked_bundle =
             static_cast<int64_t>(std::floor(std::max(0.0, mouse_time)));
+        const bool had_multi_selection = !selected_event_indices_.empty() ||
+                                         !selected_counter_points_.empty();
+        selected_event_indices_.clear();
+        selected_counter_points_.clear();
         if (selected_group_index_ != group_index ||
             selected_counter_index_ != static_cast<int>(index) ||
             (!event_tooltip_enabled_ &&
-             selected_counter_bundle_ != clicked_bundle)) {
+             selected_counter_bundle_ != clicked_bundle) ||
+            had_multi_selection) {
           selected_group_index_ = group_index;
           selected_counter_index_ = index;
           selected_counter_bundle_ = clicked_bundle;
@@ -5308,7 +5318,7 @@ bool Timeline::HandleSelectionOrTimeRangeAddition() {
       if (redraw_callback_)
         redraw_callback_();  // Trigger redraw to show points
       return true;
-    } else {
+    } else if (!event_clicked_this_frame_) {
       // Simple click in Select mode clears rectangle selection in UI.
       CalculateAndEmitMetrics();
     }
@@ -5766,6 +5776,10 @@ void Timeline::NavigateToPrevSearchResult() {
 void Timeline::FindSelectedEvents(const ImRect& selection_rect) {
   selected_event_indices_.clear();
   selected_counter_points_.clear();
+  selected_event_index_ = -1;
+  selected_group_index_ = -1;
+  selected_counter_index_ = -1;
+  selected_counter_bundle_ = -1;
 
   const ImRect timeline_area = GetTimelineArea();
   const Pixel screen_x_offset = timeline_area.Min.x;
