@@ -263,6 +263,11 @@ def _wrap_with_logdir(
     The wrapped tool function.
   """
   sig = inspect.signature(tool_func)
+  session_id_param = sig.parameters.get("session_id")
+  session_id_optional = (
+      session_id_param is not None
+      and session_id_param.default is not inspect.Parameter.empty
+  )
 
   params = []
   kwargs_param = None
@@ -308,11 +313,14 @@ def _wrap_with_logdir(
     if isinstance(logdir, bool):
       raise fire.core.FireError("The --logdir flag requires a value.")
 
-    # Reject empty session_id when --logdir is given or as positional arg
-    if args and not args[0]:
-      raise ValueError("session_id cannot be an empty string.")
-    if "session_id" in kwargs and not kwargs["session_id"]:
-      raise ValueError("session_id cannot be an empty string.")
+    # Reject an empty session_id, positional or named, unless the tool makes
+    # it optional (e.g. llo_load, which can read a local file instead). Fire
+    # passes defaults positionally, so an optional one arrives as args[0] = "".
+    if not session_id_optional:
+      if args and not args[0]:
+        raise ValueError("session_id cannot be an empty string.")
+      if "session_id" in kwargs and not kwargs["session_id"]:
+        raise ValueError("session_id cannot be an empty string.")
 
     target_path = None
     if logdir is not None:

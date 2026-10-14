@@ -380,6 +380,17 @@ class XProfCliTest(parameterized.TestCase):
     with self.assertRaises(ValueError):
       wrapped(session_id='')
 
+  def test_empty_optional_session_id_is_passed_through(self):
+    """A tool whose session_id has a default runs without one."""
+
+    def dummy_tool(session_id: str = '', llo_file: str = ''):
+      return f'{session_id}|{llo_file}'
+
+    wrapped = xprof_cli._wrap_with_logdir(dummy_tool)
+    # Fire passes defaults positionally.
+    self.assertEqual(wrapped('', '/tmp/x.pb'), '|/tmp/x.pb')
+    self.assertEqual(wrapped(session_id='', llo_file='y'), '|y')
+
   def test_preprocess_argv_quotes_timestamp_tokens(self):
     """Ensures timestamp tokens with underscores are quoted for PEP 515."""
     raw_args = [
