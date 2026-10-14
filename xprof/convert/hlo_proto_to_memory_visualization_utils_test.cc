@@ -1441,6 +1441,85 @@ TEST(MemoryViewerTest, TestReanimatedBufferDotRectsDoNotOverlap) {
   }
 }
 
+TEST(MemoryViewerTest, ReproUntracedTemporaryAllocationOffsetDesync) {
+  static constexpr char kHLOTwoTempBAs[] = R"pb(
+    hlo_module {
+      name: "test_module"
+      entry_computation_name: "test_computation"
+      computations {
+        name: "test_computation"
+        instructions {
+          name: "fusion.1"
+          id: 0
+          shape { tuple_shapes { element_type: U64 } }
+        }
+        instructions {
+          name: "fusion.2"
+          id: 1
+          shape { tuple_shapes { element_type: U64 } }
+        }
+        instructions {
+          name: "fusion.3"
+          id: 2
+          shape { tuple_shapes { element_type: U64 } }
+        }
+      }
+    }
+    buffer_assignment {
+      buffer_allocations {
+        index: 0
+        size: 1048576
+        color: 0
+        assigned { logical_buffer_id: 1 offset: 0 size: 524288 }
+        assigned { logical_buffer_id: 2 offset: 524288 size: 524288 }
+      }
+      buffer_allocations {
+        index: 1
+        size: 1048576
+        color: 0
+        assigned { logical_buffer_id: 3 offset: 0 size: 1048576 }
+      }
+      logical_buffers {
+        id: 1
+        size: 524288
+        color: 0
+        defined_at { instruction_id: 0 shape_index: 0 }
+      }
+      logical_buffers {
+        id: 2
+        size: 524288
+        color: 0
+        defined_at { instruction_id: 1 shape_index: 0 }
+      }
+      logical_buffers {
+        id: 3
+        size: 1048576
+        color: 0
+        defined_at { instruction_id: 2 shape_index: 0 }
+      }
+      heap_simulator_traces {
+        events { kind: ALLOC buffer_id: 1 }
+        events { kind: ALLOC buffer_id: 2 }
+        events { kind: FREE buffer_id: 1 }
+        events { kind: FREE buffer_id: 2 }
+      }
+    }
+  )pb";
+
+  xla::HloProto hlo_proto;
+  ASSERT_TRUE(ParseTextFormatFromString(kHLOTwoTempBAs, &hlo_proto).ok());
+  MemoryViewerOption option;
+  option.small_buffer_size = 0;
+  TF_ASSERT_OK_AND_ASSIGN(PreprocessResult result,
+                          ConvertHloProtoToPreprocessResult(hlo_proto, option));
+
+  constexpr double kTotalYSize = 1048576.0;
+  for (const auto& b : result.buffer_blocks()) {
+    EXPECT_GE(b.offset(), 0.0);
+    EXPECT_LE(b.offset() + b.size(), kTotalYSize);
+  }
+}
+
 }  // namespace
 }  // namespace profiler
 }  // namespace tensorflow

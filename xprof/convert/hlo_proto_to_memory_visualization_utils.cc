@@ -965,7 +965,8 @@ void ConvertAllocationTimeline(const HloProtoBufferWrapper& wrapper,
   } render_options;
 
   int num_lb_colors = kBufferColors.size();
-  std::vector<size_t> buffer_allocation_offsets;
+  std::vector<std::pair<const BufferAllocationStruct*, size_t>>
+      valid_allocations;
   size_t total_y_size = 0;  // Range of y dimension.
   size_t total_x_size = 0;  // Range of x dimension.
   std::vector<std::string> rects;
@@ -977,13 +978,13 @@ void ConvertAllocationTimeline(const HloProtoBufferWrapper& wrapper,
     if (buffer_allocation->IsIndefinite()) continue;
     auto heap_simulator_trace_id = buffer_allocation->heap_simulator_trace_id();
     if (!heap_simulator_trace_id) continue;
-    buffer_allocation_offsets.push_back(total_y_size);
-    total_y_size += buffer_allocation->size();
     if (*heap_simulator_trace_id >= heap_simulator_traces.size()) {
       LOG(DFATAL) << "heap_simulator_trace_id " << *heap_simulator_trace_id
                   << " out of bounds.";
       continue;
     }
+    valid_allocations.push_back({buffer_allocation, total_y_size});
+    total_y_size += buffer_allocation->size();
     total_x_size = std::max<size_t>(
         total_x_size,
         heap_simulator_traces.at(*heap_simulator_trace_id).events_size());
@@ -1024,12 +1025,8 @@ void ConvertAllocationTimeline(const HloProtoBufferWrapper& wrapper,
         node_id++, description, pos_x, pos_y, rect_w / kPointsPerInch,
         rect_h / kPointsPerInch, color, node_fontsize, label));
   };
-  int buffer_id = 0;
-  for (const auto& buffer_allocation : buffer_allocations) {
-    // Exclude BAs for "global variables". The timeline provides little value.
-    if (buffer_allocation->IsIndefinite()) continue;
-    size_t buffer_allocation_offset = buffer_allocation_offsets[buffer_id++];
-
+  for (const auto& [buffer_allocation, buffer_allocation_offset] :
+       valid_allocations) {
     BufferBlockProto* container_proto = result->add_buffer_blocks();
     container_proto->set_logical_buffer_id(-1);
     container_proto->set_name(std::string(buffer_allocation->category()));
