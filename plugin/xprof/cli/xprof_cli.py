@@ -49,6 +49,10 @@ class _LazyTool:
   def __signature__(self):
     return inspect.signature(self._load())
 
+  @property
+  def _reads_local_trace(self) -> bool:
+    return getattr(self._load(), "_reads_local_trace", True)
+
 
 class _LazyModuleProxy:
   """Lazy module proxy that yields _LazyTool instances upon attribute access."""
@@ -268,6 +272,12 @@ def _wrap_with_logdir(
       session_id_param is not None
       and session_id_param.default is not inspect.Parameter.empty
   )
+  target_func = getattr(tool_func, "__wrapped__", tool_func)
+  reads_local_trace = getattr(
+      tool_func,
+      "_reads_local_trace",
+      getattr(target_func, "_reads_local_trace", True),
+  )
 
   params = []
   kwargs_param = None
@@ -296,10 +306,12 @@ def _wrap_with_logdir(
         )
     )
 
-  selector = trace_selection.TraceSelector(
-      getattr(tool_func, "__name__", ""), sig, xprof_client.get_client
-  )
-  params = selector.extend_params(params)
+  selector = None
+  if reads_local_trace:
+    selector = trace_selection.TraceSelector(
+        getattr(tool_func, "__name__", ""), sig, xprof_client.get_client
+    )
+    params = selector.extend_params(params)
 
   if kwargs_param is not None:
     params.append(kwargs_param)
@@ -313,71 +325,71 @@ def _wrap_with_logdir(
     if isinstance(logdir, bool):
       raise fire.core.FireError("The --logdir flag requires a value.")
 
-    # Reject an empty session_id, positional or named, unless the tool makes
-    # it optional (e.g. llo_load, which can read a local file instead). Fire
-    # passes defaults positionally, so an optional one arrives as args[0] = "".
-    if not session_id_optional:
-      if args and not args[0]:
-        raise ValueError("session_id cannot be an empty string.")
-      if "session_id" in kwargs and not kwargs["session_id"]:
-        raise ValueError("session_id cannot be an empty string.")
+    if reads_local_trace:
+      # Reject an empty session_id, positional or named, unless the tool makes
+      # it optional (e.g. llo_load, which can read a local file instead). Fire
+      # passes defaults positionally, so an optional one arrives as
+      # args[0] = "".
+      if not session_id_optional:
+        if args and not args[0]:
+          raise ValueError("session_id cannot be an empty string.")
+        if "session_id" in kwargs and not kwargs["session_id"]:
+          raise ValueError("session_id cannot be an empty string.")
 
-    target_path = None
-    if logdir is not None:
-      target_path = str(logdir)
-    elif args and "session_id" in sig.parameters:
-      first_arg = args[0]
-      if isinstance(first_arg, str) and (
-          "/" in first_arg or "\\" in first_arg or "." in first_arg
-      ):
-        target_path = first_arg
+      target_path = None
+      if logdir is not None:
+        target_path = str(logdir)
+      elif args and "session_id" in sig.parameters:
+        first_arg = args[0]
+        if isinstance(first_arg, str) and (
+            "/" in first_arg or "\\" in first_arg or "." in first_arg
+        ):
+          target_path = first_arg
 
-    if target_path is not None:
-      if (
-          "destination" not in sig.parameters
-          and "run_name" not in sig.parameters
-      ):
-        skip_local_check = target_path.startswith("gs://")
-        if not skip_local_check:
-          p = pathlib.Path(target_path).expanduser()
-          if not p.exists():
-            raise FileNotFoundError(
-                f"Trace path '{target_path}' does not exist."
-            )
-          if p.is_dir():
-            has_trace = any(p.glob("**/*.xplane.pb")) or any(
-                p.glob("**/*.xspace.pb")
-            )
-            if not has_trace and accepts_compiler_dump_dir:
-              has_trace = any(
-                  any(p.glob(f"**/{pattern}"))
-                  for pattern in _COMPILER_DUMP_GLOBS
+      if target_path is not None:
+        if (
+            "destination" not in sig.parameters
+            and "run_name" not in sig.parameters
+        ):
+          skip_local_check = target_path.startswith("gs://")
+          if not skip_local_check:
+            p = pathlib.Path(target_path).expanduser()
+            if not p.exists():
+              raise FileNotFoundError(
+                  f"Trace path '{target_path}' does not exist."
               )
-            if not has_trace:
-              if accepts_compiler_dump_dir:
+            if p.is_dir():
+              has_trace = any(p.glob("**/*.xplane.pb")) or any(
+                  p.glob("**/*.xspace.pb")
+              )
+              if not has_trace and accepts_compiler_dump_dir:
+                has_trace = any(
+                    any(p.glob(f"**/{pattern}"))
+                    for pattern in _COMPILER_DUMP_GLOBS
+                )
+              if not has_trace:
+                if accepts_compiler_dump_dir:
+                  raise FileNotFoundError(
+                      "No .xplane.pb or .xspace.pb trace files and no"
+                      " --xla_jf_dump_to text artifacts found in directory"
+                      f" '{target_path}' (DATA_ABSENT)."
+                  )
                 raise FileNotFoundError(
-                    "No .xplane.pb or .xspace.pb trace files and no"
-                    " --xla_jf_dump_to text artifacts found in directory"
+                    "No .xplane.pb or .xspace.pb files found in directory"
                     f" '{target_path}' (DATA_ABSENT)."
                 )
-              raise FileNotFoundError(
-                  "No .xplane.pb or .xspace.pb files found in directory"
-                  f" '{target_path}' (DATA_ABSENT)."
-              )
-      if logdir is not None:
-        xprof_client.get_client().set_logdir(str(logdir))
-        if (
-            "session_id" in sig.parameters
-            and "session_id" not in kwargs
-            and not args
-        ):
-          kwargs["session_id"] = str(logdir)
-        elif (
-            "source" in sig.parameters
-            and "source" not in kwargs
-            and not args
-        ):
-          kwargs["source"] = str(logdir)
+        if logdir is not None:
+          xprof_client.get_client().set_logdir(str(logdir))
+          if (
+              "session_id" in sig.parameters
+              and "session_id" not in kwargs
+              and not args
+          ):
+            kwargs["session_id"] = str(logdir)
+          elif (
+              "source" in sig.parameters and "source" not in kwargs and not args
+          ):
+            kwargs["source"] = str(logdir)
 
     args_list = list(args)
     for i, p in enumerate(sig.parameters.values()):
@@ -385,7 +397,9 @@ def _wrap_with_logdir(
           "session_id",
           "source",
           "baseline_session_id",
+          "candidate_session_id",
           "optimized_session_id",
+          "program_id",
           "run_name",
           "module_name",
           "instruction_name",
@@ -402,7 +416,9 @@ def _wrap_with_logdir(
         "session_id",
         "source",
         "baseline_session_id",
+        "candidate_session_id",
         "optimized_session_id",
+        "program_id",
         "run_name",
         "module_name",
         "instruction_name",
@@ -422,7 +438,9 @@ def _wrap_with_logdir(
       ):
         kwargs.pop("bypass_cache", None)
 
-    args, kwargs, capture = selector.resolve(args, kwargs)
+    capture = None
+    if selector is not None:
+      args, kwargs, capture = selector.resolve(args, kwargs)
 
     res = tool_func(*args, **kwargs)
 
