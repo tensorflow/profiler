@@ -1104,21 +1104,12 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
     this.searchInput?.nativeElement.select();
   }
 
-  /** Copies a link that opens the viewer at the selected kernel. */
+  /** Copies the current browser URL to the clipboard. */
   copyKernelLink(): void {
-    const entry = this.selectedEntry;
-    if (!entry || !this.canCopyLink) {
+    if (!this.selectedEntry || !this.canCopyLink) {
       return;
     }
-    const link = new URL(window.location.href);
-    link.searchParams.delete('kernel');
-    link.searchParams.set('kernel_name', entry.kernel);
-    if (entry.module) {
-      link.searchParams.set('hlo_module', entry.module);
-    } else {
-      link.searchParams.delete('hlo_module');
-    }
-    navigator.clipboard.writeText(link.toString()).then(
+    navigator.clipboard.writeText(window.location.href).then(
       () => {
         if (this.isDestroyed) {
           return;
