@@ -5,6 +5,7 @@
 #include <initializer_list>
 #include <numeric>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <gmock/gmock.h>
@@ -47,6 +48,18 @@ inline void AddEvents(FlameChartTimelineData& data,
 }
 
 // Helpers for concise timeline test data construction and verification.
+Group MakeProcessGroup(absl::string_view name, int start_level = 0,
+                       int level_count = 1, bool expanded = true,
+                       ProcessId pid = 0) {
+  return {.type = Group::Type::kFlame,
+          .name = std::string(name),
+          .start_level = start_level,
+          .nesting_level = kProcessNestingLevel,
+          .expanded = expanded,
+          .level_count = level_count,
+          .pid = pid};
+}
+
 Group MakeThreadGroup(absl::string_view name, int parent_index,
                       int start_level = 0, int level_count = 1,
                       bool expanded = true, ProcessId pid = 0,
@@ -569,6 +582,122 @@ TEST(TimelineTest, SelectedEventDependenciesSetDuringRefetchAreKept) {
 
   EXPECT_EQ(timeline.selected_event_index(), 3);
   EXPECT_THAT(timeline.producer_event_indices(), ElementsAre(2));
+}
+
+// Builds data for the module run tests: a process with an "XLA Modules" track
+// at level 0 and an "XLA Ops" track at level 1. `events` must be sorted by
+// level, then by start time.
+FlameChartTimelineData MakeModuleRunTestData(
+    std::initializer_list<EventSpec> events) {
+  FlameChartTimelineData data = MakeDependencyTestData(events);
+  Group process = MakeProcessGroup("TPU:0");
+  process.child_indices = {1, 2};
+  data.groups = {std::move(process),
+                 MakeThreadGroup("XLA Modules", /*parent_index=*/0,
+                                 /*start_level=*/0, /*level_count=*/1),
+                 MakeThreadGroup("XLA Ops", /*parent_index=*/0,
+                                 /*start_level=*/1, /*level_count=*/1)};
+  return data;
+}
+
+TEST(TimelineTest,
+     SelectedEventDependenciesAreLimitedToModuleRunOfSelectedEvent) {
+  ColorPalette palette = ColorPalette::Default();
+  Timeline timeline(palette);
+  timeline.set_hlo_dependency_arrows_enabled(true);
+  // XLA Modules:  [ module     ]  [ module                      ]  [ module  ]
+  // XLA Ops:        earlier_op      operand   selected   consumer    later_op
+  //                 (other run)     ^ picked              ^ picked  (other run)
+  timeline.SetTimelineData(MakeModuleRunTestData({
+      {.name = "module", .start = 0.0, .dur = 40.0, .level = 0, .id = 1},
+      {.name = "module", .start = 50.0, .dur = 40.0, .level = 0, .id = 2},
+      {.name = "module", .start = 100.0, .dur = 40.0, .level = 0, .id = 3},
+      {.name = "earlier_op", .start = 10.0, .dur = 5.0, .level = 1, .id = 4},
+      {.name = "operand", .start = 55.0, .dur = 5.0, .level = 1, .id = 5},
+      {.name = "selected", .start = 65.0, .dur = 5.0, .level = 1, .id = 6},
+      {.name = "consumer", .start = 75.0, .dur = 5.0, .level = 1, .id = 7},
+      {.name = "later_op", .start = 110.0, .dur = 5.0, .level = 1, .id = 8},
+  }));
+  timeline.set_selected_event_index_for_test(5);
+
+  // `earlier_op` and `later_op` are in other module runs.
+  timeline.SetSelectedEventDependencies({"earlier_op", "operand"},
+                                        {"consumer", "later_op"});
+
+  EXPECT_THAT(timeline.producer_event_indices(), ElementsAre(4));
+  EXPECT_THAT(timeline.consumer_event_indices(), ElementsAre(6));
+}
+
+TEST(TimelineTest, SelectedEventDependenciesAreNotLimitedOutsideModuleRuns) {
+  ColorPalette palette = ColorPalette::Default();
+  Timeline timeline(palette);
+  timeline.set_hlo_dependency_arrows_enabled(true);
+  // XLA Modules:  [ module    ]                         [ module    ]
+  // XLA Ops:        operand            selected            consumer
+  //                                    ^ in no module run: not limited
+  timeline.SetTimelineData(MakeModuleRunTestData({
+      {.name = "module", .start = 0.0, .dur = 40.0, .level = 0, .id = 1},
+      {.name = "module", .start = 100.0, .dur = 40.0, .level = 0, .id = 2},
+      {.name = "operand", .start = 10.0, .dur = 5.0, .level = 1, .id = 3},
+      {.name = "selected", .start = 60.0, .dur = 5.0, .level = 1, .id = 4},
+      {.name = "consumer", .start = 110.0, .dur = 5.0, .level = 1, .id = 5},
+  }));
+  timeline.set_selected_event_index_for_test(3);
+
+  timeline.SetSelectedEventDependencies({"operand"}, {"consumer"});
+
+  EXPECT_THAT(timeline.producer_event_indices(), ElementsAre(2));
+  EXPECT_THAT(timeline.consumer_event_indices(), ElementsAre(4));
+}
+
+TEST(TimelineTest,
+     SelectedEventDependenciesIncludeEventsAtModuleRunBoundaries) {
+  ColorPalette palette = ColorPalette::Default();
+  Timeline timeline(palette);
+  timeline.set_hlo_dependency_arrows_enabled(true);
+  // XLA Modules:            [ module                           ]
+  // XLA Ops:   out_operand  edge_operand  selected  edge_consumer  out_consumer
+  //                         ^ starts at 50          ^ starts at 90, the end
+  timeline.SetTimelineData(MakeModuleRunTestData({
+      {.name = "module", .start = 50.0, .dur = 40.0, .level = 0, .id = 1},
+      {.name = "out_operand", .start = 45.0, .dur = 4.0, .level = 1, .id = 2},
+      {.name = "edge_operand", .start = 50.0, .dur = 4.0, .level = 1, .id = 3},
+      {.name = "selected", .start = 60.0, .dur = 5.0, .level = 1, .id = 4},
+      {.name = "edge_consumer", .start = 90.0, .dur = 4.0, .level = 1, .id = 5},
+      {.name = "out_consumer", .start = 95.0, .dur = 4.0, .level = 1, .id = 6},
+  }));
+  timeline.set_selected_event_index_for_test(3);
+
+  // `edge_*` start exactly at the start and end of the module run.
+  timeline.SetSelectedEventDependencies({"out_operand", "edge_operand"},
+                                        {"edge_consumer", "out_consumer"});
+
+  EXPECT_THAT(timeline.producer_event_indices(), ElementsAre(2));
+  EXPECT_THAT(timeline.consumer_event_indices(), ElementsAre(4));
+}
+
+TEST(TimelineTest, SelectedEventDependenciesAreLimitedOnlyByXlaModulesTrack) {
+  ColorPalette palette = ColorPalette::Default();
+  Timeline timeline(palette);
+  timeline.set_hlo_dependency_arrows_enabled(true);
+  // Steps:                 [ step           ]       (not "XLA Modules")
+  // XLA Ops:    operand        selected          consumer
+  FlameChartTimelineData data = MakeModuleRunTestData({
+      {.name = "step", .start = 50.0, .dur = 40.0, .level = 0, .id = 1},
+      {.name = "operand", .start = 10.0, .dur = 5.0, .level = 1, .id = 2},
+      {.name = "selected", .start = 60.0, .dur = 5.0, .level = 1, .id = 3},
+      {.name = "consumer", .start = 110.0, .dur = 5.0, .level = 1, .id = 4},
+  });
+  // Another track of the same process, not "XLA Modules", covers the selected
+  // event.
+  data.groups[1].name = "Steps";
+  timeline.SetTimelineData(std::move(data));
+  timeline.set_selected_event_index_for_test(2);
+
+  timeline.SetSelectedEventDependencies({"operand"}, {"consumer"});
+
+  EXPECT_THAT(timeline.producer_event_indices(), ElementsAre(1));
+  EXPECT_THAT(timeline.consumer_event_indices(), ElementsAre(3));
 }
 
 }  // namespace
