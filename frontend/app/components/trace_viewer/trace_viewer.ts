@@ -1380,6 +1380,13 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
       value: adjacentNodes['consumer_names'].join(', '),
     });
     this.selectedEventProperties = properties;
+
+    // The timeline resolves the names to events and draws the HLO dependency
+    // arrows (behind the `enable_hlo_dependency_arrows` flag).
+    this.traceViewerModule?.SetSelectedEventDependencies?.(
+      adjacentNodes['operand_names'],
+      adjacentNodes['consumer_names'],
+    );
   }
 
   // END Trace Viewer V2 WASM App Methods

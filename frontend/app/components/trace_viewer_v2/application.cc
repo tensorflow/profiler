@@ -188,6 +188,23 @@ EMSCRIPTEN_KEEPALIVE void SetVisibleRange(double start_us, double end_us) {
   Application::Instance().RequestRedraw();
 }
 
+// Passes the HLO operand and consumer names of the selected event, so that the
+// timeline can draw the HLO dependency arrows (see
+// `Timeline::SetSelectedEventDependencies`). Both arguments are JS arrays of
+// strings. Called by the page once the names of the selected op are known.
+EMSCRIPTEN_KEEPALIVE void SetSelectedEventDependencies(
+    const emscripten::val& operand_names,
+    const emscripten::val& consumer_names) {
+  if (!operand_names.isArray() || !consumer_names.isArray()) {
+    LOG(ERROR) << "Failed to set the selected event dependencies: inputs are "
+                  "not arrays";
+    return;
+  }
+  Application::Instance().timeline().SetSelectedEventDependencies(
+      emscripten::vecFromJSArray<std::string>(operand_names),
+      emscripten::vecFromJSArray<std::string>(consumer_names));
+}
+
 EMSCRIPTEN_BINDINGS(traceviewer) {
   emscripten::function("SetPalette", &SetPalette);
   emscripten::function("SetColor", &SetColor);
@@ -203,6 +220,8 @@ EMSCRIPTEN_BINDINGS(traceviewer) {
   emscripten::function("SetPlaybackState", &SetPlaybackState);
   emscripten::function("GetPresetPalettes", &GetPresetPalettes);
   emscripten::function("setVisibleRange", &SetVisibleRange);
+  emscripten::function("SetSelectedEventDependencies",
+                       &SetSelectedEventDependencies);
 }
 
 EMSCRIPTEN_BINDINGS(colors) {

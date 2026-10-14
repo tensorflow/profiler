@@ -181,6 +181,17 @@ declare global {
   // `SetVisibleRange` in application.cc). Used by the Live Trace Viewer to
   // auto-follow the newest sliding window as streaming data arrives.
   setVisibleRange(startUs: number, endUs: number): void;
+  /**
+   * Passes the HLO operand and consumer names of the selected event, so that
+   * the timeline can draw the HLO dependency arrows (behind the
+   * `enable_hlo_dependency_arrows` feature flag). Registered as a module-level
+   * Emscripten function (see `SetSelectedEventDependencies` in
+   * application.cc). Call once the names of the selected op are known.
+   */
+  SetSelectedEventDependencies?(
+    operandNames: string[],
+    consumerNames: string[],
+  ): void;
   canvas: HTMLCanvasElement;
   callMain(args: string[]): void;
   preinitializedWebGPUDevice: GPUDevice | null;
