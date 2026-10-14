@@ -327,6 +327,12 @@ class Timeline {
   const std::string& get_copied_track_name_for_test() const {
     return copied_track_name_;
   }
+  ImU32 get_group_accent_color_for_test(int group_index) const {
+    return GetGroupAccentColor(group_index);
+  }
+  const std::vector<bool>& get_group_striped_for_test() const {
+    return group_striped_;
+  }
   float get_bounds_notification_timer_for_test() const {
     return bounds_notification_timer_;
   }
@@ -887,6 +893,11 @@ class Timeline {
   void DrawEvent(int group_index, int event_index, const EventRect& rect,
                  ImDrawList* absl_nonnull draw_list);
 
+  // Returns true if the mouse is over any part (label or canvas) of the row.
+  bool IsTrackRowHovered(int group_index) const;
+  // Draw the pin / hide icon buttons of a process row with the cursor at the
+  // top-left of the button, vertically centering them in `height`. Return true
+  // if the pinned / hidden state was toggled.
   bool DrawHideButton(int group_index, Pixel height, bool is_track_hidden);
   bool DrawPinButton(int group_index, Pixel height, bool is_pinned);
 
@@ -951,16 +962,25 @@ class Timeline {
   // Draws the timeline ruler UI (background, horizontal line, labels, ticks).
   void DrawRulerUI(const TickInfo& info, Pixel timeline_width);
 
-  // Draws a header row (All or Hidden) in the timeline.
-  // Returns true if layout update is needed.
-  bool DrawHeaderRow(const Group* group_ptr, const ImVec2& tracks_start_pos,
+  // Draws a section header row (All, Pinned or Hidden) in the timeline. The
+  // whole row toggles the section. Returns true if layout update is needed.
+  bool DrawHeaderRow(const Group* group_ptr,
                      const ImVec2& tracks_start_screen_pos, Pixel group_top,
                      Pixel group_bottom);
 
-  // Draws the label for a track row.
-  void DrawTrackLabel(const Group& group, Pixel centereable_height);
+  // Copies a track's name to the clipboard and shows the copy notification.
+  void CopyTrackName(int group_index);
 
-  // Draws a standard track row in the timeline.
+  // Returns the accent color of a track (used by collapsed-track cues): the
+  // dominant event color for flame tracks, the chart color for process and
+  // counter tracks, or a neutral color for tracks without events.
+  ImU32 GetGroupAccentColor(int group_index) const;
+
+  // Recomputes `group_accent_colors_` from the current events and colors.
+  void RebuildGroupAccentColors();
+
+  // Draws a standard track row in the timeline: the row background, the label
+  // (chevron, name, subtitle and count chip) and the events.
   // Returns true if layout update is needed.
   bool DrawTrackRow(int group_index, const ImVec2& tracks_start_pos,
                     const ImVec2& tracks_start_screen_pos,
@@ -1154,6 +1174,10 @@ class Timeline {
 
   FlameChartTimelineData timeline_data_;
   std::vector<ImU32> entry_colors_;
+  // The dominant event color of each flame track, indexed by group index, or 0
+  // if the track has no events (or is not a flame track). Rebuilt together
+  // with `entry_colors_`.
+  std::vector<ImU32> group_accent_colors_;
   uint64_t cached_trace_colors_version_ = std::numeric_limits<uint64_t>::max();
   std::vector<float> utilization_bins_;
 
@@ -1273,6 +1297,11 @@ class Timeline {
   // Stores whether each group is visible (not hidden by a collapsed parent).
   // Precalculated in UpdateLevelPositions.
   std::vector<bool> group_visible_;
+  // Stores whether each visible child track gets the alternating (zebra) row
+  // stripe. The alternation restarts below every process header so the first
+  // child of each process is never striped. Precalculated in
+  // UpdateLevelPositions.
+  std::vector<bool> group_striped_;
 
   // The visible time range in microseconds in the timeline. It is initialized
   // to {0, 0} by the `TimeRange` default constructor.
@@ -1407,6 +1436,9 @@ class Timeline {
   float copy_notification_timer_ = 0.0f;
   // The name of the track that was recently copied to the clipboard.
   std::string copied_track_name_ = "";
+  // The group index of the track that was recently copied to the clipboard,
+  // used to briefly highlight its label. -1 if none.
+  int copied_track_group_index_ = -1;
   RedrawCallback redraw_callback_;
   // Current color palette.
   ColorPalette& palette_;

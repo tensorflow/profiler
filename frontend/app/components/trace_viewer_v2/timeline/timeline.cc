@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <functional>
 #include <iterator>
 #include <limits>
@@ -16,6 +17,7 @@
 #include "absl/algorithm/container.h"
 #include "absl/base/nullability.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/container/inlined_vector.h"
 #include "absl/log/log.h"
 #include "absl/strings/ascii.h"
 #include "absl/strings/escaping.h"
@@ -151,66 +153,284 @@ absl::flat_hash_map<ProcessId, uint32_t> GetProcessSortIndices(
   return process_sort_indices;
 }
 
-// Draws an expand/collapse button.
-bool DrawExpandCollapseButton(
-    bool& expanded, Pixel height, bool is_virtual_header = false,
-    std::optional<Pixel> custom_center_y_offset = std::nullopt) {
-  bool toggled = false;
-  // Draw a smaller arrow button.
-  const Pixel arrow_size = ImGui::GetFontSize() * kIconSizeScale;
-  const Pixel button_height = height;
+// Returns `color` with its alpha channel multiplied by `opacity` in [0, 1].
+ImU32 WithOpacity(ImU32 color, float opacity) {
+  const float alpha = static_cast<float>((color >> IM_COL32_A_SHIFT) & 0xFF);
+  const ImU32 new_alpha =
+      static_cast<ImU32>(std::clamp(alpha * opacity, 0.0f, 255.0f) + 0.5f);
+  return (color & ~IM_COL32_A_MASK) | (new_alpha << IM_COL32_A_SHIFT);
+}
 
-  ImVec2 p = ImGui::GetCursorScreenPos();
-  // Center the arrow in the button area.
-  Pixel center_y = custom_center_y_offset.has_value()
-                       ? p.y + *custom_center_y_offset
-                       : p.y + button_height * 0.5f;
-  Pixel center_x = p.x + arrow_size * 0.5f;
+// Linearly interpolates between two colors, channel by channel (including
+// alpha). `t` = 0 returns `from` and `t` = 1 returns `to`.
+ImU32 MixColors(ImU32 from, ImU32 to, float t) {
+  auto channel = [&](int shift) {
+    const float a = static_cast<float>((from >> shift) & 0xFF);
+    const float b = static_cast<float>((to >> shift) & 0xFF);
+    return static_cast<ImU32>(std::clamp(a + (b - a) * t, 0.0f, 255.0f) + 0.5f)
+           << shift;
+  };
+  return channel(IM_COL32_R_SHIFT) | channel(IM_COL32_G_SHIFT) |
+         channel(IM_COL32_B_SHIFT) | channel(IM_COL32_A_SHIFT);
+}
 
-  // Invisible button for interaction
-  if (ImGui::InvisibleButton("##expand_collapse",
-                             ImVec2(arrow_size, button_height))) {
-    expanded = !expanded;
-    toggled = true;
+// Draws a vertical "drop shadow": a gradient from `opacity` black at `top` to
+// transparent at `top + height`, spanning [left, right). This mimics a CSS
+// `box-shadow` cast downwards by an element whose bottom edge is at `top`.
+void DrawDropShadow(ImDrawList* draw_list, Pixel left, Pixel right, Pixel top,
+                    Pixel height, float opacity) {
+  const ImU32 top_color = WithOpacity(kBlackColor, opacity);
+  const ImU32 bottom_color = WithOpacity(kBlackColor, 0.0f);
+  draw_list->AddRectFilledMultiColor(ImVec2(left, top),
+                                     ImVec2(right, top + height), top_color,
+                                     top_color, bottom_color, bottom_color);
+}
+
+// Draws a rounded "pill" highlight inset inside the row [min, max], the hover
+// style of modern sidebars.
+void DrawRowPill(ImDrawList* draw_list, const ImVec2& min, const ImVec2& max,
+                 ImU32 color) {
+  // Edges sit on pixel centers, so the anti-aliased fringe ImGui adds around
+  // rounded shapes (+/- 0.5px) falls on pixel boundaries and never straddles a
+  // pixel center. This keeps the rasterized edge identical across machines.
+  const ImVec2 pill_min(std::floor(min.x + kTrackRowPillInsetX) + 0.5f,
+                        std::floor(min.y + kTrackRowPillInsetY) + 0.5f);
+  const ImVec2 pill_max(std::ceil(max.x - kTrackRowPillInsetX) - 0.5f,
+                        std::ceil(max.y - kTrackRowPillInsetY) - 0.5f);
+  if (pill_max.x <= pill_min.x || pill_max.y <= pill_min.y) return;
+  draw_list->AddRectFilled(pill_min, pill_max, color, kTrackRowPillRounding);
+}
+
+// Draws `text` in upper case with extra letter spacing (CSS `letter-spacing`),
+// the style used for small section labels. Returns the drawn width. Draws one
+// glyph at a time to avoid allocating an upper-cased copy every frame.
+Pixel DrawSpacedUppercaseText(ImDrawList* draw_list, ImFont* font,
+                              absl::string_view text, const ImVec2& pos,
+                              ImU32 color) {
+  ImGui::PushFont(font);
+  Pixel x = pos.x;
+  for (size_t i = 0; i < text.size(); ++i) {
+    const char glyph[2] = {absl::ascii_toupper(text[i]), '\0'};
+    draw_list->AddText(ImVec2(x, pos.y), color, glyph, glyph + 1);
+    x += ImGui::CalcTextSize(glyph, glyph + 1).x;
+    if (i + 1 < text.size()) x += kSectionLabelLetterSpacing;
   }
+  ImGui::PopFont();
+  return x - pos.x;
+}
 
-  // Draw the arrow
-  ImDrawList* draw_list = ImGui::GetWindowDrawList();
-  ImU32 arrow_col = ImGui::GetColorU32(ImGuiCol_Text);
-  if (ImGui::IsItemHovered()) {
+// Shows `text` in a tooltip styled like a modern floating card: rounded
+// corners, comfortable padding and a hairline border.
+void ShowCardTooltip(absl::string_view text) {
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, kCardTooltipRounding);
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, kCardTooltipPadding);
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
+  ImGui::SetTooltip("%.*s", static_cast<int>(text.size()), text.data());
+  ImGui::PopStyleVar(3);
+}
+
+// Draws a stroked chevron centered at `center`, rotated by `openness` in
+// [0, 1]: 0 points right (collapsed), 1 points down (expanded), and values in
+// between rotate smoothly. `size` is the length of the chevron's open side.
+void DrawChevron(ImDrawList* draw_list, const ImVec2& center, Pixel size,
+                 float openness, ImU32 color) {
+  const Pixel half = size * 0.5f;
+  const Pixel depth = size * 0.25f;
+  // The down-pointing chevron, rotated by -90 degrees when fully collapsed.
+  const float angle = -(1.0f - std::clamp(openness, 0.0f, 1.0f)) * IM_PI * 0.5f;
+  const float cos_a = std::cos(angle);
+  const float sin_a = std::sin(angle);
+  const ImVec2 down[3] = {ImVec2(-half, -depth), ImVec2(0.0f, depth),
+                          ImVec2(half, -depth)};
+  ImVec2 points[3];
+  for (int i = 0; i < 3; ++i) {
+    points[i] = ImVec2(center.x + down[i].x * cos_a - down[i].y * sin_a,
+                       center.y + down[i].x * sin_a + down[i].y * cos_a);
+  }
+  draw_list->AddPolyline(points, 3, color, ImDrawFlags_None,
+                         kTrackChevronThickness);
+}
+
+// Draws the expand/collapse chevron of a label row. Collapsed rows draw it at
+// full strength inside a small rounded "button" so their state stands out at a
+// glance; expanded rows draw a quieter chevron. `openness` (see DrawChevron)
+// cross-fades between the two looks while the chevron rotates, and
+// `hover_emphasis` in [0, 1] brightens it.
+void DrawExpandChevron(ImDrawList* draw_list, const ImVec2& center,
+                       float openness, float hover_emphasis,
+                       ImU32 foreground_color) {
+  const float collapsedness = 1.0f - std::clamp(openness, 0.0f, 1.0f);
+  if (collapsedness > 0.0f) {
+    // Edges on pixel centers keep the anti-aliased fringe deterministic.
+    const Pixel half = kTrackChevronButtonSize * 0.5f;
+    const float button_opacity = kTrackCollapsedChevronButtonOpacity +
+                                 (kTrackCollapsedChevronButtonHoverOpacity -
+                                  kTrackCollapsedChevronButtonOpacity) *
+                                     hover_emphasis;
+    draw_list->AddRectFilled(
+        ImVec2(std::floor(center.x - half) + 0.5f,
+               std::floor(center.y - half) + 0.5f),
+        ImVec2(std::floor(center.x + half) + 0.5f,
+               std::floor(center.y + half) + 0.5f),
+        WithOpacity(foreground_color, button_opacity * collapsedness),
+        kTrackChevronButtonRounding);
+  }
+  const float emphasis = std::max(collapsedness, hover_emphasis);
+  DrawChevron(draw_list, center, kTrackChevronSize, openness,
+              WithOpacity(foreground_color,
+                          kTrackMutedTextOpacity +
+                              (1.0f - kTrackMutedTextOpacity) * emphasis));
+}
+
+// Draws a "stack of cards" hint below a collapsed row, between `left` and
+// `right`: two short hairlines in the track's accent color, each narrower and
+// fainter than the one above, suggesting content folded underneath.
+void DrawCollapsedStackHint(ImDrawList* draw_list, Pixel left, Pixel right,
+                            Pixel row_bottom, ImU32 accent_color) {
+  for (int layer = 0; layer < 2; ++layer) {
+    const Pixel inset = kTrackCollapsedStackInset * (layer + 1);
+    // Lines sit on pixel centers so each layer stays a crisp 1px line.
+    const Pixel y =
+        std::floor(row_bottom) + 1.5f + kTrackCollapsedStackSpacing * layer;
+    if (right - inset <= left + inset) return;
+    draw_list->AddLine(
+        ImVec2(left + inset, y), ImVec2(right - inset, y),
+        WithOpacity(accent_color, layer == 0
+                                      ? kTrackCollapsedStackOpacity
+                                      : kTrackCollapsedStackOpacity * 0.5f),
+        1.0f);
+  }
+}
+
+// Returns the line height of `font` without pushing it. The fonts are never
+// scaled, so their line height is their size. Falls back to the current font
+// if `font` is not loaded.
+Pixel FontLineHeight(const ImFont* font) {
+  return font != nullptr ? font->LegacySize : ImGui::GetFontSize();
+}
+
+// Returns the width of the count chip drawn by `DrawCountChip` for `text`.
+Pixel CountChipWidth(absl::string_view text) {
+  ImGui::PushFont(traceviewer::fonts::label_small);
+  const Pixel width =
+      ImGui::CalcTextSize(text.data(), text.data() + text.size()).x +
+      2.0f * kTrackCountChipPaddingX;
+  ImGui::PopFont();
+  return width;
+}
+
+// Draws a rounded "pill" containing `text`, right-aligned to `right_x` and
+// vertically centered on `center_y`. Returns the pill's left edge.
+Pixel DrawCountChip(ImDrawList* draw_list, absl::string_view text,
+                    Pixel right_x, Pixel center_y, ImU32 background_color,
+                    ImU32 text_color) {
+  ImGui::PushFont(traceviewer::fonts::label_small);
+  const ImVec2 text_size =
+      ImGui::CalcTextSize(text.data(), text.data() + text.size());
+  const Pixel width = text_size.x + 2.0f * kTrackCountChipPaddingX;
+  const ImVec2 chip_min(right_x - width,
+                        center_y - kTrackCountChipHeight * 0.5f);
+  const ImVec2 chip_max(right_x, center_y + kTrackCountChipHeight * 0.5f);
+  draw_list->AddRectFilled(chip_min, chip_max, background_color,
+                           kTrackCountChipHeight * 0.5f);
+  draw_list->AddText(ImVec2(chip_min.x + kTrackCountChipPaddingX,
+                            std::round(center_y - text_size.y * 0.5f)),
+                     text_color, text.data(), text.data() + text.size());
+  ImGui::PopFont();
+  return chip_min.x;
+}
+
+// Draws `text` with the given font and color in the box starting at `pos`,
+// truncating it with an ellipsis if it would extend past `max_x`. Returns true
+// if the text was truncated.
+bool DrawTextWithEllipsis(ImFont* font, absl::string_view text, ImU32 color,
+                          const ImVec2& pos, Pixel max_x) {
+  ImGui::PushFont(font);
+  const char* text_end = text.data() + text.size();
+  const ImVec2 text_size = ImGui::CalcTextSize(text.data(), text_end);
+  const bool truncated = pos.x + text_size.x > max_x;
+  ImGui::PushStyleColor(ImGuiCol_Text, color);
+  ImGui::RenderTextEllipsis(ImGui::GetWindowDrawList(), pos,
+                            ImVec2(max_x, pos.y + text_size.y), max_x,
+                            text.data(), text_end, &text_size);
+  ImGui::PopStyleColor();
+  ImGui::PopFont();
+  return truncated;
+}
+
+// Returns the width reserved on the right side of a process label row for the
+// track management (pin and hide) buttons.
+Pixel CalculateTrackManagementButtonWidth() {
+  return 2.0f * kTrackIconButtonSize + kTrackIconButtonGap +
+         kTrackIconButtonMarginRight;
+}
+
+// The result of `TrackIconButton`.
+struct IconButtonState {
+  bool clicked = false;
+  bool hovered = false;
+  ImVec2 center;
+};
+
+// Submits a square icon button at the cursor, vertically centered in a row of
+// `row_height`, and draws its background: a circular "state layer" while
+// hovered (stronger while pressed, as on Material icon buttons) or a faint
+// persistent circle while `active` (e.g. the track is pinned). The caller draws
+// the icon at the returned center. `tooltip` is shown, card-styled, after the
+// standard hover delay.
+IconButtonState TrackIconButton(const char* id, Pixel row_height, bool active,
+                                absl::string_view tooltip,
+                                ImU32 foreground_color) {
+  IconButtonState state;
+  const ImVec2 cursor = ImGui::GetCursorScreenPos();
+  const Pixel top = std::floor(
+      cursor.y + std::max(0.0f, (row_height - kTrackIconButtonSize) * 0.5f));
+  const ImVec2 min(std::floor(cursor.x), top);
+  state.center = ImVec2(min.x + kTrackIconButtonSize * 0.5f,
+                        min.y + kTrackIconButtonSize * 0.5f);
+  ImGui::SetCursorScreenPos(min);
+  ImGui::PushItemFlag(ImGuiItemFlags_NoNav, true);
+  state.clicked = ImGui::InvisibleButton(
+      id, ImVec2(kTrackIconButtonSize, kTrackIconButtonSize),
+      ImGuiButtonFlags_PressedOnClick);
+  ImGui::PopItemFlag();
+  state.hovered = ImGui::IsItemHovered();
+  const bool pressed = ImGui::IsItemActive();
+
+  ImDrawList* const draw_list = ImGui::GetWindowDrawList();
+  const Pixel radius = kTrackIconButtonSize * 0.5f;
+  if (active) {
+    draw_list->AddCircleFilled(
+        state.center, radius,
+        WithOpacity(foreground_color, kIconButtonActiveOpacity),
+        /*num_segments=*/24);
+  }
+  if (pressed) {
+    draw_list->AddCircleFilled(
+        state.center, radius,
+        WithOpacity(foreground_color, kIconButtonPressedOpacity),
+        /*num_segments=*/24);
+  } else if (state.hovered) {
+    draw_list->AddCircleFilled(
+        state.center, radius,
+        WithOpacity(foreground_color, kIconButtonHoverOpacity),
+        /*num_segments=*/24);
+  }
+  if (state.hovered) {
     ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-    arrow_col = ImGui::GetColorU32(ImGuiCol_ButtonHovered);
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) {
+      ShowCardTooltip(tooltip);
+    }
   }
+  return state;
+}
 
-  const Pixel h = arrow_size * 0.4f;
-  const Pixel w = arrow_size * 0.2f;
-
-  ImVec2 p1(-h, -w);
-  ImVec2 p2(0, w);
-  ImVec2 p3(h, -w);
-
-  if (!expanded) {
-    // Rotate 90 degrees CCW to point Right (Y-down): x' = y, y' = -x
-    p1 = ImVec2(p1.y, -p1.x);
-    p2 = ImVec2(p2.y, -p2.x);
-    p3 = ImVec2(p3.y, -p3.x);
-  }
-
-  if (is_virtual_header) {
-    draw_list->AddTriangleFilled(ImVec2(center_x + p1.x, center_y + p1.y),
-                                 ImVec2(center_x + p3.x, center_y + p3.y),
-                                 ImVec2(center_x + p2.x, center_y + p2.y),
-                                 arrow_col);
-  } else {
-    draw_list->AddLine(ImVec2(center_x + p1.x, center_y + p1.y),
-                       ImVec2(center_x + p2.x, center_y + p2.y), arrow_col,
-                       1.2f);
-    draw_list->AddLine(ImVec2(center_x + p2.x, center_y + p2.y),
-                       ImVec2(center_x + p3.x, center_y + p3.y), arrow_col,
-                       1.2f);
-  }
-
-  return toggled;
+// Returns the color of a track icon button's glyph: full strength while hovered
+// or active, muted otherwise.
+ImU32 TrackIconColor(const IconButtonState& state, bool active,
+                     ImU32 foreground_color) {
+  return WithOpacity(foreground_color,
+                     (active || state.hovered) ? 1.0f : kTrackMutedTextOpacity);
 }
 
 // Checks if a group is one of the virtual headers (Hidden or All).
@@ -218,11 +438,6 @@ bool IsVirtualHeader(const Group* group) {
   return group->nesting_level == kHeaderNestingLevel &&
          (group->name == kHiddenHeaderName || group->name == kAllHeaderName ||
           group->name == kPinnedHeaderName);
-}
-
-// Formats the header text with the process count.
-std::string FormatHeaderText(absl::string_view name, int count) {
-  return absl::StrCat(name, " (", count, ")");
 }
 
 // Returns true if any argument key or value in `args` contains `query`
@@ -266,7 +481,6 @@ bool MatchesSearchQuery(const FlameChartTimelineData& data, int index,
   }
   return false;
 }
-
 }  // namespace
 
 int Timeline::GetNextGroupStartLevel(const FlameChartTimelineData& data,
@@ -457,6 +671,9 @@ void Timeline::UpdateLevelPositions(const FlameChartTimelineData& data) {
   std::vector<Pixel> new_group_offsets(group_count + 1, 0.0f);
   std::vector<Pixel> new_group_heights(group_count, 0.0f);
   std::vector<bool> new_group_visible(group_count, true);
+  std::vector<bool> new_group_striped(group_count, false);
+  // Whether the next visible child track gets the alternating row stripe.
+  bool next_child_striped = false;
 
   Pixel current_offset =
       ImGui::GetCurrentContext() ? ImGui::GetStyle().CellPadding.y : 0.0f;
@@ -542,6 +759,13 @@ void Timeline::UpdateLevelPositions(const FlameChartTimelineData& data) {
     new_group_offsets[group_index] = current_offset;
     has_visible_group = true;
 
+    if (group.nesting_level <= kProcessNestingLevel) {
+      next_child_striped = false;
+    } else {
+      new_group_striped[group_index] = next_child_striped;
+      next_child_striped = !next_child_striped;
+    }
+
     const bool has_children = group.has_children;
     const bool has_multiple_levels =
         next_group_start_level - group.start_level > 1;
@@ -600,6 +824,7 @@ void Timeline::UpdateLevelPositions(const FlameChartTimelineData& data) {
   group_heights_ = std::move(new_group_heights);
   visible_level_offsets_ = std::move(new_visible_level_offsets);
   group_visible_ = std::move(new_group_visible);
+  group_striped_ = std::move(new_group_striped);
 }
 
 void Timeline::SetVisibleRange(const TimeRange& range, bool animate) {
@@ -951,6 +1176,69 @@ void Timeline::RebuildEntryColors() {
       last_color = GetColorForId(name, trace_colors);
       has_last = true;
       entry_colors_[i] = last_color;
+    }
+  }
+  RebuildGroupAccentColors();
+}
+
+void Timeline::RebuildGroupAccentColors() {
+  // Bounds the work per track on huge traces: the dominant color is a visual
+  // hint, so a uniform sample of a track's events is accurate enough.
+  constexpr size_t kMaxSampledEventsPerGroup = 8192;
+
+  const size_t group_count = timeline_data_.groups.size();
+  group_accent_colors_.assign(group_count, 0);
+  const auto& total_times = timeline_data_.entry_total_times;
+  absl::InlinedVector<std::pair<ImU32, double>, kMaxColors> color_weights;
+  for (size_t group_index = 0; group_index < group_count; ++group_index) {
+    const Group& group = timeline_data_.groups[group_index];
+    if (group.type != Group::Type::kFlame ||
+        group.nesting_level == kProcessNestingLevel) {
+      continue;
+    }
+    color_weights.clear();
+    const int start_level = std::max(0, group.start_level);
+    const int end_level =
+        std::min(GetNextGroupStartLevel(timeline_data_, group_index),
+                 timeline_data_.total_levels());
+    size_t group_event_count = 0;
+    for (int level = start_level; level < end_level; ++level) {
+      group_event_count += timeline_data_.level_events(level).size();
+    }
+    // A single stride across all levels keeps the sample uniform, so levels
+    // keep their relative weights.
+    const size_t stride =
+        std::max<size_t>(1, group_event_count / kMaxSampledEventsPerGroup);
+    for (int level = start_level; level < end_level; ++level) {
+      const absl::Span<const int> indices = timeline_data_.level_events(level);
+      for (size_t i = 0; i < indices.size(); i += stride) {
+        const int event_index = indices[i];
+        if (event_index < 0 ||
+            static_cast<size_t>(event_index) >= entry_colors_.size() ||
+            static_cast<size_t>(event_index) >= total_times.size()) {
+          continue;
+        }
+        const ImU32 color = entry_colors_[event_index];
+        // Weight by duration so the accent matches the color that covers the
+        // most area on the canvas.
+        const double weight = std::max(total_times[event_index], 1e-3);
+        auto it = absl::c_find_if(color_weights, [color](const auto& entry) {
+          return entry.first == color;
+        });
+        if (it != color_weights.end()) {
+          it->second += weight;
+        } else if (color_weights.size() < kMaxColors) {
+          // Trace colors come from a palette of at most `kMaxColors` colors,
+          // so this bound only guards the linear search above.
+          color_weights.push_back({color, weight});
+        }
+      }
+    }
+    if (!color_weights.empty()) {
+      group_accent_colors_[group_index] =
+          absl::c_max_element(color_weights, [](const auto& a, const auto& b) {
+            return a.second < b.second;
+          })->first;
     }
   }
 }
@@ -1687,6 +1975,8 @@ void Timeline::ResetForNewDataset() {
   last_scroll_y_ = 0.0f;
   // Draw() only rebuilds colors when the entry count changes.
   entry_colors_.clear();
+  group_accent_colors_.clear();
+  copied_track_group_index_ = -1;
 
   // A zero visible range makes the next ProcessTraceEvents fit the new
   // dataset to width.
@@ -1767,17 +2057,18 @@ void Timeline::Draw() {
   if (track_management_enabled_) {
     // Draw "Process" header text in the top-left empty label area of
     // the ruler row.
-    ImGui::SetCursorPos(
-        ImVec2(ruler_start_pos.x + kIndentSize, ruler_start_pos.y));
-    ImGui::PushFont(traceviewer::fonts::label_large);
-
+    ImFont* const header_font = traceviewer::fonts::label_medium_strong;
     // Vertically center "Process" within ruler height
-    const Pixel text_height = ImGui::GetTextLineHeight();
-    const Pixel vertical_offset = (kRulerHeight - text_height) * 0.5f;
-    ImGui::SetCursorPosY(ruler_start_pos.y + std::max(0.0f, vertical_offset));
-
-    ImGui::TextUnformatted(kProcessHeaderLabel);
-    ImGui::PopFont();
+    const Pixel vertical_offset =
+        (kRulerHeight - FontLineHeight(header_font)) * 0.5f;
+    DrawSpacedUppercaseText(
+        ImGui::GetWindowDrawList(), header_font, kProcessHeaderLabel,
+        ImVec2(ruler_start_screen_pos.x + kTrackLabelPaddingLeft +
+                   kTrackChevronSlotWidth * 0.5f,
+               ruler_start_screen_pos.y + std::max(0.0f, vertical_offset)),
+        WithOpacity(palette_.GetColor(ColorPalette::Key::kForeground)
+                        .value_or(kBlackColor),
+                    kTrackMutedTextOpacity));
   }
 
   // Now move the cursor below the Ruler to start the Tracks child
@@ -1833,14 +2124,10 @@ void Timeline::Draw() {
       continue;
     }
     const Pixel group_bottom = GetGroupBottom(group_ptr);
-    if (group_bottom < scroll_y) {
-      // Should not happen with binary search, but serves as a safety check.
-      continue;
-    }
 
     if (is_header) {
-      if (DrawHeaderRow(group_ptr, tracks_start_pos, tracks_start_screen_pos,
-                        group_top, group_bottom)) {
+      if (DrawHeaderRow(group_ptr, tracks_start_screen_pos, group_top,
+                        group_bottom)) {
         needs_layout_update = true;
       }
       continue;
@@ -1934,6 +2221,14 @@ void Timeline::Draw() {
                         ImGuiWindowFlags_NoSavedSettings |
                         ImGuiWindowFlags_NoInputs |
                         ImGuiWindowFlags_NoBackground);
+  // Like a sticky CSS header, the ruler casts a soft shadow over the tracks
+  // once they are scrolled underneath it.
+  if (last_scroll_y_ > 0.0f) {
+    DrawDropShadow(ImGui::GetWindowDrawList(), ruler_start_screen_pos.x,
+                   ruler_start_screen_pos.x + content_region_avail_width,
+                   ruler_start_screen_pos.y + kRulerHeight,
+                   kStickyHeaderShadowHeight, kStickyHeaderShadowOpacity);
+  }
   // `DrawFlows` and `DrawSelectedTimeRanges` should be called after all other
   // timeline content (events, ruler, etc.) has been drawn. This ensures that
   // flow lines and selected time ranges are rendered on top of everything
@@ -2028,141 +2323,121 @@ void Timeline::Draw() {
 }
 
 bool Timeline::DrawHeaderRow(const Group* group_ptr,
-                             const ImVec2& tracks_start_pos,
                              const ImVec2& tracks_start_screen_pos,
                              Pixel group_top, Pixel group_bottom) {
-  bool needs_layout_update = false;
-
   int header_id = kAllHeaderId;
+  bool* expanded = &header_all_expanded_;
+  int process_count = all_processes_count_;
   if (group_ptr->name == kHiddenHeaderName) {
     header_id = kHiddenHeaderId;
+    expanded = &header_hidden_expanded_;
+    process_count = hidden_processes_count_;
   } else if (group_ptr->name == kPinnedHeaderName) {
     header_id = kPinnedHeaderId;
+    expanded = &header_pinned_expanded_;
+    process_count = pinned_processes_count_;
   }
   ImGui::PushID(header_id);
 
-  // Limit text clip region to label column
-  ImGui::PushClipRect(
-      ImVec2(tracks_start_screen_pos.x, tracks_start_screen_pos.y + group_top),
-      ImVec2(tracks_start_screen_pos.x + label_width_ - kSplitterOffset,
-             tracks_start_screen_pos.y + group_bottom),
-      true);
+  const ImVec2 row_min(tracks_start_screen_pos.x,
+                       tracks_start_screen_pos.y + group_top);
+  const ImVec2 row_max(tracks_start_screen_pos.x + label_width_,
+                       tracks_start_screen_pos.y + group_bottom);
+  const ImU32 foreground_color =
+      palette_.GetColor(ColorPalette::Key::kForeground).value_or(kBlackColor);
+  ImDrawList* const draw_list = ImGui::GetWindowDrawList();
 
-  // Position for expand/collapse button
-  ImGui::SetCursorPos(
-      ImVec2(tracks_start_pos.x + kIndentSize, tracks_start_pos.y + group_top));
-
+  // The whole header row is a single hit target that toggles the section. It
+  // stops short of the label resizer, which is submitted later and would
+  // otherwise lose the overlapping hover.
+  const Pixel hit_right = row_max.x - kSplitterOffset;
   bool toggled = false;
-  if (group_ptr->name == kAllHeaderName) {
-    toggled =
-        DrawExpandCollapseButton(header_all_expanded_, kVirtualHeaderHeight,
-                                 /*is_virtual_header=*/true);
-  } else if (group_ptr->name == kHiddenHeaderName) {
-    toggled =
-        DrawExpandCollapseButton(header_hidden_expanded_, kVirtualHeaderHeight,
-                                 /*is_virtual_header=*/true);
-  } else if (group_ptr->name == kPinnedHeaderName) {
-    toggled =
-        DrawExpandCollapseButton(header_pinned_expanded_, kVirtualHeaderHeight,
-                                 /*is_virtual_header=*/true);
+  bool hovered = false;
+  if (hit_right > row_min.x && row_max.y > row_min.y) {
+    ImGui::SetCursorScreenPos(row_min);
+    // Rows are pointer targets only; keyboard arrows navigate the timeline.
+    ImGui::PushItemFlag(ImGuiItemFlags_NoNav, true);
+    toggled = ImGui::InvisibleButton(
+        "##section_header",
+        ImVec2(hit_right - row_min.x, row_max.y - row_min.y));
+    ImGui::PopItemFlag();
+    hovered = ImGui::IsItemHovered();
   }
-
   if (toggled) {
-    needs_layout_update = true;
+    *expanded = !*expanded;
+    event_clicked_this_frame_ = true;
+  }
+  const float hover_emphasis = hovered ? 1.0f : 0.0f;
+  if (hovered) {
+    ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+  }
+  if (hover_emphasis > 0.0f) {
+    DrawRowPill(
+        draw_list, row_min, row_max,
+        WithOpacity(foreground_color, kTrackHoverOpacity * hover_emphasis));
   }
 
-  // Name text
-  ImGui::SameLine();
-  ImGui::SetCursorPosX(ImGui::GetCursorPosX() + kLabelPaddingLeft);
-  ImGui::PushFont(traceviewer::fonts::title_small);
+  // Limit drawing to the label column.
+  ImGui::PushClipRect(row_min, row_max, true);
 
-  // Vertically center text in header height
-  const Pixel text_height = ImGui::GetTextLineHeight();
-  const Pixel vertical_offset = (kVirtualHeaderHeight - text_height) * 0.5f;
-  ImGui::SetCursorPosY(tracks_start_pos.y + group_top +
-                       std::max(0.0f, vertical_offset));
+  const Pixel center_y = (row_min.y + row_max.y) * 0.5f;
+  const ImU32 muted_color = WithOpacity(
+      foreground_color, kTrackMutedTextOpacity + (kTrackSecondaryTextOpacity -
+                                                  kTrackMutedTextOpacity) *
+                                                     hover_emphasis);
+  DrawExpandChevron(
+      draw_list,
+      ImVec2(row_min.x + kTrackLabelPaddingLeft + kTrackChevronSlotWidth * 0.5f,
+             center_y),
+      *expanded ? 1.0f : 0.0f, hover_emphasis, foreground_color);
 
-  std::string header_text;
-  if (group_ptr->name == kHiddenHeaderName) {
-    header_text = FormatHeaderText(kHiddenHeaderName, hidden_processes_count_);
-  } else if (group_ptr->name == kAllHeaderName) {
-    header_text = FormatHeaderText(kAllHeaderName, all_processes_count_);
-  } else if (group_ptr->name == kPinnedHeaderName) {
-    header_text = FormatHeaderText(kPinnedHeaderName, pinned_processes_count_);
-  }
-  ImGui::TextUnformatted(header_text.c_str());
-  ImGui::PopFont();
+  ImFont* const name_font = traceviewer::fonts::label_medium_strong;
+  const ImVec2 name_pos(
+      row_min.x + kTrackLabelPaddingLeft + kTrackChevronSlotWidth +
+          kTrackLabelGap * 0.5f,
+      std::round(center_y - FontLineHeight(name_font) * 0.5f));
+  const Pixel name_width = DrawSpacedUppercaseText(
+      draw_list, name_font, group_ptr->name, name_pos, muted_color);
+
+  // AlphaNum formats into an inline buffer, avoiding a per-frame allocation.
+  const absl::AlphaNum count_text(process_count);
+  DrawCountChip(draw_list, count_text.Piece(),
+                name_pos.x + name_width + kTrackLabelGap +
+                    CountChipWidth(count_text.Piece()),
+                center_y, WithOpacity(foreground_color, kTrackCountChipOpacity),
+                muted_color);
 
   ImGui::PopClipRect();
   ImGui::PopID();
 
-  return needs_layout_update;
+  return toggled;
 }
 
-void Timeline::DrawTrackLabel(const Group& group, Pixel centereable_height) {
-  ImGui::PushFont(traceviewer::fonts::label_large);
-  const Pixel text_height_large = ImGui::GetTextLineHeight();
-  ImGui::PopFont();
+void Timeline::CopyTrackName(int group_index) {
+  const std::string& name = timeline_data_.groups[group_index].name;
+  ImGui::SetClipboardText(name.c_str());
+  traceviewer::CopyToClipboard(name);
+  copied_track_name_ = name;
+  copied_track_group_index_ = group_index;
+  copy_notification_timer_ = 2.0f;
+}
 
-  ImGui::PushFont(traceviewer::fonts::label_medium);
-  const Pixel text_height_medium = ImGui::GetTextLineHeight();
-  ImGui::PopFont();
-
-  const bool has_subtitle = !group.subtitle.empty();
-
-  const Pixel spacing = ImGui::GetStyle().ItemSpacing.y;
-  const Pixel total_text_height =
-      has_subtitle ? (text_height_large + spacing + text_height_medium)
-                   : text_height_large;
-
-  const Pixel vertical_offset = (centereable_height - total_text_height) * 0.5f;
-  const Pixel label_start_y = ImGui::GetCursorPosY();
-  ImGui::SetCursorPosY(label_start_y + std::max(0.0f, vertical_offset));
-
-  ImGui::BeginGroup();
-
-  absl::string_view display_name = group.name;
-  if (has_subtitle) {
-    display_name.remove_prefix(group.subtitle.size() + 1);
-    if (!display_name.empty() && display_name.front() == '/') {
-      display_name.remove_prefix(1);
-    }
+ImU32 Timeline::GetGroupAccentColor(int group_index) const {
+  const Group& group = timeline_data_.groups[group_index];
+  if (group.type == Group::Type::kCounter) {
+    return kCounterTrackColor;
   }
-
-  ImGui::PushFont(traceviewer::fonts::label_large);
-  ImGui::TextUnformatted(display_name.data(),
-                         display_name.data() + display_name.size());
-  ImGui::PopFont();
-
-  if (has_subtitle) {
-    ImGui::PushFont(traceviewer::fonts::label_medium);
-    ImGui::PushStyleColor(ImGuiCol_Text,
-                          palette_.GetColor(ColorPalette::Key::kSubtitle)
-                              .value_or(kOnSecondaryFixedVariantColor));
-    ImGui::TextUnformatted(group.subtitle.data());
-    ImGui::PopStyleColor();
-    ImGui::PopFont();
+  if (group.nesting_level == kProcessNestingLevel) {
+    // Matches the color of the process utilization chart.
+    return palette_.GetColor(ColorPalette::Key::kFlameHeader).value_or(kBlue70);
   }
-
-  ImGui::EndGroup();
-
-  if (ImGui::IsItemHovered()) {
-    ImGui::SetMouseCursor(ImGuiMouseCursor_TextInput);
-    if (ImGui::IsMouseClicked(0)) {
-      ImGui::SetClipboardText(group.name.c_str());
-      traceviewer::CopyToClipboard(group.name);
-
-      copied_track_name_ = group.name;
-      copy_notification_timer_ = 2.0f;
-    }
+  if (static_cast<size_t>(group_index) < group_accent_colors_.size() &&
+      group_accent_colors_[group_index] != 0) {
+    return group_accent_colors_[group_index];
   }
-
-  if (copy_notification_timer_ > 1.8f && copied_track_name_ == group.name) {
-    ImVec2 group_min = ImGui::GetItemRectMin();
-    ImVec2 group_max = ImGui::GetItemRectMax();
-    ImGui::GetWindowDrawList()->AddRectFilled(group_min, group_max,
-                                              IM_COL32(66, 133, 244, 128));
-  }
+  return WithOpacity(
+      palette_.GetColor(ColorPalette::Key::kForeground).value_or(kBlackColor),
+      kTrackNeutralAccentOpacity);
 }
 
 bool Timeline::DrawTrackRow(int group_index, const ImVec2& tracks_start_pos,
@@ -2174,109 +2449,295 @@ bool Timeline::DrawTrackRow(int group_index, const ImVec2& tracks_start_pos,
   Group& group = timeline_data_.groups[group_index];
   ImGui::PushID(group_index);
 
-  // Set cursor to draw the label
-  ImGui::SetCursorPos(ImVec2(tracks_start_pos.x,
-                             tracks_start_pos.y + group_offsets_[group_index]));
-
-  ImDrawList* draw_list = ImGui::GetWindowDrawList();
-
-  if (group.nesting_level == kProcessNestingLevel) {
-    ImU32 bg_color =
-        group.expanded ? palette_.GetColor(ColorPalette::Key::kExpandedHeader)
-                             .value_or(kProcessTrackExpandedColor)
-                       : palette_.GetColor(ColorPalette::Key::kCollapsedHeader)
-                             .value_or(kProcessTrackCollapsedColor);
-    draw_list->AddRectFilled(
-        ImVec2(tracks_start_screen_pos.x,
-               tracks_start_screen_pos.y + group_offsets_[group_index]),
-        ImVec2(tracks_start_screen_pos.x + content_region_avail_width,
-               tracks_start_screen_pos.y + group_offsets_[group_index + 1]),
-        bg_color);
-  }
-
-  // Push clip rect to prevent label text from bleeding into the track area
-  ImGui::PushClipRect(
-      ImVec2(tracks_start_screen_pos.x,
-             tracks_start_screen_pos.y + group_offsets_[group_index]),
-      ImVec2(tracks_start_screen_pos.x + label_width_ - kSplitterOffset,
-             tracks_start_screen_pos.y + group_offsets_[group_index + 1]),
-      true);
-
-  const bool has_children = group.has_children;
-  const int next_group_start_level =
-      GetNextGroupStartLevel(timeline_data_, group_index);
-  const bool has_multiple_levels =
-      next_group_start_level - group.start_level > 1;
-
+  const bool is_process = group.nesting_level == kProcessNestingLevel;
+  const int own_level_count =
+      GetNextGroupStartLevel(timeline_data_, group_index) - group.start_level;
   const bool expandable = group.type == Group::Type::kFlame &&
-                          (has_children || has_multiple_levels);
-
+                          (group.has_children || own_level_count > 1);
   const bool is_collapsed = expandable && !group.expanded;
-  Pixel group_height = kEventHeight;
-  if (group.nesting_level == kProcessNestingLevel) {
-    group_height = kProcessTrackHeight;
-  } else if (!is_collapsed) {
-    if (group.type == Group::Type::kCounter) {
-      group_height = kCounterTrackHeight;
-    } else if (group.type == Group::Type::kFlame) {
-      const int end_level =
-          GetNextGroupStartLevel(timeline_data_, group_index);
-      group_height = std::max(1, end_level - group.start_level) *
-                     (kEventHeight + kEventPaddingBottom);
-    }
-  }
 
-  const Pixel arrow_size = ImGui::GetFontSize() * kIconSizeScale;
-  Pixel indent_amount = (group.nesting_level + 1) * kIndentSize;
-
-  const Pixel label_start_y = ImGui::GetCursorPosY();
-  const Pixel centereable_height =
-      group.nesting_level == kProcessNestingLevel
+  // Row geometry in screen space. The label column spans [row_left,
+  // label_right); the timeline canvas spans [label_right, row_right).
+  const Pixel row_left = tracks_start_screen_pos.x;
+  const Pixel row_right = row_left + content_region_avail_width;
+  const Pixel row_top = tracks_start_screen_pos.y + group_offsets_[group_index];
+  const Pixel row_height = group_heights_[group_index];
+  const Pixel row_bottom = row_top + row_height;
+  const Pixel label_right = row_left + label_width_ - kSplitterOffset;
+  // The height of the first line of the row, used to vertically align the
+  // chevron and the track name. Multi-level flame tracks align their label
+  // with their first level.
+  const Pixel first_line_height =
+      is_process
           ? kProcessTrackHeight
-          : (group.type == Group::Type::kFlame ? kEventHeight : group_height);
+          : (group.type == Group::Type::kFlame ? kEventHeight : row_height);
 
-  ImGui::Indent(indent_amount);
+  const ImU32 foreground_color =
+      palette_.GetColor(ColorPalette::Key::kForeground).value_or(kBlackColor);
+  ImDrawList* const draw_list = ImGui::GetWindowDrawList();
+  const float openness = is_collapsed ? 0.0f : 1.0f;
 
-  // Calculate custom_center_y_offset to align arrow with first line of label
-  ImGui::PushFont(traceviewer::fonts::label_large);
-  const Pixel text_height_large = ImGui::GetTextLineHeight();
-  ImGui::PopFont();
-
-  ImGui::PushFont(traceviewer::fonts::label_medium);
-  const Pixel text_height_medium = ImGui::GetTextLineHeight();
-  ImGui::PopFont();
-
-  const bool has_subtitle = !group.subtitle.empty();
-  const Pixel spacing = ImGui::GetStyle().ItemSpacing.y;
-  const Pixel total_text_height =
-      has_subtitle ? (text_height_large + spacing + text_height_medium)
-                   : text_height_large;
-
-  const Pixel vertical_offset = (centereable_height - total_text_height) * 0.5f;
-  const Pixel custom_center_y_offset =
-      std::max(0.0f, vertical_offset) + text_height_large * 0.5f;
-
-  if (expandable) {
-    if (DrawExpandCollapseButton(group.expanded, centereable_height, false,
-                                 custom_center_y_offset)) {
-      needs_layout_update = true;
-    }
-    ImGui::SameLine();
-  } else if (group.nesting_level == kProcessNestingLevel) {
-    ImGui::Dummy(ImVec2(arrow_size, centereable_height));
-    ImGui::SameLine();
+  // 1. Row background. Process headers get an elevated surface; child tracks
+  // alternate a subtle stripe that spans both the label column and the canvas,
+  // so a label is visually connected to its events. Splitting the gap between
+  // consecutive child tracks keeps each row centered inside its visual band
+  // while consecutive stripes still meet without a seam.
+  const Pixel half_gap = kThreadTrackGap * 0.5f;
+  const Pixel band_top =
+      is_process ? row_top
+                 : std::max(tracks_start_screen_pos.y, row_top - half_gap);
+  const Pixel band_bottom = is_process ? row_bottom : (row_bottom + half_gap);
+  if (is_process) {
+    // Cross-fades between the collapsed and expanded surface colors while the
+    // header's chevron rotates.
+    const ImU32 bg_color =
+        MixColors(palette_.GetColor(ColorPalette::Key::kCollapsedHeader)
+                      .value_or(kProcessTrackCollapsedColor),
+                  palette_.GetColor(ColorPalette::Key::kExpandedHeader)
+                      .value_or(kProcessTrackExpandedColor),
+                  openness);
+    // A subtle top-to-bottom gradient, a 1px inner top highlight and a soft
+    // drop shadow give the header an elevated, card-like surface (the
+    // ImGui equivalent of CSS `linear-gradient` + `box-shadow`).
+    const ImU32 top_color =
+        MixColors(bg_color, foreground_color, kTrackHeaderGradientStrength);
+    draw_list->AddRectFilledMultiColor(ImVec2(row_left, row_top),
+                                       ImVec2(row_right, row_bottom), top_color,
+                                       top_color, bg_color, bg_color);
+    draw_list->AddLine(
+        ImVec2(row_left, row_top + 0.5f), ImVec2(row_right, row_top + 0.5f),
+        WithOpacity(foreground_color, kTrackHeaderHighlightOpacity), 1.0f);
+    DrawDropShadow(draw_list, row_left, row_right, row_bottom,
+                   kTrackHeaderShadowHeight, kTrackHeaderShadowOpacity);
+  } else if (static_cast<size_t>(group_index) < group_striped_.size() &&
+             group_striped_[group_index]) {
+    draw_list->AddRectFilled(
+        ImVec2(row_left, band_top), ImVec2(row_right, band_bottom),
+        WithOpacity(foreground_color, kTrackZebraStripeOpacity));
   }
 
-  ImGui::SetCursorPosX(ImGui::GetCursorPosX() + kLabelPaddingLeft);
+  // 2. The whole label row is a single hit target: clicking an expandable
+  // track toggles it, clicking any other track copies its name, and
+  // right-clicking any track copies its name. The track management buttons
+  // (pin / hide) are excluded so they keep their own hit targets.
+  const Pixel management_width = track_management_enabled_ && is_process
+                                     ? CalculateTrackManagementButtonWidth()
+                                     : 0.0f;
+  const Pixel hit_right = label_right - management_width;
+  bool row_clicked = false;
+  bool row_hovered = false;
+  bool row_hovered_for_tooltip = false;
+  ImGui::SetCursorScreenPos(ImVec2(row_left, row_top));
+  bool row_right_clicked = false;
+  if (hit_right > row_left && row_height > 0.0f) {
+    // Rows are pointer targets only; keyboard arrows navigate the timeline.
+    ImGui::PushItemFlag(ImGuiItemFlags_NoNav, true);
+    row_clicked = ImGui::InvisibleButton(
+        "##track_label", ImVec2(hit_right - row_left, row_height));
+    ImGui::PopItemFlag();
+    row_hovered = ImGui::IsItemHovered();
+    row_right_clicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
+    row_hovered_for_tooltip =
+        ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip);
+  }
+  // Include the management buttons area so the row stays highlighted while
+  // the pointer moves onto the pin / hide buttons.
+  const bool tracks_window_hovered =
+      ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) && !is_dragging_ &&
+      !is_resizing_label_column_;
+  const bool label_area_hovered =
+      row_hovered ||
+      (management_width > 0.0f && tracks_window_hovered &&
+       ImGui::IsMouseHoveringRect(ImVec2(hit_right, row_top),
+                                  ImVec2(label_right, row_bottom)));
+  // Whether the pointer is over this track's events on the canvas. The label
+  // resizer's hit area (which straddles the splitter) is excluded.
+  const bool canvas_row_hovered =
+      !label_area_hovered && tracks_window_hovered &&
+      ImGui::IsMouseHoveringRect(ImVec2(label_right + kSplitterWidth, row_top),
+                                 ImVec2(row_right, row_bottom));
+  // Evaluate full-row hover before pushing the sidebar clip rect (which clips
+  // ImGui::IsMouseHoveringRect to the label column), so hovering the canvas row
+  // also reserves space for the revealed pin / hide buttons.
+  const bool management_buttons_visible =
+      management_width > 0.0f &&
+      (pinned_track_names_.contains(group.name) ||
+       hidden_track_names_.contains(group.name) ||
+       IsTrackRowHovered(group_index));
 
-  DrawTrackLabel(group, centereable_height);
+  if (row_clicked) {
+    // Clicking a label must not clear the current event selection.
+    event_clicked_this_frame_ = true;
+    if (expandable) {
+      group.expanded = !group.expanded;
+      needs_layout_update = true;
+    } else {
+      CopyTrackName(group_index);
+    }
+  }
+  if (row_right_clicked) {
+    CopyTrackName(group_index);
+  }
+  if (row_hovered) {
+    ImGui::SetMouseCursor(expandable ? ImGuiMouseCursor_Hand
+                                     : ImGuiMouseCursor_TextInput);
+  }
 
-  ImGui::Unindent(indent_amount);
-  ImGui::SetCursorPosY(label_start_y);
+  // Hover feedback highlights the entire row (both the track's label pill and
+  // its events' row on the canvas) whether the pointer is over the label or
+  // over the canvas row.
+  const Pixel splitter_x = row_left + label_width_;
+  const float label_emphasis = label_area_hovered ? 1.0f : 0.0f;
+  const float row_emphasis =
+      (label_area_hovered || canvas_row_hovered) ? 1.0f : 0.0f;
+  if (row_emphasis > 0.0f) {
+    draw_list->AddRectFilled(
+        ImVec2(splitter_x, band_top), ImVec2(row_right, band_bottom),
+        WithOpacity(foreground_color,
+                    kTrackCanvasRowFocusOpacity * row_emphasis));
+  }
+
+  // Tree guides: one vertical line per ancestor level, centered under the
+  // ancestor's chevron. Each row draws its own segment (including the gap
+  // above it), so consecutive children form a continuous line.
+  const int depth = std::max(0, group.nesting_level - kProcessNestingLevel);
+  const ImU32 guide_color =
+      WithOpacity(foreground_color, kTrackTreeGuideOpacity);
+  ImGui::PushClipRect(ImVec2(row_left, row_top - kThreadTrackGap),
+                      ImVec2(splitter_x, row_bottom), true);
+  for (int level = 0; level < depth; ++level) {
+    const Pixel guide_x = std::floor(row_left + kTrackLabelPaddingLeft +
+                                     level * kTrackChevronSlotWidth +
+                                     kTrackChevronSlotWidth * 0.5f) +
+                          0.5f;
+    draw_list->AddLine(ImVec2(guide_x, row_top - kThreadTrackGap),
+                       ImVec2(guide_x, row_bottom), guide_color, 1.0f);
+  }
   ImGui::PopClipRect();
 
+  // 3. Label column content, clipped so it never bleeds into the canvas.
+  ImGui::PushClipRect(ImVec2(row_left, band_top),
+                      ImVec2(splitter_x, band_bottom), true);
+
+  // Frame the track's title line (rather than the full multi-level row height)
+  // and add 1px symmetric vertical breathing room on child tracks so the pill
+  // is centered on `first_line_center_y`.
+  const Pixel pill_top = is_process ? row_top : (row_top - 1.0f);
+  const Pixel pill_bottom =
+      is_process ? row_bottom : (row_top + first_line_height + 1.0f);
+  if (row_emphasis > 0.0f) {
+    DrawRowPill(
+        draw_list, ImVec2(row_left, pill_top), ImVec2(label_right, pill_bottom),
+        WithOpacity(foreground_color, kTrackHoverOpacity * row_emphasis));
+  }
+  if (copied_track_group_index_ == group_index &&
+      copy_notification_timer_ > 1.8f) {
+    DrawRowPill(draw_list, ImVec2(row_left, pill_top),
+                ImVec2(label_right, pill_bottom),
+                WithOpacity(kBlue60, kTrackCopyFlashOpacity));
+  }
+
+  // Chevron.
+  const Pixel slot_left =
+      row_left + kTrackLabelPaddingLeft + depth * kTrackChevronSlotWidth;
+  const Pixel first_line_center_y = row_top + first_line_height * 0.5f;
+  if (expandable) {
+    DrawExpandChevron(
+        draw_list,
+        ImVec2(slot_left + kTrackChevronSlotWidth * 0.5f, first_line_center_y),
+        openness, label_emphasis, foreground_color);
+  }
+
+  // Count chip on collapsed tracks: the number of hidden child tracks (or
+  // levels, for a multi-level track without child tracks). The space of the
+  // track management buttons is only reserved while they are visible (see
+  // DrawPinButton and DrawHideButton), so names use the full width otherwise.
+  const Pixel content_left = slot_left + kTrackChevronSlotWidth;
+  const Pixel text_left = content_left + kTrackLabelGap;
+  Pixel text_right = label_right - kTrackLabelPaddingRight -
+                     (management_buttons_visible ? management_width : 0.0f);
+  // The collapsed cues (count chip, stack hint) fade in as the row collapses
+  // and out as it expands.
+  const float collapsed_cue_alpha = expandable ? 1.0f - openness : 0.0f;
+  const ImU32 accent_color =
+      collapsed_cue_alpha > 0.0f ? GetGroupAccentColor(group_index) : 0;
+  if (collapsed_cue_alpha > 0.0f) {
+    const int hidden_count = group.has_children
+                                 ? static_cast<int>(group.child_indices.size())
+                                 : own_level_count;
+    // "+N" reads as "N more inside". Formatted into a stack buffer to avoid a
+    // per-frame allocation.
+    char count_buffer[16];
+    const int count_length =
+        std::snprintf(count_buffer, sizeof(count_buffer), "+%d", hidden_count);
+    const absl::string_view count_text(
+        count_buffer,
+        std::clamp<int>(count_length, 0, sizeof(count_buffer) - 1));
+    if (hidden_count > 0 &&
+        text_right - CountChipWidth(count_text) >= text_left) {
+      // The chip is tinted with the track's accent color so it reads as part
+      // of the track rather than generic chrome.
+      const Pixel chip_left = DrawCountChip(
+          draw_list, count_text, text_right, first_line_center_y,
+          WithOpacity(accent_color,
+                      kTrackCollapsedChipAccentOpacity * collapsed_cue_alpha),
+          WithOpacity(foreground_color,
+                      kTrackSecondaryTextOpacity * collapsed_cue_alpha));
+      text_right = chip_left - kTrackLabelGap;
+    }
+  }
+
+  // Track name and optional subtitle.
+  absl::string_view display_name = group.name;
+  const bool has_subtitle = !group.subtitle.empty();
+  if (has_subtitle && display_name.size() > group.subtitle.size()) {
+    display_name.remove_prefix(group.subtitle.size() + 1);
+    if (!display_name.empty() && display_name.front() == '/') {
+      display_name.remove_prefix(1);
+    }
+  }
+  ImFont* const name_font = is_process ? traceviewer::fonts::title_small_strong
+                                       : traceviewer::fonts::title_small;
+  const ImU32 name_color =
+      is_process ? foreground_color
+                 : WithOpacity(foreground_color, kTrackSecondaryTextOpacity);
+  const Pixel name_height = FontLineHeight(name_font);
+  const Pixel subtitle_height =
+      has_subtitle ? FontLineHeight(traceviewer::fonts::label_small) : 0.0f;
+  const Pixel text_block_height = name_height + subtitle_height;
+  // Roboto's cap-height center sits ~1px below `name_height * 0.5f` due to
+  // ascender/descender metrics, so nudge single-line titles up by 1px for
+  // optical centering inside the row pill.
+  const Pixel name_top =
+      std::round(row_top + (first_line_height - text_block_height) * 0.5f) -
+      (has_subtitle ? 0.0f : 1.0f);
+  const bool name_truncated =
+      DrawTextWithEllipsis(name_font, display_name, name_color,
+                           ImVec2(text_left, name_top), text_right);
+  if (has_subtitle) {
+    DrawTextWithEllipsis(traceviewer::fonts::label_small, group.subtitle,
+                         palette_.GetColor(ColorPalette::Key::kSubtitle)
+                             .value_or(kOnSecondaryFixedVariantColor),
+                         ImVec2(text_left, name_top + name_height), text_right);
+  }
+  if (name_truncated && row_hovered_for_tooltip) {
+    ShowCardTooltip(group.name);
+  }
+
+  ImGui::PopClipRect();
+
+  if (collapsed_cue_alpha > 0.0f) {
+    // The hint lives in the gap below the row, so it gets its own clip rect.
+    ImGui::PushClipRect(ImVec2(row_left, row_bottom),
+                        ImVec2(splitter_x, row_bottom + kThreadTrackGap), true);
+    DrawCollapsedStackHint(draw_list, content_left,
+                           label_right - kTrackLabelPaddingRight, row_bottom,
+                           WithOpacity(accent_color, collapsed_cue_alpha));
+    ImGui::PopClipRect();
+  }
+
   if (DrawTrackManagementButtons(group_index, group, tracks_start_pos,
-                                 centereable_height)) {
+                                 first_line_height)) {
     needs_layout_update = true;
   }
 
@@ -5173,12 +5634,16 @@ bool Timeline::DrawTrackManagementButtons(int group_index, const Group& group,
   if (group.nesting_level != kProcessNestingLevel) return false;
 
   bool needs_layout_update = false;
-  const Pixel arrow_size = ImGui::GetFontSize() * kIconSizeScale;
+
+  // The buttons are right-aligned in the label column with a small margin
+  // before the splitter: [pin] gap [hide] margin | splitter.
+  const Pixel row_y = tracks_start_pos.y + group_offsets_[group_index];
+  const Pixel hide_x = tracks_start_pos.x + label_width_ - kSplitterOffset -
+                       kTrackIconButtonMarginRight - kTrackIconButtonSize;
+  const Pixel pin_x = hide_x - kTrackIconButtonGap - kTrackIconButtonSize;
 
   // Position and draw Pin button
-  ImGui::SameLine();
-  ImGui::SetCursorPosX(tracks_start_pos.x + label_width_ - kSplitterOffset -
-                       arrow_size * 2.0f - kButtonGap);
+  ImGui::SetCursorPos(ImVec2(pin_x, row_y));
   const bool is_pinned = pinned_track_names_.contains(group.name);
   if (DrawPinButton(group_index, centereable_height, is_pinned)) {
     needs_layout_update = true;
@@ -5189,9 +5654,7 @@ bool Timeline::DrawTrackManagementButtons(int group_index, const Group& group,
   }
 
   // Position and draw Hide button
-  ImGui::SameLine();
-  ImGui::SetCursorPosX(tracks_start_pos.x + label_width_ - kSplitterOffset -
-                       arrow_size);
+  ImGui::SetCursorPos(ImVec2(hide_x, row_y));
   const bool is_track_hidden = hidden_track_names_.contains(group.name);
   if (DrawHideButton(group_index, centereable_height, is_track_hidden)) {
     needs_layout_update = true;
@@ -5209,27 +5672,31 @@ bool Timeline::DrawTrackManagementButtons(int group_index, const Group& group,
   return needs_layout_update;
 }
 
+bool Timeline::IsTrackRowHovered(int group_index) const {
+  const Pixel content_region_avail_width =
+      ImGui::GetWindowWidth() - ImGui::GetStyle().ScrollbarSize;
+  const Pixel row_top =
+      tracks_start_screen_pos_.y + group_offsets_[group_index];
+  return ImGui::IsMouseHoveringRect(
+      ImVec2(tracks_start_screen_pos_.x, row_top),
+      ImVec2(tracks_start_screen_pos_.x + content_region_avail_width,
+             row_top + group_heights_[group_index]));
+}
+
 bool Timeline::DrawHideButton(int group_index, Pixel height,
                               bool is_track_hidden) {
+  if (height <= 0.0f) return false;
   const Group& group = timeline_data_.groups[group_index];
+  const ImU32 foreground_color =
+      palette_.GetColor(ColorPalette::Key::kForeground).value_or(kBlackColor);
 
-  // Base size to determine the icon's drawing area and the button's width.
-  // The button size (especially width) directly relates to the icon draw size
-  // so that the hit target matches the visual boundary of the hide icon.
-  const Pixel kIconDrawSize = ImGui::GetFontSize() * kIconSizeScale;
-  const Pixel kButtonVisibleHeight = height;
-  if (kIconDrawSize <= 0.0f || kButtonVisibleHeight <= 0.0f) {
-    return false;
-  }
-
-  ImVec2 p = ImGui::GetCursorScreenPos();
-  // The icon will be drawn within a kIconDrawSize * kIconDrawSize area.
-  // The button width matches the icon draw width.
-  const ImVec2 buttonSize(kIconDrawSize, kButtonVisibleHeight);
+  const IconButtonState state =
+      TrackIconButton("##hide", height, is_track_hidden,
+                      is_track_hidden ? kUnhideTrackTooltip : kHideTrackTooltip,
+                      foreground_color);
 
   bool toggled = false;
-  if (ImGui::InvisibleButton("##hide", buttonSize,
-                             ImGuiButtonFlags_PressedOnClick)) {
+  if (state.clicked) {
     auto it = hidden_track_names_.find(group.name);
     if (it != hidden_track_names_.end()) {
       hidden_track_names_.erase(it);
@@ -5244,50 +5711,28 @@ bool Timeline::DrawHideButton(int group_index, Pixel height,
     }
   }
 
-  // Calculate the center point for drawing the icon.
-  Pixel center_x = p.x + kIconDrawSize * 0.5f;
-  Pixel center_y = p.y + kButtonVisibleHeight * 0.5f;
-
-  ImDrawList* draw_list = ImGui::GetWindowDrawList();
-  ImU32 icon_col = ImGui::GetColorU32(ImGuiCol_Text);
-  if (ImGui::IsItemHovered()) {
-    ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-    icon_col = ImGui::GetColorU32(ImGuiCol_ButtonHovered);
-    ImGui::SetTooltip(is_track_hidden ? kUnhideTrackTooltip
-                                      : kHideTrackTooltip);
-  }
-
-  const Pixel content_region_avail_width =
-      ImGui::GetWindowWidth() - ImGui::GetStyle().ScrollbarSize;
-  const bool is_row_hovered = ImGui::IsMouseHoveringRect(
-      ImVec2(tracks_start_screen_pos_.x,
-             tracks_start_screen_pos_.y + group_offsets_[group_index]),
-      ImVec2(tracks_start_screen_pos_.x + content_region_avail_width,
-             tracks_start_screen_pos_.y + group_offsets_[group_index + 1]));
-
-  if (is_row_hovered || is_track_hidden) {
-    DrawHideIcon(draw_list, center_x, center_y, kIconDrawSize, icon_col,
+  // The button is only revealed on row hover, unless the track is hidden.
+  if (state.hovered || is_track_hidden || IsTrackRowHovered(group_index)) {
+    DrawHideIcon(ImGui::GetWindowDrawList(), state.center.x, state.center.y,
+                 kTrackIconButtonSize,
+                 TrackIconColor(state, is_track_hidden, foreground_color),
                  is_track_hidden);
   }
   return toggled;
 }
 
 bool Timeline::DrawPinButton(int group_index, Pixel height, bool is_pinned) {
+  if (height <= 0.0f) return false;
   const Group& group = timeline_data_.groups[group_index];
+  const ImU32 foreground_color =
+      palette_.GetColor(ColorPalette::Key::kForeground).value_or(kBlackColor);
 
-  // Base size to determine the icon's drawing area and the button's width.
-  const Pixel kIconDrawSize = ImGui::GetFontSize() * kIconSizeScale;
-  const Pixel kButtonVisibleHeight = height;
-  if (kIconDrawSize <= 0.0f || kButtonVisibleHeight <= 0.0f) {
-    return false;
-  }
-
-  ImVec2 p = ImGui::GetCursorScreenPos();
-  const ImVec2 buttonSize(kIconDrawSize, kButtonVisibleHeight);
+  const IconButtonState state = TrackIconButton(
+      "##pin", height, is_pinned,
+      is_pinned ? kUnpinTrackTooltip : kPinTrackTooltip, foreground_color);
 
   bool toggled = false;
-  if (ImGui::InvisibleButton("##pin", buttonSize,
-                             ImGuiButtonFlags_PressedOnClick)) {
+  if (state.clicked) {
     if (is_pinned) {
       pinned_track_names_.erase(group.name);
     } else {
@@ -5296,30 +5741,11 @@ bool Timeline::DrawPinButton(int group_index, Pixel height, bool is_pinned) {
     toggled = true;
   }
 
-  // Calculate the center point for drawing the icon.
-  Pixel center_x = p.x + kIconDrawSize * 0.5f;
-  Pixel center_y = p.y + kButtonVisibleHeight * 0.5f;
-
-  ImDrawList* draw_list = ImGui::GetWindowDrawList();
-  ImU32 icon_col = ImGui::GetColorU32(ImGuiCol_Text);
-  if (ImGui::IsItemHovered()) {
-    ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-    icon_col = ImGui::GetColorU32(ImGuiCol_ButtonHovered);
-    ImGui::SetTooltip(is_pinned ? kUnpinTrackTooltip : kPinTrackTooltip);
-  }
-
-  const Pixel content_region_avail_width =
-      ImGui::GetWindowWidth() - ImGui::GetStyle().ScrollbarSize;
-  const bool is_row_hovered = ImGui::IsMouseHoveringRect(
-      ImVec2(tracks_start_screen_pos_.x,
-             tracks_start_screen_pos_.y + group_offsets_[group_index]),
-      ImVec2(tracks_start_screen_pos_.x + content_region_avail_width,
-             tracks_start_screen_pos_.y + group_offsets_[group_index + 1]));
-
-  if (is_row_hovered || is_pinned) {
-    // Draw the icon using the same base size.
-    DrawPinIcon(draw_list, center_x, center_y, kIconDrawSize, icon_col,
-                is_pinned);
+  // The button is only revealed on row hover, unless the track is pinned.
+  if (state.hovered || is_pinned || IsTrackRowHovered(group_index)) {
+    DrawPinIcon(ImGui::GetWindowDrawList(), state.center.x, state.center.y,
+                kTrackIconButtonSize,
+                TrackIconColor(state, is_pinned, foreground_color), is_pinned);
   }
   return toggled;
 }
@@ -6801,11 +7227,6 @@ bool Timeline::HandleTrackDragAndDrop(int group_index, Group& group,
   }
 
   return is_drag_and_drop_action;
-}
-
-static Pixel CalculateTrackManagementButtonWidth() {
-  const Pixel arrow_size = ImGui::GetFontSize() * kIconSizeScale;
-  return arrow_size * 2.0f + kButtonGap + kTrackManagementButtonMargin;
 }
 
 void Timeline::HandleTrackDragAndDropHoverAndFeedback(

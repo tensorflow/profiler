@@ -62,21 +62,16 @@ inline constexpr int kMinorTickDivisions = 5;
 inline constexpr ImDrawFlags kImDrawFlags = ImDrawFlags_RoundCornersDefault_;
 inline constexpr ImU32 kDefaultTextColor = kBlackColor;
 inline constexpr Microseconds kMinVisibleEventDuration = 1000.0;
-inline constexpr Pixel kButtonGap = 6.0f;
 inline constexpr Pixel kCornerRounding = 0.0f;
 inline constexpr Pixel kDefaultLabelWidth = 250.0f;
 inline constexpr Pixel kEventHeight = 18.0f;
 inline constexpr Pixel kEventMinimumDrawWidth = 2.0f;
 inline constexpr Pixel kEventPaddingBottom = 1.0f;
 inline constexpr Pixel kEventPaddingRight = 1.0f;
-// The size of the visual indent for nested groups in the timeline, indicating
-// their nesting level.
-inline constexpr Pixel kIndentSize = 10.0f;
 inline constexpr Pixel kInstantEventChevronHalfWidth = 4.5f;
 inline constexpr Pixel kInstantEventChevronHeight = 15.5f;
 inline constexpr Pixel kInstantEventHoverChevronHalfWidth = 7.0f;
 inline constexpr Pixel kInstantEventHoverChevronHeight = 20.0f;
-inline constexpr Pixel kLabelPaddingLeft = 4.0f;
 inline constexpr Pixel kMinTextWidth = 5.0f;
 inline constexpr Pixel kMinUtilizationNormalization = 1.0f;
 inline constexpr Pixel kProcessTrackGap = 7.0f;
@@ -88,8 +83,6 @@ inline constexpr Pixel kTimelinePaddingRight = 1.0f;
 inline constexpr Pixel kToastCornerRounding = 4.0f;
 inline constexpr Pixel kVirtualHeaderHeight = 30.0f;
 inline constexpr double kEpsilon = 0.001;
-// The scale factor applied to the font size to determine the arrow / icon size.
-inline constexpr float kIconSizeScale = 0.7f;
 // go/keep-sorted end
 
 // Highlighting Constants
@@ -129,6 +122,113 @@ inline constexpr ImU32 kProcessTrackExpandedColor = kSecondaryContainerColor;
 inline constexpr Pixel kProcessTrackHeight = 36.0f;
 // go/keep-sorted end
 
+// Track Sidebar Constants
+// These constants style the track label column (the sidebar on the left of the
+// timeline): row striping, hover feedback, collapsed cues and tree guides.
+// Translucent colors are derived from the palette foreground at the given
+// opacity, so the sidebar adapts to both light and dark palettes.
+// go/keep-sorted start
+// The corner rounding of the collapsed chevron's background square.
+inline constexpr Pixel kTrackChevronButtonRounding = 4.0f;
+// The size of the rounded square drawn behind the chevron of collapsed rows.
+inline constexpr Pixel kTrackChevronButtonSize = 14.0f;
+// The size (width of the open side) of the chevron glyph.
+inline constexpr Pixel kTrackChevronSize = 7.0f;
+// The horizontal slot reserved for the expand/collapse chevron. Child tracks
+// are indented by the same amount, so a child's chevron sits right under its
+// parent's name.
+inline constexpr Pixel kTrackChevronSlotWidth = 14.0f;
+// The thickness of the chevron strokes.
+inline constexpr Pixel kTrackChevronThickness = 1.5f;
+// The horizontal inset (per layer) of the "stack of cards" hint drawn below
+// collapsed rows.
+inline constexpr Pixel kTrackCollapsedStackInset = 4.0f;
+// The vertical spacing between the "stack of cards" hint layers.
+inline constexpr Pixel kTrackCollapsedStackSpacing = 2.0f;
+// The height of the count chip shown on collapsed tracks.
+inline constexpr Pixel kTrackCountChipHeight = 14.0f;
+// The horizontal padding inside the count chip.
+inline constexpr Pixel kTrackCountChipPaddingX = 5.0f;
+// The height of the drop shadow cast below process headers.
+inline constexpr Pixel kTrackHeaderShadowHeight = 4.0f;
+// The gap between the pin and hide icon buttons.
+inline constexpr Pixel kTrackIconButtonGap = 2.0f;
+// The margin between the rightmost icon button and the label column's edge.
+inline constexpr Pixel kTrackIconButtonMarginRight = 4.0f;
+// The size of the square pin / hide icon buttons (and their hover circle).
+inline constexpr Pixel kTrackIconButtonSize = 20.0f;
+// The horizontal gap between the chevron slot, the track name, and the count
+// chip.
+inline constexpr Pixel kTrackLabelGap = 6.0f;
+// The space between the label column's left edge and the first chevron slot.
+inline constexpr Pixel kTrackLabelPaddingLeft = 6.0f;
+// The space between the end of a label row's content and the splitter.
+inline constexpr Pixel kTrackLabelPaddingRight = 8.0f;
+// The horizontal inset of the rounded hover pill from the label column edges.
+inline constexpr Pixel kTrackRowPillInsetX = 4.0f;
+// The vertical inset of the rounded hover pill from the row edges.
+inline constexpr Pixel kTrackRowPillInsetY = 1.0f;
+// The corner rounding of the hover pill.
+inline constexpr Pixel kTrackRowPillRounding = 6.0f;
+// The opacity of the overlay drawn on a track's canvas row while the row
+// (either its label or its canvas area) is hovered.
+inline constexpr float kTrackCanvasRowFocusOpacity = 0.03f;
+// The opacity of the collapsed chevron's background square while hovered.
+inline constexpr float kTrackCollapsedChevronButtonHoverOpacity = 0.18f;
+// The opacity of the collapsed chevron's background square.
+inline constexpr float kTrackCollapsedChevronButtonOpacity = 0.10f;
+// The opacity of the accent-colored count chip background on collapsed rows.
+inline constexpr float kTrackCollapsedChipAccentOpacity = 0.28f;
+// The opacity of the top layer of the collapsed "stack of cards" hint.
+inline constexpr float kTrackCollapsedStackOpacity = 0.85f;
+// The opacity of the full-row overlay drawn when a label row is clicked and
+// its name is copied.
+inline constexpr float kTrackCopyFlashOpacity = 0.16f;
+// The opacity of the count chip background drawn on collapsed tracks.
+inline constexpr float kTrackCountChipOpacity = 0.10f;
+// How far the process header gradient's top color moves towards the
+// foreground color.
+inline constexpr float kTrackHeaderGradientStrength = 0.05f;
+// The opacity of the 1px inner highlight along the top of process headers.
+inline constexpr float kTrackHeaderHighlightOpacity = 0.07f;
+// The opacity (black) at the top of the drop shadow below process headers.
+inline constexpr float kTrackHeaderShadowOpacity = 0.14f;
+// The opacity of the overlay drawn on the hovered label row.
+inline constexpr float kTrackHoverOpacity = 0.07f;
+// The opacity of muted text (subtitles, counts, section headers).
+inline constexpr float kTrackMutedTextOpacity = 0.62f;
+// The opacity of the neutral accent used by tracks without a dominant color.
+inline constexpr float kTrackNeutralAccentOpacity = 0.28f;
+// The opacity of secondary (child track) label text.
+inline constexpr float kTrackSecondaryTextOpacity = 0.86f;
+// The opacity of the vertical tree guides connecting child tracks to parents.
+inline constexpr float kTrackTreeGuideOpacity = 0.16f;
+// The opacity of the alternating (zebra) row stripe spanning label and canvas.
+inline constexpr float kTrackZebraStripeOpacity = 0.035f;
+// go/keep-sorted end
+
+// Modern Styling Constants
+// CSS-like finishing touches shared by the timeline chrome.
+// go/keep-sorted start
+// The padding inside card-style tooltips.
+inline constexpr ImVec2 kCardTooltipPadding = ImVec2(8.0f, 6.0f);
+// The corner rounding of card-style tooltips.
+inline constexpr Pixel kCardTooltipRounding = 6.0f;
+// The extra space between letters of small upper-case section labels.
+inline constexpr Pixel kSectionLabelLetterSpacing = 0.8f;
+// The height of the shadow cast by the sticky ruler over scrolled tracks.
+inline constexpr Pixel kStickyHeaderShadowHeight = 6.0f;
+// The opacity of the faint circle behind an active (pinned / hidden) icon
+// button.
+inline constexpr float kIconButtonActiveOpacity = 0.08f;
+// The opacity of the circular hover state behind icon buttons.
+inline constexpr float kIconButtonHoverOpacity = 0.12f;
+// The opacity of the circular state behind an icon button while pressed.
+inline constexpr float kIconButtonPressedOpacity = 0.20f;
+// The opacity (black) at the top of the sticky ruler's shadow.
+inline constexpr float kStickyHeaderShadowOpacity = 0.18f;
+// go/keep-sorted end
+
 // Nesting Level Constants
 // go/keep-sorted start
 inline constexpr int kCounterNestingLevel = 2;
@@ -139,7 +239,6 @@ inline constexpr int kThreadNestingLevel = 2;
 
 // Virtual Header ID Constants
 // go/keep-sorted start
-inline constexpr Pixel kTrackManagementButtonMargin = 8.0f;
 inline constexpr int kAllHeaderId = 100000;
 inline constexpr int kHiddenHeaderId = 200000;
 inline constexpr int kPinnedHeaderId = 300000;

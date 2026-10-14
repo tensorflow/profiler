@@ -84,6 +84,23 @@ inline void AddEvents(FlameChartTimelineData& data,
 // Y = kRulerHeight + kEventHeight / 2.
 constexpr float kFirstEventY = kRulerHeight + kEventHeight / 2.0f;
 
+// Returns `color` with its alpha channel multiplied by `opacity`. Mirrors the
+// helper used by the timeline to draw translucent label colors.
+// Returns the screen X of the pin button's center for a label column of
+// `label_width`: the pin button sits left of the hide button.
+float PinButtonCenterX(float label_width) {
+  return label_width - kSplitterOffset - kTrackIconButtonMarginRight -
+         kTrackIconButtonSize - kTrackIconButtonGap -
+         kTrackIconButtonSize * 0.5f;
+}
+
+ImU32 WithOpacityForTest(ImU32 color, float opacity) {
+  const float alpha = static_cast<float>((color >> IM_COL32_A_SHIFT) & 0xFF);
+  const ImU32 new_alpha =
+      static_cast<ImU32>(std::clamp(alpha * opacity, 0.0f, 255.0f) + 0.5f);
+  return (color & ~IM_COL32_A_MASK) | (new_alpha << IM_COL32_A_SHIFT);
+}
+
 // Mock class for Timeline to mock virtual methods.
 class MockTimeline : public Timeline {
  public:
@@ -4339,6 +4356,91 @@ class TestTimeline : public Timeline {
 
 using RealTimelineImGuiFixture = TimelineImGuiTestFixture<TestTimeline>;
 
+// Returns a single-level flame thread track.
+Group CreateThreadGroup(absl::string_view name, int start_level,
+                        int nesting_level = kThreadNestingLevel) {
+  return {.type = Group::Type::kFlame,
+          .name = std::string(name),
+          .start_level = start_level,
+          .nesting_level = nesting_level,
+          .expanded = true,
+          .level_count = 1};
+}
+
+// Returns a flame process track whose children start at `start_level`.
+Group CreateProcessGroup(absl::string_view name, int start_level,
+                         std::vector<int> child_indices) {
+  return {.type = Group::Type::kFlame,
+          .name = std::string(name),
+          .start_level = start_level,
+          .nesting_level = kProcessNestingLevel,
+          .expanded = true,
+          .child_indices = std::move(child_indices),
+          .has_children = true};
+}
+
+TEST(TimelineTest, GroupStripesAlternatePerProcessAndSkipHiddenTracks) {
+  FlameChartTimelineData data;
+  data.groups = {
+      CreateProcessGroup("P1", 0, {1, 2, 3}),
+      CreateThreadGroup("c1", 0),
+      CreateThreadGroup("c2", 1),
+      CreateThreadGroup("c3", 2),
+      CreateProcessGroup("P2", 3, {5, 6}),
+      CreateThreadGroup("d1", 3),
+      CreateThreadGroup("d2", 4),
+  };
+  data.level_offsets.assign(6, 0);
+  ColorPalette palette = ColorPalette::Default();
+  TestTimeline timeline(palette);
+  timeline.SetTimelineData(data);
+
+  // Processes are never striped and the first child of each process is never
+  // striped.
+  EXPECT_THAT(timeline.get_group_striped_for_test(),
+              ElementsAre(false, false, true, false, false, false, true));
+
+  // Collapsing P1 hides its children; P2's children keep their pattern.
+  data.groups[0].expanded = false;
+  timeline.SetTimelineData(data);
+
+  EXPECT_THAT(timeline.group_visible(),
+              ElementsAre(true, false, false, false, true, true, true));
+  EXPECT_THAT(timeline.get_group_striped_for_test(),
+              ElementsAre(false, false, false, false, false, false, true));
+}
+
+TEST(TimelineTest, GroupStripesDoNotCountCollapsedDescendants) {
+  FlameChartTimelineData data;
+  data.groups = {
+      CreateProcessGroup("P1", 0, {1, 2, 4}),
+      CreateThreadGroup("c1", 0),
+      CreateThreadGroup("c2", 1),
+      CreateThreadGroup("g1", 2, kThreadNestingLevel + 1),
+      CreateThreadGroup("c3", 3),
+  };
+  data.groups[2].child_indices = {3};
+  data.groups[2].has_children = true;
+  data.level_offsets.assign(5, 0);
+  ColorPalette palette = ColorPalette::Default();
+  TestTimeline timeline(palette);
+  timeline.SetTimelineData(data);
+
+  // Every visible child track alternates, regardless of its depth.
+  EXPECT_THAT(timeline.get_group_striped_for_test(),
+              ElementsAre(false, false, true, false, true));
+
+  // Collapsing c2 hides g1, which no longer consumes a stripe, so c3 follows
+  // c2 directly.
+  data.groups[2].expanded = false;
+  timeline.SetTimelineData(data);
+
+  EXPECT_THAT(timeline.group_visible(),
+              ElementsAre(true, true, true, false, true));
+  EXPECT_THAT(timeline.get_group_striped_for_test(),
+              ElementsAre(false, false, true, false, false));
+}
+
 // Add a sanity check that the window padding is set to zero.
 // This is the presumption for all the drawing logic. And all tests below assume
 // this.
@@ -6457,12 +6559,17 @@ TEST_F(RealTimelineImGuiFixture, RulerHeightAndProcessHeaderAlignment) {
       << expected_line_y;
 
   // Verify (kRulerHeight - text_height) * 0.5f vertical centering.
-  ImGui::PushFont(traceviewer::fonts::label_large);
+  ImGui::PushFont(traceviewer::fonts::label_medium_strong);
   const Pixel text_height = ImGui::GetTextLineHeight();
   ImGui::PopFont();
   const Pixel expected_vertical_offset = (kRulerHeight - text_height) * 0.5f;
 
-  const ImU32 text_col = ImGui::GetColorU32(ImGuiCol_Text);
+  // The "Process" header is drawn in the muted foreground color.
+  const ImU32 foreground_color =
+      color_palette_.GetColor(ColorPalette::Key::kForeground)
+          .value_or(kBlackColor);
+  const ImU32 text_col =
+      WithOpacityForTest(foreground_color, kTrackMutedTextOpacity);
   float min_header_text_y = std::numeric_limits<float>::max();
   bool found_header_text = false;
   for (const auto& vtx : timeline_window->DrawList->VtxBuffer) {
@@ -9831,12 +9938,16 @@ TEST_F(RealTimelineImGuiFixture,
 
   SimulateFrame();
 
-  // Button is at X = (nesting_level + 1) * kIndentSize.
-  // For kThreadNestingLevel (2), indent is 3 * 10 = 30.
-  // Button width is around 13px. So X=35 is inside.
+  // The chevron is centered in the chevron slot of the track's depth below
+  // its process: X = kTrackLabelPaddingLeft + (depth + 0.5) *
+  // kTrackChevronSlotWidth, where depth = kThreadNestingLevel -
+  // kProcessNestingLevel.
   // Y should be inside the track (24-47).
+  const float chevron_x = kTrackLabelPaddingLeft +
+                          (kThreadNestingLevel - kProcessNestingLevel + 0.5f) *
+                              kTrackChevronSlotWidth;
   ImGuiIO& io = ImGui::GetIO();
-  io.MousePos = ImVec2(35.0f, 34.0f);
+  io.MousePos = ImVec2(chevron_x, 34.0f);
   SimulateFrame();
 
   // It should be a Hand cursor over the button
@@ -9848,6 +9959,271 @@ TEST_F(RealTimelineImGuiFixture,
   SimulateFrame();
 
   EXPECT_FALSE(timeline_.timeline_data().groups[0].expanded);
+}
+
+// Returns data with a single expandable (multi-level) thread track whose first
+// level contains one event.
+FlameChartTimelineData CreateExpandableThreadTrackData() {
+  FlameChartTimelineData data;
+  data.entry_levels = {0};
+  data.entry_total_times = {10.0};
+  data.entry_self_times = {10.0};
+  data.entry_start_times = {0.0};
+  data.entry_names = {"event"};
+  data.groups = {{Group::Type::kFlame, "Expandable Track", "", 0,
+                  kThreadNestingLevel, true}};
+  // 2 levels, the second one empty, so the track is expandable.
+  data.level_offsets = {0, 1, 1};
+  data.level_event_indices = {0};
+  return data;
+}
+
+// A point on the track name text of the first track, far to the right of its
+// chevron. Y is inside the first track (screen Y 24-47).
+constexpr ImVec2 kFirstTrackNamePos(150.0f, 34.0f);
+
+TEST_F(RealTimelineImGuiFixture, ClickTrackNameOfExpandableTrackTogglesIt) {
+  timeline_.SetTimelineData(CreateExpandableThreadTrackData());
+  SimulateFrame();
+
+  ImGuiIO& io = ImGui::GetIO();
+  io.MousePos = kFirstTrackNamePos;
+  SimulateFrame();
+
+  // Click to collapse.
+  io.AddMouseButtonEvent(0, true);
+  SimulateFrame();
+  io.AddMouseButtonEvent(0, false);
+  SimulateFrame();
+
+  EXPECT_FALSE(timeline_.timeline_data().groups[0].expanded);
+  // Toggling a track does not copy its name.
+  EXPECT_EQ(timeline_.get_copied_track_name_for_test(), "");
+
+  // Click again to expand.
+  io.AddMouseButtonEvent(0, true);
+  SimulateFrame();
+  io.AddMouseButtonEvent(0, false);
+  SimulateFrame();
+
+  EXPECT_TRUE(timeline_.timeline_data().groups[0].expanded);
+  EXPECT_EQ(timeline_.get_copied_track_name_for_test(), "");
+}
+
+TEST_F(RealTimelineImGuiFixture,
+       HoverTrackNameOfExpandableTrackShowsHandCursor) {
+  timeline_.SetTimelineData(CreateExpandableThreadTrackData());
+  SimulateFrame();
+
+  ImGuiIO& io = ImGui::GetIO();
+  io.MousePos = kFirstTrackNamePos;
+  SimulateFrame();
+
+  EXPECT_EQ(ImGui::GetMouseCursor(), ImGuiMouseCursor_Hand);
+}
+
+TEST_F(RealTimelineImGuiFixture,
+       ClickNonExpandableTrackLabelCopiesNameAndDoesNotToggle) {
+  FlameChartTimelineData data;
+  data.entry_levels = {0};
+  data.entry_total_times = {10.0};
+  data.entry_self_times = {10.0};
+  data.entry_start_times = {0.0};
+  data.entry_names = {"event"};
+  data.groups = {{Group::Type::kFlame, "Single Level Track", "", 0,
+                  kThreadNestingLevel, true}};
+  data.level_offsets = {0, 1};
+  data.level_event_indices = {0};
+  timeline_.SetTimelineData(data);
+  SimulateFrame();
+
+  ImGuiIO& io = ImGui::GetIO();
+  io.MousePos = kFirstTrackNamePos;
+  SimulateFrame();
+
+  io.AddMouseButtonEvent(0, true);
+  SimulateFrame();
+  io.AddMouseButtonEvent(0, false);
+  SimulateFrame();
+
+  EXPECT_TRUE(timeline_.timeline_data().groups[0].expanded);
+  EXPECT_EQ(timeline_.get_copied_track_name_for_test(), "Single Level Track");
+  const char* clipboard_text = ImGui::GetClipboardText();
+  ASSERT_NE(clipboard_text, nullptr);
+  EXPECT_STREQ(clipboard_text, "Single Level Track");
+}
+
+TEST_F(RealTimelineImGuiFixture,
+       RightClickExpandableTrackLabelCopiesNameAndDoesNotToggle) {
+  timeline_.SetTimelineData(CreateExpandableThreadTrackData());
+  SimulateFrame();
+
+  ImGuiIO& io = ImGui::GetIO();
+  io.MousePos = kFirstTrackNamePos;
+  SimulateFrame();
+
+  io.AddMouseButtonEvent(ImGuiMouseButton_Right, true);
+  SimulateFrame();
+  io.AddMouseButtonEvent(ImGuiMouseButton_Right, false);
+  SimulateFrame();
+
+  EXPECT_TRUE(timeline_.timeline_data().groups[0].expanded);
+  EXPECT_EQ(timeline_.get_copied_track_name_for_test(), "Expandable Track");
+  const char* clipboard_text = ImGui::GetClipboardText();
+  ASSERT_NE(clipboard_text, nullptr);
+  EXPECT_STREQ(clipboard_text, "Expandable Track");
+}
+
+TEST_F(RealTimelineImGuiFixture, ToggleTrackViaLabelKeepsEventSelection) {
+  timeline_.SetTimelineData(CreateExpandableThreadTrackData());
+  timeline_.SetVisibleRange({0.0, 100.0});
+  SimulateFrame();
+  timeline_.set_selected_event_index_for_test(0);
+  SimulateFrame();
+  ASSERT_EQ(timeline_.selected_event_index(), 0);
+
+  ImGuiIO& io = ImGui::GetIO();
+  io.MousePos = kFirstTrackNamePos;
+  SimulateFrame();
+
+  io.AddMouseButtonEvent(0, true);
+  SimulateFrame();
+  io.AddMouseButtonEvent(0, false);
+  SimulateFrame();
+
+  EXPECT_FALSE(timeline_.timeline_data().groups[0].expanded);
+  EXPECT_EQ(timeline_.selected_event_index(), 0);
+}
+
+TEST_F(RealTimelineImGuiFixture, AccentColorIsDurationWeightedDominantColor) {
+  FlameChartTimelineData data;
+  // Two short "minor_event"s followed by one long "dominant_event". The minor
+  // events are more numerous, but the dominant event covers more time.
+  data.entry_names = {"minor_event", "minor_event", "dominant_event"};
+  data.entry_levels = {0, 0, 0};
+  data.entry_start_times = {0.0, 5.0, 10.0};
+  data.entry_total_times = {5.0, 5.0, 90.0};
+  data.entry_self_times = {5.0, 5.0, 90.0};
+  data.entry_args = {{}, {}, {}};
+  data.groups = {
+      {Group::Type::kFlame, "Thread", "", 0, kThreadNestingLevel, true}};
+  data.level_offsets = {0, 3};
+  data.level_event_indices = {0, 1, 2};
+  timeline_.SetTimelineData(std::move(data));
+  SimulateFrame();
+
+  const ImU32 dominant_color =
+      GetColorForId("dominant_event", color_palette_.GetTraceColors());
+  const ImU32 minor_color =
+      GetColorForId("minor_event", color_palette_.GetTraceColors());
+  ASSERT_NE(dominant_color, minor_color);
+  EXPECT_EQ(timeline_.get_group_accent_color_for_test(0), dominant_color);
+}
+
+TEST_F(RealTimelineImGuiFixture, AccentColorOfCounterTrackIsCounterColor) {
+  FlameChartTimelineData data;
+  data.groups = {{.type = Group::Type::kCounter,
+                  .name = "Counter",
+                  .start_level = 0,
+                  .nesting_level = kThreadNestingLevel,
+                  .expanded = true}};
+  timeline_.SetTimelineData(std::move(data));
+
+  EXPECT_EQ(timeline_.get_group_accent_color_for_test(0), kCounterTrackColor);
+}
+
+TEST_F(RealTimelineImGuiFixture, AccentColorOfProcessTrackIsFlameHeaderColor) {
+  FlameChartTimelineData data;
+  data.entry_names = {"event"};
+  data.entry_levels = {0};
+  data.entry_start_times = {0.0};
+  data.entry_total_times = {10.0};
+  data.entry_self_times = {10.0};
+  data.entry_args.push_back({});
+  data.groups = {{.type = Group::Type::kFlame,
+                  .name = "Process",
+                  .start_level = 0,
+                  .nesting_level = kProcessNestingLevel,
+                  .expanded = true}};
+  data.level_offsets = {0, 1};
+  data.level_event_indices = {0};
+  timeline_.SetTimelineData(std::move(data));
+  SimulateFrame();
+
+  const auto flame_header_color =
+      color_palette_.GetColor(ColorPalette::Key::kFlameHeader);
+  ASSERT_TRUE(flame_header_color.ok());
+  EXPECT_EQ(timeline_.get_group_accent_color_for_test(0), *flame_header_color);
+}
+
+TEST_F(RealTimelineImGuiFixture, AccentColorOfEmptyFlameTrackIsNeutral) {
+  FlameChartTimelineData data;
+  data.entry_names = {"event"};
+  data.entry_levels = {0};
+  data.entry_start_times = {0.0};
+  data.entry_total_times = {10.0};
+  data.entry_self_times = {10.0};
+  data.entry_args.push_back({});
+  // "Empty Thread" owns level 1, which has no events.
+  data.groups = {
+      {Group::Type::kFlame, "Thread", "", 0, kThreadNestingLevel, true},
+      {Group::Type::kFlame, "Empty Thread", "", 1, kThreadNestingLevel, true}};
+  data.level_offsets = {0, 1, 1};
+  data.level_event_indices = {0};
+  timeline_.SetTimelineData(std::move(data));
+  SimulateFrame();
+
+  const ImU32 neutral_color = timeline_.get_group_accent_color_for_test(1);
+  EXPECT_LT(neutral_color >> IM_COL32_A_SHIFT, 255u);
+  EXPECT_NE(neutral_color,
+            GetColorForId("event", color_palette_.GetTraceColors()));
+  // The track with an event gets that event's color instead.
+  EXPECT_EQ(timeline_.get_group_accent_color_for_test(0),
+            GetColorForId("event", color_palette_.GetTraceColors()));
+}
+
+TEST_F(RealTimelineImGuiFixture, ClickSectionHeaderTextTogglesSection) {
+  FlameChartTimelineData data;
+  data.entry_levels = {0};
+  data.entry_total_times = {10.0};
+  data.entry_self_times = {10.0};
+  data.entry_start_times = {0.0};
+  data.entry_names = {"event"};
+  data.groups = {
+      {Group::Type::kFlame, "Process A", "", 0, kProcessNestingLevel, false},
+      {Group::Type::kFlame, "Thread A1", "", 0, kThreadNestingLevel, true}};
+  data.level_offsets = {0, 1, 1};
+  data.level_event_indices = {0};
+  timeline_.set_track_management_enabled(true);
+  timeline_.SetTimelineData(data);
+  SimulateFrame();
+
+  ASSERT_TRUE(timeline_.group_visible()[0]);
+
+  // "Hidden" header is at 0-30 (screen 24-54), "Pinned" header is at 30-60
+  // (screen 54-84) and "All" header is at 60-90 (screen 84-114). X=150 is far
+  // to the right of the header's chevron and text.
+  ImGuiIO& io = ImGui::GetIO();
+  io.MousePos = ImVec2(150.0f, 99.0f);
+  SimulateFrame();
+
+  EXPECT_EQ(ImGui::GetMouseCursor(), ImGuiMouseCursor_Hand);
+
+  // Click to collapse the "All" section.
+  io.AddMouseButtonEvent(0, true);
+  SimulateFrame();
+  io.AddMouseButtonEvent(0, false);
+  SimulateFrame();
+
+  EXPECT_FALSE(timeline_.group_visible()[0]);
+
+  // Click again to expand it.
+  io.AddMouseButtonEvent(0, true);
+  SimulateFrame();
+  io.AddMouseButtonEvent(0, false);
+  SimulateFrame();
+
+  EXPECT_TRUE(timeline_.group_visible()[0]);
 }
 
 TEST_F(RealTimelineImGuiFixture,
@@ -10317,6 +10693,84 @@ TEST_F(RealTimelineImGuiFixture, ClickHideButtonOnCollapsedTrackHidesIt) {
   EXPECT_FALSE(timeline_.group_visible()[1]);
 }
 
+TEST_F(RealTimelineImGuiFixture,
+       HoveringCanvasRowShiftsCountChipLeftOfManagementButtons) {
+  FlameChartTimelineData data;
+  data.entry_levels = {0};
+  data.entry_total_times = {10.0};
+  data.entry_self_times = {10.0};
+  data.entry_start_times = {0.0};
+  data.entry_names = {"event"};
+
+  // Process A is collapsed, with a child track so it renders a "+1" count chip.
+  data.groups = {{.type = Group::Type::kFlame,
+                  .name = "Process A",
+                  .start_level = 0,
+                  .nesting_level = kProcessNestingLevel,
+                  .expanded = false,
+                  .child_indices = {1},
+                  .has_children = true},
+                 {.type = Group::Type::kFlame,
+                  .name = "Thread A1",
+                  .start_level = 0,
+                  .nesting_level = kThreadNestingLevel,
+                  .expanded = true,
+                  .parent_index = 0},
+                 {.type = Group::Type::kFlame,
+                  .name = "Process B",
+                  .start_level = 1,
+                  .nesting_level = kProcessNestingLevel,
+                  .expanded = false}};
+  data.level_offsets = {0, 1, 1, 1};
+  data.level_event_indices = {0};
+  timeline_.set_track_management_enabled(true);
+  timeline_.SetTimelineData(data);
+
+  auto get_count_chip_right_x = [&](ImVec2 mouse_pos) {
+    ImGui::GetIO().MousePos = mouse_pos;
+    ImGui::NewFrame();
+    timeline_.Draw();
+
+    ImGuiWindow* timeline_window = ImGui::FindWindowByName("Timeline viewer");
+    float max_x = -1.0f;
+    if (timeline_window != nullptr) {
+      for (ImGuiWindow* child : timeline_window->DC.ChildWindows) {
+        if (absl::StrContains(child->Name, "Tracks")) {
+          // The count chip pill is the only non-greyscale (accent-tinted)
+          // element drawn inside the label column on Process A's row.
+          for (const auto& vtx : child->DrawList->VtxBuffer) {
+            const ImU32 col = vtx.col;
+            const int r = (col >> IM_COL32_R_SHIFT) & 0xFF;
+            const int g = (col >> IM_COL32_G_SHIFT) & 0xFF;
+            const int b = (col >> IM_COL32_B_SHIFT) & 0xFF;
+            if ((r != g || g != b) && vtx.pos.x < timeline_.GetLabelWidth() &&
+                vtx.pos.y >= 115.0f && vtx.pos.y <= 150.0f) {
+              max_x = std::max(max_x, vtx.pos.x);
+            }
+          }
+          break;
+        }
+      }
+    }
+    ImGui::EndFrame();
+    return max_x;
+  };
+
+  // Run one warm-up frame to settle layout positions.
+  SimulateFrame();
+
+  const float unhovered_chip_right_x =
+      get_count_chip_right_x(ImVec2(500.0f, 500.0f));
+  const float label_hovered_chip_right_x =
+      get_count_chip_right_x(ImVec2(50.0f, 135.0f));
+  const float canvas_hovered_chip_right_x = get_count_chip_right_x(
+      ImVec2(timeline_.GetLabelWidth() + 100.0f, 135.0f));
+
+  EXPECT_GT(unhovered_chip_right_x, 0.0f);
+  EXPECT_LT(label_hovered_chip_right_x, unhovered_chip_right_x);
+  EXPECT_FLOAT_EQ(canvas_hovered_chip_right_x, label_hovered_chip_right_x);
+}
+
 TEST_F(RealTimelineImGuiFixture, CannotHideLastVisibleProcess) {
   FlameChartTimelineData data;
   data.entry_levels = {0};
@@ -10386,7 +10840,8 @@ TEST_F(RealTimelineImGuiFixture, CollapseAllHeaderHidesGroups) {
   // "Hidden" header is at 0-30 (screen 24-54)
   // "Pinned" header is at 30-60 (screen 54-84)
   // "All" header is at 60-90 (screen 84-114)
-  // Button is at X = kIndentSize (10), Y ~ 99
+  // Chevron is at X = kTrackLabelPaddingLeft + kTrackChevronSlotWidth / 2
+  // (13), Y ~ 99.
   io.MousePos = ImVec2(15.0f, 99.0f);
   SimulateFrame();
 
@@ -10431,7 +10886,8 @@ TEST_F(RealTimelineImGuiFixture, ExpandHiddenHeaderShowsHiddenGroups) {
   ImGuiIO& io = ImGui::GetIO();
   // Click on "Hidden" header expand/collapse button
   // "Hidden" header is at 0-30 (screen 24-54)
-  // Button is at X = kIndentSize (10), Y ~ 39
+  // Chevron is at X = kTrackLabelPaddingLeft + kTrackChevronSlotWidth / 2
+  // (13), Y ~ 39.
   io.MousePos = ImVec2(15.0f, 39.0f);
   SimulateFrame();
 
@@ -10472,7 +10928,8 @@ TEST_F(RealTimelineImGuiFixture, ClickUnhideButtonOnHiddenTrackUnhidesIt) {
   ImGuiIO& io = ImGui::GetIO();
   // Expand "Hidden" section
   // "Hidden" header is at 0-30 (screen 20-50)
-  // Button is at X = kIndentSize (10), Y ~ 35  // 1. Expand Hidden header
+  // Chevron is at X = kTrackLabelPaddingLeft + kTrackChevronSlotWidth / 2
+  // (13). 1. Expand Hidden header
   // Hidden is at 0-30 local, 24-54 screen.
   io.MousePos = ImVec2(15.0f, 39.0f);
   SimulateFrame();
@@ -10492,10 +10949,11 @@ TEST_F(RealTimelineImGuiFixture, ClickUnhideButtonOnHiddenTrackUnhidesIt) {
   timeline_.set_redraw_callback([&redraw_called]() { redraw_called = true; });
 
   // Click the hide button of Process A in Hidden section.
-  // Hide button is at X ~ 241 (label_width_ - offset).
+  // Hide button is centered at X = label_width_ - kSplitterOffset -
+  // kTrackIconButtonMarginRight - kTrackIconButtonSize / 2 = 232.
   // Y should be centered in the track height
   // (e.g. 30 + 25 = 55 local, + 24 = 79 screen).
-  io.MousePos = ImVec2(241.0f, 79.0f);
+  io.MousePos = ImVec2(232.0f, 79.0f);
   SimulateFrame();
 
   EXPECT_EQ(ImGui::GetMouseCursor(), ImGuiMouseCursor_Hand);
@@ -10615,30 +11073,22 @@ TEST_F(RealTimelineImGuiFixture, TrackManagement_HideButtonLayout) {
   SimulateFrame();
 
   const float label_width = timeline_.GetLabelWidth();
-  const float font_size = ImGui::GetFontSize();
-  // Math check: kArrowSize = font_size * 0.7f.
-  const float arrow_size = font_size * 0.7f;
-  const float splitter_offset = 4.0f;  // kSplitterOffset is 4.0f
+  // The hide button is the rightmost icon button:
+  // [hide_right - kTrackIconButtonSize, hide_right].
+  const float hide_right =
+      label_width - kSplitterOffset - kTrackIconButtonMarginRight;
 
   ImGuiIO& io = ImGui::GetIO();
 
   // Test 1: Verify that hovering over a process track's hide button
-  // sets the cursor to Hand.
-  // The correct button horizontal range is:
-  // [label_width - splitter_offset - arrow_size,
-  //  label_width - splitter_offset].
-  // Set position to the center of the range.
-  io.MousePos =
-      ImVec2(label_width - splitter_offset - arrow_size * 0.5f, 49.0f);
+  // sets the cursor to Hand. Set position to the center of the button.
+  io.MousePos = ImVec2(hide_right - kTrackIconButtonSize * 0.5f, 49.0f);
   SimulateFrame();
   EXPECT_EQ(ImGui::GetMouseCursor(), ImGuiMouseCursor_Hand);
 
-  // Test 2: Hovering just outside (to the left) of the correct range.
-  // Under correct code, this is outside. Cursor should NOT be Hand.
-  // Under mutated code (Mutant 612), arrow_size is increased by 1px,
-  // making the range wider to the left, so it would be Hand.
-  io.MousePos =
-      ImVec2(label_width - splitter_offset - arrow_size - 0.5f, 45.0f);
+  // Test 2: Hovering just outside (to the left) of the hide button, in the gap
+  // before the pin button. Cursor should NOT be Hand.
+  io.MousePos = ImVec2(hide_right - kTrackIconButtonSize - 0.5f, 45.0f);
   SimulateFrame();
   EXPECT_NE(ImGui::GetMouseCursor(), ImGuiMouseCursor_Hand);
 
@@ -10650,8 +11100,7 @@ TEST_F(RealTimelineImGuiFixture, TrackManagement_HideButtonLayout) {
   // so cursor would be Hand.
   // Thread A1 starts at group_offset = 54.0f (Tracks screen starting
   // Y = 24.0f). Its center Y = 24.0f + 54.0f + 23.0f * 0.5f = 89.5f.
-  io.MousePos =
-      ImVec2(label_width - splitter_offset - arrow_size * 0.5f, 89.5f);
+  io.MousePos = ImVec2(hide_right - kTrackIconButtonSize * 0.5f, 89.5f);
   SimulateFrame();
   EXPECT_NE(ImGui::GetMouseCursor(), ImGuiMouseCursor_Hand);
 }
@@ -10674,7 +11123,7 @@ TEST_F(RealTimelineImGuiFixture, PinUnpinnedTrack) {
 
   ImGuiIO& io = ImGui::GetIO();
   // Hover Pin button in 'All' section (Y=135.0f)
-  io.MousePos = ImVec2(timeline_.GetLabelWidth() - 20.0f, 135.0f);
+  io.MousePos = ImVec2(PinButtonCenterX(timeline_.GetLabelWidth()), 135.0f);
   SimulateFrame();
 
   EXPECT_EQ(ImGui::GetMouseCursor(), ImGuiMouseCursor_Hand);
@@ -10740,7 +11189,7 @@ TEST_F(RealTimelineImGuiFixture, UnpinPinnedTrack) {
 
   ImGuiIO& io = ImGui::GetIO();
   // Hover Unpin button in 'Pinned' section (Y=105.0f)
-  io.MousePos = ImVec2(timeline_.GetLabelWidth() - 20.0f, 105.0f);
+  io.MousePos = ImVec2(PinButtonCenterX(timeline_.GetLabelWidth()), 105.0f);
   SimulateFrame();
 
   EXPECT_EQ(ImGui::GetMouseCursor(), ImGuiMouseCursor_Hand);
@@ -10798,7 +11247,7 @@ TEST_F(RealTimelineImGuiFixture, PinAndUnpinTrackWorksWell) {
   SimulateFrame();
 
   ImGuiIO& io = ImGui::GetIO();
-  io.MousePos = ImVec2(timeline_.GetLabelWidth() - 20.0f, 135.0f);
+  io.MousePos = ImVec2(PinButtonCenterX(timeline_.GetLabelWidth()), 135.0f);
   SimulateFrame();
 
   EXPECT_EQ(ImGui::GetMouseCursor(), ImGuiMouseCursor_Hand);
@@ -10813,7 +11262,7 @@ TEST_F(RealTimelineImGuiFixture, PinAndUnpinTrackWorksWell) {
             absl::StrCat(kPinnedProcessNotificationPrefix, "Process A"));
 
   // Click to UNPIN (draws at Y = 105.0f because Pinned is the second header):
-  io.MousePos = ImVec2(timeline_.GetLabelWidth() - 20.0f, 105.0f);
+  io.MousePos = ImVec2(PinButtonCenterX(timeline_.GetLabelWidth()), 105.0f);
   SimulateFrame();
 
   EXPECT_EQ(ImGui::GetMouseCursor(), ImGuiMouseCursor_Hand);
@@ -10829,7 +11278,7 @@ TEST_F(RealTimelineImGuiFixture, PinAndUnpinTrackWorksWell) {
             absl::StrCat(kUnpinnedProcessNotificationPrefix, "Process A"));
 
   // Verify Process A returns back to All section (hovering at Y = 135.0f):
-  io.MousePos = ImVec2(timeline_.GetLabelWidth() - 20.0f, 135.0f);
+  io.MousePos = ImVec2(PinButtonCenterX(timeline_.GetLabelWidth()), 135.0f);
   SimulateFrame();
   EXPECT_EQ(ImGui::GetMouseCursor(), ImGuiMouseCursor_Hand);
 }
