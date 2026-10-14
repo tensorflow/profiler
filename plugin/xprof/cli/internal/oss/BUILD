@@ -22,6 +22,7 @@ pytype_library(
         ":xprof_client",  # buildcleaner: keep
         "//plugin/xprof:profile_data",
         "//plugin/xprof/cli/internal:decorators",
+        "//plugin/xprof/cli/internal:xplane_event_query",
     ],
 )
 

@@ -83,6 +83,46 @@ xprof list_xplane_events /path/to/logdir \
 The aggregation gives total/self time and event counts for the block; the event
 list gives per-instance start/duration for building a per-op breakdown.
 
+#### Narrowing events: windows, durations, filters, grouping
+
+Both `list_xplane_events` and `aggregate_xplane_events` accept:
+
+Flag                  | Meaning
+--------------------- | ---------------------------------------------------
+`--start_time_ps`     | Window start (picoseconds)
+`--end_time_ps`       | Window end (picoseconds)
+`--window_semantics`  | `containment` (default) or `overlap`
+`--min_duration_ps`   | Drop events shorter than this
+`--max_duration_ps`   | Drop events longer than this
+`--filter`            | Boolean expression (see below)
+
+Use `overlap` to include events that straddle a window edge. Use
+`containment` to keep only events fully inside it.
+
+`--filter` combines comparisons with `AND`/`&&`, `OR`/`||`, `NOT`/`!` and
+parentheses. String fields: `plane`, `line`, `event` with `==`, `!=`, `=~`,
+`!~`, `CONTAINS`. Numeric fields: `duration_ps`, `duration_ns`,
+`duration_us`, `duration_ms`, `offset_ps`, `end_ps` with `==`, `!=`, `<`,
+`<=`, `>`, `>=`. Values take an optional unit suffix (`ps`, `ns`, `us`, `ms`,
+`s`).
+
+`aggregate_xplane_events` also takes `--group_by` (comma-separated subset of
+`event`, `plane`, `line`; default `event`). Every row reports `count`, total,
+average, min, `p50_duration_ps`, `p90_duration_ps`, `p99_duration_ps`, max and
+standard deviation.
+
+```bash
+# Tail latency of long attention ops, split per device and timeline line
+xprof aggregate_xplane_events /path/to/logdir \
+  --plane_regex="Device.*" --group_by="plane,line,event" \
+  --filter='event =~ "attention" AND duration > 10us'
+
+# Everything touching a 2 ms window, including partially overlapping events
+xprof list_xplane_events /path/to/logdir \
+  --start_time_ps=1000000000 --end_time_ps=3000000000 \
+  --window_semantics=overlap
+```
+
 ### Step 4: Connect ops back to source with the graph viewer
 
 To confirm which Python source produced an HLO op (and to disambiguate scopes

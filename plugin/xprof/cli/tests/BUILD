@@ -25,6 +25,17 @@ py_test(
 )
 
 py_test(
+    name = "xplane_event_query_test",
+    srcs = ["xplane_event_query_test.py"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//plugin/xprof/cli/internal:xplane_event_query",
+        "@absl_py//absl/testing:absltest",
+        "@absl_py//absl/testing:parameterized",
+    ],
+)
+
+py_test(
     name = "check_host_boundness_tool_test",
     srcs = ["check_host_boundness_tool_test.py"],
     visibility = ["//visibility:public"],
@@ -242,6 +253,7 @@ pytype_strict_contrib_test(
         "//plugin/xprof/cli/internal:decorators",
         "//plugin/xprof/cli/internal/oss:xplane_tools",
         "@absl_py//absl/testing:absltest",
+        "@pypi//fire",
     ],
 )
 

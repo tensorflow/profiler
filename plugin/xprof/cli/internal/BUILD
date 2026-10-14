@@ -38,3 +38,8 @@ pytype_strict_library(
     srcs = ["trace_selection.py"],
     deps = ["@pypi//fire"],
 )
+
+pytype_strict_library(
+    name = "xplane_event_query",
+    srcs = ["xplane_event_query.py"],
+)
