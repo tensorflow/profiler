@@ -135,7 +135,7 @@
         </div>
         <div class="info" *ngIf="xprofKernelMetadata">
           <div class="title">Xprof Kernel Metadata:</div>
-          <ngx-json-viewer [json]="xprofKernelMetadata"></ngx-json-viewer>
+          <ngx-json-viewer [json]="xprofKernelMetadata" />
         </div>
         <div class="info" [hidden]="!rawTimeMs">
           <div class="title">Total Time Sum:</div>
@@ -180,7 +180,7 @@
         </div>
         <div selector="[utilWarning]" class="warning" [hidden]="!showUtilizationWarning">
           <p>Utilization may have been capped at 100% as accurate bandwidth could not be determined.</p>
-          <ng-content select="[utilWarningBug]"></ng-content>
+          <ng-content select="[utilWarningBug]" />
         </div>
         <div class="info" [hidden]="!sourceTopLine">
           <div class="title">Source:</div>

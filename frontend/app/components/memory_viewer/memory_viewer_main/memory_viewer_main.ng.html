@@ -1,12 +1,12 @@
 <as-split direction="vertical">
 <as-split-area [size]="80">
 
-<diagnostics-view [diagnostics]="diagnostics"></diagnostics-view>
+<diagnostics-view [diagnostics]="diagnostics" />
 
 <div class="section-container">
   <div class="row">
     <div>
-      <div class="mat-headline">Module Name: {{currentModule}}</div>
+      <div class="mat-headline">Module Name: {{currentModule()}}</div>
       <div class="sub-title">Peak memory allocation: {{peakHeapSizeMiB}} MiB, {{totalBufferAllocationMiB}} MiB (with fragmentation)</div>
       <div class="description" [hidden]="!paddingOverhead">
         {{paddingOverhead}} MiB total padding overhead
@@ -32,55 +32,45 @@
   </div>
 </div>
 
-<program-order-chart
-  *ngIf="heapSizes.length"
+<program-order-chart *ngIf="heapSizes.length"
   [heapSizes]="heapSizes"
   [unpaddedHeapSizes]="unpaddedHeapSizes"
   [hloInstructionNames]="hloInstructionNames"
   [peakInfo]="peakInfo"
   [activeInfo]="activeInfo"
   [timelineUrl]="timelineUrl"
-  (selectedStep)="setSelectedProgramOrderStep($event)">
-</program-order-chart>
+  (selectedStep)="setSelectedProgramOrderStep($event)" />
 
-<div *ngIf="memoryViewerPreprocessResult && memoryViewerPreprocessResult.bufferBlocks && memoryViewerPreprocessResult.bufferBlocks.length">
+<div *ngIf="memoryViewerPreprocessResult()?.bufferBlocks?.length">
   <div class="heap-chart-header"><h2>Buffer Allocation Timeline</h2></div>
-  <buffer-allocation-timeline
-      [selectedBlock]="selectedBlock"
+  <buffer-allocation-timeline [selectedBlock]="selectedBlock"
       (selected)="setSelectedBlock($event)"
       (hovered)="setHoveredBlock($event)"
       [highlightedStep]="selectedProgramOrderStep !== null ? selectedProgramOrderStep : -1"
-      [bufferBlocks]="memoryViewerPreprocessResult.bufferBlocks"
-      [totalSteps]="memoryViewerPreprocessResult.heapSizes?.length || 0"
-      [totalBytes]="timelineTotalBytes">
-  </buffer-allocation-timeline>
+      [bufferBlocks]="memoryViewerPreprocessResult()!.bufferBlocks!"
+      [totalSteps]="memoryViewerPreprocessResult()!.heapSizes?.length || 0"
+      [totalBytes]="timelineTotalBytes" />
 </div>
 
 <div [hidden]="!heapSizes.length">
-  <mat-divider ></mat-divider>
+  <mat-divider />
   <div class="heap-chart-header"><h2>HLO Ops at Peak Memory Allocation Time</h2></div>
 </div>
 
-<max-heap-chart
-   [maxHeap]="maxHeap"
+<max-heap-chart [maxHeap]="maxHeap"
    [title]="'by Program Order'"
    [selectedIndex]="selectedIndex"
-   (selected)="setSelectedHeapObject($event)">
-</max-heap-chart>
+   (selected)="setSelectedHeapObject($event)" />
 
-<max-heap-chart
-  [maxHeap]="maxHeapBySize"
+<max-heap-chart [maxHeap]="maxHeapBySize"
   [title]="'by Buffer Size'"
   [selectedIndex]="selectedIndexBySize"
-  (selected)="setSelectedHeapObjectBySize($event)">
-</max-heap-chart>
+  (selected)="setSelectedHeapObjectBySize($event)" />
 
-<max-heap-chart
-  [maxHeap]="maxHeapByPaddingSize"
+<max-heap-chart [maxHeap]="maxHeapByPaddingSize"
   [title]="'by Padding Size'"
   [selectedIndex] = "selectedIndexByPaddingSize"
-  (selected)="setSelectedHeapObjectByPaddingSize($event)">
-</max-heap-chart>
+  (selected)="setSelectedHeapObjectByPaddingSize($event)" />
 
 <div class="section-container" [hidden]="hasTrace">
   There is no data to display.
@@ -101,7 +91,7 @@
 
 <as-split-area [size]="20" *ngIf="sourceCodeServiceIsAvailable && showStackTrace">
   <source-mapper
-      [sessionId]="currentRun"
+      [sessionId]="currentRun()"
       [opName]="selectedOpName"
       [opCategory]="selectedOpCategory"
       [programId]="currentProgramId"

@@ -21,7 +21,7 @@
       <mat-menu #flowMenu="matMenu">
         <button mat-menu-item (click)="selectAllFlowCategories()">All</button>
         <button mat-menu-item (click)="selectNoneFlowCategories()">None</button>
-        <mat-divider></mat-divider>
+        <mat-divider />
         <button mat-menu-item *ngFor="let category of flowCategories" (click)="toggleFlowCategory(category)">
           <mat-checkbox [checked]="isSelectedFlowCategory(category)">{{category.name}}</mat-checkbox>
         </button>
@@ -63,13 +63,13 @@
     <mat-icon aria-label="Filter">filter_list</mat-icon>
   </div>
   <span class="filter-content">
-    <filter-chips class="filter-chips" [hosts]="hostList" [processes]="processList" [filters]="selectedFilters" (filterChanged)="onFilterEdit($event)" (filterRemoved)="onFilterRemove($event)"></filter-chips>
+    <filter-chips class="filter-chips" [hosts]="hostList" [processes]="processList" [filters]="selectedFilters" (filterChanged)="onFilterEdit($event)" (filterRemoved)="onFilterRemove($event)" />
     <div class="filler-inputs-wrapper">
       <filter-input #filterInput
         [validFilterFields]="validFilterFields"
         [hosts]="hostList"
         [processes]="processList"
-        (filterAdded)="onFilterAdd($event)"></filter-input>
+        (filterAdded)="onFilterAdd($event)" />
     </div>
   </span>
   <button
@@ -96,8 +96,7 @@
                         (eventsSelected)="onEventsSelected($event)"
                         (searchEvents)="onSearchEvents($event)"
                         (initializeWasm)="onInitializeWasm()"
-                        (toggleSettings)="toggleSettings()">
-</trace-viewer-container>
+                        (toggleSettings)="toggleSettings()" />
 
 <ng-template #settingsDialog #paletteDialog #featureFlagsDialog let-dialogRef="dialogRef">
   <div class="settings-dialog-container">

@@ -1,15 +1,14 @@
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   ElementRef,
-  EventEmitter,
   HostListener,
   inject,
-  Input,
-  NgModule,
+  input,
   OnChanges,
   OnInit,
-  Output,
+  output,
   SimpleChanges,
 } from '@angular/core';
 import {
@@ -22,8 +21,8 @@ import {
 
 /** A common chart component. */
 @Component({
-  changeDetection: ChangeDetectionStrategy.Default,
-  standalone: false,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
   selector: 'chart',
   template: '',
   // Below 960px wide charts scroll sideways instead of widening the page. Only
@@ -38,22 +37,21 @@ import {
 })
 export class Chart implements OnChanges, OnInit {
   /** The type of chart. */
-  @Input() chartType?: ChartType;
+  readonly chartType = input<ChartType | `${ChartType}`>();
 
   /** The information of chart data. */
-  @Input() dataInfo?: ChartDataInfo;
+  readonly dataInfo = input<ChartDataInfo>();
 
   /** The event for the number of rows of processed data. */
-  @Output() readonly processedNumberOfRows = new EventEmitter<number>();
+  readonly processedNumberOfRows = output<number>();
 
   /** The event when the selection of the chart is changed. */
-  @Output() readonly selected = new EventEmitter<
-    google.visualization.ChartSelection[]
-  >();
+  readonly selected = output<google.visualization.ChartSelection[]>();
 
   chart?: ChartClass;
 
   private readonly elementRef: ElementRef = inject(ElementRef);
+  private readonly cdr = inject(ChangeDetectorRef);
   private isSmallScreen = window.innerWidth < 960;
 
   @HostListener('window:resize')
@@ -65,16 +63,16 @@ export class Chart implements OnChanges, OnInit {
     }
   }
 
-  ngOnInit() {
-    this.loadGoogleChart();
-  }
-
   ngOnChanges(changes: SimpleChanges) {
-    if (changes['dataInfo'] && this.dataInfo && this.dataInfo.dataProvider) {
-      this.dataInfo.dataProvider.parseData(this.dataInfo.data);
-      this.dataInfo.dataProvider.setFilters(this.dataInfo.filters || []);
+    const dataInfo = this.dataInfo();
+    if (changes['dataInfo'] && dataInfo && dataInfo.dataProvider) {
+      dataInfo.dataProvider.parseData(dataInfo.data);
+      dataInfo.dataProvider.setFilters(dataInfo.filters || []);
     }
     this.draw();
+  }
+  ngOnInit() {
+    this.loadGoogleChart();
   }
 
   draw() {
@@ -83,17 +81,17 @@ export class Chart implements OnChanges, OnInit {
       return;
     }
 
-    if (!this.dataInfo || !this.dataInfo.dataProvider) {
+    const dataInfo = this.dataInfo();
+    if (!dataInfo || !dataInfo.dataProvider) {
       this.chart.clearChart();
       return;
     }
 
     const processedData = this.getProcessedData(
-      this.dataInfo.customChartDataProcessor,
+      dataInfo.customChartDataProcessor,
     );
 
-    const options =
-      this.dataInfo.dataProvider.getOptions() || this.dataInfo.options;
+    const options = dataInfo.dataProvider.getOptions() || dataInfo.options;
     const drawOptions =
       this.isSmallScreen && options && 'tooltip' in options && options.tooltip
         ? {...options, tooltip: {...options.tooltip, ignoreBounds: false}}
@@ -112,15 +110,16 @@ export class Chart implements OnChanges, OnInit {
   getProcessedData(
     customChartDataProcessor: CustomChartDataProcessor | undefined,
   ): DataTableOrDataView | null {
-    if (!this.dataInfo || !this.dataInfo.dataProvider) {
+    const dataInfo = this.dataInfo();
+    if (!dataInfo || !dataInfo.dataProvider) {
       return null;
     }
 
     if (customChartDataProcessor && customChartDataProcessor.process) {
-      return customChartDataProcessor.process(this.dataInfo.dataProvider);
+      return customChartDataProcessor.process(dataInfo.dataProvider);
     }
 
-    return this.dataInfo.dataProvider.process();
+    return dataInfo.dataProvider.process();
   }
 
   loadGoogleChart() {
@@ -138,13 +137,15 @@ export class Chart implements OnChanges, OnInit {
       if (this.chart) {
         google.visualization.events.addListener(this.chart, 'select', () => {
           this.selected.emit(this.chart?.getSelection() || []);
+          this.cdr.markForCheck();
         });
       }
+      this.cdr.markForCheck();
     });
   }
 
   initChart() {
-    switch (this.chartType) {
+    switch (this.chartType()) {
       case ChartType.AREA_CHART:
         this.chart = new google.visualization.AreaChart(
           this.elementRef.nativeElement,
@@ -212,20 +213,19 @@ export class Chart implements OnChanges, OnInit {
   }
 
   initDataProvider() {
-    if (!this.dataInfo || !this.dataInfo.dataProvider) {
+    const dataInfo = this.dataInfo();
+    if (!dataInfo || !dataInfo.dataProvider) {
       return;
     }
 
     if (this.chart) {
-      this.dataInfo.dataProvider.setChart(this.chart);
+      dataInfo.dataProvider.setChart(this.chart);
     }
-    this.dataInfo.dataProvider.parseData(this.dataInfo.data);
-    this.dataInfo.dataProvider.setFilters(this.dataInfo.filters || []);
-    this.dataInfo.dataProvider.setUpdateEventListener(() => {
+    dataInfo.dataProvider.parseData(dataInfo.data);
+    dataInfo.dataProvider.setFilters(dataInfo.filters || []);
+    dataInfo.dataProvider.setUpdateEventListener(() => {
       this.draw();
+      this.cdr.markForCheck();
     });
   }
 }
-
-@NgModule({declarations: [Chart], exports: [Chart]})
-export class ChartModule {}

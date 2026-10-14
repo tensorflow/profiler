@@ -1,9 +1,9 @@
 <div class="row">
-  <category-filter [dataTable]="dataTable" column="Include Infeed/Outfeed" (changed)="onUpdateFilters($event)" [initValue]="true"></category-filter>
-  <category-filter [dataTable]="dataTable" column="Category" (changed)="onUpdateFilters($event)" all="All"></category-filter>
-  <category-filter [dataTable]="dataTable" column="Bound by" (changed)="onUpdateFilters($event)" all="All"></category-filter>
-  <string-filter [dataTable]="dataTable" column="Operation" [value]="selectedOp" (changed)="onUpdateFilters($event)" all="All"></string-filter>
-  <div class="control" *ngIf="sourceCodeServiceIsAvailable">
+  <category-filter [dataTable]="dataTable" column="Include Infeed/Outfeed" (changed)="onUpdateFilters($event)" [initValue]="true" />
+  <category-filter [dataTable]="dataTable" column="Category" (changed)="onUpdateFilters($event)" all="All" />
+  <category-filter [dataTable]="dataTable" column="Bound by" (changed)="onUpdateFilters($event)" all="All" />
+  <string-filter [dataTable]="dataTable" column="Operation" [value]="selectedOp()" (changed)="onUpdateFilters($event)" all="All" />
+  <div class="control" *ngIf="sourceCodeServiceIsAvailable()">
     <div class="control-title">Show Source Code
       <mat-icon
         class="tooltip-icon"
@@ -18,13 +18,13 @@
   </div>
 </div>
 <div class="row">
-  <chart chartType="ScatterChart" [dataInfo]="dataInfoRooflineScatterChart"></chart>
+  <chart chartType="ScatterChart" [dataInfo]="dataInfoRooflineScatterChart" />
   <div class="flex-space"></div>
-  <chart chartType="PieChart" [dataInfo]="dataInfoCategoryPieChart"></chart>
+  <chart chartType="PieChart" [dataInfo]="dataInfoCategoryPieChart" />
 </div>
 <table #table [dataView]="dataView" [showRowNumber]="true"></table>
 
 <stack-trace-snippet
     [sourceFileAndLineNumber]="sourceFileAndLineNumber"
     [stackTrace]="stackTrace"
-    *ngIf="sourceCodeServiceIsAvailable && showStackTrace"/>
+    *ngIf="sourceCodeServiceIsAvailable() && showStackTrace"/>

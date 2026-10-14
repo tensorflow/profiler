@@ -49,9 +49,9 @@ import {NAV_DRAWER_CONTEXT} from './navigation_item';
   },
   template: `
     <div class="drawer-content">
-      <ng-content></ng-content>
+      <ng-content />
     </div>
-    <div class="drawer-footer"><ng-content select="[slot=footer],[footer]"></ng-content></div>
+    <div class="drawer-footer"><ng-content select="[slot=footer],[footer]" /></div>
   `,
 })
 export class RackNavigationDrawer {

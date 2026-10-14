@@ -3,7 +3,7 @@
     <mat-stepper [linear]="false" #stepper>
       <mat-step>
         <ng-template matStepLabel>Profiler<br>Options</ng-template>
-        <app-profiler-options [formGroup]="kernelForm"></app-profiler-options>
+        <app-profiler-options [formGroup]="kernelForm" />
         <div class="stepper-actions">
           <button mat-flat-button color="primary" matStepperNext>Next</button>
         </div>
@@ -11,8 +11,7 @@
 
       <mat-step>
         <ng-template matStepLabel>Execution<br>Preview</ng-template>
-        <app-execution-preview
-            [estimatedPasses]="kernelPasses"
+        <app-execution-preview [estimatedPasses]="kernelPasses"
             [path]="formValue['path']"
             (pathChange)="kernelForm.get('path')?.setValue($event)"
             [deviceName]="formValue['device_name']"
@@ -21,8 +20,7 @@
             [sctcSampling]="formValue['sctc_sampling']"
             [sctdSampling]="formValue['sctd_sampling']"
             [cmnSampling]="formValue['cmn_sampling']"
-            [icrSampling]="formValue['icr_sampling']">
-        </app-execution-preview>
+            [icrSampling]="formValue['icr_sampling']" />
         <div class="stepper-actions">
           <button mat-button matStepperPrevious>Back</button>
         </div>

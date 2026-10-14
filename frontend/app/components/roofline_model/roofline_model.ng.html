@@ -3,7 +3,7 @@
     <div class="row">
       <h2>Device Information</h2>
       <div class="flex-space"></div>
-      <export-as-csv [sessionId]="sessionId" [tool]="tool" [host]="host"></export-as-csv>
+      <export-as-csv [sessionId]="sessionId" [tool]="tool" [host]="host" />
     </div>
   </div>
   <div class="block-content">
@@ -21,7 +21,7 @@
           info
         </mat-icon>
       </div>
-      <mat-slide-toggle [checked]="applyScalingFactor" (toggleChange)="toggleScalingFactor()"></mat-slide-toggle>
+      <mat-slide-toggle [checked]="applyScalingFactor" (toggleChange)="toggleScalingFactor()" />
     </div>
   </div>
 </div>
@@ -44,11 +44,11 @@
     </div>
   </div>
   <div [hidden]="loadingAnalysis" class="block-content">
-    <program-level-analysis #programLevelAnalysis [rooflineModelData]="dataTableProgram" [viewColumns]="columnsIdxProgram" [rooflineSeriesData]="scatterDataProgram" [scatterChartOptions]="scatterChartOptionsProgram" (filterUpdated)="updateDataTableProgram($event)"></program-level-analysis>
+    <program-level-analysis #programLevelAnalysis [rooflineModelData]="dataTableProgram" [viewColumns]="columnsIdxProgram" [rooflineSeriesData]="scatterDataProgram" [scatterChartOptions]="scatterChartOptionsProgram" (filterUpdated)="updateDataTableProgram($event)" />
   </div>
   <div class="progress-container" [hidden]="!loadingAnalysis">
     <div class="loading-message">Loading analysis...</div>
-    <mat-progress-bar color="primary" mode="indeterminate" aria-label="refreshing program level roofline analysis"></mat-progress-bar>
+    <mat-progress-bar color="primary" mode="indeterminate" aria-label="refreshing program level roofline analysis" />
   </div>
 </div>
 
@@ -69,10 +69,10 @@
     </div>
   </div>
   <div [hidden]="loadingAnalysis" class="block-content">
-    <operation-level-analysis #opLevelAnalysis [selectedOp]="selectedOpName" [rooflineModelData]="dataTableOp" [viewColumns]="columnsIdxOp" [rooflineSeriesData]="scatterDataOp" [scatterChartOptions]="scatterChartOptionsOp" [sourceCodeServiceIsAvailable]="sourceCodeServiceIsAvailable" (filterUpdated)="updateDataTableOp($event)"></operation-level-analysis>
+    <operation-level-analysis #opLevelAnalysis [selectedOp]="selectedOpName" [rooflineModelData]="dataTableOp" [viewColumns]="columnsIdxOp" [rooflineSeriesData]="scatterDataOp" [scatterChartOptions]="scatterChartOptionsOp" [sourceCodeServiceIsAvailable]="sourceCodeServiceIsAvailable" (filterUpdated)="updateDataTableOp($event)" />
   </div>
   <div class="progress-container" [hidden]="!loadingAnalysis">
     <div class="loading-message">Loading analysis...</div>
-    <mat-progress-bar color="primary" mode="indeterminate" aria-label="refreshing operation level roofline analysis"></mat-progress-bar>
+    <mat-progress-bar color="primary" mode="indeterminate" aria-label="refreshing operation level roofline analysis" />
   </div>
 </div>

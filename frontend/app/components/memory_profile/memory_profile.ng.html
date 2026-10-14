@@ -42,7 +42,7 @@
   <div class="progress-container" *ngIf="loading">
     <div class="loading-message">Loading memory profile data...</div>
     <!-- TODO(go/progressbar-aria): Replace the aria-label with a better description, e.g. "Fetching user data" -->
-    <mat-progress-bar color="primary" mode="indeterminate" aria-label="Loading"></mat-progress-bar>
+    <mat-progress-bar color="primary" mode="indeterminate" aria-label="Loading" />
   </div>
   <div class="error-message" *ngIf="!hasMemoryData && !loading">
     <span>There is no memory profile to display because there were no memory activity data in the captured
@@ -51,20 +51,18 @@
   <div *ngIf="hasMemoryData && !loading">
     <div class="container">
       <div class="left-column">
-        <memory-profile-summary [data]="data" [memoryId]="selectedMemoryId"></memory-profile-summary>
+        <memory-profile-summary [data]="data" [memoryId]="selectedMemoryId" />
       </div>
       <div class="right-column">
         <div class="error-message" [hidden]="!hasIncompleteSteps">
           WARNING: Steps may be incomplete. For accurate result, please try profiling for longer.
         </div>
-        <memory-timeline-graph
-          [memoryProfileProto]="data"
+        <memory-timeline-graph [memoryProfileProto]="data"
           [memoryId]="selectedMemoryId"
-        ></memory-timeline-graph>
+         />
       </div>
       <div class="full-column">
-        <memory-breakdown-table [memoryProfileData]="data" [memoryId]="selectedMemoryId">
-        </memory-breakdown-table>
+        <memory-breakdown-table [memoryProfileData]="data" [memoryId]="selectedMemoryId" />
       </div>
     </div>
   </div>

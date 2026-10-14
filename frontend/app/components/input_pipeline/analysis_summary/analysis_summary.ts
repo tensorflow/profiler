@@ -1,22 +1,36 @@
-import {Component, Input, ChangeDetectionStrategy} from '@angular/core';
-import {DEFAULT_SIMPLE_DATA_TABLE, type InputPipelineDeviceAnalysis} from 'org_xprof/frontend/app/common/interfaces/data_table';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  input,
+  OnChanges,
+  SimpleChanges,
+} from '@angular/core';
+import {
+  DEFAULT_SIMPLE_DATA_TABLE,
+  type InputPipelineDeviceAnalysis,
+} from 'org_xprof/frontend/app/common/interfaces/data_table';
 
 /** A summary of input pipeline analysis component. */
 @Component({
-  changeDetection: ChangeDetectionStrategy.Default,standalone: false,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
   selector: 'analysis-summary',
   templateUrl: './analysis_summary.ng.html',
-  styleUrls: ['./analysis_summary.scss']
+  styleUrls: ['./analysis_summary.scss'],
 })
-export class AnalysisSummary {
-  /** The input pipeline device anaysis data. */
-  @Input()
-  set deviceAnalysis(analysis: InputPipelineDeviceAnalysis|null) {
-    analysis = analysis || DEFAULT_SIMPLE_DATA_TABLE;
-    analysis.p = analysis.p || {};
-    this.inputConclusion = analysis.p['input_conclusion'] || '';
-    this.summaryNextstep =
-        this.replaceSectionName(analysis.p['summary_nextstep'] || '');
+export class AnalysisSummary implements OnChanges {
+  /** The input pipeline device analysis data. */
+  readonly deviceAnalysis = input<InputPipelineDeviceAnalysis | null>(null);
+
+  inputConclusion = '';
+  summaryNextstep = '';
+  summaryColor = 'green';
+
+  ngOnChanges(changes: SimpleChanges) {
+    const analysis = this.deviceAnalysis() || DEFAULT_SIMPLE_DATA_TABLE;
+    const p = analysis.p || {};
+    this.inputConclusion = p['input_conclusion'] || '';
+    this.summaryNextstep = this.replaceSectionName(p['summary_nextstep'] || '');
     this.summaryColor = 'green';
     if (this.inputConclusion.includes('HIGHLY')) {
       this.summaryColor = 'red';
@@ -25,12 +39,9 @@ export class AnalysisSummary {
     }
   }
 
-  inputConclusion = '';
-  summaryNextstep = '';
-  summaryColor = 'green';
-
   private replaceSectionName(summary: string): string {
-    return summary.replace(/section 2/g, 'Device-side analysis details section')
-        .replace(/section 3/g, 'Host-side analysis details section');
+    return summary
+      .replace(/section 2/g, 'Device-side analysis details section')
+      .replace(/section 3/g, 'Host-side analysis details section');
   }
 }

@@ -78,7 +78,7 @@ import {
       class="group-content"
       [class.expanded]="expanded()"
       [class.collapsed]="!expanded()">
-      <ng-content></ng-content>
+      <ng-content />
     </div>
   `,
 })

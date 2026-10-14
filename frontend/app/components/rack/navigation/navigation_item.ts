@@ -102,9 +102,9 @@ export const NAV_DRAWER_CONTEXT = new InjectionToken<NavigationDrawerContext>(
           class="nav-icon material-symbols-outlined"
           aria-hidden="true">{{ icon() }}</mat-icon>
       }
-      <span #navText class="nav-text"><ng-content></ng-content></span>
+      <span #navText class="nav-text"><ng-content /></span>
       <span class="nav-badge-slot">
-        <ng-content select="[slot=badge], [badge], rack-badge, rack-status-tag, [slot=trailing], [trailing]"></ng-content>
+        <ng-content select="[slot=badge], [badge], rack-badge, rack-status-tag, [slot=trailing], [trailing]" />
         @if (badge()) {
           <span class="nav-badge" [attr.data-variant]="badgeVariant()">
             {{ badge() }}

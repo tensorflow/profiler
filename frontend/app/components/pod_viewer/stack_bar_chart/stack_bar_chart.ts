@@ -1,13 +1,16 @@
 import {
+  AfterViewInit,
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   ElementRef,
-  EventEmitter,
-  Input,
+  inject,
+  input,
   OnChanges,
   OnInit,
-  Output,
-  ViewChild,
+  output,
+  SimpleChanges,
+  viewChild,
 } from '@angular/core';
 import {KELLY_COLORS} from 'org_xprof/frontend/app/common/constants/constants';
 import {PrimitiveTypeNumberString} from 'org_xprof/frontend/app/common/interfaces/data_table';
@@ -17,42 +20,47 @@ const DEFAULT_CHART_WIDTH = 500;
 
 /** A stack bar chart view component. */
 @Component({
-  changeDetection: ChangeDetectionStrategy.Default,
-  standalone: false,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
   selector: 'stack-bar-chart',
   templateUrl: './stack_bar_chart.ng.html',
   styleUrls: ['./stack_bar_chart.scss'],
 })
-export class StackBarChart implements OnChanges, OnInit {
+export class StackBarChart implements OnChanges, OnInit, AfterViewInit {
   /** The data to be display. */
-  @Input() data?: Array<Array<PrimitiveTypeNumberString | undefined>>;
+  readonly data = input<Array<Array<PrimitiveTypeNumberString | undefined>>>();
 
   /** The event when the selection of the chart is changed. */
-  @Output() selected = new EventEmitter<number>();
+  readonly selected = output<number>();
+  private readonly cdr = inject(ChangeDetectorRef);
 
-  @ViewChild('chart', {static: false}) chartRef!: ElementRef;
+  readonly chartRef = viewChild<ElementRef>('chart');
 
   chart: google.visualization.BarChart | null = null;
   chartWidth = DEFAULT_CHART_WIDTH;
+
+  ngOnChanges(changes: SimpleChanges) {
+    this.drawChart();
+  }
 
   ngOnInit() {
     this.loadGoogleChart();
   }
 
-  ngOnChanges() {
-    this.drawChart();
+  ngAfterViewInit() {
+    if (!this.chart) {
+      this.loadGoogleChart();
+    }
   }
 
   drawChart() {
-    if (!this.chart || !this.data) {
+    const data = this.data();
+    if (!this.chart || !data) {
       return;
     }
 
-    this.chartWidth = Math.max(
-      DEFAULT_CHART_WIDTH,
-      this.data.length * BAR_WIDTH,
-    );
-    const dataTable = window.google.visualization.arrayToDataTable(this.data);
+    this.chartWidth = Math.max(DEFAULT_CHART_WIDTH, data.length * BAR_WIDTH);
+    const dataTable = window.google.visualization.arrayToDataTable(data);
 
     const options = {
       backgroundColor: 'transparent',
@@ -84,14 +92,15 @@ export class StackBarChart implements OnChanges, OnInit {
     if (!google || !google.charts) {
       setTimeout(() => {
         this.loadGoogleChart();
+        this.cdr.markForCheck();
       }, 100);
     }
 
     google.charts.safeLoad({'packages': ['corechart']});
     google.charts.setOnLoadCallback(() => {
-      this.chart = new google.visualization.BarChart(
-        this.chartRef.nativeElement,
-      );
+      const chartEl = this.chartRef()?.nativeElement;
+      if (!chartEl) return;
+      this.chart = new google.visualization.BarChart(chartEl);
 
       google.visualization.events.addListener(
         this.chart,
@@ -99,10 +108,12 @@ export class StackBarChart implements OnChanges, OnInit {
         (event: google.visualization.ChartSelection) => {
           event = event || {};
           this.selected.emit(event.row || 0);
+          this.cdr.markForCheck();
         },
       );
 
       this.drawChart();
+      this.cdr.markForCheck();
     });
   }
 }

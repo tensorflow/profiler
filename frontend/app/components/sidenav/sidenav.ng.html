@@ -1,6 +1,6 @@
 <div *ngIf="!hideCaptureProfileButton" class="button-container horizontal-center">
-  <capture-profile></capture-profile>
-  <capture-kernel></capture-kernel>
+  <capture-profile />
+  <capture-kernel />
 </div>
 
 <!-- TODO(bhupendradubey): Rename internal variables and function names (e.g., `runs`, `selectedRun`, `onRunSelectionChange`) to use `session` instead of `run` for consistency. -->
@@ -86,11 +86,11 @@
 
 <!-- TODO(xprof): Remove buffer details from sidenav once it's been moved to the memory viewer control. -->
 <div [hidden]="!selectedTag.startsWith('memory_viewer')">
-  <buffer-details></buffer-details>
+  <buffer-details />
 </div>
 
 <div [hidden]="!selectedTag.startsWith('pod_viewer')">
-  <pod-viewer-details></pod-viewer-details>
+  <pod-viewer-details />
 </div>
 
 <br>

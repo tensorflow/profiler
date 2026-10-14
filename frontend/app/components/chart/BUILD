@@ -79,3 +79,24 @@ xprof_ng_module(
         "@org_xprof//frontend/app/common/utils:testing",
     ],
 )
+
+xprof_ng_module(
+    name = "screenshot_tests",
+    testonly = True,
+    srcs = [
+        "chart_screenshot_test.ts",
+    ],
+    deps = [
+        ":chart",
+        ":default_data_provider",
+        "//javascript/angular2/testing/catalyst/async",
+        # ksf,
+        "@org_xprof//frontend/app/common/angular:angular_platform-browser_animation",
+        "//:node_modules/safevalues",
+        "//third_party/javascript/safevalues/dom",
+        "//third_party/javascript/typings/jasmine",
+        "@org_xprof//frontend/app/common/interfaces",
+        "@org_xprof//frontend/app/common/interfaces:chart",
+        "@org_xprof//frontend/app/common/utils:testing",
+    ],
+)
