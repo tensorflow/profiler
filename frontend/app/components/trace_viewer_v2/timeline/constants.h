@@ -242,7 +242,6 @@ inline constexpr double kEventNavigationZoomFactor = 2.5;
 inline constexpr char kAllHeaderName[] = "All";
 inline constexpr char kCannotHideLastProcessNotification[] =
     "Cannot hide the last visible process.";
-inline constexpr char kCounterTooltipFormat[] = "Time: %s\nValue: %.2f";
 inline constexpr char kDragToResizeTooltip[] = "Drag to resize";
 inline constexpr char kHiddenHeaderName[] = "Hidden";
 inline constexpr char kHiddenProcessNotificationPrefix[] = "Hidden process: ";
