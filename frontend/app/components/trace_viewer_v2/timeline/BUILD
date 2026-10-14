@@ -51,11 +51,13 @@ wasm_cc_library(
     name = "timeline",
     srcs = [
         "timeline.cc",
+        "timeline_hlo_dependencies.cc",
         "timeline_player_sync.cc",
         "timeline_schedule_sync.cc",
     ],
     hdrs = [
         "timeline.h",
+        "timeline_hlo_dependencies.h",
     ],
     deps = [
         ":constants",
@@ -107,6 +109,20 @@ cc_test(
         "@org_xprof//frontend/app/components/trace_viewer_v2/helper:time_formatter",
         "@org_xprof//frontend/app/components/trace_viewer_v2/trace_helper:trace_event",
         "@tsl//tsl/profiler/lib:context_types_hdrs",
+    ],
+)
+
+cc_test(
+    name = "timeline_hlo_dependencies_test",
+    srcs = ["timeline_hlo_dependencies_test.cc"],
+    deps = [
+        ":constants",
+        ":timeline",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/types:span",
+        "@com_google_googletest//:gtest_main",
+        "@org_xprof//frontend/app/components/trace_viewer_v2/color:colors",
+        "@org_xprof//frontend/app/components/trace_viewer_v2/trace_helper:trace_event",
     ],
 )
 

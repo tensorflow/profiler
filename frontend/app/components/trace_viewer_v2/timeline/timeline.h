@@ -29,6 +29,7 @@
 #include "frontend/app/components/trace_viewer_v2/event_data.h"
 #include "frontend/app/components/trace_viewer_v2/timeline/constants.h"
 #include "frontend/app/components/trace_viewer_v2/timeline/time_range.h"
+#include "frontend/app/components/trace_viewer_v2/timeline/timeline_hlo_dependencies.h"
 #include "frontend/app/components/trace_viewer_v2/trace_helper/trace_event.h"
 
 namespace traceviewer {
@@ -585,6 +586,29 @@ class Timeline {
     }
   }
   bool event_tooltip_enabled() const { return event_tooltip_enabled_; }
+
+  void set_hlo_dependency_arrows_enabled(bool enabled) {
+    hlo_dependency_arrows_enabled_ = enabled;
+  }
+
+  // Resolves the HLO operands and consumers of the selected event to events
+  // on its track, see ResolveEventDependencies() in
+  // timeline_hlo_dependencies.h. Does nothing unless HLO dependency arrows are
+  // enabled.
+  void SetSelectedEventDependencies(
+      absl::Span<const std::string> operand_names,
+      absl::Span<const std::string> consumer_names);
+
+  // The events that the operands and consumers of the selected event resolved
+  // to. Empty if they were set while another event was selected.
+  absl::Span<const int> producer_event_indices() const {
+    if (dependencies_.event_index != selected_event_index_) return {};
+    return dependencies_.producer_indices;
+  }
+  absl::Span<const int> consumer_event_indices() const {
+    if (dependencies_.event_index != selected_event_index_) return {};
+    return dependencies_.consumer_indices;
+  }
 
   void set_panning_speed(float speed) { panning_speed_ = speed; }
   float panning_speed() const { return panning_speed_; }
@@ -1264,6 +1288,9 @@ class Timeline {
   bool minimap_enabled_ = false;
   // See set_event_tooltip_enabled().
   bool event_tooltip_enabled_ = true;
+  bool hlo_dependency_arrows_enabled_ = false;
+  // See SetSelectedEventDependencies().
+  EventDependencies dependencies_;
 
   float panning_speed_ = kPanningSpeed;
   float zoom_speed_ = kZoomSpeed;

@@ -37,6 +37,7 @@
 #include "frontend/app/components/trace_viewer_v2/timeline/constants.h"
 #include "frontend/app/components/trace_viewer_v2/timeline/draw_helpers.h"
 #include "frontend/app/components/trace_viewer_v2/timeline/time_range.h"
+#include "frontend/app/components/trace_viewer_v2/timeline/timeline_hlo_dependencies.h"
 #include "frontend/app/components/trace_viewer_v2/trace_helper/trace_event.h"
 
 namespace traceviewer {
@@ -752,6 +753,8 @@ void Timeline::UpdateTimelineData(
   // layout recalculations before saving the newly arrived timeline_data.
   UpdateLevelPositions(data);
   timeline_data_ = std::move(data);
+  // Resolved event indices do not apply to the new data.
+  dependencies_ = {};
   RebuildEntryColors();
   BuildLevelMipPyramids();
 
@@ -2364,6 +2367,14 @@ void Timeline::EmitEventSelected(int event_index) {
     PopulateEventSelectedScheduleDetails(event_index, event_data);
   }
   event_callback_(kEventSelected, event_data);
+}
+
+void Timeline::SetSelectedEventDependencies(
+    absl::Span<const std::string> operand_names,
+    absl::Span<const std::string> consumer_names) {
+  if (!hlo_dependency_arrows_enabled_) return;
+  dependencies_ = ResolveEventDependencies(
+      timeline_data_, selected_event_index_, operand_names, consumer_names);
 }
 
 void Timeline::EmitEventHovered(int event_index, float mouse_x, float mouse_y) {
