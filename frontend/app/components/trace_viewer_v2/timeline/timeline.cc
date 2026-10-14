@@ -2311,18 +2311,19 @@ EventData Timeline::CreateBaseEventData(int event_index, bool is_hover) const {
   event_data.try_emplace(kEventSelectedName,
                          timeline_data_.entry_names[event_index]);
   if (event_index < timeline_data_.entry_start_times.size()) {
-    event_data.try_emplace(kEventSelectedStart,
-                           timeline_data_.entry_start_times[event_index]);
+    const Microseconds start_ts = timeline_data_.entry_start_times[event_index];
+    event_data.try_emplace(kEventSelectedStart, start_ts);
     event_data.try_emplace(
         kEventSelectedStartFormatted,
-        FormatTime(timeline_data_.entry_start_times[event_index]));
+        time_axis_unit_ == TimeAxisUnit::kUnitless
+            ? FormatRulerLabel(start_ts - data_time_range_.start())
+            : FormatTime(start_ts));
   }
   if (event_index < timeline_data_.entry_total_times.size()) {
-    event_data.try_emplace(kEventSelectedDuration,
-                           timeline_data_.entry_total_times[event_index]);
-    event_data.try_emplace(
-        kEventSelectedDurationFormatted,
-        FormatTime(timeline_data_.entry_total_times[event_index]));
+    const Microseconds total_ts = timeline_data_.entry_total_times[event_index];
+    event_data.try_emplace(kEventSelectedDuration, total_ts);
+    event_data.try_emplace(kEventSelectedDurationFormatted,
+                           FormatDuration(total_ts, time_axis_unit_));
   }
   if (event_index < timeline_data_.entry_levels.size()) {
     ProcessId pid = 0;
@@ -4489,7 +4490,7 @@ void Timeline::DrawSelectedTimeRange(const TimeRange& range,
       }
     }
 
-    const std::string text = FormatTime(range.duration());
+    const std::string text = FormatDuration(range.duration(), time_axis_unit_);
     const ImVec2 text_size = ImGui::CalcTextSize(text.c_str());
     const ImU32 kTextColor =
         palette_.GetColor(ColorPalette::Key::kForeground).value_or(kBlackColor);
@@ -5325,6 +5326,17 @@ bool Timeline::HandleSelectionOrTimeRangeAddition() {
   } else if (current_selected_time_range_ &&
              current_selected_time_range_->duration() > 0) {
     selected_time_ranges_.push_back(*current_selected_time_range_);
+    if (!event_tooltip_enabled_ && event_callback_) {
+      const Microseconds start_us = current_selected_time_range_->start();
+      const Microseconds dur_us = current_selected_time_range_->duration();
+      const std::string json = absl::StrFormat(
+          R"({"selectionStartUs":%.1f,"selectionExtentUs":%.1f})", start_us,
+          dur_us);
+      EventData event_data;
+      event_data.try_emplace(kEventsSelectedData, json);
+      PopulateMultiSelectionScheduleDetails(start_us, dur_us, event_data);
+      event_callback_(kEventsSelected, event_data);
+    }
     return true;
   }
   return false;
@@ -6065,7 +6077,12 @@ void Timeline::DrawBookmarks(Pixel timeline_width,
                        kBookmarkThickness);
 
     // Draw label (timestamp)
-    const std::string label = FormatTime(time);
+    const std::string label =
+        time_axis_unit_ == TimeAxisUnit::kUnitless
+            ? absl::StrCat(
+                  "Bundle ",
+                  FormatRulerLabel(std::floor(time) - data_time_range_.start()))
+            : FormatTime(time);
     ImGui::PushFont(fonts::label_small);
     const ImVec2 label_size = ImGui::CalcTextSize(label.c_str());
     const ImVec2 label_pos = ImVec2(

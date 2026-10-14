@@ -9328,6 +9328,69 @@ TEST_F(TimelineMouseModeSelectTestSuite,
       ::testing::Not(::testing::Contains(std::string(kEventsSelected))));
 }
 
+TEST_F(TimelineDragSelectionTest,
+       TimingModeInUnitlessAxisEmitsEventsSelectedWithBundleScheduleDetails) {
+  ImGuiIO& io = ImGui::GetIO();
+  io.AddKeyEvent(ImGuiMod_Shift, false);
+  timeline_.set_mouse_mode(MouseMode::kTiming);
+  timeline_.set_time_axis_unit(TimeAxisUnit::kUnitless);
+  timeline_.set_event_tooltip_enabled(false);
+
+  FlameChartTimelineData data;
+  data.groups = {
+      {Group::Type::kFlame, "Operations", "", 0, kThreadNestingLevel, true}};
+  data.level_offsets = {0, 1};
+  data.level_event_indices = {0};
+  data.entry_levels = {0};
+  data.entry_start_times = {10.0};
+  data.entry_total_times = {5.0};
+  data.entry_self_times = {5.0};
+  data.entry_names = {"add.1"};
+  data.entry_event_ids = {1};
+  data.entry_args = {{}};
+  timeline_.SetTimelineData(std::move(data));
+
+  bool events_selected_emitted = false;
+  std::string events_selected_json;
+  int total_instructions = 0;
+  timeline_.set_event_callback(
+      [&](absl::string_view event_type, const EventData& ev_data) {
+        if (event_type == kEventsSelected) {
+          events_selected_emitted = true;
+          auto it = ev_data.find(std::string(kEventsSelectedData));
+          if (it != ev_data.end()) {
+            events_selected_json = std::any_cast<std::string>(it->second);
+          }
+          auto it_total = ev_data.find("totalInstructions");
+          if (it_total != ev_data.end()) {
+            total_instructions = std::any_cast<int>(it_total->second);
+          }
+        }
+      });
+
+  SimulateFrame();
+
+  // Drag in Timing (Measure) mode from 5.0 (50px) to 25.0 (250px).
+  io.MousePos =
+      ImVec2(GetTimelineStartX() + kSelectionStartOffset, kEmptyAreaY);
+  io.AddMouseButtonEvent(0, true);
+  SimulateFrame();
+
+  io.MousePos = ImVec2(GetTimelineStartX() + 250.0f, kEmptyAreaY);
+  SimulateFrame();
+
+  io.AddMouseButtonEvent(0, false);
+  SimulateFrame();
+
+  ASSERT_EQ(timeline_.selected_time_ranges().size(), 1);
+  EXPECT_TRUE(events_selected_emitted);
+  EXPECT_THAT(events_selected_json,
+              ::testing::HasSubstr("\"selectionStartUs\":5.0"));
+  EXPECT_THAT(events_selected_json,
+              ::testing::HasSubstr("\"selectionExtentUs\":20.0"));
+  EXPECT_EQ(total_instructions, 1);
+}
+
 // =============================================================================
 // Fixture: TimelineImGuiFixture
 // =============================================================================
