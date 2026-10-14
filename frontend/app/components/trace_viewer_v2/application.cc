@@ -216,7 +216,9 @@ EMSCRIPTEN_BINDINGS(colors) {
       .value("kSubtitle", ColorPalette::Key::kSubtitle)
       .value("kRulerText", ColorPalette::Key::kRulerText)
       .value("kRulerLine", ColorPalette::Key::kRulerLine)
-      .value("kSelection", ColorPalette::Key::kSelection);
+      .value("kSelection", ColorPalette::Key::kSelection)
+      .value("kHloProducerArrow", ColorPalette::Key::kHloProducerArrow)
+      .value("kHloConsumerArrow", ColorPalette::Key::kHloConsumerArrow);
 }
 
 }  // namespace

@@ -25,6 +25,8 @@ ColorPalette& ColorPalette::operator=(const ColorPalette::Preset& preset) {
   colors_[Key::kSelection] = preset.selection;
   colors_[Key::kOnSurface] = preset.on_surface;
   colors_[Key::kInverseOnSurface] = preset.inverse_on_surface;
+  colors_[Key::kHloProducerArrow] = preset.hlo_producer_arrow;
+  colors_[Key::kHloConsumerArrow] = preset.hlo_consumer_arrow;
   trace_colors_ = preset.trace_colors;
   flow_colors_ = preset.flow_colors;
   version_++;

@@ -1005,6 +1005,17 @@ class Timeline {
   // level).
   void DrawFlows(Pixel timeline_width, Pixel timeline_y_start);
 
+  // Draws an arrow from the end of `from_event` to the start of `to_event`,
+  // as a Bezier curve like a flow line, with an arrowhead at the end.
+  void DrawDependencyArrow(int from_event, int to_event, ImU32 color,
+                           Pixel timeline_x_start, Pixel timeline_y_start,
+                           double px_per_time, ImDrawList* draw_list);
+
+  // Draws arrows from the resolved HLO operands of the selected event to it,
+  // and from it to its resolved consumers (see SetSelectedEventDependencies).
+  // At most kMaxHloDependencyArrowsPerSide are drawn on each side.
+  void DrawDependencyArrows(Pixel timeline_width, Pixel timeline_y_start);
+
   // Draws a single selected time range.
   // The `show_delete_button` will be false for the currently selected time
   // time range.

@@ -1,6 +1,8 @@
 #ifndef THIRD_PARTY_XPROF_FRONTEND_APP_COMPONENTS_TRACE_VIEWER_V2_TIMELINE_CONSTANTS_H_
 #define THIRD_PARTY_XPROF_FRONTEND_APP_COMPONENTS_TRACE_VIEWER_V2_TIMELINE_CONSTANTS_H_
 
+#include <cstddef>
+
 #include "imgui.h"
 #include "frontend/app/components/trace_viewer_v2/color/colors.h"
 #include "frontend/app/components/trace_viewer_v2/trace_helper/trace_event.h"
@@ -96,6 +98,9 @@ inline constexpr ImU32 kCounterHoverColor = kBlue80;
 inline constexpr ImU32 kHoverMaskColor = kTransparentWhiteColor;
 inline constexpr ImU32 kSelectedBorderColor = kBlueColor;
 inline constexpr Pixel kCounterHoverThickness = 3.5f;
+// The arrows between the selected HLO op and its operands and consumers.
+inline constexpr Pixel kHloDependencyArrowHeadSize = 7.0f;
+inline constexpr Pixel kHloDependencyArrowThickness = 2.0f;
 inline constexpr Pixel kHoverCornerRounding = 4.0f;
 inline constexpr Pixel kHoverPadding = 2.0f;
 // The radius of the circle used to draw points in the counter track.
@@ -104,6 +109,9 @@ inline constexpr Pixel kSelectedBorderThickness = 2.0f;
 inline constexpr Pixel kSelectedDataPointRadius = 4.0f;
 // The opacity of the group preview (aggregated view) background.
 inline constexpr float kGroupPreviewOpacity = 0.6f;
+// At most this many HLO dependency arrows are drawn on each side of the
+// selected op, so that an op with many consumers does not cover the timeline.
+inline constexpr size_t kMaxHloDependencyArrowsPerSide = 8;
 // go/keep-sorted end
 
 // Splitter Highlighting Constants

@@ -1784,6 +1784,7 @@ void Timeline::Draw() {
   // else within the current ImGui window, without affecting global foreground
   // elements like tooltips.
   DrawFlows(current_timeline_width_, tracks_start_screen_pos.y);
+  DrawDependencyArrows(current_timeline_width_, tracks_start_screen_pos.y);
   DrawSelectedTimeRanges(current_timeline_width_, px_per_time_unit_val);
   DrawBookmarks(current_timeline_width_, px_per_time_unit_val);
   DrawSelectionRectangle();
@@ -2392,6 +2393,8 @@ void Timeline::SetSelectedEventDependencies(
   dependencies_ = ResolveEventDependencies(
       timeline_data_, selected_event_index_, std::move(operand_names),
       std::move(consumer_names));
+  // The names usually arrive after the frame that selected the event.
+  if (redraw_callback_) redraw_callback_();
 }
 
 void Timeline::EmitEventHovered(int event_index, float mouse_x, float mouse_y) {
@@ -4406,6 +4409,94 @@ void Timeline::DrawFlows(Pixel timeline_width, Pixel timeline_y_start) {
     }
   }
 
+  draw_list->PopClipRect();
+}
+
+void Timeline::DrawDependencyArrow(int from_event, int to_event, ImU32 color,
+                                   Pixel timeline_x_start,
+                                   Pixel timeline_y_start, double px_per_time,
+                                   ImDrawList* draw_list) {
+  const uint16_t from_level = timeline_data_.entry_levels[from_event];
+  const uint16_t to_level = timeline_data_.entry_levels[to_event];
+  if (from_level >= visible_level_offsets_.size() ||
+      to_level >= visible_level_offsets_.size()) {
+    return;
+  }
+  const ImVec2 start(
+      TimeToScreenX(timeline_data_.entry_start_times[from_event] +
+                        timeline_data_.entry_total_times[from_event],
+                    timeline_x_start, px_per_time),
+      timeline_y_start + visible_level_offsets_[from_level]);
+  const ImVec2 end(TimeToScreenX(timeline_data_.entry_start_times[to_event],
+                                 timeline_x_start, px_per_time),
+                   timeline_y_start + visible_level_offsets_[to_level]);
+
+  ImVec2 cp0, cp1;
+  CalculateBezierControlPoints(start.x, start.y, end.x, end.y, cp0, cp1);
+  draw_list->AddBezierCubic(start, cp0, cp1, end, color,
+                            kHloDependencyArrowThickness);
+  draw_list->AddCircleFilled(start, kPointRadius, color);
+
+  // The arrowhead points along the end of the curve. If the curve ends
+  // vertically, its last control point coincides with the end, so fall back to
+  // the overall direction.
+  ImVec2 direction(end.x - cp1.x, end.y - cp1.y);
+  if (direction.x == 0.0f && direction.y == 0.0f) {
+    direction = ImVec2(end.x - start.x, end.y - start.y);
+  }
+  const float length = std::hypot(direction.x, direction.y);
+  if (length == 0.0f) return;
+  direction = ImVec2(direction.x / length, direction.y / length);
+  const ImVec2 base(end.x - direction.x * kHloDependencyArrowHeadSize,
+                    end.y - direction.y * kHloDependencyArrowHeadSize);
+  const ImVec2 half_width(-direction.y * kHloDependencyArrowHeadSize * 0.5f,
+                          direction.x * kHloDependencyArrowHeadSize * 0.5f);
+  draw_list->AddTriangleFilled(
+      end, ImVec2(base.x + half_width.x, base.y + half_width.y),
+      ImVec2(base.x - half_width.x, base.y - half_width.y), color);
+}
+
+void Timeline::DrawDependencyArrows(Pixel timeline_width,
+                                    Pixel timeline_y_start) {
+  const absl::Span<const int> producers = producer_event_indices();
+  const absl::Span<const int> consumers = consumer_event_indices();
+  if (producers.empty() && consumers.empty()) return;
+  if (selected_event_index_ < 0 ||
+      selected_event_index_ >=
+          static_cast<int>(timeline_data_.entry_levels.size())) {
+    return;
+  }
+  const double px_per_time = px_per_time_unit(timeline_width);
+  if (px_per_time <= 0) return;
+
+  const Pixel timeline_x_start = ImGui::GetItemRectMin().x + label_width_;
+  // Drawn like the flow lines: on the foreground draw list, clipped to the
+  // timeline area of the current window.
+  ImDrawList* const draw_list = ImGui::GetForegroundDrawList();
+  const ImVec2 window_pos = ImGui::GetWindowPos();
+  draw_list->PushClipRect(ImVec2(window_pos.x + label_width_, window_pos.y),
+                          ImVec2(window_pos.x + ImGui::GetWindowWidth(),
+                                 window_pos.y + ImGui::GetWindowHeight()),
+                          /*intersect_with_current_clip_rect=*/true);
+
+  const ImU32 producer_color =
+      palette_.GetColor(ColorPalette::Key::kHloProducerArrow)
+          .value_or(kHloProducerArrowColor);
+  for (const int producer : producers.first(
+           std::min(producers.size(), kMaxHloDependencyArrowsPerSide))) {
+    DrawDependencyArrow(producer, selected_event_index_, producer_color,
+                        timeline_x_start, timeline_y_start, px_per_time,
+                        draw_list);
+  }
+  const ImU32 consumer_color =
+      palette_.GetColor(ColorPalette::Key::kHloConsumerArrow)
+          .value_or(kHloConsumerArrowColor);
+  for (const int consumer : consumers.first(
+           std::min(consumers.size(), kMaxHloDependencyArrowsPerSide))) {
+    DrawDependencyArrow(selected_event_index_, consumer, consumer_color,
+                        timeline_x_start, timeline_y_start, px_per_time,
+                        draw_list);
+  }
   draw_list->PopClipRect();
 }
 
