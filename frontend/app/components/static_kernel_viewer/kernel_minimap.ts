@@ -152,6 +152,47 @@ const BRUSH_DRAG_THRESHOLD_PX = 5;
 /** Default track label column width in pixels (`kDefaultLabelWidth` in C++). */
 const DEFAULT_LABEL_WIDTH_PX = 250;
 
+/** Height of the bundle/time ruler above the minimap track. */
+const RULER_HEIGHT_PX = 16;
+
+/** Track height with at most one scope section (Regions or Pallas). */
+const TRACK_HEIGHT_PX = 51;
+
+/** Track height when both scope sections are shown. */
+const TRACK_HEIGHT_TWO_SCOPES_PX = 65;
+
+/** Height of the activity density strip at the top of the track. */
+const STRIP_HEIGHT_PX = 5;
+
+/** Vertical gap between the strip, scope sections, and activity lanes. */
+const BAND_GAP_PX = 2;
+
+/**
+ * Height of one mirrored flame level: a 4px bar plus a 1px gap, echoing the
+ * level padding of the canvas.
+ */
+const SCOPE_ROW_HEIGHT_PX = 5;
+
+/** Height of a single-level scope section, tall enough for inline labels. */
+const SCOPE_SINGLE_ROW_HEIGHT_PX = 12;
+
+/** Maximum mirrored flame levels per scope section (`kMaxMinimapScopeRows`). */
+const MAX_SCOPE_ROWS = 3;
+
+/** Scope markers at least this wide (in % of the track) join the tab order. */
+const MIN_FOCUSABLE_MARKER_WIDTH_PERCENT = 1.5;
+
+/** Hover tolerance (in % of the track) for hitting very narrow markers. */
+const MARKER_HOVER_TOLERANCE_PERCENT = 0.3;
+
+/** WCAG 2.x AA minimum contrast for small text. */
+const TEXT_CONTRAST_RATIO = 4.5;
+
+/** WCAG 2.x AA minimum contrast for UI components and graphical objects. */
+const UI_CONTRAST_RATIO = 3;
+
+const HEX_COLOR_PATTERN = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+
 /** Formats a duration or relative timestamp in microseconds with optional compact units. */
 export function formatMinimapTimeUs(us: number, includeUnit = true): string {
   if (!Number.isFinite(us) || Math.abs(us) < 1e-9) {
@@ -185,26 +226,22 @@ export interface MinimapBin {
   readonly secondaryUnit?: FunctionalUnit;
   readonly color: string;
   readonly secondaryColor?: string;
-  readonly opacity: number;
   readonly density: number;
   readonly region: string;
   readonly pallasPrimitive: string;
   readonly namedScope: string;
   readonly active: boolean;
-  readonly topPercent: number;
-  readonly heightPercent: number;
-  readonly secondaryTopPercent?: number;
-  readonly secondaryHeightPercent?: number;
-  readonly gapRight: boolean;
-  readonly secondaryGapRight: boolean;
 }
 
 /** A major region or Pallas primitive flame bar along the schedule minimap. */
 export interface MinimapRegionMarker {
+  /** Unique key across scope sections, e.g. `regions:12`. */
+  readonly key: string;
   readonly eventIndex: number;
   readonly name: string;
   readonly startUs: number;
   readonly durationUs: number;
+  /** Flame level within the scope track; also the minimap row. */
   readonly depth: number;
   readonly row: number;
   readonly topPercent: number;
@@ -214,7 +251,67 @@ export interface MinimapRegionMarker {
   readonly color: string;
   readonly textColor: string;
   readonly bundlesLabel: string;
+  /** Number of sub-pixel events merged into this marker (1 for real events). */
+  readonly count: number;
+  readonly ariaLabel: string;
+  readonly focusable: boolean;
   readonly source?: string;
+}
+
+/** One mirrored scope track (Regions or Pallas Primitives) of the canvas. */
+export interface MinimapScopeSection {
+  readonly key: 'pallas' | 'regions';
+  readonly trackName: string;
+  readonly rows: number;
+  readonly topPx: number;
+  readonly heightPx: number;
+  readonly showLabels: boolean;
+  readonly markers: readonly MinimapRegionMarker[];
+}
+
+/** An activity lane mirroring one (or several merged) canvas unit tracks. */
+export interface MinimapLane {
+  readonly name: string;
+  /** CSS `#rrggbb` / `#rrggbbaa` colors per cell; empty for idle cells. */
+  readonly cells: readonly string[];
+  /** Hard-stop CSS gradient rendering `cells` across the lane. */
+  readonly background: string;
+  readonly heightPx: number;
+}
+
+/** Vertical layout of the minimap track in CSS pixels. */
+export interface MinimapLayout {
+  readonly barHeightPx: number;
+  readonly trackHeightPx: number;
+  readonly stripHeightPx: number;
+  readonly lanesTopPx: number;
+  readonly lanesHeightPx: number;
+}
+
+/**
+ * Colors derived from the canvas theme that are guaranteed to stay legible on
+ * every palette (WCAG AA: 4.5:1 for text, 3:1 for UI affordances).
+ */
+export interface MinimapColorTokens {
+  /** Primary text on the minimap background. */
+  readonly ink: string;
+  /** Secondary text on the minimap background. */
+  readonly inkMuted: string;
+  /** Ruler tick labels on the ruler (midtone) background. */
+  readonly rulerInk: string;
+  /** Viewport lens frame and resize handle fill. */
+  readonly lens: string;
+  /** Grip marks drawn on the resize handles. */
+  readonly onLens: string;
+  /** Ring separating the lens and handles from the colorful tracks. */
+  readonly halo: string;
+  /** Translucent veil dimming the schedule outside the viewport lens. */
+  readonly curtain: string;
+  /** Elevated surface of the hover pill. */
+  readonly surfaceRaised: string;
+  readonly pillInk: string;
+  readonly pillInkMuted: string;
+  readonly pillBorder: string;
 }
 
 /** A tick mark on the full-schedule bundle ruler above the minimap tracks. */
@@ -225,15 +322,29 @@ export interface MinimapRulerTick {
   readonly isRightEdge?: boolean;
 }
 
+/** A colored chip in the hover pill with a guaranteed-legible text color. */
+export interface MinimapHoverChip {
+  readonly label: string;
+  readonly color: string;
+  readonly textColor: string;
+}
+
 /** Floating hover pill state when inspecting the minimap ribbon. */
 export interface MinimapHoverInfo {
   readonly leftPercent: number;
   readonly align: 'left' | 'center' | 'right';
   readonly bundleLabel: string;
-  readonly unit?: FunctionalUnit;
-  readonly secondaryUnit?: FunctionalUnit;
-  readonly pallasPrimitive?: string;
-  readonly pallasColor?: string;
+  /** Track name of the scope row or lane under the pointer. */
+  readonly trackName?: string;
+  /** Scope marker or lane activity under the pointer. */
+  readonly target?: MinimapHoverChip;
+  /** Extra context for `target`, e.g. bundle range and source location. */
+  readonly targetDetail?: string;
+  /** Key of the hovered scope marker, used to highlight it. */
+  readonly markerKey?: string;
+  readonly unit?: MinimapHoverChip;
+  readonly secondaryUnit?: MinimapHoverChip;
+  readonly pallas?: MinimapHoverChip;
   readonly region?: string;
 }
 
@@ -254,7 +365,11 @@ export interface KernelMinimapState {
   readonly rightCurtainLeftPercent: number;
   readonly rightCurtainWidthPercent: number;
   readonly theme: MinimapTheme;
+  readonly tokens: MinimapColorTokens;
+  readonly layout: MinimapLayout;
   readonly bins: readonly MinimapBin[];
+  readonly lanes: readonly MinimapLane[];
+  readonly scopeSections: readonly MinimapScopeSection[];
   readonly regions: readonly MinimapRegionMarker[];
   readonly pallasPrimitives: readonly MinimapRegionMarker[];
   readonly hasPallasPrimitives: boolean;
@@ -351,22 +466,64 @@ function readThemeString(
     : fallback;
 }
 
+interface Rgba {
+  readonly r: number;
+  readonly g: number;
+  readonly b: number;
+  readonly a: number;
+}
+
+const BLACK: Rgba = {r: 0, g: 0, b: 0, a: 1};
+const WHITE: Rgba = {r: 255, g: 255, b: 255, a: 1};
+
+/** Parses a CSS `#rgb`, `#rrggbb`, or `#rrggbbaa` color. */
+function parseHexColor(hex: string): Rgba | undefined {
+  const value = hex.trim();
+  if (!HEX_COLOR_PATTERN.test(value)) {
+    return undefined;
+  }
+  let digits = value.slice(1);
+  if (digits.length === 3) {
+    digits = digits
+      .split('')
+      .map((c) => c + c)
+      .join('');
+  }
+  // The pattern above guarantees valid hex digits for these conversions.
+  const channel = (start: number) =>
+    Number(`0x${digits.slice(start, start + 2)}`);
+  return {
+    r: channel(0),
+    g: channel(2),
+    b: channel(4),
+    a: digits.length === 8 ? channel(6) / 255 : 1,
+  };
+}
+
+function toHexColor({r, g, b}: Rgba): string {
+  const channel = (v: number) =>
+    Math.round(clamp(v, 0, 255))
+      .toString(16)
+      .padStart(2, '0');
+  return `#${channel(r)}${channel(g)}${channel(b)}`;
+}
+
+/** Linearly interpolates from `from` (t = 0) to `to` (t = 1). */
+function mixRgb(from: Rgba, to: Rgba, t: number): Rgba {
+  return {
+    r: from.r + (to.r - from.r) * t,
+    g: from.g + (to.g - from.g) * t,
+    b: from.b + (to.b - from.b) * t,
+    a: 1,
+  };
+}
+
 function linearSrgbChannel(value255: number): number {
   const c = value255 / 255;
   return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
 }
 
-function hexRelativeLuminance(hex: string): number {
-  const cleaned = hex.replace(/^#/, '');
-  if (cleaned.length !== 6) {
-    return 0.5;
-  }
-  const r = Number(`0x${cleaned.slice(0, 2)}`);
-  const g = Number(`0x${cleaned.slice(2, 4)}`);
-  const b = Number(`0x${cleaned.slice(4, 6)}`);
-  if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) {
-    return 0.5;
-  }
+function relativeLuminance({r, g, b}: Rgba): number {
   return (
     0.2126 * linearSrgbChannel(r) +
     0.7152 * linearSrgbChannel(g) +
@@ -374,17 +531,164 @@ function hexRelativeLuminance(hex: string): number {
   );
 }
 
-function getTextColorForContrast(
-  bgHex: string,
-  onSurfaceHex: string,
-  inverseOnSurfaceHex: string,
+function rgbContrast(a: Rgba, b: Rgba): number {
+  const la = relativeLuminance(a);
+  const lb = relativeLuminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+/** WCAG 2.x contrast ratio between two opaque CSS hex colors (1 to 21). */
+export function contrastRatio(foreground: string, background: string): number {
+  const fg = parseHexColor(foreground);
+  const bg = parseHexColor(background);
+  return fg && bg ? rgbContrast(fg, bg) : 1;
+}
+
+/**
+ * Returns `color` as `#rrggbb`, nudged toward black or white (whichever moves
+ * it away from `background`) just enough to reach `minRatio`. Keeps the hue of
+ * theme colors that already pass so the minimap stays on-palette.
+ */
+export function ensureContrast(
+  color: string,
+  background: string,
+  minRatio: number,
 ): string {
-  const bgLum = hexRelativeLuminance(bgHex);
-  const onSurfaceLum = hexRelativeLuminance(onSurfaceHex);
-  const contrastOnSurface =
-    (Math.max(bgLum, onSurfaceLum) + 0.05) /
-    (Math.min(bgLum, onSurfaceLum) + 0.05);
-  return contrastOnSurface >= 4.5 ? onSurfaceHex : inverseOnSurfaceHex;
+  const fg = parseHexColor(color);
+  const bg = parseHexColor(background);
+  if (!fg || !bg) {
+    return color;
+  }
+  if (rgbContrast(fg, bg) >= minRatio) {
+    return toHexColor(fg);
+  }
+  const target =
+    rgbContrast(BLACK, bg) >= rgbContrast(WHITE, bg) ? BLACK : WHITE;
+  if (rgbContrast(target, bg) < minRatio) {
+    return toHexColor(target);
+  }
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 12; i++) {
+    const mid = (lo + hi) / 2;
+    if (rgbContrast(mixRgb(fg, target, mid), bg) >= minRatio) {
+      hi = mid;
+    } else {
+      lo = mid;
+    }
+  }
+  // Rounding channels to integers can land just under the threshold; step a
+  // little further toward the target until the emitted color passes.
+  let result = toHexColor(mixRgb(fg, target, hi));
+  while (hi < 1 && contrastRatio(result, background) < minRatio) {
+    hi = Math.min(1, hi + 0.01);
+    result = toHexColor(mixRgb(fg, target, hi));
+  }
+  return result;
+}
+
+/** Composites a possibly translucent CSS hex color over an opaque backdrop. */
+export function compositeOver(color: string, backdrop: string): string {
+  const fg = parseHexColor(color);
+  const bg = parseHexColor(backdrop);
+  if (!fg) {
+    return backdrop;
+  }
+  return bg ? toHexColor(mixRgb(bg, fg, fg.a)) : toHexColor(fg);
+}
+
+/**
+ * Picks the most legible text color for a chip or bar filled with
+ * `background`: the best of `preferred` (theme inks) when it reaches WCAG AA
+ * (4.5:1) for small text, otherwise whichever of black or white contrasts
+ * more, since nudging a theme ink only gets mid-tone fills to the bare
+ * minimum.
+ */
+function readableTextColor(
+  background: string,
+  preferred: readonly string[],
+): string {
+  const bg = parseHexColor(background);
+  if (!bg) {
+    return preferred[0] ?? toHexColor(BLACK);
+  }
+  let best: Rgba | undefined;
+  let bestRatio = -1;
+  for (const candidate of preferred) {
+    const rgba = parseHexColor(candidate);
+    const ratio = rgba ? rgbContrast(rgba, bg) : -1;
+    if (rgba && ratio > bestRatio) {
+      best = rgba;
+      bestRatio = ratio;
+    }
+  }
+  if (best && bestRatio >= TEXT_CONTRAST_RATIO) {
+    return toHexColor(best);
+  }
+  return toHexColor(
+    rgbContrast(BLACK, bg) >= rgbContrast(WHITE, bg) ? BLACK : WHITE,
+  );
+}
+
+/**
+ * Picks the most legible text color for a chip or bar filled with
+ * `background`, preferring the canvas theme's own inks and guaranteeing WCAG
+ * AA contrast (4.5:1) wherever any color can reach it.
+ */
+export function pickReadableTextColor(
+  background: string,
+  theme: MinimapTheme,
+): string {
+  return readableTextColor(background, [
+    theme.onSurface,
+    theme.inverseOnSurface,
+    theme.foreground,
+    theme.background,
+  ]);
+}
+
+/** Derives contrast-safe minimap chrome colors from the canvas theme. */
+export function buildMinimapColorTokens(
+  theme: MinimapTheme,
+): MinimapColorTokens {
+  const background = parseHexColor(theme.background)
+    ? theme.background
+    : DEFAULT_MINIMAP_THEME.background;
+  const ink = ensureContrast(theme.foreground, background, TEXT_CONTRAST_RATIO);
+  const backgroundRgb = parseHexColor(background) ?? WHITE;
+  const inkRgb = parseHexColor(ink) ?? BLACK;
+  // A slightly elevated surface keeps the hover pill distinct from the canvas
+  // it floats over, in both light and dark themes.
+  const surfaceRaised = toHexColor(mixRgb(backgroundRgb, inkRgb, 0.07));
+  const lens = ensureContrast(theme.foreground, background, UI_CONTRAST_RATIO);
+  // Pastel event colors already sit close to light backgrounds, so light
+  // palettes get a lighter veil to keep the out-of-view schedule readable.
+  const curtainAlpha = relativeLuminance(backgroundRgb) > 0.5 ? 0.4 : 0.5;
+  return {
+    ink,
+    inkMuted: ensureContrast(theme.subtitle, background, TEXT_CONTRAST_RATIO),
+    rulerInk: ensureContrast(
+      theme.rulerText,
+      parseHexColor(theme.midtone) ? theme.midtone : background,
+      TEXT_CONTRAST_RATIO,
+    ),
+    lens,
+    onLens: ensureContrast(toHexColor(backgroundRgb), lens, UI_CONTRAST_RATIO),
+    halo: toHexColor(backgroundRgb),
+    curtain: `rgba(${backgroundRgb.r}, ${backgroundRgb.g}, ${backgroundRgb.b}, ${curtainAlpha})`,
+    surfaceRaised,
+    pillInk: ensureContrast(
+      theme.foreground,
+      surfaceRaised,
+      TEXT_CONTRAST_RATIO,
+    ),
+    pillInkMuted: ensureContrast(
+      theme.subtitle,
+      surfaceRaised,
+      TEXT_CONTRAST_RATIO,
+    ),
+    pillBorder: toHexColor(mixRgb(backgroundRgb, inkRgb, 0.24)),
+  };
 }
 
 /** Parses optional `theme` object from `minimap_updated` event detail. */
@@ -504,30 +808,6 @@ function resolveFunctionalUnit(
   return baseUnit;
 }
 
-interface ParsedBinRecord {
-  readonly unit?: FunctionalUnit;
-  readonly secondaryUnit?: FunctionalUnit;
-  readonly density: number;
-  readonly region: string;
-  readonly pallasPrimitive: string;
-  readonly namedScope: string;
-  readonly active: boolean;
-}
-
-const FUNCTIONAL_UNIT_ROW_INDEX: Readonly<Record<string, number>> = {
-  'MXU': 0,
-  'XLU': 0,
-  'VPU': 1,
-  'SALU': 1,
-  'EUP': 1,
-  'VLD': 2,
-  'VST': 2,
-  'DMA': 3,
-  'Other': 3,
-};
-
-const FUNCTIONAL_UNIT_LANE_COUNT = 4;
-
 /** Parses raw `bins` array from `minimap_updated` event detail. */
 function parseMinimapBins(
   rawBins: unknown,
@@ -545,15 +825,8 @@ function parseMinimapBins(
     customUnitOrder.set(key, nextIdx);
     return nextIdx;
   };
-  const getRowForUnit = (label: string): number => {
-    const fixedRow = FUNCTIONAL_UNIT_ROW_INDEX[label];
-    if (fixedRow !== undefined) {
-      return fixedRow;
-    }
-    return getCustomUnitIndex(label) % FUNCTIONAL_UNIT_LANE_COUNT;
-  };
 
-  const parsed: ParsedBinRecord[] = [];
+  const bins: MinimapBin[] = [];
   for (let i = 0; i < rawBins.length; i++) {
     const item = rawBins[i];
     if (!isRecord(item)) {
@@ -595,91 +868,146 @@ function parseMinimapBins(
       getCustomUnitIndex(secondaryKey),
     );
     const active = Boolean(unitKey) || density > 0;
-    parsed.push({
-      unit,
-      secondaryUnit,
-      density,
-      region,
-      pallasPrimitive,
-      namedScope,
-      active,
-    });
-  }
-
-  const laneHeightPercent = 100 / FUNCTIONAL_UNIT_LANE_COUNT;
-  const bins: MinimapBin[] = [];
-  for (let i = 0; i < parsed.length; i++) {
-    const current = parsed[i];
-    const next = i + 1 < parsed.length ? parsed[i + 1] : undefined;
-    const {
-      unit,
-      secondaryUnit,
-      density,
-      region,
-      pallasPrimitive,
-      namedScope,
-      active,
-    } = current;
-    const color =
-      unit?.color ??
-      (active ? (theme.traceColors[0] ?? DEFAULT_ACCENT_COLOR) : 'transparent');
-    const opacity = active ? Number((0.9 + 0.1 * density).toFixed(2)) : 0;
-    const primaryRow = unit ? getRowForUnit(unit.label) : 0;
-    const topPercent = primaryRow * laneHeightPercent;
-    const heightPercent = active ? laneHeightPercent : 0;
-
-    let secondaryTopPercent: number | undefined;
-    let secondaryHeightPercent: number | undefined;
-    if (secondaryUnit) {
-      let secondaryRow = getRowForUnit(secondaryUnit.label);
-      if (secondaryRow === primaryRow) {
-        secondaryRow = (primaryRow + 1) % FUNCTIONAL_UNIT_LANE_COUNT;
-      }
-      secondaryTopPercent = secondaryRow * laneHeightPercent;
-      secondaryHeightPercent = laneHeightPercent;
-    }
-
-    const nextHasPrimary =
-      Boolean(unit) &&
-      Boolean(next) &&
-      next?.region === region &&
-      next?.unit?.label === unit?.label;
-    const nextHasSecondary =
-      Boolean(secondaryUnit) &&
-      Boolean(next) &&
-      next?.region === region &&
-      next?.secondaryUnit?.label === secondaryUnit?.label;
-
     bins.push({
-      index: i,
+      index: bins.length,
       unit,
       secondaryUnit,
-      color,
+      color:
+        unit?.color ??
+        (active
+          ? (theme.traceColors[0] ?? DEFAULT_ACCENT_COLOR)
+          : 'transparent'),
       secondaryColor: secondaryUnit?.color,
-      opacity,
       density,
       region,
       pallasPrimitive,
       namedScope,
       active,
-      topPercent,
-      heightPercent,
-      secondaryTopPercent,
-      secondaryHeightPercent,
-      gapRight: !nextHasPrimary,
-      secondaryGapRight: !nextHasSecondary,
     });
   }
   return bins;
 }
 
-/** Parses raw `regions` or `pallasPrimitives` array from `minimap_updated` event detail. */
+function formatGradientPercent(fraction: number): string {
+  return `${Number((fraction * 100).toFixed(3))}%`;
+}
+
+/**
+ * Builds a hard-stop horizontal CSS gradient painting each lane cell with its
+ * color (or leaving it transparent when idle). Adjacent equal cells share one
+ * stop pair so long runs stay cheap to render.
+ */
+export function buildLaneGradient(cells: readonly string[]): string {
+  const n = cells.length;
+  const stops: string[] = [];
+  let hasColor = false;
+  let runStart = 0;
+  for (let i = 1; i <= n; i++) {
+    if (i < n && cells[i] === cells[runStart]) {
+      continue;
+    }
+    const color = cells[runStart] || 'transparent';
+    hasColor = hasColor || Boolean(cells[runStart]);
+    stops.push(
+      `${color} ${formatGradientPercent(runStart / n)} ${formatGradientPercent(
+        i / n,
+      )}`,
+    );
+    runStart = i;
+  }
+  if (!hasColor) {
+    return 'none';
+  }
+  if (stops.length === 1) {
+    return `linear-gradient(to right, ${cells[0]} 0%, ${cells[0]} 100%)`;
+  }
+  return `linear-gradient(to right, ${stops.join(', ')})`;
+}
+
+/** Splits `totalPx` into `count` integer heights so lanes render crisply. */
+function distributeHeights(totalPx: number, count: number): number[] {
+  if (count <= 0) {
+    return [];
+  }
+  const base = Math.floor(totalPx / count);
+  const extra = totalPx - base * count;
+  return Array.from({length: count}, (_, i) =>
+    Math.max(1, base + (i < extra ? 1 : 0)),
+  );
+}
+
+/** Parses raw `lanes` from `minimap_updated` (one lane per canvas track). */
+function parseMinimapLanes(rawLanes: unknown): Array<{
+  name: string;
+  cells: string[];
+}> {
+  if (!Array.isArray(rawLanes)) {
+    return [];
+  }
+  const lanes: Array<{name: string; cells: string[]}> = [];
+  for (const item of rawLanes) {
+    if (!isRecord(item)) {
+      continue;
+    }
+    const rawCells: unknown = item['cells'];
+    if (!Array.isArray(rawCells)) {
+      continue;
+    }
+    const name = typeof item['name'] === 'string' ? item['name'] : '';
+    const cells = rawCells.map((cell: unknown) =>
+      typeof cell === 'string' && HEX_COLOR_PATTERN.test(cell) ? cell : '',
+    );
+    if (cells.some(Boolean)) {
+      lanes.push({name, cells});
+    }
+  }
+  return lanes;
+}
+
+/**
+ * Derives activity lanes from bins for payloads without `lanes`: one lane per
+ * functional unit in canonical canvas order, painted where the unit is the
+ * primary or secondary unit of a bin.
+ */
+function buildLanesFromBins(
+  bins: readonly MinimapBin[],
+): Array<{name: string; cells: string[]}> {
+  const order = new Map<string, number>();
+  for (const bin of bins) {
+    for (const unit of [bin.unit, bin.secondaryUnit]) {
+      if (unit && !order.has(unit.label)) {
+        order.set(
+          unit.label,
+          FUNCTIONAL_UNIT_INDEX_BY_LANE.get(unit.label) ??
+            FUNCTIONAL_UNITS.length + order.size,
+        );
+      }
+    }
+  }
+  return [...order.entries()]
+    .sort((a, b) => a[1] - b[1])
+    .map(([label]) => ({
+      name: label,
+      cells: bins.map((bin) => {
+        if (bin.unit?.label === label) return bin.unit.color;
+        if (bin.secondaryUnit?.label === label) return bin.secondaryUnit.color;
+        return '';
+      }),
+    }));
+}
+
+/**
+ * Parses raw `regions` or `pallasPrimitives` from `minimap_updated` event
+ * detail. Each marker is placed on the row of its canvas flame level (`depth`)
+ * so nested scopes keep the exact shapes the timeline draws.
+ */
 function parseMinimapRegions(
   rawRegions: unknown,
   dataStartUs: number,
   dataEndUs: number,
   theme: MinimapTheme = DEFAULT_MINIMAP_THEME,
   isTimeAxis = false,
+  sectionKey: MinimapScopeSection['key'] = 'regions',
 ): MinimapRegionMarker[] {
   const duration = dataEndUs - dataStartUs;
   if (!Array.isArray(rawRegions) || !(duration > 0)) {
@@ -694,11 +1022,13 @@ function parseMinimapRegions(
     readonly leftPercent: number;
     readonly widthPercent: number;
     readonly bundlesLabel: string;
+    readonly count: number;
     readonly color?: string;
     readonly textColor?: string;
     readonly source?: string;
   }
   const candidates: RawRegion[] = [];
+  let maxDepth = 0;
   for (const item of rawRegions) {
     if (!isRecord(item)) {
       continue;
@@ -709,20 +1039,32 @@ function parseMinimapRegions(
     const startUs = typeof item['startUs'] === 'number' ? item['startUs'] : NaN;
     const durationUs =
       typeof item['durationUs'] === 'number' ? item['durationUs'] : 0;
-    const depth = typeof item['depth'] === 'number' ? item['depth'] : 0;
+    const depth =
+      typeof item['depth'] === 'number' && Number.isFinite(item['depth'])
+        ? Math.max(0, Math.floor(item['depth']))
+        : 0;
+    const count =
+      typeof item['count'] === 'number' && item['count'] > 1
+        ? Math.floor(item['count'])
+        : 1;
     const color =
-      typeof item['color'] === 'string' && item['color']
+      typeof item['color'] === 'string' && parseHexColor(item['color'])
         ? item['color']
         : undefined;
     const textColor =
-      typeof item['textColor'] === 'string' && item['textColor']
+      typeof item['textColor'] === 'string' && parseHexColor(item['textColor'])
         ? item['textColor']
         : undefined;
     const source =
       typeof item['source'] === 'string' && item['source']
         ? item['source']
         : undefined;
-    if (eventIndex < 0 || !name || !Number.isFinite(startUs)) {
+    if (
+      eventIndex < 0 ||
+      !name ||
+      !Number.isFinite(startUs) ||
+      depth >= MAX_SCOPE_ROWS
+    ) {
       continue;
     }
     const leftPercent = clamp(
@@ -733,9 +1075,11 @@ function parseMinimapRegions(
     if (leftPercent >= 99.5) {
       continue;
     }
+    // True-to-scale width; CSS keeps sub-pixel markers visible with a minimum
+    // width instead of inflating them here.
     const widthPercent = clamp(
       (durationUs / duration) * 100,
-      0.8,
+      0,
       100 - leftPercent,
     );
     const startBundle = Math.round(startUs);
@@ -745,6 +1089,7 @@ function parseMinimapRegions(
       : durationUs > 1
         ? `${BUNDLE_FORMAT.format(startBundle)}–${BUNDLE_FORMAT.format(endBundle)}`
         : BUNDLE_FORMAT.format(startBundle);
+    maxDepth = Math.max(maxDepth, depth);
     candidates.push({
       eventIndex,
       name,
@@ -754,74 +1099,124 @@ function parseMinimapRegions(
       leftPercent,
       widthPercent,
       bundlesLabel,
+      count,
       color,
       textColor,
       source,
     });
   }
 
-  // Pack regions into up to 2 flame rows so nested sub-regions sit directly
-  // beneath their enclosing region, matching the viewer's flame chart levels.
-  const maxRows = 2;
-  const rowEndPercent = [-1, -1];
-  const assignedRows: number[] = [];
-  let usedRows = 1;
-  for (const candidate of candidates) {
-    let row = 0;
-    while (
-      row < maxRows - 1 &&
-      candidate.leftPercent < rowEndPercent[row] - 0.2
-    ) {
-      row++;
-    }
-    rowEndPercent[row] = Math.max(
-      rowEndPercent[row],
-      candidate.leftPercent + candidate.widthPercent,
-    );
-    assignedRows.push(row);
-    usedRows = Math.max(usedRows, row + 1);
-  }
-
-  const rowHeightPercent = Number((100 / usedRows).toFixed(2));
+  const rows = maxDepth + 1;
+  const rowHeightPercent = 100 / rows;
   const palette =
     theme.traceColors.length > 0 ? theme.traceColors : TRACE_VIEWER_PALETTE;
+  const kind = sectionKey === 'pallas' ? 'Pallas primitive' : 'region';
   const regions: MinimapRegionMarker[] = [];
   for (let i = 0; i < candidates.length; i++) {
     const c = candidates[i];
-    const row = assignedRows[i];
     const color = c.color ?? palette[i % palette.length];
-    const textColor =
-      c.textColor ??
-      getTextColorForContrast(color, theme.onSurface, theme.inverseOnSurface);
+    // Re-validate the canvas-provided label color so it always reaches AA.
+    const textColor = c.textColor
+      ? readableTextColor(color, [
+          c.textColor,
+          theme.onSurface,
+          theme.inverseOnSurface,
+        ])
+      : pickReadableTextColor(color, theme);
+    const label = c.count > 1 ? `${c.name} +${c.count - 1} more` : c.name;
     regions.push({
+      key: `${sectionKey}:${c.eventIndex}`,
       eventIndex: c.eventIndex,
       name: c.name,
       startUs: c.startUs,
       durationUs: c.durationUs,
       depth: c.depth,
-      row,
-      topPercent: Number(((row * 100) / usedRows).toFixed(2)),
+      row: c.depth,
+      topPercent: c.depth * rowHeightPercent,
       heightPercent: rowHeightPercent,
       leftPercent: c.leftPercent,
       widthPercent: c.widthPercent,
       color,
       textColor,
       bundlesLabel: c.bundlesLabel,
+      count: c.count,
+      ariaLabel: `Select ${kind} ${label} (${c.bundlesLabel}${
+        isTimeAxis ? '' : ' bundles'
+      })`,
+      focusable:
+        c.count === 1 && c.widthPercent >= MIN_FOCUSABLE_MARKER_WIDTH_PERCENT,
       source: c.source,
     });
   }
   return regions;
 }
 
+/** Number of mirrored flame levels used by a list of scope markers. */
+function scopeRowCount(markers: readonly MinimapRegionMarker[]): number {
+  let maxDepth = 0;
+  for (const marker of markers) {
+    maxDepth = Math.max(maxDepth, marker.depth);
+  }
+  return markers.length > 0 ? maxDepth + 1 : 0;
+}
+
+interface ScopeSectionInput {
+  readonly key: MinimapScopeSection['key'];
+  readonly trackName: string;
+  readonly markers: readonly MinimapRegionMarker[];
+}
+
+/**
+ * Stacks the strip, scope sections, and activity lanes inside the track using
+ * whole pixels so thin rows stay crisp.
+ */
+function buildMinimapLayout(
+  sections: readonly ScopeSectionInput[],
+  laneCount: number,
+): {layout: MinimapLayout; sections: MinimapScopeSection[]} {
+  const trackHeightPx =
+    sections.length >= 2 ? TRACK_HEIGHT_TWO_SCOPES_PX : TRACK_HEIGHT_PX;
+  let y = STRIP_HEIGHT_PX + BAND_GAP_PX;
+  const laidOut: MinimapScopeSection[] = [];
+  for (const section of sections) {
+    const rows = Math.max(1, scopeRowCount(section.markers));
+    const heightPx =
+      rows === 1 ? SCOPE_SINGLE_ROW_HEIGHT_PX : rows * SCOPE_ROW_HEIGHT_PX;
+    laidOut.push({
+      ...section,
+      rows,
+      topPx: y,
+      heightPx,
+      showLabels: rows === 1,
+    });
+    y += heightPx + BAND_GAP_PX;
+  }
+  // Leave a 1px gutter above the bar's bottom border.
+  const lanesHeightPx = laneCount > 0 ? Math.max(0, trackHeightPx - 1 - y) : 0;
+  return {
+    layout: {
+      // The bar includes a 1px bottom border.
+      barHeightPx: RULER_HEIGHT_PX + trackHeightPx + 1,
+      trackHeightPx,
+      stripHeightPx: STRIP_HEIGHT_PX,
+      lanesTopPx: y,
+      lanesHeightPx,
+    },
+    sections: laidOut,
+  };
+}
+
 /**
  * Horizontal schedule minimap for the Static Kernel Viewer and Trace Viewer.
  *
- * Renders a full-schedule VLIW functional unit or track ribbon above the
- * timeline canvas, aligned pixel-for-pixel with the track label column and
- * timeline ruler. Supports dragging the viewport lens to pan, dragging lens
- * handles to resize/zoom, clicking or brushing outside the lens to jump/zoom,
- * mouse-wheel zooming, and double-clicking or clicking Fit to reset to the full
- * schedule.
+ * Renders a full-schedule miniature of the timeline canvas above it, aligned
+ * pixel-for-pixel with the track label column and timeline ruler: the top
+ * flame levels of the scope tracks (Regions, Pallas Primitives, Steps, ...)
+ * row by row, followed by one activity lane per unit track in canvas order,
+ * all in the canvas's own colors. Supports dragging the viewport lens to pan,
+ * dragging lens handles to resize/zoom, clicking or brushing outside the lens
+ * to jump/zoom, mouse-wheel zooming, and double-clicking or clicking Fit to
+ * reset to the full schedule.
  */
 @Component({
   standalone: true,
@@ -856,9 +1251,20 @@ export class KernelMinimap implements AfterViewInit, OnDestroy {
   private labelWidthPx = DEFAULT_LABEL_WIDTH_PX;
   private isTimeAxis = false;
   private cachedTheme: MinimapTheme = DEFAULT_MINIMAP_THEME;
+  private cachedTokens: MinimapColorTokens = buildMinimapColorTokens(
+    DEFAULT_MINIMAP_THEME,
+  );
   private cachedBins: readonly MinimapBin[] = [];
+  private cachedLaneData: ReadonlyArray<{
+    readonly name: string;
+    readonly cells: readonly string[];
+  }> = [];
+  private hasExplicitLanes = false;
   private cachedRegions: readonly MinimapRegionMarker[] = [];
   private cachedPallasPrimitives: readonly MinimapRegionMarker[] = [];
+  private cachedRegionsFirst = false;
+  private cachedRegionsTrackName = 'Regions';
+  private cachedPallasTrackName = 'Pallas Primitives';
   private cachedTicks: readonly MinimapRulerTick[] = [];
 
   private dragStartClientX = 0;
@@ -1050,7 +1456,7 @@ export class KernelMinimap implements AfterViewInit, OnDestroy {
     if (this.isDragging || !this.state) {
       return;
     }
-    this.updateHoverInfo(event.clientX);
+    this.updateHoverInfo(event.clientX, event.clientY);
   }
 
   onTrackMouseLeave(): void {
@@ -1070,8 +1476,16 @@ export class KernelMinimap implements AfterViewInit, OnDestroy {
     return bin.index;
   }
 
-  trackByRegionIndex(index: number, marker: MinimapRegionMarker): number {
-    return marker.eventIndex;
+  trackByRegionIndex(index: number, marker: MinimapRegionMarker): string {
+    return marker.key;
+  }
+
+  trackBySectionKey(index: number, section: MinimapScopeSection): string {
+    return section.key;
+  }
+
+  trackByLaneIndex(index: number): number {
+    return index;
   }
 
   trackByTickBundle(index: number, tick: MinimapRulerTick): number {
@@ -1139,10 +1553,26 @@ export class KernelMinimap implements AfterViewInit, OnDestroy {
 
     if (isRecord(detail['theme'])) {
       this.cachedTheme = parseMinimapTheme(detail['theme']);
+      this.cachedTokens = buildMinimapColorTokens(this.cachedTheme);
     }
 
     if (Array.isArray(detail['bins'])) {
       this.cachedBins = parseMinimapBins(detail['bins'], this.cachedTheme);
+    }
+    if (Array.isArray(detail['lanes'])) {
+      this.cachedLaneData = parseMinimapLanes(detail['lanes']);
+      this.hasExplicitLanes = true;
+    } else if (Array.isArray(detail['bins']) && !this.hasExplicitLanes) {
+      this.cachedLaneData = buildLanesFromBins(this.cachedBins);
+    }
+    if (typeof detail['regionsFirst'] === 'boolean') {
+      this.cachedRegionsFirst = detail['regionsFirst'];
+    }
+    if (typeof detail['regionsTrackName'] === 'string') {
+      this.cachedRegionsTrackName = detail['regionsTrackName'];
+    }
+    if (typeof detail['pallasTrackName'] === 'string') {
+      this.cachedPallasTrackName = detail['pallasTrackName'];
     }
     if (Array.isArray(detail['regions'])) {
       this.cachedRegions = parseMinimapRegions(
@@ -1151,6 +1581,7 @@ export class KernelMinimap implements AfterViewInit, OnDestroy {
         dataEndUs,
         this.cachedTheme,
         this.isTimeAxis,
+        'regions',
       );
     } else if (boundsChanged && this.cachedRegions.length > 0) {
       this.cachedRegions = parseMinimapRegions(
@@ -1159,6 +1590,7 @@ export class KernelMinimap implements AfterViewInit, OnDestroy {
         dataEndUs,
         this.cachedTheme,
         this.isTimeAxis,
+        'regions',
       );
     }
     if (Array.isArray(detail['pallasPrimitives'])) {
@@ -1168,6 +1600,7 @@ export class KernelMinimap implements AfterViewInit, OnDestroy {
         dataEndUs,
         this.cachedTheme,
         this.isTimeAxis,
+        'pallas',
       );
     } else if (boundsChanged && this.cachedPallasPrimitives.length > 0) {
       this.cachedPallasPrimitives = parseMinimapRegions(
@@ -1176,6 +1609,7 @@ export class KernelMinimap implements AfterViewInit, OnDestroy {
         dataEndUs,
         this.cachedTheme,
         this.isTimeAxis,
+        'pallas',
       );
     }
     if (boundsChanged || this.cachedTicks.length === 0) {
@@ -1320,7 +1754,7 @@ export class KernelMinimap implements AfterViewInit, OnDestroy {
     return this.dataStartUs + ratio * (this.dataEndUs - this.dataStartUs);
   }
 
-  private updateHoverInfo(clientX: number): void {
+  private updateHoverInfo(clientX: number, clientY: number): void {
     const rect = this.trackElement?.nativeElement.getBoundingClientRect();
     const totalDuration = this.dataEndUs - this.dataStartUs;
     if (!rect || !(rect.width > 0) || !(totalDuration > 0)) {
@@ -1341,6 +1775,12 @@ export class KernelMinimap implements AfterViewInit, OnDestroy {
     const bin = binIndex >= 0 ? this.cachedBins[binIndex] : undefined;
     const align: MinimapHoverInfo['align'] =
       leftPercent < 14 ? 'left' : leftPercent > 86 ? 'right' : 'center';
+    const theme = this.cachedTheme;
+    const chip = (label: string, color: string): MinimapHoverChip => ({
+      label,
+      color,
+      textColor: pickReadableTextColor(color, theme),
+    });
     const pallasPrimitive = bin?.pallasPrimitive || undefined;
     const pallasColor = pallasPrimitive
       ? (this.cachedPallasPrimitives.find(
@@ -1351,7 +1791,7 @@ export class KernelMinimap implements AfterViewInit, OnDestroy {
         )?.color ??
         this.cachedPallasPrimitives.find((m) => m.name === pallasPrimitive)
           ?.color ??
-        this.cachedTheme.traceColors[2] ??
+        theme.traceColors[2] ??
         '#b1d284')
       : undefined;
 
@@ -1361,13 +1801,118 @@ export class KernelMinimap implements AfterViewInit, OnDestroy {
       bundleLabel: this.isTimeAxis
         ? formatMinimapTimeUs(hoveredUs - this.dataStartUs)
         : BUNDLE_FORMAT.format(bundle),
-      unit: bin?.unit,
-      secondaryUnit: bin?.secondaryUnit,
+      ...this.findHoverTarget(leftPercent, clientY - rect.top),
+      unit: bin?.unit ? chip(bin.unit.label, bin.unit.color) : undefined,
+      secondaryUnit: bin?.secondaryUnit
+        ? chip(`+${bin.secondaryUnit.label}`, bin.secondaryUnit.color)
+        : undefined,
+      pallas:
+        pallasPrimitive && pallasColor
+          ? chip(pallasPrimitive, pallasColor)
+          : undefined,
       region: bin?.region || undefined,
-      pallasPrimitive,
-      pallasColor,
     };
     this.changeDetectorRef.markForCheck();
+  }
+
+  /**
+   * Resolves the scope marker or activity lane under the pointer, using the
+   * same geometry the template renders so it also works under the lens.
+   */
+  private findHoverTarget(
+    leftPercent: number,
+    offsetY: number,
+  ): Pick<
+    MinimapHoverInfo,
+    'trackName' | 'target' | 'targetDetail' | 'markerKey'
+  > {
+    const state = this.state;
+    if (!state) {
+      return {};
+    }
+    for (const section of state.scopeSections) {
+      if (
+        offsetY < section.topPx ||
+        offsetY >= section.topPx + section.heightPx
+      ) {
+        continue;
+      }
+      const row = Math.floor(
+        ((offsetY - section.topPx) / section.heightPx) * section.rows,
+      );
+      let best: MinimapRegionMarker | undefined;
+      let bestDistance = Infinity;
+      for (const marker of section.markers) {
+        if (marker.row !== row) {
+          continue;
+        }
+        const start = marker.leftPercent;
+        const end = marker.leftPercent + marker.widthPercent;
+        const distance =
+          leftPercent < start
+            ? start - leftPercent
+            : leftPercent > end
+              ? leftPercent - end
+              : 0;
+        if (
+          distance <= MARKER_HOVER_TOLERANCE_PERCENT &&
+          distance < bestDistance
+        ) {
+          best = marker;
+          bestDistance = distance;
+        }
+      }
+      if (!best) {
+        return {};
+      }
+      const unitSuffix = state.isTimeAxis ? '' : ' bundles';
+      return {
+        trackName: section.trackName,
+        markerKey: best.key,
+        target: {
+          label: best.count > 1 ? `${best.name} +${best.count - 1}` : best.name,
+          color: best.color,
+          textColor: best.textColor,
+        },
+        targetDetail: `${best.bundlesLabel}${unitSuffix}${
+          best.source ? ` · ${best.source}` : ''
+        }`,
+      };
+    }
+    const {lanesTopPx, lanesHeightPx} = state.layout;
+    if (
+      state.lanes.length > 0 &&
+      offsetY >= lanesTopPx &&
+      offsetY < lanesTopPx + lanesHeightPx
+    ) {
+      let laneTop = lanesTopPx;
+      for (const lane of state.lanes) {
+        if (offsetY < laneTop + lane.heightPx) {
+          const cell =
+            lane.cells[
+              clamp(
+                Math.floor((leftPercent / 100) * lane.cells.length),
+                0,
+                lane.cells.length - 1,
+              )
+            ];
+          if (!cell) {
+            return {trackName: lane.name, targetDetail: 'Idle'};
+          }
+          // Chip shows the lane cell exactly as painted over the background.
+          const color = compositeOver(cell, state.theme.background);
+          return {
+            target: {
+              label: lane.name,
+              color,
+              textColor: pickReadableTextColor(color, state.theme),
+            },
+          };
+        }
+        laneTop += lane.heightPx;
+      }
+    }
+    return {};
   }
 
   private applyAndEmitVisibleRange(startUs: number, endUs: number): void {
@@ -1440,6 +1985,47 @@ export class KernelMinimap implements AfterViewInit, OnDestroy {
     const showStandaloneUnitLabel =
       !this.isTimeAxis && !this.cachedTicks.some((tick) => tick.isRightEdge);
 
+    // Scope sections stack in the same order as their tracks on the canvas.
+    const scopeInputs: ScopeSectionInput[] = [];
+    if (this.cachedPallasPrimitives.length > 0) {
+      scopeInputs.push({
+        key: 'pallas',
+        trackName: this.cachedPallasTrackName,
+        markers: this.cachedPallasPrimitives,
+      });
+    }
+    if (this.cachedRegions.length > 0) {
+      const regionsSection: ScopeSectionInput = {
+        key: 'regions',
+        trackName: this.cachedRegionsTrackName,
+        markers: this.cachedRegions,
+      };
+      if (this.cachedRegionsFirst) {
+        scopeInputs.unshift(regionsSection);
+      } else {
+        scopeInputs.push(regionsSection);
+      }
+    }
+    const {layout, sections} = buildMinimapLayout(
+      scopeInputs,
+      this.cachedLaneData.length,
+    );
+    const laneHeights = distributeHeights(
+      layout.lanesHeightPx,
+      Math.min(this.cachedLaneData.length, layout.lanesHeightPx),
+    );
+    const previousLanes = this.state?.lanes ?? [];
+    const lanes: MinimapLane[] = laneHeights.map((heightPx, i) => {
+      const {name, cells} = this.cachedLaneData[i];
+      // Reuse the previous gradient while only the viewport moves.
+      const previous = previousLanes[i];
+      const background =
+        previous?.cells === cells
+          ? previous.background
+          : buildLaneGradient(cells);
+      return {name, cells, background, heightPx};
+    });
+
     this.state = {
       dataStartUs: this.dataStartUs,
       dataEndUs: this.dataEndUs,
@@ -1456,7 +2042,11 @@ export class KernelMinimap implements AfterViewInit, OnDestroy {
       rightCurtainLeftPercent,
       rightCurtainWidthPercent,
       theme: this.cachedTheme,
+      tokens: this.cachedTokens,
+      layout,
       bins: this.cachedBins,
+      lanes,
+      scopeSections: sections,
       regions: this.cachedRegions,
       pallasPrimitives: this.cachedPallasPrimitives,
       hasPallasPrimitives: this.cachedPallasPrimitives.length > 0,

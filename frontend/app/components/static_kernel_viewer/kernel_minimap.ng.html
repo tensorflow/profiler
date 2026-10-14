@@ -5,6 +5,7 @@
   [class.has-pallas]="s.hasPallasPrimitives"
   [class.has-both-scopes]="s.hasBothScopeRows"
   [attr.data-palette]="s.theme.paletteName"
+  [style.height.px]="s.layout.barHeightPx"
   [style.--minimap-bg]="s.theme.background"
   [style.--minimap-fg]="s.theme.foreground"
   [style.--minimap-midtone]="s.theme.midtone"
@@ -17,6 +18,17 @@
   [style.--minimap-selection]="s.theme.selection"
   [style.--minimap-on-surface]="s.theme.onSurface"
   [style.--minimap-inverse-on-surface]="s.theme.inverseOnSurface"
+  [style.--minimap-ink]="s.tokens.ink"
+  [style.--minimap-ink-muted]="s.tokens.inkMuted"
+  [style.--minimap-ruler-ink]="s.tokens.rulerInk"
+  [style.--minimap-lens]="s.tokens.lens"
+  [style.--minimap-on-lens]="s.tokens.onLens"
+  [style.--minimap-halo]="s.tokens.halo"
+  [style.--minimap-curtain]="s.tokens.curtain"
+  [style.--minimap-surface-raised]="s.tokens.surfaceRaised"
+  [style.--minimap-pill-ink]="s.tokens.pillInk"
+  [style.--minimap-pill-ink-muted]="s.tokens.pillInkMuted"
+  [style.--minimap-pill-border]="s.tokens.pillBorder"
   role="region"
   aria-label="Schedule overview minimap"
 >
@@ -66,6 +78,7 @@
     <div
       #trackElement
       class="minimap-track"
+      [style.height.px]="s.layout.trackHeightPx"
       [class.dragging-pan]="isDragging && dragMode === 'pan'"
       [class.dragging-resize]="isDragging && (dragMode === 'resize-left' || dragMode === 'resize-right')"
       [class.dragging-scrub]="isDragging && dragMode === 'scrub'"
@@ -83,7 +96,11 @@
         ></div>
       </div>
 
-      <div class="minimap-utilization-strip" aria-hidden="true">
+      <div
+        class="minimap-utilization-strip"
+        [style.height.px]="s.layout.stripHeightPx"
+        aria-hidden="true"
+      >
         <div
           *ngFor="let bin of s.bins; trackBy: trackByBinIndex"
           class="utilization-col"
@@ -96,63 +113,52 @@
         </div>
       </div>
 
-      <div *ngIf="s.pallasPrimitives.length > 0" class="minimap-pallas">
+      <!-- Top flame levels of each scope track, one row per canvas level. -->
+      <div
+        *ngFor="let section of s.scopeSections; trackBy: trackBySectionKey"
+        class="minimap-scope"
+        [class.minimap-pallas]="section.key === 'pallas'"
+        [class.minimap-regions]="section.key === 'regions'"
+        [class.show-labels]="section.showLabels"
+        [style.top.px]="section.topPx"
+        [style.height.px]="section.heightPx"
+        role="group"
+        [attr.aria-label]="section.trackName"
+      >
         <button
-          *ngFor="let marker of s.pallasPrimitives; trackBy: trackByRegionIndex"
-          type="button"
-          class="region-marker pallas-marker"
-          [style.left.%]="marker.leftPercent"
-          [style.width.%]="marker.widthPercent"
-          [style.top.%]="marker.topPercent"
-          [style.height.%]="marker.heightPercent"
-          [style.--region-color]="marker.color"
-          [style.--region-text-color]="marker.textColor"
-          [matTooltip]="marker.name + ' (' + marker.bundlesLabel + (s.isTimeAxis ? '' : ' bundles') + ')' + (marker.source ? ' • ' + marker.source : '')"
-          matTooltipPosition="above"
-          (mousedown)="$event.stopPropagation()"
-          (click)="onRegionMarkerClick(marker, $event)"
-          [attr.aria-label]="'Select Pallas primitive ' + marker.name"
-        >
-          <span class="region-label" aria-hidden="true">{{ marker.name }}</span>
-        </button>
-      </div>
-
-      <div *ngIf="s.regions.length > 0" class="minimap-regions">
-        <button
-          *ngFor="let marker of s.regions; trackBy: trackByRegionIndex"
+          *ngFor="let marker of section.markers; trackBy: trackByRegionIndex"
           type="button"
           class="region-marker"
+          [class.pallas-marker]="section.key === 'pallas'"
+          [class.hovered]="hoverInfo?.markerKey === marker.key"
           [style.left.%]="marker.leftPercent"
           [style.width.%]="marker.widthPercent"
           [style.top.%]="marker.topPercent"
           [style.height.%]="marker.heightPercent"
           [style.--region-color]="marker.color"
           [style.--region-text-color]="marker.textColor"
-          [matTooltip]="marker.name + ' (' + marker.bundlesLabel + (s.isTimeAxis ? '' : ' bundles') + ')'"
-          matTooltipPosition="above"
+          [attr.tabindex]="marker.focusable ? 0 : -1"
           (mousedown)="$event.stopPropagation()"
           (click)="onRegionMarkerClick(marker, $event)"
-          [attr.aria-label]="'Select region ' + marker.name"
+          [attr.aria-label]="marker.ariaLabel"
         >
-          <span class="region-label" aria-hidden="true">{{ marker.name }}</span>
+          <span *ngIf="section.showLabels" class="region-label" aria-hidden="true">{{ marker.name }}</span>
         </button>
       </div>
 
-      <div class="minimap-bins" aria-hidden="true">
+      <!-- One activity lane per unit track, in canvas order. -->
+      <div
+        *ngIf="s.lanes.length > 0"
+        class="minimap-lanes"
+        [style.top.px]="s.layout.lanesTopPx"
+        [style.height.px]="s.layout.lanesHeightPx"
+        aria-hidden="true"
+      >
         <div
-          *ngFor="let bin of s.bins; trackBy: trackByBinIndex"
-          class="minimap-bin"
-          [class.active]="bin.active"
-          [class.has-secondary]="!!bin.secondaryColor"
-          [class.gap-right]="bin.gapRight"
-          [class.secondary-gap-right]="bin.secondaryGapRight"
-          [style.--bin-color]="bin.color"
-          [style.--bin-opacity]="bin.opacity"
-          [style.--bin-top.%]="bin.topPercent"
-          [style.--bin-height.%]="bin.heightPercent"
-          [style.--bin-secondary-color]="bin.secondaryColor || null"
-          [style.--bin-secondary-top.%]="bin.secondaryTopPercent ?? 0"
-          [style.--bin-secondary-height.%]="bin.secondaryHeightPercent ?? 0"
+          *ngFor="let lane of s.lanes; trackBy: trackByLaneIndex"
+          class="minimap-lane"
+          [style.height.px]="lane.heightPx"
+          [style.background-image]="lane.background"
         ></div>
       </div>
 
@@ -223,30 +229,47 @@
         aria-hidden="true"
       >
         <span class="hover-bundle">{{ s.isTimeAxis ? h.bundleLabel : 'Bundle ' + h.bundleLabel }}</span>
-        <span
-          *ngIf="h.unit as u"
-          class="hover-unit-chip"
-          [style.--unit-color]="u.color"
-        >
-          <span class="unit-dot"></span>
-          {{ u.label }}
-        </span>
-        <span
-          *ngIf="h.secondaryUnit as su"
-          class="hover-unit-chip secondary"
-          [style.--unit-color]="su.color"
-        >
-          +{{ su.label }}
-        </span>
-        <span *ngIf="!h.unit && !h.pallasPrimitive" class="hover-idle">Idle</span>
-        <span
-          *ngIf="h.pallasPrimitive as pp"
-          class="hover-pallas-chip"
-          [style.--pallas-color]="h.pallasColor"
-        >
-          {{ pp }}
-        </span>
-        <span *ngIf="h.region" class="hover-region">{{ h.region }}</span>
+        <ng-container *ngIf="h.target || h.trackName; else binSummary">
+          <span *ngIf="h.trackName" class="hover-track">{{ h.trackName }}</span>
+          <span
+            *ngIf="h.target as t"
+            class="hover-chip hover-target-chip"
+            [style.--chip-bg]="t.color"
+            [style.--chip-fg]="t.textColor"
+          >
+            {{ t.label }}
+          </span>
+          <span *ngIf="h.targetDetail || h.region" class="hover-detail">{{ h.targetDetail || h.region }}</span>
+        </ng-container>
+        <ng-template #binSummary>
+          <span
+            *ngIf="h.unit as u"
+            class="hover-chip hover-unit-chip"
+            [style.--chip-bg]="u.color"
+            [style.--chip-fg]="u.textColor"
+          >
+            <span class="unit-dot"></span>
+            {{ u.label }}
+          </span>
+          <span
+            *ngIf="h.secondaryUnit as su"
+            class="hover-chip hover-unit-chip secondary"
+            [style.--chip-bg]="su.color"
+            [style.--chip-fg]="su.textColor"
+          >
+            {{ su.label }}
+          </span>
+          <span *ngIf="!h.unit && !h.pallas" class="hover-idle">Idle</span>
+          <span
+            *ngIf="h.pallas as pp"
+            class="hover-chip hover-pallas-chip"
+            [style.--chip-bg]="pp.color"
+            [style.--chip-fg]="pp.textColor"
+          >
+            {{ pp.label }}
+          </span>
+          <span *ngIf="h.region" class="hover-region">{{ h.region }}</span>
+        </ng-template>
       </div>
     </div>
   </div>

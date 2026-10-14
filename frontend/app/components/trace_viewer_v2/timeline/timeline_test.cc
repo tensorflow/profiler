@@ -13,6 +13,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -15925,6 +15926,14 @@ TEST(TimelineTest, EmitsMinimapUpdatedWhenMinimapEnabledWithTimeAxisAndSteps) {
   ASSERT_EQ(bins.size(), 160u);
   EXPECT_EQ(std::any_cast<std::string>(bins[30].at("unit")), "XLA Ops");
 
+  // Steps sit above XLA Modules on the canvas, so the minimap stacks the
+  // Steps row first and labels both rows with their track names.
+  EXPECT_TRUE(std::any_cast<bool>(summary.at("regionsFirst")));
+  EXPECT_EQ(std::any_cast<std::string>(summary.at("regionsTrackName")),
+            "Steps");
+  EXPECT_EQ(std::any_cast<std::string>(summary.at("pallasTrackName")),
+            "XLA Modules");
+
   // Simulate an incremental zoom-in refetch covering only [1200, 1300]:
   // SyncMinimapState should preserve the existing full-trace schedule rather
   // than recomputing bins from the partial slice.
@@ -15935,6 +15944,186 @@ TEST(TimelineTest, EmitsMinimapUpdatedWhenMinimapEnabledWithTimeAxisAndSteps) {
   timeline.SetVisibleRange({1220.0, 1280.0});
   ASSERT_FALSE(minimap_updates.empty());
   EXPECT_FALSE(minimap_updates.back().contains("bins"));
+}
+
+// Builds flame chart data where `levels[i]` lists the (name, start, duration)
+// events on level i. Events on a level must be sorted by start time.
+FlameChartTimelineData BuildMinimapTestData(
+    std::vector<Group> groups,
+    const std::vector<std::vector<std::tuple<std::string, double, double>>>&
+        levels) {
+  FlameChartTimelineData data;
+  data.groups = std::move(groups);
+  data.level_offsets.push_back(0);
+  for (size_t lvl = 0; lvl < levels.size(); ++lvl) {
+    for (const auto& [name, start, duration] : levels[lvl]) {
+      data.level_event_indices.push_back(
+          static_cast<int>(data.entry_names.size()));
+      data.entry_names.push_back(name);
+      data.entry_levels.push_back(static_cast<int>(lvl));
+      data.entry_start_times.push_back(start);
+      data.entry_total_times.push_back(duration);
+      data.entry_self_times.push_back(duration);
+      data.entry_args.push_back({});
+    }
+    data.level_offsets.push_back(
+        static_cast<int>(data.level_event_indices.size()));
+  }
+  return data;
+}
+
+std::vector<EventData> CaptureMinimapUpdates(Timeline& timeline,
+                                             FlameChartTimelineData data,
+                                             TimeRange range) {
+  std::vector<EventData> updates;
+  timeline.set_event_callback(
+      [&](absl::string_view type, const EventData& detail) {
+        if (type == kMinimapUpdated) {
+          updates.push_back(detail);
+        }
+      });
+  timeline.SetTimelineData(std::move(data));
+  timeline.set_data_time_range(range);
+  timeline.SetVisibleRange(range);
+  timeline.set_event_callback(nullptr);
+  return updates;
+}
+
+// Formats an ImU32 color as the CSS `#rrggbb` string sent to the minimap.
+std::string CssHex(ImU32 color) {
+  return absl::StrCat("#", absl::Hex(color & 0xFF, absl::kZeroPad2),
+                      absl::Hex((color >> 8) & 0xFF, absl::kZeroPad2),
+                      absl::Hex((color >> 16) & 0xFF, absl::kZeroPad2));
+}
+
+TEST(TimelineTest, MinimapScopeRowsMirrorCanvasLevelsAndMergeTinyEvents) {
+  ColorPalette palette = ColorPalette::Default();
+  Timeline timeline(palette);
+  timeline.set_event_tooltip_enabled(false);
+
+  std::vector<std::tuple<std::string, double, double>> tiny_level = {
+      {"get", 0.0, 400.0}};
+  // 20 contiguous events far narrower than a minimap pixel.
+  for (int i = 0; i < 20; ++i) {
+    tiny_level.push_back({i % 2 == 0 ? "swap" : "sub", 400.0 + i * 0.5, 0.5});
+  }
+  tiny_level.push_back({"mul", 410.0, 590.0});
+  std::vector<std::tuple<std::string, double, double>> mxu_level;
+  for (int i = 0; i < 500; ++i) {
+    mxu_level.push_back({"vmatmul", static_cast<double>(i), 1.0});
+  }
+
+  FlameChartTimelineData data = BuildMinimapTestData(
+      {{.name = "Pallas Primitives",
+        .start_level = 0,
+        .nesting_level = 1,
+        .expanded = true},
+       {.name = "Regions",
+        .start_level = 4,
+        .nesting_level = 1,
+        .expanded = true},
+       {.name = "MXU", .start_level = 5, .nesting_level = 1, .expanded = true},
+       // A track without events must not produce an empty lane.
+       {.name = "EUP", .start_level = 6, .nesting_level = 1, .expanded = true},
+       {.name = "XLU", .start_level = 7, .nesting_level = 1, .expanded = true}},
+      {
+          {{"dma_start", 0.0, 1000.0}},
+          {{"dma_wait", 0.0, 1000.0}},
+          tiny_level,
+          // Depth 3 is deeper than the minimap mirrors.
+          {{"quantize", 0.0, 100.0}},
+          {{"loop.body", 0.0, 1000.0}},
+          mxu_level,
+          {},
+          {{"vrot", 500.0, 1.0}},
+      });
+
+  const std::vector<EventData> updates =
+      CaptureMinimapUpdates(timeline, std::move(data), {0.0, 1000.0});
+  ASSERT_FALSE(updates.empty());
+  const EventData& summary = updates.front();
+
+  const auto& pallas = std::any_cast<const std::vector<EventData>&>(
+      summary.at("pallasPrimitives"));
+  std::vector<std::pair<std::string, int>> name_and_depth;
+  for (const EventData& marker : pallas) {
+    name_and_depth.push_back({std::any_cast<std::string>(marker.at("name")),
+                              std::any_cast<int>(marker.at("depth"))});
+  }
+  EXPECT_THAT(name_and_depth,
+              ::testing::ElementsAre(
+                  ::testing::Pair("dma_start", 0),
+                  ::testing::Pair("dma_wait", 1), ::testing::Pair("get", 2),
+                  ::testing::Pair("swap", 2), ::testing::Pair("mul", 2)));
+  // The run of tiny events collapses into one tile covering the whole run,
+  // painted with the blend of its event colors like the canvas overview.
+  const EventData& tile = pallas[3];
+  EXPECT_EQ(std::any_cast<int>(tile.at("count")), 20);
+  EXPECT_DOUBLE_EQ(std::any_cast<double>(tile.at("startUs")), 400.0);
+  EXPECT_DOUBLE_EQ(std::any_cast<double>(tile.at("durationUs")), 10.0);
+  EXPECT_FALSE(pallas[2].contains("count"));
+  const ImU32 get_color = GetColorForId("get", palette.GetTraceColors());
+  EXPECT_EQ(std::any_cast<std::string>(pallas[2].at("color")),
+            CssHex(get_color));
+
+  EXPECT_FALSE(std::any_cast<bool>(summary.at("regionsFirst")));
+  EXPECT_EQ(std::any_cast<std::string>(summary.at("pallasTrackName")),
+            "Pallas Primitives");
+  EXPECT_EQ(std::any_cast<std::string>(summary.at("regionsTrackName")),
+            "Regions");
+
+  const auto& lanes =
+      std::any_cast<const std::vector<EventData>&>(summary.at("lanes"));
+  ASSERT_EQ(lanes.size(), 2u);
+  EXPECT_EQ(std::any_cast<std::string>(lanes[0].at("name")), "MXU");
+  EXPECT_EQ(std::any_cast<std::string>(lanes[1].at("name")), "XLU");
+  const auto& mxu_cells =
+      std::any_cast<const std::vector<std::string>&>(lanes[0].at("cells"));
+  ASSERT_EQ(mxu_cells.size(), 320u);
+  // Densely packed instructions paint opaque cells in the canvas color.
+  const ImU32 mxu_color = GetColorForId("vmatmul", palette.GetTraceColors());
+  const std::string mxu_hex = CssHex(mxu_color);
+  EXPECT_EQ(mxu_cells[0], absl::StrCat(mxu_hex, "ff"));
+  EXPECT_EQ(mxu_cells[159], absl::StrCat(mxu_hex, "ff"));
+  EXPECT_EQ(mxu_cells[160], "");
+  // A lone instruction covering 3 of 8 sub-slots is drawn translucent.
+  const auto& xlu_cells =
+      std::any_cast<const std::vector<std::string>&>(lanes[1].at("cells"));
+  EXPECT_EQ(xlu_cells[159], "");
+  ASSERT_EQ(xlu_cells[160].size(), 9u);
+  EXPECT_EQ(xlu_cells[160].substr(7), "92");
+
+  // Hover bins report the blended lane color of their dominant unit.
+  const auto& bins =
+      std::any_cast<const std::vector<EventData>&>(summary.at("bins"));
+  EXPECT_EQ(std::any_cast<std::string>(bins[10].at("unit")), "MXU");
+  EXPECT_EQ(std::any_cast<std::string>(bins[10].at("unitColor")), mxu_hex);
+}
+
+TEST(TimelineTest, MinimapMergesConsecutiveTracksWhenLanesOverflow) {
+  ColorPalette palette = ColorPalette::Default();
+  Timeline timeline(palette);
+  timeline.set_event_tooltip_enabled(false);
+
+  std::vector<Group> groups;
+  std::vector<std::vector<std::tuple<std::string, double, double>>> levels;
+  for (int i = 0; i < 14; ++i) {
+    groups.push_back({.name = absl::StrCat("Track ", i),
+                      .start_level = i,
+                      .nesting_level = 1,
+                      .expanded = true});
+    levels.push_back({{absl::StrCat("op_", i), i * 10.0, 10.0}});
+  }
+
+  const std::vector<EventData> updates = CaptureMinimapUpdates(
+      timeline, BuildMinimapTestData(std::move(groups), levels), {0.0, 140.0});
+  ASSERT_FALSE(updates.empty());
+  const auto& lanes =
+      std::any_cast<const std::vector<EventData>&>(updates.front().at("lanes"));
+  ASSERT_EQ(lanes.size(), 12u);
+  EXPECT_EQ(std::any_cast<std::string>(lanes[0].at("name")), "Track 0");
+  EXPECT_EQ(std::any_cast<std::string>(lanes[5].at("name")), "Track 5 +1");
+  EXPECT_EQ(std::any_cast<std::string>(lanes[11].at("name")), "Track 12 +1");
 }
 
 TEST(TimelineTest, CompactTimelineDataRemapsAndClearsSparseEntryGroupIds) {

@@ -1,6 +1,8 @@
 #include <algorithm>
+#include <bitset>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <iterator>
 #include <limits>
 #include <string>
@@ -9,6 +11,7 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
@@ -34,6 +37,61 @@ std::string FormatCssHexColor(ImU32 color) {
   return absl::StrFormat("#%02x%02x%02x", color & 0xFF, (color >> 8) & 0xFF,
                          (color >> 16) & 0xFF);
 }
+
+// Formats an ImU32 color (0xAABBGGRR) as a lowercase CSS #rrggbbaa hex string.
+std::string FormatCssHexColorWithAlpha(ImU32 color) {
+  return absl::StrFormat("#%02x%02x%02x%02x", color & 0xFF, (color >> 8) & 0xFF,
+                         (color >> 16) & 0xFF, (color >> 24) & 0xFF);
+}
+
+// Accumulates duration-weighted RGB channels, mirroring how the canvas blends
+// the colors of sub-pixel events into a single overview tile.
+struct ColorAccumulator {
+  double weight = 0.0;
+  double r = 0.0;
+  double g = 0.0;
+  double b = 0.0;
+
+  void Add(ImU32 color, double w) {
+    weight += w;
+    r += w * static_cast<double>((color >> IM_COL32_R_SHIFT) & 0xFF);
+    g += w * static_cast<double>((color >> IM_COL32_G_SHIFT) & 0xFF);
+    b += w * static_cast<double>((color >> IM_COL32_B_SHIFT) & 0xFF);
+  }
+
+  void Add(const ColorAccumulator& other) {
+    weight += other.weight;
+    r += other.r;
+    g += other.g;
+    b += other.b;
+  }
+
+  // Returns the blended color with the given alpha, or 0 if nothing was added.
+  ImU32 Blend(ImU32 alpha = 0xFF) const {
+    if (weight <= 0.0) return 0;
+    auto channel = [this](double sum) {
+      return static_cast<ImU32>(
+          std::clamp(std::lround(sum / weight), 0L, 255L));
+    };
+    return IM_COL32(channel(r), channel(g), channel(b), alpha);
+  }
+};
+
+// One cell of a minimap activity lane. `coverage_slots` is a bitmask of the
+// equal-width sub-slots of the cell that contain at least one event, which
+// approximates how much of the cell the canvas paints at overview zoom.
+struct MinimapLaneCell {
+  ColorAccumulator color;
+  uint8_t coverage_slots = 0;
+};
+
+// Number of coverage sub-slots tracked per lane cell (bits of
+// `MinimapLaneCell::coverage_slots`).
+constexpr int kLaneCellCoverageSlots = 8;
+
+// Opacity of a lane cell with a single occupied sub-slot. Fully covered cells
+// are opaque so dense activity matches the canvas colors exactly.
+constexpr double kMinLaneCellAlpha = 0.4;
 
 struct InstructionSummary {
   std::string track_name;
@@ -1071,10 +1129,28 @@ void Timeline::SyncMinimapState() {
 void Timeline::PopulateMinimapScheduleSummary(Microseconds data_start,
                                               Microseconds data_end,
                                               EventData& payload) const {
+  // Hover detail bins sent to the minimap.
   constexpr int kNumMinimapBins = 160;
-  constexpr size_t kMaxMinimapRegions = 24;
+  // Activity lanes are rasterized at a finer resolution than the hover bins;
+  // every bin spans exactly `kLaneCellsPerBin` lane cells.
+  constexpr int kLaneCellsPerBin = 2;
+  constexpr int kNumMinimapLaneCells = kNumMinimapBins * kLaneCellsPerBin;
   constexpr size_t kMaxMinimapUnits = 32;
+  // Consecutive unit tracks are merged into one lane once there are more of
+  // them than lanes, like downsampling the canvas vertically.
+  constexpr size_t kMaxMinimapLanes = 12;
   constexpr int kMaxLevelsPerUnitGroup = 8;
+  // Scope tracks (Regions, Pallas Primitives, ...) mirror their top flame
+  // levels, one minimap row per canvas level.
+  constexpr int kMaxMinimapScopeRows = 3;
+  // Scope events shorter than `total_span / kMinimapScopeResolution` are
+  // merged with close neighbors into blended tiles, like the canvas does for
+  // sub-pixel events at overview zoom.
+  constexpr double kMinimapScopeResolution = 640.0;
+  // Merged scope tiles never grow wider than this many resolution units, so
+  // long runs of tiny events keep their local colors.
+  constexpr double kMaxMinimapScopeTileUnits = 8.0;
+  constexpr size_t kMaxMinimapMarkersPerRow = 128;
   const Microseconds total_span = data_end - data_start;
   if (total_span <= 0.0) {
     return;
@@ -1141,6 +1217,16 @@ void Timeline::PopulateMinimapScheduleSummary(Microseconds data_start,
   int steps_group_index = -1;
   int xla_modules_group_index = -1;
   int framework_scope_group_index = -1;
+  // Tracks without any events would only add empty minimap lanes.
+  auto group_has_events = [&](int g_idx) {
+    const int start_lvl = std::max(0, timeline_data_.groups[g_idx].start_level);
+    const int end_lvl =
+        std::min(GetNextGroupStartLevel(timeline_data_, g_idx), total_levels);
+    for (int lvl = start_lvl; lvl < end_lvl; ++lvl) {
+      if (!timeline_data_.level_events(lvl).empty()) return true;
+    }
+    return false;
+  };
   for (size_t g_idx = 0; g_idx < timeline_data_.groups.size(); ++g_idx) {
     const Group& g = timeline_data_.groups[g_idx];
     if (g.type != Group::Type::kFlame ||
@@ -1178,7 +1264,8 @@ void Timeline::PopulateMinimapScheduleSummary(Microseconds data_start,
       }
       continue;
     }
-    if (unit_names.size() < kMaxMinimapUnits) {
+    if (unit_names.size() < kMaxMinimapUnits &&
+        group_has_events(static_cast<int>(g_idx))) {
       unit_names.push_back(g.name);
       unit_group_indices.push_back(static_cast<int>(g_idx));
     }
@@ -1186,16 +1273,21 @@ void Timeline::PopulateMinimapScheduleSummary(Microseconds data_start,
   if (unit_names.empty()) {
     for (int g_idx : all_flame_group_indices) {
       if (unit_names.size() >= kMaxMinimapUnits) break;
+      if (!group_has_events(g_idx)) continue;
       unit_names.push_back(timeline_data_.groups[g_idx].name);
       unit_group_indices.push_back(g_idx);
     }
   }
 
+  // Rasterize every unit track into lane cells. Each cell keeps the
+  // overlap-weighted blend of its event colors (the canvas's overview tile
+  // color) and which sub-slots are occupied (how much of the cell the canvas
+  // paints).
   const size_t num_units = unit_names.size();
-  std::vector<double> unit_bin_overlap(num_units * kNumMinimapBins, 0.0);
-  std::vector<int> unit_bin_best_event(num_units * kNumMinimapBins, -1);
-  std::vector<double> unit_bin_best_overlap(num_units * kNumMinimapBins, 0.0);
-  std::vector<double> bin_total_overlap(kNumMinimapBins, 0.0);
+  const Microseconds lane_cell_width = total_span / kNumMinimapLaneCells;
+  const Microseconds coverage_slot_width =
+      lane_cell_width / kLaneCellCoverageSlots;
+  std::vector<MinimapLaneCell> unit_cells(num_units * kNumMinimapLaneCells);
 
   for (size_t u = 0; u < num_units; ++u) {
     const int g_idx = unit_group_indices[u];
@@ -1204,6 +1296,7 @@ void Timeline::PopulateMinimapScheduleSummary(Microseconds data_start,
     const int end_lvl =
         std::min({GetNextGroupStartLevel(timeline_data_, g_idx), total_levels,
                   start_lvl + kMaxLevelsPerUnitGroup});
+    MinimapLaneCell* cells = &unit_cells[u * kNumMinimapLaneCells];
     for (int lvl = start_lvl; lvl < end_lvl; ++lvl) {
       for (int idx : timeline_data_.level_events(lvl)) {
         if (idx < 0 || static_cast<size_t>(idx) >= num_entries) continue;
@@ -1213,39 +1306,51 @@ void Timeline::PopulateMinimapScheduleSummary(Microseconds data_start,
             std::min(data_end, timeline_data_.entry_start_times[idx] +
                                    timeline_data_.entry_total_times[idx]);
         if (e <= s) continue;
-        const int b0 =
-            std::clamp(static_cast<int>((s - data_start) / bin_width), 0,
-                       kNumMinimapBins - 1);
-        const int b1 =
-            std::clamp(static_cast<int>((e - data_start - 1e-9) / bin_width), 0,
-                       kNumMinimapBins - 1);
-        for (int b = b0; b <= b1; ++b) {
-          const Microseconds bin_s = data_start + b * bin_width;
-          const Microseconds bin_e = bin_s + bin_width;
-          const Microseconds overlap = std::min(e, bin_e) - std::max(s, bin_s);
-          if (overlap > 0.0) {
-            const size_t cell = u * kNumMinimapBins + b;
-            unit_bin_overlap[cell] += overlap;
-            if (overlap > unit_bin_best_overlap[cell]) {
-              unit_bin_best_overlap[cell] = overlap;
-              unit_bin_best_event[cell] = idx;
-            }
-            bin_total_overlap[b] += overlap;
+        const ImU32 color = GetEventColor(idx);
+        const int c0 =
+            std::clamp(static_cast<int>((s - data_start) / lane_cell_width), 0,
+                       kNumMinimapLaneCells - 1);
+        const int c1 = std::clamp(
+            static_cast<int>((e - data_start - 1e-9) / lane_cell_width), 0,
+            kNumMinimapLaneCells - 1);
+        for (int c = c0; c <= c1; ++c) {
+          const Microseconds cell_s = data_start + c * lane_cell_width;
+          const Microseconds lo = std::max(s, cell_s);
+          const Microseconds hi = std::min(e, cell_s + lane_cell_width);
+          if (hi <= lo) continue;
+          MinimapLaneCell& cell = cells[c];
+          cell.color.Add(color, hi - lo);
+          const int k0 =
+              std::clamp(static_cast<int>((lo - cell_s) / coverage_slot_width),
+                         0, kLaneCellCoverageSlots - 1);
+          const int k1 = std::clamp(
+              static_cast<int>((hi - cell_s - 1e-9) / coverage_slot_width), 0,
+              kLaneCellCoverageSlots - 1);
+          for (int k = k0; k <= k1; ++k) {
+            cell.coverage_slots |= static_cast<uint8_t>(1u << k);
           }
         }
       }
     }
   }
 
-  struct RegionCandidate {
+  struct ScopeTile {
+    // Longest (dominant) event of the tile; identifies it on hover and click.
     int event_index;
-    std::string name;
+    Microseconds dominant_duration;
     Microseconds start_us;
-    Microseconds duration_us;
+    Microseconds end_us;
     int depth;
+    int count;
+    ColorAccumulator color;
   };
-  auto extract_scope_group = [&](int group_index, int max_depth,
-                                 double min_span_fraction,
+  const Microseconds scope_resolution = total_span / kMinimapScopeResolution;
+  const Microseconds max_scope_tile_span =
+      scope_resolution * kMaxMinimapScopeTileUnits;
+  // Mirrors the top `max_rows` flame levels of a scope track, one row per
+  // canvas level, so nested scopes keep the exact shapes drawn by the canvas.
+  // Also records the scope name active in each hover bin (all levels).
+  auto extract_scope_group = [&](int group_index, int max_rows,
                                  bool prefer_innermost,
                                  std::vector<std::string>& bin_names,
                                  std::vector<EventData>& out_markers) {
@@ -1254,9 +1359,11 @@ void Timeline::PopulateMinimapScheduleSummary(Microseconds data_start,
     const int start_lvl = std::max(0, grp.start_level);
     const int end_lvl = std::min(
         GetNextGroupStartLevel(timeline_data_, group_index), total_levels);
-    std::vector<RegionCandidate> candidates;
+    std::vector<ScopeTile> tiles;
     for (int lvl = start_lvl; lvl < end_lvl; ++lvl) {
       const int depth = lvl - start_lvl;
+      const size_t row_begin = tiles.size();
+      bool has_open_tile = false;
       for (int idx : timeline_data_.level_events(lvl)) {
         if (idx < 0 || static_cast<size_t>(idx) >= num_entries) continue;
         const Microseconds s = timeline_data_.entry_start_times[idx];
@@ -1276,44 +1383,71 @@ void Timeline::PopulateMinimapScheduleSummary(Microseconds data_start,
             bin_names[b] = timeline_data_.entry_names[idx];
           }
         }
-        if (depth <= max_depth && d >= total_span * min_span_fraction) {
-          candidates.push_back(
-              {idx, timeline_data_.entry_names[idx], s, d, depth});
+        if (depth >= max_rows) continue;
+        const ImU32 event_color = GetEventColor(idx);
+        const bool is_narrow = d < scope_resolution;
+        if (is_narrow && has_open_tile) {
+          ScopeTile& open = tiles.back();
+          if (s - open.end_us <= scope_resolution &&
+              e - open.start_us <= max_scope_tile_span) {
+            open.end_us = std::max(open.end_us, e);
+            ++open.count;
+            open.color.Add(event_color, d);
+            if (d > open.dominant_duration) {
+              open.dominant_duration = d;
+              open.event_index = idx;
+            }
+            continue;
+          }
         }
+        ScopeTile tile{.event_index = idx,
+                       .dominant_duration = d,
+                       .start_us = s,
+                       .end_us = e,
+                       .depth = depth,
+                       .count = 1};
+        tile.color.Add(event_color, d);
+        tiles.push_back(tile);
+        has_open_tile = is_narrow;
+      }
+      // Bound the DOM cost of pathological rows by keeping the widest shapes.
+      if (tiles.size() - row_begin > kMaxMinimapMarkersPerRow) {
+        const auto row_start = tiles.begin() + row_begin;
+        std::nth_element(row_start, row_start + kMaxMinimapMarkersPerRow,
+                         tiles.end(),
+                         [](const ScopeTile& a, const ScopeTile& b) {
+                           return a.end_us - a.start_us > b.end_us - b.start_us;
+                         });
+        tiles.resize(row_begin + kMaxMinimapMarkersPerRow);
+        std::sort(tiles.begin() + row_begin, tiles.end(),
+                  [](const ScopeTile& a, const ScopeTile& b) {
+                    return a.start_us < b.start_us;
+                  });
       }
     }
-    if (candidates.size() > kMaxMinimapRegions) {
-      std::sort(candidates.begin(), candidates.end(),
-                [](const RegionCandidate& a, const RegionCandidate& b) {
-                  if (a.depth != b.depth) return a.depth < b.depth;
-                  if (a.duration_us != b.duration_us) {
-                    return a.duration_us > b.duration_us;
-                  }
-                  return a.start_us < b.start_us;
-                });
-      candidates.resize(kMaxMinimapRegions);
-    }
-    std::sort(candidates.begin(), candidates.end(),
-              [](const RegionCandidate& a, const RegionCandidate& b) {
-                if (a.start_us != b.start_us) return a.start_us < b.start_us;
-                return a.depth < b.depth;
-              });
-    out_markers.reserve(candidates.size());
-    for (const RegionCandidate& c : candidates) {
+    out_markers.reserve(tiles.size());
+    for (const ScopeTile& t : tiles) {
       EventData reg;
-      reg.try_emplace(kEventSelectedIndex, c.event_index);
-      reg.try_emplace(kEventSelectedName, c.name);
-      reg.try_emplace(kEventSelectedStart, c.start_us);
-      reg.try_emplace(kEventSelectedDuration, c.duration_us);
-      reg.try_emplace("depth", c.depth);
-      const ImU32 event_color = GetEventColor(c.event_index);
+      reg.try_emplace(kEventSelectedIndex, t.event_index);
+      reg.try_emplace(kEventSelectedName,
+                      timeline_data_.entry_names[t.event_index]);
+      reg.try_emplace(kEventSelectedStart, t.start_us);
+      reg.try_emplace(kEventSelectedDuration, t.end_us - t.start_us);
+      reg.try_emplace("depth", t.depth);
+      // Single events keep their exact canvas color; merged tiles use the
+      // blended color the canvas paints for them.
+      const ImU32 color =
+          t.count > 1 ? t.color.Blend() : GetEventColor(t.event_index);
       const ImU32 text_color = GetTextColorForContrast(
-          event_color, on_surface_color, inverse_on_surface_color);
-      reg.try_emplace("color", FormatCssHexColor(event_color));
+          color, on_surface_color, inverse_on_surface_color);
+      reg.try_emplace("color", FormatCssHexColor(color));
       reg.try_emplace("textColor", FormatCssHexColor(text_color));
-      if (timeline_data_.HasEntryArgs(static_cast<size_t>(c.event_index))) {
+      if (t.count > 1) {
+        reg.try_emplace("count", t.count);
+      }
+      if (timeline_data_.HasEntryArgs(static_cast<size_t>(t.event_index))) {
         const auto raw_args =
-            timeline_data_.GetEntryArgs(static_cast<size_t>(c.event_index));
+            timeline_data_.GetEntryArgs(static_cast<size_t>(t.event_index));
         if (auto it = raw_args.find("source");
             it != raw_args.end() && !it->second.empty()) {
           reg.try_emplace("source", it->second);
@@ -1333,35 +1467,57 @@ void Timeline::PopulateMinimapScheduleSummary(Microseconds data_start,
 
   std::vector<std::string> bin_region_names(kNumMinimapBins);
   std::vector<EventData> regions;
-  extract_scope_group(primary_region_group, /*max_depth=*/2,
-                      /*min_span_fraction=*/0.015, /*prefer_innermost=*/true,
-                      bin_region_names, regions);
+  extract_scope_group(primary_region_group, kMaxMinimapScopeRows,
+                      /*prefer_innermost=*/true, bin_region_names, regions);
+  int regions_source_group = primary_region_group;
 
   std::vector<std::string> bin_pallas_names(kNumMinimapBins);
   std::vector<EventData> pallas_primitives;
-  extract_scope_group(primary_pallas_group, /*max_depth=*/4,
-                      /*min_span_fraction=*/0.01, /*prefer_innermost=*/false,
-                      bin_pallas_names, pallas_primitives);
+  extract_scope_group(primary_pallas_group, kMaxMinimapScopeRows,
+                      /*prefer_innermost=*/false, bin_pallas_names,
+                      pallas_primitives);
+  int pallas_source_group = primary_pallas_group;
 
   std::vector<std::string> bin_named_scope_names(kNumMinimapBins);
   std::vector<EventData> named_scopes;
-  extract_scope_group(primary_named_scope_group, /*max_depth=*/2,
-                      /*min_span_fraction=*/0.015, /*prefer_innermost=*/true,
-                      bin_named_scope_names, named_scopes);
+  extract_scope_group(primary_named_scope_group, kMaxMinimapScopeRows,
+                      /*prefer_innermost=*/true, bin_named_scope_names,
+                      named_scopes);
   if (pallas_primitives.empty() && !named_scopes.empty()) {
     pallas_primitives = std::move(named_scopes);
+    pallas_source_group = primary_named_scope_group;
   }
   if (regions.empty() && !pallas_primitives.empty() &&
       primary_region_group < 0 && pallas_group_index < 0) {
     regions = std::move(pallas_primitives);
     pallas_primitives.clear();
+    regions_source_group = pallas_source_group;
+    pallas_source_group = -1;
   }
   if (regions.empty() && pallas_primitives.empty() &&
       !unit_group_indices.empty()) {
-    extract_scope_group(unit_group_indices.front(), /*max_depth=*/0,
-                        /*min_span_fraction=*/0.02, /*prefer_innermost=*/false,
-                        bin_region_names, regions);
+    extract_scope_group(unit_group_indices.front(), /*max_rows=*/1,
+                        /*prefer_innermost=*/false, bin_region_names, regions);
+    regions_source_group = unit_group_indices.front();
   }
+
+  // Total unit activity per hover bin, which normalizes the density strip.
+  std::vector<double> bin_total_overlap(kNumMinimapBins, 0.0);
+  for (size_t u = 0; u < num_units; ++u) {
+    for (int c = 0; c < kNumMinimapLaneCells; ++c) {
+      bin_total_overlap[c / kLaneCellsPerBin] +=
+          unit_cells[u * kNumMinimapLaneCells + c].color.weight;
+    }
+  }
+  // Activity of unit `u` in hover bin `b`, merged from its lane cells.
+  auto unit_bin_color = [&](size_t u, int b) {
+    ColorAccumulator color;
+    for (int j = 0; j < kLaneCellsPerBin; ++j) {
+      color.Add(unit_cells[u * kNumMinimapLaneCells + b * kLaneCellsPerBin + j]
+                    .color);
+    }
+    return color;
+  };
 
   double max_bin_total = bin_width;
   for (double val : bin_total_overlap) {
@@ -1373,38 +1529,32 @@ void Timeline::PopulateMinimapScheduleSummary(Microseconds data_start,
   for (int b = 0; b < kNumMinimapBins; ++b) {
     int best_u = -1;
     int second_u = -1;
-    double best_overlap = 0.0;
-    double second_overlap = 0.0;
+    ColorAccumulator best_color;
+    ColorAccumulator second_color;
     for (size_t u = 0; u < num_units; ++u) {
-      const double ov = unit_bin_overlap[u * kNumMinimapBins + b];
-      if (ov > best_overlap) {
-        second_overlap = best_overlap;
+      const ColorAccumulator color = unit_bin_color(u, b);
+      if (color.weight > best_color.weight) {
+        second_color = best_color;
         second_u = best_u;
-        best_overlap = ov;
+        best_color = color;
         best_u = static_cast<int>(u);
-      } else if (ov > second_overlap) {
-        second_overlap = ov;
+      } else if (color.weight > second_color.weight) {
+        second_color = color;
         second_u = static_cast<int>(u);
       }
     }
     EventData bin_data;
     bin_data.try_emplace("unit",
                          best_u >= 0 ? unit_names[best_u] : std::string());
+    // Unit colors match the blended lane color the minimap draws for the unit.
     if (best_u >= 0) {
-      const int best_evt = unit_bin_best_event[best_u * kNumMinimapBins + b];
-      if (best_evt >= 0) {
-        bin_data.try_emplace("unitColor",
-                             FormatCssHexColor(GetEventColor(best_evt)));
-      }
+      bin_data.try_emplace("unitColor", FormatCssHexColor(best_color.Blend()));
     }
-    if (second_u >= 0 && best_overlap > 0.0 &&
-        second_overlap >= best_overlap * 0.25) {
+    if (second_u >= 0 && best_color.weight > 0.0 &&
+        second_color.weight >= best_color.weight * 0.25) {
       bin_data.try_emplace("secondaryUnit", unit_names[second_u]);
-      const int sec_evt = unit_bin_best_event[second_u * kNumMinimapBins + b];
-      if (sec_evt >= 0) {
-        bin_data.try_emplace("secondaryUnitColor",
-                             FormatCssHexColor(GetEventColor(sec_evt)));
-      }
+      bin_data.try_emplace("secondaryUnitColor",
+                           FormatCssHexColor(second_color.Blend()));
     }
     const double density =
         (max_bin_total > 0.0 && bin_total_overlap[b] > 0.0)
@@ -1425,7 +1575,59 @@ void Timeline::PopulateMinimapScheduleSummary(Microseconds data_start,
     bins.push_back(std::move(bin_data));
   }
 
+  // One activity lane per unit track, in canvas order. Cell alpha encodes how
+  // much of the cell holds events, so sparse activity reads lighter while
+  // dense activity matches the canvas colors exactly.
+  const size_t num_lanes = std::min(num_units, kMaxMinimapLanes);
+  std::vector<EventData> lanes;
+  lanes.reserve(num_lanes);
+  for (size_t lane = 0; lane < num_lanes; ++lane) {
+    const size_t first_unit = lane * num_units / num_lanes;
+    const size_t end_unit = (lane + 1) * num_units / num_lanes;
+    std::vector<std::string> cells(kNumMinimapLaneCells);
+    for (int c = 0; c < kNumMinimapLaneCells; ++c) {
+      ColorAccumulator color;
+      uint8_t coverage_slots = 0;
+      for (size_t u = first_unit; u < end_unit; ++u) {
+        const MinimapLaneCell& cell = unit_cells[u * kNumMinimapLaneCells + c];
+        color.Add(cell.color);
+        coverage_slots |= cell.coverage_slots;
+      }
+      if (color.weight <= 0.0) continue;
+      const size_t occupied_slots =
+          std::bitset<kLaneCellCoverageSlots>(coverage_slots).count();
+      const double coverage =
+          static_cast<double>(std::max<size_t>(occupied_slots, 1) - 1) /
+          (kLaneCellCoverageSlots - 1);
+      const double alpha =
+          kMinLaneCellAlpha + (1.0 - kMinLaneCellAlpha) * coverage;
+      cells[c] = FormatCssHexColorWithAlpha(
+          color.Blend(static_cast<ImU32>(std::lround(alpha * 255.0))));
+    }
+    EventData lane_data;
+    lane_data.try_emplace(kEventSelectedName,
+                          end_unit - first_unit > 1
+                              ? absl::StrCat(unit_names[first_unit], " +",
+                                             end_unit - first_unit - 1)
+                              : unit_names[first_unit]);
+    lane_data.try_emplace("cells", std::move(cells));
+    lanes.push_back(std::move(lane_data));
+  }
+
   payload.try_emplace("bins", std::move(bins));
+  payload.try_emplace("lanes", std::move(lanes));
+  // Scope rows are stacked in the same order as their tracks on the canvas.
+  payload.try_emplace("regionsFirst",
+                      regions_source_group >= 0 && pallas_source_group >= 0 &&
+                          regions_source_group < pallas_source_group);
+  if (regions_source_group >= 0) {
+    payload.try_emplace("regionsTrackName",
+                        timeline_data_.groups[regions_source_group].name);
+  }
+  if (pallas_source_group >= 0) {
+    payload.try_emplace("pallasTrackName",
+                        timeline_data_.groups[pallas_source_group].name);
+  }
   payload.try_emplace("regions", std::move(regions));
   payload.try_emplace("pallasPrimitives", std::move(pallas_primitives));
 }
