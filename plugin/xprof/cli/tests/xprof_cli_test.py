@@ -564,12 +564,18 @@ class XProfCliTest(parameterized.TestCase):
     self.assertFalse(hasattr(get_kernel_stats_tool, 'compute_avg_step_time'))
 
   @mock.patch.object(
+      diff_sessions_tool.get_hlo_stats_tool,
+      'get_hlo_stats',
+      autospec=True,
+      spec_set=True,
+  )
+  @mock.patch.object(
       diff_sessions_tool.get_kernel_stats_tool,
       'get_kernel_stats',
       autospec=True,
       spec_set=True,
   )
-  def test_oss_diff_sessions(self, mock_get_kernel_stats):
+  def test_oss_diff_sessions(self, mock_get_kernel_stats, mock_get_hlo_stats):
     mock_get_kernel_stats.side_effect = [
         json.dumps({
             'total_device_duration_us': 100.0,
@@ -584,6 +590,24 @@ class XProfCliTest(parameterized.TestCase):
             ],
         }),
     ]
+    mock_get_hlo_stats.side_effect = [
+        json.dumps({
+            'records': [{'op_name': 'matmul.1', 'total_self_time_us': 60.0}],
+            'truncated': False,
+            'total_records': 1,
+            'top_level_records': 1,
+            'returned_records': 1,
+            'total_self_time_ms_all_records': 0.06,
+        }),
+        json.dumps({
+            'records': [{'op_name': 'matmul.1', 'total_self_time_us': 40.0}],
+            'truncated': False,
+            'total_records': 1,
+            'top_level_records': 1,
+            'returned_records': 1,
+            'total_self_time_ms_all_records': 0.04,
+        }),
+    ]
     res_json = diff_sessions_tool.diff_sessions(
         baseline_session_id='/tmp/base',
         optimized_session_id='/tmp/opt',
@@ -593,6 +617,12 @@ class XProfCliTest(parameterized.TestCase):
     self.assertEqual(res['total_device_duration_delta_pct'], -20.0)
     self.assertLen(res['kernel_diffs'], 1)
     self.assertEqual(res['kernel_diffs'][0]['delta_duration_us'], -20.0)
+    self.assertEqual(
+        res['hlo_stats']['baseline']['total_self_time_ms_all_records'], 0.06
+    )
+    self.assertEqual(
+        res['hlo_stats']['optimized']['total_self_time_ms_all_records'], 0.04
+    )
 
 
 class MultiTraceSelectionTest(absltest.TestCase):

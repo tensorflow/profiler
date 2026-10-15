@@ -761,6 +761,14 @@ def _format_response(
         if v is not None or k == "total_steps"
     }
   out["step_breakdown"] = [_step_to_dict(s) for s in limited_steps]
+  # Truncation markers: `limit` cuts `step_breakdown` only. Read step totals
+  # and averages from `summary`, not by summing `step_breakdown`.
+  out.update(
+      decorators.build_truncation_fields(
+          total_records=len(steps),
+          returned_records=len(limited_steps),
+      )
+  )
   return json.dumps(out, indent=2)
 
 
@@ -857,7 +865,11 @@ def get_step_trace(
         False).
 
   Returns:
-      Formatted step execution and timing breakdown in JSON format.
+      Formatted step execution and timing breakdown in JSON format. `summary`
+      carries the session step count (`total_steps`) and averages;
+      `total_records` and `returned_records` count the per-step records in
+      `step_breakdown` before and after `limit` (0 when `summary.is_aggregate`
+      is True and only aggregate overview stats are available).
   """
   session_id = str(session_id)
   client = xprof_client.get_client()
@@ -876,6 +888,11 @@ def get_step_trace(
               f"No step trace data found for session '{session_id}' (the trace"
               " may lack step markers). Consider using 'list_xplane_events' to"
               " get more performance insights."
+          ),
+          "step_breakdown": [],
+          **decorators.build_truncation_fields(
+              total_records=0,
+              returned_records=0,
           ),
       },
       indent=2,

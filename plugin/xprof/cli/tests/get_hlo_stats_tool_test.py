@@ -116,7 +116,7 @@ class GetHloStatsToolTest(parameterized.TestCase):
     self.mock_client.fetch.return_value = (None, db.SerializeToString())
 
     result = get_hlo_stats_tool.get_hlo_stats("session_123")
-    records = json.loads(result)
+    records = json.loads(result)["records"]
 
     self.assertLen(records, 3)
     self.assertEqual(records[0]["op_name"], "convolution.1")
@@ -145,7 +145,7 @@ class GetHloStatsToolTest(parameterized.TestCase):
     self.mock_client.fetch.return_value = (None, json_str.encode("utf-8"))
 
     result_str = get_hlo_stats_tool.get_hlo_stats("session_123")
-    records = json.loads(result_str)
+    records = json.loads(result_str)["records"]
 
     self.assertLen(records, 3)
     self.assertEqual(records[0]["op_name"], "convolution.1")
@@ -155,7 +155,7 @@ class GetHloStatsToolTest(parameterized.TestCase):
     self.mock_client.fetch.return_value = db.SerializeToString()
 
     result_str = get_hlo_stats_tool.get_hlo_stats("session_123")
-    records = json.loads(result_str)
+    records = json.loads(result_str)["records"]
 
     self.assertLen(records, 3)
     self.assertEqual(records[0]["op_name"], "convolution.1")
@@ -174,7 +174,7 @@ class GetHloStatsToolTest(parameterized.TestCase):
     self.mock_client.fetch.return_value = (None, db.SerializeToString())
 
     result_str = get_hlo_stats_tool.get_hlo_stats("session_123")
-    records = json.loads(result_str)
+    records = json.loads(result_str)["records"]
 
     self.assertLen(records, 1)
     self.assertEqual(
@@ -196,7 +196,7 @@ class GetHloStatsToolTest(parameterized.TestCase):
     self.mock_client.fetch.return_value = (None, db.SerializeToString())
 
     result_str = get_hlo_stats_tool.get_hlo_stats("session_123")
-    records = json.loads(result_str)
+    records = json.loads(result_str)["records"]
 
     self.assertLen(records, 1)
     # %qux is the single token immediately preceding ' =' without internal '%'
@@ -216,7 +216,7 @@ class GetHloStatsToolTest(parameterized.TestCase):
     result_str = get_hlo_stats_tool.get_hlo_stats(
         "session_123", sort_by=sort_by
     )
-    records = json.loads(result_str)
+    records = json.loads(result_str)["records"]
     actual_order = [r["op_name"] for r in records]
     self.assertEqual(actual_order, expected_order)
 
@@ -227,17 +227,60 @@ class GetHloStatsToolTest(parameterized.TestCase):
     result_str = get_hlo_stats_tool.get_hlo_stats(
         "session_123", category_filter="Convolution"
     )
-    records = json.loads(result_str)
+    records = json.loads(result_str)["records"]
     self.assertLen(records, 1)
     self.assertEqual(records[0]["op_name"], "convolution.1")
 
-  def test_limit(self):
+  def test_limit_marks_truncation_and_keeps_totals(self):
     db = self._create_fake_database()
     self.mock_client.fetch.return_value = (None, db.SerializeToString())
 
-    result_str = get_hlo_stats_tool.get_hlo_stats("session_123", limit=2)
-    records = json.loads(result_str)
-    self.assertLen(records, 2)
+    payload = json.loads(
+        get_hlo_stats_tool.get_hlo_stats("session_123", limit=2)
+    )
+
+    self.assertLen(payload["records"], 2)
+    self.assertTrue(payload["truncated"])
+    self.assertEqual(payload["total_records"], 3)
+    self.assertEqual(payload["returned_records"], 2)
+    # 1000 + 800 + 200 us over all rows, not the 1800 us of the two rows.
+    self.assertEqual(payload["total_self_time_ms_all_records"], 2.0)
+
+  @parameterized.named_parameters(
+      ("limit_above_count", 20),
+      ("limit_equals_count", 3),
+      ("no_limit", 0),
+  )
+  def test_limit_not_truncated(self, limit):
+    db = self._create_fake_database()
+    self.mock_client.fetch.return_value = (None, db.SerializeToString())
+
+    payload = json.loads(
+        get_hlo_stats_tool.get_hlo_stats("session_123", limit=limit)
+    )
+
+    self.assertLen(payload["records"], 3)
+    self.assertFalse(payload["truncated"])
+    self.assertEqual(payload["total_records"], 3)
+    self.assertEqual(payload["returned_records"], 3)
+    self.assertEqual(payload["total_self_time_ms_all_records"], 2.0)
+
+  def test_total_self_time_excludes_nested_rows(self):
+    db = self._create_database_with_nested()
+    self.mock_client.fetch.return_value = (None, db.SerializeToString())
+
+    payload = json.loads(
+        get_hlo_stats_tool.get_hlo_stats(
+            "session_123", include_nested=True, limit=1
+        )
+    )
+
+    self.assertTrue(payload["truncated"])
+    self.assertEqual(payload["total_records"], 3)
+    self.assertEqual(payload["top_level_records"], 2)
+    self.assertEqual(payload["returned_records"], 1)
+    # 800 + 200 us of top-level rows; the 500 us SparseCore row is excluded.
+    self.assertEqual(payload["total_self_time_ms_all_records"], 1.0)
 
   def test_error_fetch_failure(self):
     self.mock_client.fetch.side_effect = RuntimeError("Connection Refused")
@@ -343,7 +386,7 @@ class GetHloStatsToolTest(parameterized.TestCase):
     )
 
     result_str = get_hlo_stats_tool.get_hlo_stats("session_123")
-    records = json.loads(result_str)
+    records = json.loads(result_str)["records"]
 
     self.assertLen(records, 2)
     self.assertEqual(records[0]["op_name"], "convolution.1")
@@ -496,7 +539,7 @@ class GetHloStatsToolTest(parameterized.TestCase):
     )
 
     result_str = get_hlo_stats_tool.get_hlo_stats("session_server_datatable")
-    records = json.loads(result_str)
+    records = json.loads(result_str)["records"]
 
     self.assertLen(records, 1)
     self.assertEqual(records[0]["rank"], 1)
@@ -523,6 +566,11 @@ class GetHloStatsToolTest(parameterized.TestCase):
 
     self.assertEqual(payload["status"], "NO_DATA")
     self.assertEmpty(payload["records"])
+    self.assertFalse(payload["truncated"])
+    self.assertEqual(payload["total_records"], 0)
+    self.assertEqual(payload["top_level_records"], 0)
+    self.assertEqual(payload["returned_records"], 0)
+    self.assertEqual(payload["total_self_time_ms_all_records"], 0.0)
     self.assertIn("No HLO stats records found", payload["message"])
     self.assertIn("custom_call_tracing", payload["guidance"].replace("-", "_"))
 
@@ -561,7 +609,9 @@ class GetHloStatsToolTest(parameterized.TestCase):
     self.mock_client.fetch.return_value = (None, db.SerializeToString())
 
     with mock.patch.object(sys, "stderr", new_callable=io.StringIO) as stderr:
-      records = json.loads(get_hlo_stats_tool.get_hlo_stats("session_123"))
+      records = json.loads(get_hlo_stats_tool.get_hlo_stats("session_123"))[
+          "records"
+      ]
 
     self.assertEqual(
         [r["op_name"] for r in records],
@@ -580,7 +630,7 @@ class GetHloStatsToolTest(parameterized.TestCase):
     with mock.patch.object(sys, "stderr", new_callable=io.StringIO) as stderr:
       records = json.loads(
           get_hlo_stats_tool.get_hlo_stats("session_123", include_nested=True)
-      )
+      )["records"]
 
     self.assertNotIn("xprof-note", stderr.getvalue())
     self.assertEqual(
@@ -605,6 +655,11 @@ class GetHloStatsToolTest(parameterized.TestCase):
 
     self.assertEqual(payload["status"], "NO_DATA")
     self.assertEmpty(payload["records"])
+    self.assertFalse(payload["truncated"])
+    self.assertEqual(payload["total_records"], 0)
+    self.assertEqual(payload["top_level_records"], 0)
+    self.assertEqual(payload["returned_records"], 0)
+    self.assertEqual(payload["total_self_time_ms_all_records"], 0.0)
     self.assertIn("--include_nested=True", payload["message"])
 
   def test_datatable_nested_row_hidden_by_default(self):
@@ -645,12 +700,14 @@ class GetHloStatsToolTest(parameterized.TestCase):
         json.dumps(datatable_json).encode("utf-8"),
     )
 
-    records = json.loads(get_hlo_stats_tool.get_hlo_stats("session_dt"))
+    records = json.loads(get_hlo_stats_tool.get_hlo_stats("session_dt"))[
+        "records"
+    ]
     self.assertEqual([r["op_name"] for r in records], ["rs.1.call-done"])
 
     records = json.loads(
         get_hlo_stats_tool.get_hlo_stats("session_dt", include_nested=True)
-    )
+    )["records"]
     self.assertEqual(records[1]["parent_op_name"], "rs.1.call-done")
     self.assertEqual(records[1]["core_type"], "SparseCore")
 

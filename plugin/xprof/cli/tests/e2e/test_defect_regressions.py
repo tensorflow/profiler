@@ -695,7 +695,7 @@ class DefectRegressionsTest(parameterized.TestCase):
     """D-20: get_hlo_stats parses production DataTable schema without corrupt trace error."""
     # 1. Test live execution on real v6e trace (t1_path)
     res_raw = get_hlo_stats_tool.get_hlo_stats(self.t1_path, limit=10)
-    records = json.loads(res_raw)
+    records = json.loads(res_raw)["records"]
     self.assertIsInstance(records, list)
     self.assertNotEmpty(records)
 
@@ -716,14 +716,14 @@ class DefectRegressionsTest(parameterized.TestCase):
     res_bypass_raw = get_hlo_stats_tool.get_hlo_stats(
         self.t1_path, limit=5, bypass_cache=True
     )
-    records_bypass = json.loads(res_bypass_raw)
+    records_bypass = json.loads(res_bypass_raw)["records"]
     self.assertLen(records_bypass, 5)
 
     # 3. Test sorting
     res_sort_raw = get_hlo_stats_tool.get_hlo_stats(
         self.t1_path, limit=5, sort_by="total_time"
     )
-    records_sort = json.loads(res_sort_raw)
+    records_sort = json.loads(res_sort_raw)["records"]
     self.assertLen(records_sort, 5)
     self.assertGreaterEqual(
         records_sort[0]["total_time_us"], records_sort[1]["total_time_us"]

@@ -331,6 +331,12 @@ class OssKernelUtilizationToolTest(parameterized.TestCase):
         result["devices"][0]["kernels"][0]["mxu_utilization"], 25.0
     )
     self.assertEqual(self.mock_client.fetch.call_count, 2)
+    mock_get_kernel_stats.assert_called_once_with(
+        "session_v7x",
+        kernel_name="matmul_optimized.1",
+        limit=0,
+        bypass_cache=True,
+    )
 
   @mock.patch.object(
       get_kernel_utilization_tool.kernel_stats_tools,

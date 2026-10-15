@@ -30,7 +30,10 @@ pytype_library(
     name = "kernel_stats_tools",
     srcs = ["kernel_stats_tools.py"],
     # strict_deps = False,
-    deps = [":xplane_tools"],
+    deps = [
+        ":xplane_tools",
+        "//plugin/xprof/cli/internal:decorators",
+    ],
 )
 
 pytype_library(

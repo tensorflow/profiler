@@ -78,6 +78,46 @@ def llo_data_absent_response(error: str) -> dict[str, Any]:
   )
 
 
+_STDERR_NOTES = threading.local()
+
+
+def emit_stderr_note(note: str) -> None:
+  """Writes a side-channel note to stderr and records it for cache replay."""
+  sys.stderr.write(note)
+  notes = getattr(_STDERR_NOTES, "notes", None)
+  if isinstance(notes, list):
+    notes.append(note)
+
+
+def build_truncation_fields(
+    *,
+    total_records: int,
+    returned_records: int,
+    truncated: bool | None = None,
+    top_level_records: int | None = None,
+    total_field: str | None = None,
+    total_value: float | None = None,
+    ndigits: int = 4,
+) -> dict[str, Any]:
+  """Builds standardized truncation and un-sliced total fields for CLI tables."""
+  fields: dict[str, Any] = {
+      "truncated": (
+          returned_records < total_records
+          if truncated is None
+          else bool(truncated)
+      ),
+      "total_records": total_records,
+      "returned_records": returned_records,
+  }
+  if top_level_records is not None:
+    fields["top_level_records"] = top_level_records
+  if total_field is not None:
+    fields[total_field] = (
+        round(float(total_value), ndigits) if total_value is not None else None
+    )
+  return fields
+
+
 _FINGERPRINT_CACHE_MAXSIZE = 1024
 _FINGERPRINT_MEM_CACHE: collections.OrderedDict[Any, str] = (
     collections.OrderedDict()
@@ -508,7 +548,8 @@ def _add_cache_indicator(value: Any, set_time: float | None = None) -> Any:
         data["__cached__"] = True
         if set_time is not None:
           data["__cache_age_s__"] = round(time.time() - set_time, 2)
-        return json.dumps(data)
+        indent = 2 if "\n" in value else None
+        return json.dumps(data, indent=indent)
     except json.JSONDecodeError:
       pass
   return value
@@ -676,15 +717,37 @@ def cached(
 
         if value is not _UNKNOWN:
           logging.debug("Cache hit for %s", getattr(func, "__name__", ""))
+          try:
+            stderr_note = cache_instance.get(f"{key}:stderr", default=_UNKNOWN)
+            if isinstance(stderr_note, str) and stderr_note:
+              emit_stderr_note(stderr_note)
+          except Exception:  # pylint: disable=broad-except
+            pass
           return _add_cache_indicator(value, set_time=set_time)
 
       # 3. MISS or BYPASS.
       logging.debug("Cache miss for %s", getattr(func, "__name__", ""))
-      result = func(*args, **kwargs_call)
+      prev_notes = getattr(_STDERR_NOTES, "notes", None)
+      current_notes: list[str] = []
+      _STDERR_NOTES.notes = current_notes
+      try:
+        result = func(*args, **kwargs_call)
+      finally:
+        _STDERR_NOTES.notes = prev_notes
+        if isinstance(prev_notes, list) and current_notes:
+          prev_notes.extend(current_notes)
 
       # 4. Store in cache.
       try:
         cache_instance.set(key, result, expire=expire, **kwargs)
+        if current_notes:
+          cache_instance.set(
+              f"{key}:stderr", "".join(current_notes), expire=expire, **kwargs
+          )
+        elif not _is_error_payload(result) and hasattr(
+            cache_instance, "delete"
+        ):
+          cache_instance.delete(f"{key}:stderr")
       except Exception:  # pylint: disable=broad-except
         logging.warning("Failed to store in cache", exc_info=True)
 

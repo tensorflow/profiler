@@ -4,7 +4,6 @@ import dataclasses
 import json
 import logging
 import re
-import sys
 from typing import Any
 
 from google.protobuf import json_format
@@ -395,10 +394,17 @@ def get_hlo_stats(
     bypass_cache: Whether to bypass cache and recompute metrics.
 
   Returns:
-    A JSON-formatted string. On success this is a list of HLO operation
-    statistics. When the trace parses but contains no HLO-level operations,
-    a Tier 2 envelope ``{"status": "NO_DATA", "records": [], ...}`` is
-    returned instead, with exit code 0.
+    A JSON-formatted string. On success this is an object whose `records`
+    key holds the HLO operation statistics, sorted by `sort_by` and cut to
+    `limit` rows. The object also has `truncated` (True if `limit` dropped
+    rows), `total_records` (matching rows before `limit`),
+    `top_level_records` (matching non-nested rows before `limit`),
+    `returned_records`, and `total_self_time_ms_all_records` (self time of
+    all matching top-level rows before `limit`; nested rows are excluded).
+    Read totals from these fields, not by summing `records`. When the trace
+    parses but contains no HLO-level operations, a Tier 2 envelope
+    ``{"status": "NO_DATA", "records": [], ...}`` with zeroed truncation
+    fields is returned instead, with exit code 0.
 
   Raises:
     RuntimeError: If fetching or parsing HLO stats fails.
@@ -440,6 +446,13 @@ def get_hlo_stats(
       data, category_filter=category_filter
   )
   num_nested = sum(1 for record in extracted_records if record.is_nested)
+  empty_truncation = decorators.build_truncation_fields(
+      total_records=0,
+      returned_records=0,
+      top_level_records=0,
+      total_field="total_self_time_ms_all_records",
+      total_value=0.0,
+  )
   if not include_nested and num_nested:
     top_level = [record for record in extracted_records if not record.is_nested]
     if not top_level:
@@ -453,13 +466,14 @@ def get_hlo_stats(
                   " pass --include_nested=True to list them."
               ),
               "records": [],
+              **empty_truncation,
           },
           indent=2,
       )
     extracted_records = top_level
-    # The result is a plain list, so report hidden rows on stderr, in the
-    # same style as the `xprof-capture:` line, instead of changing its shape.
-    sys.stderr.write(
+    # Report hidden rows on stderr, in the same style as the
+    # `xprof-capture:` line.
+    decorators.emit_stderr_note(
         f"xprof-note: hid {num_nested} nested operation(s) (e.g. SparseCore"
         " ops inside a TensorCore offload op; their time is SparseCore time,"
         " not TensorCore time). Pass --include_nested=True to list them.\n"
@@ -477,6 +491,7 @@ def get_hlo_stats(
             "status": "NO_DATA",
             "message": message,
             "records": [],
+            **empty_truncation,
             "guidance": (
                 "The trace parsed successfully but contains no HLO-level"
                 " operations. On traces captured with"
@@ -507,10 +522,30 @@ def get_hlo_stats(
   )
   extracted_records.sort(key=sort_fn, reverse=True)
 
-  # Truncate to limit
+  # Totals come from every matching record, before `limit` drops any. Nested
+  # rows are SparseCore time and never add to the top-level total.
+  total_records = len(extracted_records)
+  top_level_records = [
+      record for record in extracted_records if not record.is_nested
+  ]
+  total_self_time_us = sum(
+      record.total_self_time_us for record in top_level_records
+  )
   if limit > 0:
     extracted_records = extracted_records[:limit]
 
   return json.dumps(
-      [dataclasses.asdict(record) for record in extracted_records], indent=2
+      {
+          "records": [
+              dataclasses.asdict(record) for record in extracted_records
+          ],
+          **decorators.build_truncation_fields(
+              total_records=total_records,
+              returned_records=len(extracted_records),
+              top_level_records=len(top_level_records),
+              total_field="total_self_time_ms_all_records",
+              total_value=total_self_time_us / 1000.0,
+          ),
+      },
+      indent=2,
   )

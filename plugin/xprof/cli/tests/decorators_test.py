@@ -1,11 +1,14 @@
 """Unit tests for cli/internal/decorators.py."""
 
+import io
 import json
 import pathlib
 import shutil
+import sys
 import tempfile
 import time
 import unittest
+from unittest import mock
 
 # pylint: disable=g-import-not-at-top
 from xprof.cli.internal import decorators
@@ -78,6 +81,63 @@ class DecoratorsTest(unittest.TestCase):
     parsed = json.loads(indicated_str)
     self.assertTrue(parsed["__cached__"])
     self.assertAlmostEqual(parsed["__cache_age_s__"], 15.5, delta=1.0)
+    self.assertNotIn("\n", indicated_str)
+
+    # Pretty-printed JSON string preserves indentation on cache hits.
+    pretty_str = json.dumps(data, indent=2)
+    indicated_pretty = decorators._add_cache_indicator(pretty_str, set_time=t0)
+    self.assertIn("\n  ", indicated_pretty)
+    self.assertTrue(json.loads(indicated_pretty)["__cached__"])
+
+  def test_cached_replays_stderr_notes_on_cache_hit(self):
+    """Verifies emit_stderr_note replays notes and clears stale ones."""
+    emit = True
+
+    @decorators.cached(cache=self.cache)
+    def noisy_tool(session_id: str, bypass_cache: bool = False) -> str:
+      del bypass_cache
+      if emit:
+        decorators.emit_stderr_note(f"xprof-note: truncated {session_id}\n")
+      return json.dumps([{"k": 1}], indent=2)
+
+    with mock.patch.object(sys, "stderr", new_callable=io.StringIO) as err1:
+      res1 = noisy_tool("run1")
+    with mock.patch.object(sys, "stderr", new_callable=io.StringIO) as err2:
+      res2 = noisy_tool("run1")
+
+    self.assertEqual(res1, res2)
+    self.assertEqual(err1.getvalue(), "xprof-note: truncated run1\n")
+    self.assertEqual(err2.getvalue(), "xprof-note: truncated run1\n")
+
+    # Replacing the cached result with a run that produces no note must clear
+    # the old saved note so later cache hits do not replay it.
+    emit = False
+    with mock.patch.object(sys, "stderr", new_callable=io.StringIO) as err3:
+      noisy_tool("run1", bypass_cache=True)
+    with mock.patch.object(sys, "stderr", new_callable=io.StringIO) as err4:
+      noisy_tool("run1")
+    self.assertEqual(err3.getvalue(), "")
+    self.assertEqual(err4.getvalue(), "")
+
+  def test_build_truncation_fields_standardizes_rounding(self):
+    """Verifies build_truncation_fields produces consistent fields and rounding."""
+    fields = decorators.build_truncation_fields(
+        total_records=5,
+        returned_records=2,
+        top_level_records=4,
+        total_field="total_self_time_ms_all_records",
+        total_value=12.3456789,
+    )
+    self.assertEqual(
+        fields,
+        {
+            "truncated": True,
+            "total_records": 5,
+            "returned_records": 2,
+            "top_level_records": 4,
+            "total_self_time_ms_all_records": 12.3457,
+        },
+    )
 
   def test_compute_path_fingerprint_no_trace_inputs_sentinel(self):
     """Verifies empty directory emits NO_TRACE_INPUTS."""

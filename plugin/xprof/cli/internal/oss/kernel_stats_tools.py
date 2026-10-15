@@ -7,6 +7,7 @@ import re
 import statistics as stats_mod
 from typing import Any, Dict, List, Literal
 
+from xprof.cli.internal import decorators
 from xprof.cli.internal.oss import xplane_tools
 
 _DEVICE_PLANE_RE = re.compile(r"^/device:.*")
@@ -107,6 +108,89 @@ def format_markdown_table(
   return "\n".join(lines)
 
 
+def _apply_kernel_truncation(
+    records: list[dict[str, Any]],
+    *,
+    kernel_name: str | None,
+    limit: int,
+    total_duration_us_all: float | None = None,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+  """Computes truncation fields and applies `limit` to kernel records."""
+  total_records = len(records)
+  non_region = [
+      r for r in records if not r.get("is_intra_kernel_region", False)
+  ]
+  sliced = records[:limit] if not kernel_name and limit > 0 else list(records)
+  truncation_fields = decorators.build_truncation_fields(
+      total_records=total_records,
+      returned_records=len(sliced),
+      top_level_records=len(non_region),
+      total_field="total_duration_us_all_records",
+      total_value=total_duration_us_all,
+  )
+  return truncation_fields, sliced
+
+
+def _format_kernel_records_output(
+    records: list[dict[str, Any]],
+    *,
+    truncation_fields: dict[str, Any],
+    kernel_name: str | None,
+    limit: int,
+    output_format: Literal["json", "markdown"],
+) -> str:
+  """Formats kernel records as markdown or JSON and emits truncation notes."""
+  truncated = bool(truncation_fields["truncated"])
+  total_records = int(truncation_fields["total_records"])
+  raw_total_dur = truncation_fields.get("total_duration_us_all_records")
+  total_dur_all = float(raw_total_dur) if raw_total_dur is not None else None
+  if output_format == "markdown":
+    table = format_markdown_table(records, kernel_name)
+    if truncated:
+      if total_dur_all is not None:
+        table += (
+            f"\n\nShowing {len(records)} of {total_records} kernels"
+            f" (--limit={limit}). Total duration across all outermost"
+            f" kernels: {total_dur_all:.2f} us (sums across device planes,"
+            " excluding nested loop body ops and intra-kernel regions; pass"
+            " --include_summary=True for wall-clock"
+            " total_device_duration_us). Do not sum the rows above to get a"
+            " total."
+        )
+      else:
+        table += (
+            f"\n\nShowing {len(records)} of {total_records} kernels"
+            f" (--limit={limit}). Total duration across all kernels is"
+            " unavailable for pre-computed records without event timestamps."
+            " Do not sum the rows above to get a total."
+        )
+    return table
+  if truncated:
+    # The JSON result is a plain list, so report truncation on stderr, in
+    # the same style as the `xprof-capture:` line, instead of changing its
+    # shape. `include_summary=True` returns these fields in the object.
+    if total_dur_all is not None:
+      decorators.emit_stderr_note(
+          f"xprof-note: truncated: returned {len(records)} of"
+          f" {total_records} kernels (--limit={limit});"
+          f" total_duration_us_all_records={total_dur_all}"
+          " (sum of outermost kernel durations across device planes,"
+          " excluding nested loop body ops and intra-kernel regions). Do"
+          " not sum the rows to get a total; pass --include_summary=True"
+          " for total_device_duration_us and truncation fields.\n"
+      )
+    else:
+      decorators.emit_stderr_note(
+          f"xprof-note: truncated: returned {len(records)} of"
+          f" {total_records} kernels (--limit={limit});"
+          " total_duration_us_all_records=null (unavailable for"
+          " pre-computed records without event timestamps). Do not sum the"
+          " rows to get a total; pass --include_summary=True for"
+          " truncation fields.\n"
+      )
+  return json.dumps(records, indent=2)
+
+
 def _matches(pattern: str, text: str) -> bool:
   """Matches text against a regex pattern or literal substring."""
   try:
@@ -150,33 +234,67 @@ def get_kernel_stats(
     include_intra_kernel_regions: If True, also emits events from TPU lines that
       carry regions *inside* a kernel ("LLO Ops", "Pallas Primitives", "<unit>
       Instructions"). These overlap the kernel that contains them, so they are
-      excluded by default to keep the ranking over top-level kernels only.
-      Included records are tagged with is_intra_kernel_region=True.
+      excluded by default on trace inputs to keep the ranking over kernels only.
+      Included records are tagged with is_intra_kernel_region=True. Pre-computed
+      record inputs keep all supplied rows unchanged.
     bypass_cache: Whether to bypass cache.
 
   Returns:
       A JSON string (a list of kernel records, or a summary object when
-      include_summary=True) or a markdown table string.
+      include_summary=True) or a markdown table string. The summary object
+      also has `truncated`, `total_records`, `top_level_records` (count of
+      kernel records excluding intra-kernel regions), `returned_records`, and
+      `total_duration_us_all_records` (sum of outermost kernel event durations
+      across device planes before `limit`, excluding ops nested inside
+      control-flow kernels such as `%while` and excluding intra-kernel regions,
+      or `None` when called with pre-computed records that lack event
+      timestamps; see `total_device_duration_us` for wall-clock device time).
+      When `limit` drops rows, the list form writes an `xprof-note: truncated`
+      line to stderr and the markdown form appends a "Showing N of M kernels"
+      line.
   """
   del bypass_cache
   if isinstance(source, (int, float)):
     source = str(source)
   try:
     if isinstance(source, (dict, list)):
-      records = (
+      raw_records = (
           source.get("kernel_records", source)
           if isinstance(source, dict)
           else source
       )
-      if not isinstance(records, list):
-        records = [records] if isinstance(records, dict) else []
-      if not kernel_name:
-        records = records[:limit]
-      if output_format == "markdown":
-        return format_markdown_table(records, kernel_name)
-      return json.dumps(source if include_summary else records, indent=2)
+      if not isinstance(raw_records, list):
+        raw_records = [raw_records] if isinstance(raw_records, dict) else []
+      # Pre-computed records carry no event start times, so nested loop body
+      # ops cannot be distinguished from outermost kernels; leave
+      # total_duration_us_all_records as None rather than summing records.
+      records = [
+          r
+          for r in raw_records
+          if isinstance(r, dict)
+          and (not kernel_name or r.get("kernel_name") == kernel_name)
+      ]
+      truncation_fields, records = _apply_kernel_truncation(
+          records,
+          kernel_name=kernel_name,
+          limit=limit,
+          total_duration_us_all=None,
+      )
+      if include_summary:
+        summary_out = dict(source) if isinstance(source, dict) else {}
+        summary_out["kernel_records"] = records
+        summary_out.update(truncation_fields)
+        return json.dumps(summary_out, indent=2)
+      return _format_kernel_records_output(
+          records,
+          truncation_fields=truncation_fields,
+          kernel_name=kernel_name,
+          limit=limit,
+          output_format=output_format,
+      )
 
     kernel_durations_us = collections.defaultdict(list)
+    top_level_total_us = 0.0
     all_intervals: list[tuple[int, int]] = []
     line_intervals: dict[str, list[tuple[int, int]]] = collections.defaultdict(
         list
@@ -218,7 +336,16 @@ def get_kernel_stats(
         elif any(w in line_name_upper for w in _DEVICE_LINE_EXCLUDE):
           continue
 
-        for event in line.events:
+        # Per (plane, line): an event is outermost unless an earlier event on
+        # the same line still covers its start (e.g. a `%while` op covering the
+        # ops in its body on `XLA Ops`).
+        cover_end_ns = -1
+        for event in sorted(
+            line.events,
+            key=lambda e: (int(e.start_ns), -int(e.duration_ns)),
+        ):
+          start_ns = int(event.start_ns)
+          end_ns = start_ns + int(event.duration_ns)
           name_info = event.name
           tf_op_name = None
           for stat_name, stat_val in event.stats:
@@ -248,12 +375,13 @@ def get_kernel_stats(
 
           dur_us = float(event.duration_ns) / 1000.0
           kernel_durations_us[(name_info, is_region_line)].append(dur_us)
+          if not is_region_line and start_ns >= cover_end_ns:
+            top_level_total_us += dur_us
+          cover_end_ns = max(cover_end_ns, end_ns)
 
           # Region intervals are nested inside kernel intervals, so including
           # them would not change the union but would blur its meaning.
           if include_summary and not is_region_line:
-            start_ns = int(event.start_ns)
-            end_ns = start_ns + int(event.duration_ns)
             all_intervals.append((start_ns, end_ns))
             name_lower = name_info.lower()
             if (
@@ -292,8 +420,15 @@ def get_kernel_stats(
       })
 
     records.sort(key=lambda x: x["total_duration_us"], reverse=True)
-    if not kernel_name and limit > 0:
-      records = records[:limit]
+    # `top_level_total_us` sums outermost kernel events per (plane, line)
+    # before `limit` drops any rows, so ops inside `%while` bodies and
+    # intra-kernel regions are not double-counted.
+    truncation_fields, records = _apply_kernel_truncation(
+        records,
+        kernel_name=kernel_name,
+        limit=limit,
+        total_duration_us_all=top_level_total_us,
+    )
 
     if include_summary:
       total_ns = compute_disjoint_interval_union_ns(all_intervals)
@@ -324,6 +459,7 @@ def get_kernel_stats(
           "kernel_records": records,
           "step_durations_us": step_durations_us,
           "stats": {"mean_us": round(mean_us, 4), "std_us": round(std_us, 4)},
+          **truncation_fields,
       }
       if excluded_region_lines:
         summary["excluded_intra_kernel_region_lines"] = sorted(
@@ -338,9 +474,13 @@ def get_kernel_stats(
         )
       return json.dumps(summary, indent=2)
 
-    if output_format == "markdown":
-      return format_markdown_table(records, kernel_name)
-    return json.dumps(records, indent=2)
+    return _format_kernel_records_output(
+        records,
+        truncation_fields=truncation_fields,
+        kernel_name=kernel_name,
+        limit=limit,
+        output_format=output_format,
+    )
 
   except (FileNotFoundError, ValueError):
     raise

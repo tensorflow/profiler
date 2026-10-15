@@ -8,8 +8,10 @@ py_test(
     srcs = ["oss_kernel_stats_tools_test.py"],
     visibility = ["//visibility:public"],
     deps = [
+        "//plugin/xprof/cli/internal:decorators",
         "//plugin/xprof/cli/internal/oss:kernel_stats_tools",
         "//plugin/xprof/cli/internal/oss:xplane_tools",
+        "//plugin/xprof/cli/tools:get_kernel_stats_tool",
     ],
 )
 

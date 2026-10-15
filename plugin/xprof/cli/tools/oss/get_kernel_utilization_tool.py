@@ -120,7 +120,10 @@ def _lookup_fallback_duration_us(
     try:
       stats = json.loads(
           kernel_stats_tools.get_kernel_stats(
-              source, kernel_name=kernel_name, bypass_cache=bypass_cache
+              source,
+              kernel_name=kernel_name,
+              limit=0,
+              bypass_cache=bypass_cache,
           )
       )
     except (RuntimeError, ValueError, KeyError, OSError, TypeError):
@@ -138,7 +141,10 @@ def _lookup_fallback_duration_us(
     try:
       stats = json.loads(
           kernel_stats_tools.get_kernel_stats(
-              source, kernel_name=None, bypass_cache=bypass_cache
+              source,
+              kernel_name=None,
+              limit=0,
+              bypass_cache=bypass_cache,
           )
       )
     except (RuntimeError, ValueError, KeyError, OSError, TypeError):

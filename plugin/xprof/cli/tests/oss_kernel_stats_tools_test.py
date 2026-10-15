@@ -1,15 +1,19 @@
 """Unit tests for OSS hermetic kernel_stats_tools."""
 
+import io
 import json
 import pathlib
+import shutil
 import sys
 import tempfile
 import unittest
 from unittest import mock
 
 # pylint: disable=g-import-not-at-top
+from xprof.cli.internal import decorators
 from xprof.cli.internal.oss import kernel_stats_tools
 from xprof.cli.internal.oss import xplane_tools
+from xprof.cli.tools import get_kernel_stats_tool
 
 
 class OssKernelStatsToolsTest(unittest.TestCase):
@@ -361,6 +365,260 @@ class OssKernelStatsToolsTest(unittest.TestCase):
       self.assertEqual(res_logdir, res_latest)
       self.assertEqual(len(res_logdir), 1)
       self.assertEqual(res_logdir[0]["kernel_name"], "latest_kernel")
+
+  def _three_kernel_plane(self):
+    """Returns a TPU plane with non-overlapping kernels of 3000, 2000, 1000 us."""
+    events = []
+    start_ns = 0
+    for name, duration_ns in (
+        ("k1", 3_000_000),
+        ("k2", 2_000_000),
+        ("k3", 1_000_000),
+    ):
+      ev = mock.MagicMock(duration_ns=duration_ns, start_ns=start_ns, stats=[])
+      ev.name = name
+      events.append(ev)
+      start_ns += duration_ns
+    line = mock.MagicMock(events=events)
+    line.name = "XLA Ops"
+    plane = mock.MagicMock(lines=[line])
+    plane.name = "/device:TPU:0"
+    return plane
+
+  def test_while_loop_not_double_counted_in_total(self):
+    """A `%while` op and the ops inside its body must not be summed twice."""
+    # `%while.1` spans [0, 100] us and contains `fusion.1` [10, 40] us and
+    # `fusion.2` [50, 90] us on the same `XLA Ops` line.
+    ev_while = mock.MagicMock(duration_ns=100_000, start_ns=0, stats=[])
+    ev_while.name = "%while.1"
+    ev_f1 = mock.MagicMock(duration_ns=30_000, start_ns=10_000, stats=[])
+    ev_f1.name = "fusion.1"
+    ev_f2 = mock.MagicMock(duration_ns=40_000, start_ns=50_000, stats=[])
+    ev_f2.name = "fusion.2"
+    # Deliberately pass events out of start_ns order to verify sorting.
+    line = mock.MagicMock(events=[ev_f1, ev_while, ev_f2])
+    line.name = "XLA Ops"
+    plane = mock.MagicMock(lines=[line])
+    plane.name = "/device:TPU:0"
+
+    with (
+        mock.patch.object(xplane_tools, "iter_planes", return_value=[plane]),
+        mock.patch.object(sys, "stderr", new_callable=io.StringIO) as stderr,
+    ):
+      summary = json.loads(
+          kernel_stats_tools.get_kernel_stats(
+              "local_logdir", include_summary=True, limit=1
+          )
+      )
+      records = json.loads(
+          kernel_stats_tools.get_kernel_stats("local_logdir", limit=1)
+      )
+      md = kernel_stats_tools.get_kernel_stats(
+          "local_logdir", limit=1, output_format="markdown"
+      )
+
+    self.assertTrue(summary["truncated"])
+    self.assertEqual(summary["total_records"], 3)
+    self.assertEqual(summary["top_level_records"], 3)
+    self.assertEqual(summary["returned_records"], 1)
+    # Outermost total is 100 us (`%while.1` only), not 170 us (100 + 30 + 40).
+    self.assertEqual(summary["total_duration_us_all_records"], 100.0)
+    self.assertEqual(len(records), 1)
+    self.assertIn("total_duration_us_all_records=100.0", stderr.getvalue())
+    self.assertIn("100.00 us", md)
+
+  def test_summary_limit_marks_truncation_and_keeps_totals(self):
+    with mock.patch.object(
+        xplane_tools, "iter_planes", return_value=[self._three_kernel_plane()]
+    ):
+      result = json.loads(
+          kernel_stats_tools.get_kernel_stats(
+              "local_logdir", include_summary=True, limit=2
+          )
+      )
+
+    self.assertEqual(len(result["kernel_records"]), 2)
+    self.assertTrue(result["truncated"])
+    self.assertEqual(result["total_records"], 3)
+    self.assertEqual(result["returned_records"], 2)
+    # All three kernels, not the 5000 us of the two returned rows.
+    self.assertEqual(result["total_duration_us_all_records"], 6000.0)
+
+  def test_summary_limit_not_truncated(self):
+    for limit in (10, 3, 0):
+      with (
+          self.subTest(limit=limit),
+          mock.patch.object(
+              xplane_tools,
+              "iter_planes",
+              return_value=[self._three_kernel_plane()],
+          ),
+      ):
+        result = json.loads(
+            kernel_stats_tools.get_kernel_stats(
+                "local_logdir", include_summary=True, limit=limit
+            )
+        )
+        self.assertEqual(len(result["kernel_records"]), 3)
+        self.assertFalse(result["truncated"])
+        self.assertEqual(result["total_records"], 3)
+        self.assertEqual(result["returned_records"], 3)
+        self.assertEqual(result["total_duration_us_all_records"], 6000.0)
+
+  def test_list_limit_writes_truncation_note_to_stderr(self):
+    with (
+        mock.patch.object(
+            xplane_tools,
+            "iter_planes",
+            return_value=[self._three_kernel_plane()],
+        ),
+        mock.patch.object(sys, "stderr", new_callable=io.StringIO) as stderr,
+    ):
+      records = json.loads(
+          kernel_stats_tools.get_kernel_stats("local_logdir", limit=2)
+      )
+
+    self.assertEqual(len(records), 2)
+    self.assertIn("xprof-note: truncated: returned 2 of 3", stderr.getvalue())
+    self.assertIn("total_duration_us_all_records=6000.0", stderr.getvalue())
+
+  def test_list_without_truncation_writes_no_note(self):
+    with (
+        mock.patch.object(
+            xplane_tools,
+            "iter_planes",
+            return_value=[self._three_kernel_plane()],
+        ),
+        mock.patch.object(sys, "stderr", new_callable=io.StringIO) as stderr,
+    ):
+      records = json.loads(
+          kernel_stats_tools.get_kernel_stats("local_logdir", limit=3)
+      )
+
+    self.assertEqual(len(records), 3)
+    self.assertNotIn("xprof-note", stderr.getvalue())
+
+  def test_markdown_limit_appends_truncation_line(self):
+    with mock.patch.object(
+        xplane_tools, "iter_planes", return_value=[self._three_kernel_plane()]
+    ):
+      truncated = kernel_stats_tools.get_kernel_stats(
+          "local_logdir", limit=2, output_format="markdown"
+      )
+      full = kernel_stats_tools.get_kernel_stats(
+          "local_logdir", limit=0, output_format="markdown"
+      )
+
+    self.assertIn("Showing 2 of 3 kernels", truncated)
+    self.assertIn("6000.00 us", truncated)
+    self.assertNotIn("Showing", full)
+
+  def test_precomputed_records_limit_marks_truncation(self):
+    records = [
+        {
+            "kernel_name": f"k{i}",
+            "total_duration_us": float((3 - i) * 1000),
+            "execution_count": 1,
+            "avg_duration_us": float((3 - i) * 1000),
+        }
+        for i in range(3)
+    ]
+    with mock.patch.object(sys, "stderr", new_callable=io.StringIO) as stderr:
+      limited = json.loads(
+          kernel_stats_tools.get_kernel_stats(records, limit=2)
+      )
+    self.assertEqual(len(limited), 2)
+    self.assertIn("xprof-note: truncated: returned 2 of 3", stderr.getvalue())
+    self.assertIn("total_duration_us_all_records=null", stderr.getvalue())
+
+    summary = json.loads(
+        kernel_stats_tools.get_kernel_stats(
+            {"kernel_records": records, "total_device_duration_us": 5000.0},
+            include_summary=True,
+            limit=2,
+        )
+    )
+    self.assertTrue(summary["truncated"])
+    self.assertEqual(summary["total_records"], 3)
+    self.assertEqual(summary["top_level_records"], 3)
+    self.assertEqual(summary["returned_records"], 2)
+    self.assertIsNone(summary["total_duration_us_all_records"])
+    self.assertEqual(summary["total_device_duration_us"], 5000.0)
+
+    md = kernel_stats_tools.get_kernel_stats(
+        records, limit=2, output_format="markdown"
+    )
+    self.assertIn("Showing 2 of 3 kernels", md)
+    self.assertIn(
+        "unavailable for pre-computed records without event timestamps", md
+    )
+
+    # Pre-computed inputs with intra-kernel region rows keep those rows by
+    # default while excluding them from top_level_records.
+    records_with_region = records + [{
+        "kernel_name": "dma_region",
+        "total_duration_us": 500.0,
+        "execution_count": 1,
+        "avg_duration_us": 500.0,
+        "is_intra_kernel_region": True,
+    }]
+    kept = json.loads(
+        kernel_stats_tools.get_kernel_stats(records_with_region, limit=0)
+    )
+    self.assertEqual(len(kept), 4)
+    region_summary = json.loads(
+        kernel_stats_tools.get_kernel_stats(
+            records_with_region, include_summary=True, limit=0
+        )
+    )
+    self.assertEqual(region_summary["total_records"], 4)
+    self.assertEqual(region_summary["top_level_records"], 3)
+    self.assertEqual(region_summary["returned_records"], 4)
+    self.assertIsNone(region_summary["total_duration_us_all_records"])
+
+  def test_summary_intra_kernel_regions_separates_top_level_count(self):
+    plane = self._pallas_plane_with_regions()
+    with mock.patch.object(xplane_tools, "iter_planes", return_value=[plane]):
+      summary = json.loads(
+          kernel_stats_tools.get_kernel_stats(
+              "local_logdir",
+              include_summary=True,
+              include_intra_kernel_regions=True,
+              limit=1,
+          )
+      )
+    self.assertTrue(summary["truncated"])
+    self.assertEqual(summary["total_records"], 2)
+    self.assertEqual(summary["top_level_records"], 1)
+    self.assertEqual(summary["returned_records"], 1)
+    self.assertEqual(summary["total_duration_us_all_records"], 1556.6)
+
+  def test_cached_get_kernel_stats_replays_truncation_stderr_note(self):
+    temp_dir = pathlib.Path(tempfile.mkdtemp())
+    self.addCleanup(lambda: shutil.rmtree(temp_dir, ignore_errors=True))
+    cache = decorators.Cache(temp_dir)
+    with (
+        mock.patch.object(decorators, "get_cache", return_value=cache),
+        mock.patch.object(
+            xplane_tools,
+            "iter_planes",
+            return_value=[self._three_kernel_plane()],
+        ) as mock_iter,
+    ):
+      with mock.patch.object(sys, "stderr", new_callable=io.StringIO) as err1:
+        res1 = json.loads(
+            get_kernel_stats_tool.get_kernel_stats("local_logdir", limit=2)
+        )
+      with mock.patch.object(sys, "stderr", new_callable=io.StringIO) as err2:
+        res2 = json.loads(
+            get_kernel_stats_tool.get_kernel_stats("local_logdir", limit=2)
+        )
+
+    self.assertEqual(mock_iter.call_count, 1)
+    self.assertEqual(len(res1), 2)
+    self.assertEqual(res1, res2)
+    self.assertIn("xprof-note: truncated: returned 2 of 3", err1.getvalue())
+    self.assertIn("xprof-note: truncated: returned 2 of 3", err2.getvalue())
 
 
 if __name__ == "__main__":

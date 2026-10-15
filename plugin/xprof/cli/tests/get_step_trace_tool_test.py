@@ -256,8 +256,8 @@ class GetStepTraceToolTest(parameterized.TestCase):
     self.assertEqual(step_breakdown[0]["step_num"], 11)
     self.assertAlmostEqual(step_breakdown[0]["step_time_ms"], 200.0, places=2)
 
-  def test_get_step_trace_limit(self):
-    pod_viewer_mock_data = {
+  def _five_step_pod_viewer_payload(self) -> bytes:
+    return json.dumps({
         "podStatsSequence": {
             "podStatsMap": [
                 {
@@ -272,11 +272,12 @@ class GetStepTraceToolTest(parameterized.TestCase):
                 for i in range(5)
             ]
         }
-    }
+    }).encode("utf-8")
 
+  def test_get_step_trace_limit(self):
     self.mock_client.fetch.return_value = (
         None,
-        json.dumps(pod_viewer_mock_data).encode("utf-8"),
+        self._five_step_pod_viewer_payload(),
     )
 
     result_json = get_step_trace_tool.get_step_trace("test_session", limit=2)
@@ -284,6 +285,29 @@ class GetStepTraceToolTest(parameterized.TestCase):
 
     self.assertEqual(result["summary"]["total_steps"], 5)
     self.assertLen(result["step_breakdown"], 2)
+    self.assertTrue(result["truncated"])
+    self.assertEqual(result["total_records"], 5)
+    self.assertEqual(result["returned_records"], 2)
+
+  @parameterized.named_parameters(
+      ("limit_above_count", 20),
+      ("limit_equals_count", 5),
+      ("no_limit", 0),
+  )
+  def test_get_step_trace_limit_not_truncated(self, limit):
+    self.mock_client.fetch.return_value = (
+        None,
+        self._five_step_pod_viewer_payload(),
+    )
+
+    result = json.loads(
+        get_step_trace_tool.get_step_trace("test_session", limit=limit)
+    )
+
+    self.assertLen(result["step_breakdown"], 5)
+    self.assertFalse(result["truncated"])
+    self.assertEqual(result["total_records"], 5)
+    self.assertEqual(result["returned_records"], 5)
 
   def test_get_step_trace_device_core_filter(self):
     pod_viewer_mock_data = {
@@ -505,6 +529,9 @@ class GetStepTraceToolTest(parameterized.TestCase):
 
     self.assertEqual(result["summary"]["total_steps"], 42)
     self.assertTrue(result["summary"]["is_aggregate"])
+    self.assertFalse(result["truncated"])
+    self.assertEqual(result["total_records"], 0)
+    self.assertEqual(result["returned_records"], 0)
 
   def test_get_step_trace_no_data(self):
     self.mock_client.fetch.return_value = (None, b"")
@@ -512,6 +539,10 @@ class GetStepTraceToolTest(parameterized.TestCase):
     res = json.loads(res_raw)
     self.assertEqual(res.get("status"), "NO_DATA")
     self.assertIn("No step trace data", res.get("message", ""))
+    self.assertEqual(res.get("step_breakdown"), [])
+    self.assertFalse(res.get("truncated"))
+    self.assertEqual(res.get("total_records"), 0)
+    self.assertEqual(res.get("returned_records"), 0)
 
   def test_get_step_trace_exception_handled(self):
     self.mock_client.fetch.side_effect = RuntimeError("Backend unavailable")

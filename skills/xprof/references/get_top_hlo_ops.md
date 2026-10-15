@@ -60,6 +60,19 @@ which operations are consuming the most resources.
             and `top_by_bytes_accessed` so zero-FLOP placeholders do not
             pollute top-N rankings.
 
+3.  Read totals from the truncation fields, not by summing a list. `--limit`
+    applies to each list separately, so the sum of a list is not a total. The
+    JSON also has these fields, computed before `--limit` drops rows:
+
+    -   `truncated`: `true` if `--limit` dropped rows from any list.
+    -   `total_records`: Number of matched operations (same value as
+        `total_matched`).
+    -   `returned_records`: Number of rows in `top_by_time`.
+    -   `total_self_time_ms_all_records`: Sum of `total_self_time_ms` over all
+        matched operations.
+
+    Pass `--limit=0` to return every matched operation.
+
 > [!NOTE] **Compilation Proto Requirement**: If operation profile data is
 > missing from a trace session, ensure compilation was captured with
 > `XLA_FLAGS='--xla_dump_to=<logdir> --xla_dump_hlo_as_proto'`.

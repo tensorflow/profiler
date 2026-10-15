@@ -39,8 +39,34 @@ xprof get_hlo_stats <logdir> \
 
 ## Output
 
-A JSON list of operations. Each row includes `rank`, `self_time_percent`,
-`core_type` (`TensorCore` or `SparseCore`) and `parent_op_name`.
+A JSON object. `records` holds the operations, sorted by `--sort_by` and cut to
+`--limit` rows. Each row includes `rank`, `self_time_percent`, `core_type`
+(`TensorCore` or `SparseCore`) and `parent_op_name`.
+
+### Truncation and totals
+
+`--limit` keeps only the top rows, so the sum of `records` is not a total. The
+object also has these fields, computed before `--limit` drops rows:
+
+-   `truncated`: `true` if `--limit` dropped rows.
+-   `total_records`: Number of matching rows in the table before `--limit`
+    (includes nested rows when `--include_nested=True`).
+-   `top_level_records`: Number of matching top-level (non-nested) rows before
+    `--limit`, which is the exact count summed into
+    `total_self_time_ms_all_records`.
+-   `returned_records`: Number of rows in `records`.
+-   `total_self_time_ms_all_records`: Self time of all matching top-level rows,
+    in ms. Nested rows are excluded (see below).
+
+Take totals from `total_self_time_ms_all_records`, never by summing `records`.
+For example, with the default `--limit=20` the 20 rows can hold about half of
+the total self time. To see every row, pass `--limit=0`.
+
+A trace with no matching operations returns
+`{"status": "NO_DATA", "records": [], ...}` with `truncated: false` and zeroed
+truncation fields (`total_records`, `top_level_records`, `returned_records`, and
+`total_self_time_ms_all_records`) instead. Cached runs add `"__cached__": true`
+and `"__cache_age_s__"` to the JSON object while preserving indentation.
 
 ### Nested operations
 

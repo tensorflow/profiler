@@ -72,6 +72,17 @@ specific step profiles.
         `communication_breakdown_ms` (`all_reduce_ms`, `send_ms`,
         `recv_ms`), `infeed_time_ms`, `outfeed_time_ms`, `idle_time_ms`,
         `idle_percent`, and `bottleneck`.
+    -   `truncated`: `true` if `--limit` dropped steps from `step_breakdown`.
+    -   `total_records`: Number of per-step breakdown records before `--limit`
+        (`0` when `summary.is_aggregate` is `true` on the overview-page
+        fallback, even when `summary.total_steps` is positive).
+    -   `returned_records`: Number of per-step records in `step_breakdown`.
+
+    Take the session step count (`total_steps`) and averages from `summary`,
+    not by counting or summing `step_breakdown`, which holds at most `--limit`
+    steps (and is empty when `summary.is_aggregate` is `true`). Use `truncated`,
+    `total_records`, and `returned_records` to check whether `--limit` cut
+    `step_breakdown`.
 
 ## Example Usage
 

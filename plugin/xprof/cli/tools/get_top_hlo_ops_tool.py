@@ -99,7 +99,11 @@ def get_top_hlo_ops(
 
   Returns:
       A JSON-formatted string containing three lists of top operations with
-      mandatory source provenance metadata whenever available.
+      mandatory source provenance metadata whenever available. `truncated` is
+      True if `limit` dropped rows from any list; `total_records`,
+      `returned_records` (length of `top_by_time`) and
+      `total_self_time_ms_all_records` describe all matched ops before
+      `limit`. Read totals from these fields, not by summing a list.
 
   Raises:
       FileNotFoundError: If no HLO op_profile data is found in the trace.
@@ -315,6 +319,12 @@ def get_top_hlo_ops(
             "top_by_flops": [],
             "top_by_bytes_accessed": [],
             "total_matched": 0,
+            **decorators.build_truncation_fields(
+                total_records=0,
+                returned_records=0,
+                total_field="total_self_time_ms_all_records",
+                total_value=0.0,
+            ),
             "has_by_program": op_profile.HasField("by_program"),
         },
         indent=2,
@@ -365,6 +375,19 @@ def get_top_hlo_ops(
       "top_by_flops": top_by_flops,
       "top_by_bytes_accessed": top_by_bytes,
       "total_matched": len(flat_ops),
+      # Truncation markers. `limit` applies to each list separately; the
+      # totals cover every matched op, before `limit` drops any.
+      **decorators.build_truncation_fields(
+          total_records=len(flat_ops),
+          returned_records=len(top_by_time),
+          truncated=(
+              len(top_by_time) < len(flat_ops)
+              or len(top_by_flops) < len(flops_candidates)
+              or len(top_by_bytes) < len(bytes_candidates)
+          ),
+          total_field="total_self_time_ms_all_records",
+          total_value=sum(op["total_self_time_ms"] for op in flat_ops),
+      ),
       "metric_semantics": {
           "source": "op_profile",
           "total_self_time_ms": (

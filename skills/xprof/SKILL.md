@@ -261,7 +261,23 @@ Pallas or Mosaic):
         latency. *(Note: `get_roofline_model` and `get_overview` will report 0.0
         GFLOP/s and 0% MXU for `tpu_custom_call` because XLA has no cost model
         for custom calls; use `get_kernel_stats` for latency and
-        `get_llo_analysis` for instruction counts).*
+        `get_llo_analysis` for instruction counts).* `--limit` (default 10)
+        keeps only the top kernels. With `--include_summary=True` the JSON has
+        `total_device_duration_us` (wall-clock device active time via disjoint
+        interval union), `truncated`, `total_records`, `top_level_records`
+        (count of kernel records excluding intra-kernel regions),
+        `returned_records`, and `total_duration_us_all_records` (sum of
+        outermost kernel event durations across device planes before `--limit`,
+        excluding nested ops inside control-flow kernels such as `%while` and
+        excluding intra-kernel regions, which scales with chip count on
+        multi-chip traces; `null` for pre-computed record inputs that lack event
+        timestamps); without it, a truncated JSON list prints one
+        `xprof-note: truncated: ...` line to stderr and markdown output ends
+        with a "Showing N of M kernels" line. Pass `--include_summary=True` and
+        read `total_device_duration_us` for wall-clock device time or
+        `total_duration_us_all_records` for the sum of outermost kernel
+        durations across device planes. Never sum the returned rows to get a
+        total.
     *   **Trace Validation**: Test LLO presence by calling `get_llo_analysis`
         and reading `success`, not by inspecting trace line names. A trace
         without LLO data returns `"reason": "LLO_DATA_ABSENT"`; take the

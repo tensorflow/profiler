@@ -124,6 +124,42 @@ class GetTopHloOpsToolTest(parameterized.TestCase):
     self.assertEqual(result["top_by_bytes_accessed"][0]["name"], "root/Op3")
     self.assertEqual(result["top_by_bytes_accessed"][1]["name"], "root/Op1")
 
+  def test_get_top_hlo_ops_limit_marks_truncation(self):
+    self.mock_client.fetch.return_value = (
+        None,
+        self._create_fake_profile().SerializeToString(),
+    )
+
+    result = json.loads(
+        get_top_hlo_ops_tool.get_top_hlo_ops("test_session", limit=2)
+    )
+
+    self.assertTrue(result["truncated"])
+    self.assertEqual(result["total_records"], 3)
+    self.assertEqual(result["returned_records"], 2)
+    # 60 + 30 + 10 ms over all ops, not the 90 ms of the two returned rows.
+    self.assertEqual(result["total_self_time_ms_all_records"], 100.0)
+
+  @parameterized.named_parameters(
+      ("limit_above_count", 10),
+      ("limit_equals_count", 3),
+      ("no_limit", 0),
+  )
+  def test_get_top_hlo_ops_limit_not_truncated(self, limit):
+    self.mock_client.fetch.return_value = (
+        None,
+        self._create_fake_profile().SerializeToString(),
+    )
+
+    result = json.loads(
+        get_top_hlo_ops_tool.get_top_hlo_ops("test_session", limit=limit)
+    )
+
+    self.assertFalse(result["truncated"])
+    self.assertEqual(result["total_records"], 3)
+    self.assertEqual(result["returned_records"], 3)
+    self.assertEqual(result["total_self_time_ms_all_records"], 100.0)
+
   def test_get_top_hlo_ops_no_ops(self):
     real_profile = op_profile_pb2.Profile()
     real_profile.by_category.metrics.raw_time = 0
@@ -136,6 +172,8 @@ class GetTopHloOpsToolTest(parameterized.TestCase):
 
     self.assertEqual(result["top_by_time"], [])
     self.assertEqual(result["total_matched"], 0)
+    self.assertFalse(result["truncated"])
+    self.assertEqual(result["total_records"], 0)
 
   def test_get_top_hlo_ops_fetch_error(self):
     self.mock_client.fetch.return_value = None
