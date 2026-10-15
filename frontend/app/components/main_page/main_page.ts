@@ -68,6 +68,9 @@ export class MainPage implements OnDestroy {
   currentTag = '';
   runToolsMap: RunToolsMap = {};
 
+  collapsedCategories = new Set<string>();
+  pinnedTools = new Set<string>();
+
   private readonly toolIconMap: {[key: string]: string} = {
     'overview_page': 'home',
     'trace_viewer': 'view_object_track',
@@ -108,6 +111,7 @@ export class MainPage implements OnDestroy {
   ]);
 
   constructor() {
+    this.loadNavPreferences();
     const searchParams = new URLSearchParams(window.location.search);
     const newNavParam = searchParams.get('new_nav');
     this.isNewNavEnabled = newNavParam === 'true' || newNavParam === '1';
@@ -243,6 +247,69 @@ export class MainPage implements OnDestroy {
   onResize() {
     this.isSmallScreen = window.innerWidth < 960;
   }
+
+  isCategoryExpanded(category: string): boolean {
+    return !this.collapsedCategories.has(category);
+  }
+
+  onCategoryExpandedChange(category: string, expanded: boolean) {
+    if (expanded) {
+      this.collapsedCategories.delete(category);
+    } else {
+      this.collapsedCategories.add(category);
+    }
+    this.saveNavPreferences();
+  }
+
+  isToolPinned(tag: string): boolean {
+    const cleanTag = tag && tag.endsWith('@') ? tag.slice(0, -1) : tag || '';
+    return this.pinnedTools.has(cleanTag);
+  }
+
+  onToolPinnedChange(tag: string, pinned: boolean) {
+    const cleanTag = tag && tag.endsWith('@') ? tag.slice(0, -1) : tag || '';
+    if (pinned) {
+      this.pinnedTools.add(cleanTag);
+    } else {
+      this.pinnedTools.delete(cleanTag);
+    }
+    this.saveNavPreferences();
+  }
+
+  private loadNavPreferences() {
+    try {
+      const collapsedJson = window.localStorage.getItem(
+        'xprof_collapsed_categories',
+      );
+      if (collapsedJson) {
+        this.collapsedCategories = new Set(
+          (JSON.parse(collapsedJson) as string[]) || [],
+        );
+      }
+      const pinnedJson = window.localStorage.getItem('xprof_pinned_tools');
+      if (pinnedJson) {
+        this.pinnedTools = new Set((JSON.parse(pinnedJson) as string[]) || []);
+      }
+    } catch {
+      // Ignore JSON parse errors.
+    }
+  }
+
+  private saveNavPreferences() {
+    try {
+      window.localStorage.setItem(
+        'xprof_collapsed_categories',
+        JSON.stringify([...this.collapsedCategories]),
+      );
+      window.localStorage.setItem(
+        'xprof_pinned_tools',
+        JSON.stringify([...this.pinnedTools]),
+      );
+    } catch {
+      // Ignore quota/security errors.
+    }
+  }
+
   get diagnostics(): Diagnostics {
     return {
       errors: this.errorMessages,

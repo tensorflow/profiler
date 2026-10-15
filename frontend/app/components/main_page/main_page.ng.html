@@ -24,12 +24,16 @@
     @if (isNewNavEnabled) {
       <rack-navigation-drawer [collapsed]="!isSideNavOpen">
         @for (group of getCategorizedTools(); track group.category) {
-          <rack-navigation-group [label]="group.category" [expanded]="true">
+          <rack-navigation-group
+            [label]="group.category"
+            [expanded]="isCategoryExpanded(group.category)"
+            (expandedChange)="onCategoryExpandedChange(group.category, $event)">
             @for (tag of group.tools; track tag) {
               <rack-navigation-item
                 [icon]="getToolIcon(tag)"
-                [label]="getToolLabel(tag)"
                 [active]="activeTool === tag"
+                [pinned]="isToolPinned(tag)"
+                (pinnedChange)="onToolPinnedChange(tag, $event)"
                 (click)="selectTool(tag)">
                 {{getToolLabel(tag)}}
               </rack-navigation-item>
