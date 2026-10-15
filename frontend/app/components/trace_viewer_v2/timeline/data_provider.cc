@@ -49,6 +49,7 @@ namespace {
 // tie-breaking.
 constexpr uint32_t kMpmdUnrankedSortIndexBase = 1u << 30;
 
+constexpr ThreadId kSyntheticOpenSpanTidBit = 0x80000000;
 bool GetExpandedState(int nesting_level, absl::string_view name,
                       absl::string_view parent_name, bool default_expanded,
                       const absl::btree_map<GroupKey, bool>& expanded_states) {
@@ -497,36 +498,80 @@ void GenerateFlowLines(const TraceInformation& trace_info,
   }
 }
 
-const std::string& LookupHloModuleAtTimestamp(
-    absl::Span<const TraceEvent* const> module_events, Microseconds ts,
-    size_t& cursor, Microseconds& last_ts) {
-  static const absl::NoDestructor<std::string> kHloModuleDefaultStr(
-      kHloModuleDefault);
-  if (module_events.empty()) return *kHloModuleDefaultStr;
-  if (ts < last_ts || cursor >= module_events.size() ||
-      module_events[cursor]->ts > ts) {
+uint32_t InternHloModuleName(std::vector<std::string>& hlo_module_names,
+                             absl::string_view module_name) {
+  if (module_name.empty() || module_name == kHloModuleDefault) {
+    return 0;
+  }
+  for (size_t i = hlo_module_names.size(); i > 0; --i) {
+    if (hlo_module_names[i - 1] == module_name) {
+      return static_cast<uint32_t>(i);
+    }
+  }
+  hlo_module_names.emplace_back(module_name);
+  return static_cast<uint32_t>(hlo_module_names.size());
+}
+
+struct TrackSpanSource {
+  absl::Span<const TraceEvent* const> events;
+};
+
+TrackSpanSource ResolveTrackSpanSource(
+    ProcessId pid, const absl::flat_hash_map<ProcessId, ThreadId>& tid_by_pid,
+    const TraceInformation& trace_info) {
+  TrackSpanSource src;
+  const auto it_tid = tid_by_pid.find(pid);
+  if (it_tid == tid_by_pid.end()) return src;
+  if (const auto it_events = trace_info.events_by_pid_tid.find(pid);
+      it_events != trace_info.events_by_pid_tid.end()) {
+    if (const auto it_thread = it_events->second.find(it_tid->second);
+        it_thread != it_events->second.end()) {
+      src.events = it_thread->second;
+    }
+  }
+  return src;
+}
+
+template <typename StartFn, typename DurFn, typename NameFn>
+absl::string_view ScanSpansAtTimestamp(size_t count, StartFn get_start,
+                                       DurFn get_dur, NameFn get_name,
+                                       size_t& cursor, Microseconds& last_ts,
+                                       Microseconds ts,
+                                       absl::string_view default_name) {
+  if (count == 0) return default_name;
+  if (ts < last_ts || cursor >= count || get_start(cursor) > ts) {
     cursor = 0;
   }
   last_ts = ts;
-  while (cursor < module_events.size() &&
-         module_events[cursor]->ts + module_events[cursor]->dur < ts) {
+  while (cursor < count && get_start(cursor) + get_dur(cursor) < ts) {
     ++cursor;
   }
-  for (size_t i = cursor;
-       i < module_events.size() && module_events[i]->ts <= ts; ++i) {
-    if (module_events[i]->ts + module_events[i]->dur >= ts) {
-      return module_events[i]->name;
+  for (size_t k = cursor; k < count && get_start(k) <= ts; ++k) {
+    if (get_start(k) + get_dur(k) >= ts) {
+      return get_name(k);
     }
   }
-  return *kHloModuleDefaultStr;
+  return default_name;
+}
+
+absl::string_view LookupTrackSpanAtTimestamp(
+    const TrackSpanSource& src, size_t& cursor, Microseconds& last_ts,
+    Microseconds ts, absl::string_view default_name = kHloModuleDefault) {
+  if (!src.events.empty()) {
+    return ScanSpansAtTimestamp(
+        src.events.size(), [&](size_t k) { return src.events[k]->ts; },
+        [&](size_t k) { return src.events[k]->dur; },
+        [&](size_t k) -> absl::string_view { return src.events[k]->name; },
+        cursor, last_ts, ts, default_name);
+  }
+  return default_name;
 }
 
 void AppendEventToTimelineData(
     const TraceEvent* event, int level, FlameChartTimelineData& data,
     TimeBounds& bounds, const TraceInformation& trace_info,
-    absl::string_view thread_name,
-    absl::Span<const TraceEvent* const> module_events, size_t& module_cursor,
-    Microseconds& last_module_lookup_ts,
+    absl::string_view thread_name, const TrackSpanSource& module_src,
+    size_t& module_cursor, Microseconds& last_module_lookup_ts,
     std::optional<Microseconds> self_time = std::nullopt) {
   static const absl::NoDestructor<std::string> kHloOpStr(kHloOp);
   static const absl::NoDestructor<std::string> kHloModuleStr(kHloModule);
@@ -549,11 +594,11 @@ void AppendEventToTimelineData(
                             << ": exceeds uint16_t flame chart level range";
     return;
   }
-  const size_t entry_idx = data.entry_names.size();
+  const size_t entry_idx = data.entry_start_times.size();
   data.entry_start_times.push_back(event->ts);
   data.entry_total_times.push_back(event->dur);
   data.entry_self_times.push_back(self_time.value_or(event->dur));
-  data.entry_levels.push_back(level);
+  data.entry_levels.push_back(static_cast<uint16_t>(level));
   data.entry_names.push_back(event->name);
   data.entry_event_ids.push_back(event->event_id);
 
@@ -579,18 +624,11 @@ void AppendEventToTimelineData(
 
     absl::string_view hlo_module_str = *kHloModuleDefaultStr;
     if (is_xla_ops_thread) {
-      hlo_module_str = LookupHloModuleAtTimestamp(
-          module_events, event->ts, module_cursor, last_module_lookup_ts);
+      hlo_module_str = LookupTrackSpanAtTimestamp(
+          module_src, module_cursor, last_module_lookup_ts, event->ts);
     }
-    uint32_t mod_id = 0;
-    if (hlo_module_str != *kHloModuleDefaultStr) {
-      if (data.hlo_module_names.empty() ||
-          data.hlo_module_names.back() != hlo_module_str) {
-        data.hlo_module_names.push_back(std::string(hlo_module_str));
-      }
-      mod_id = static_cast<uint32_t>(data.hlo_module_names.size());
-    }
-    data.entry_hlo_module_ids.push_back(mod_id);
+    data.entry_hlo_module_ids.push_back(
+        InternHloModuleName(data.hlo_module_names, hlo_module_str));
 
     bounds.min = std::min(bounds.min, event->ts);
     bounds.max = std::max(bounds.max, event->ts + event->dur);
@@ -608,8 +646,8 @@ void AppendEventToTimelineData(
   if (event->has_group_id) {
     cur_args.try_emplace("group_id", absl::StrCat(event->group_id));
   }
-  bool has_hlo_in_args = event->args.count(*kHloOpStr) > 0 &&
-                         event->args.count(*kHloModuleStr) > 0;
+  const bool has_hlo_in_args = event->args.count(*kHloOpStr) > 0 &&
+                               event->args.count(*kHloModuleStr) > 0;
   if (is_xla_ops_thread || is_source_thread || is_data_motion_layer ||
       has_hlo_in_args) {
     if (is_data_motion_layer) {
@@ -618,21 +656,14 @@ void AppendEventToTimelineData(
         cur_args[*kHloOpStr] = it_name->second;
       }
     } else if (is_source_thread && !event->args.count(*kHloOpStr)) {
-      auto it_op_tid = trace_info.xla_ops_tids.find(event->pid);
-      if (it_op_tid != trace_info.xla_ops_tids.end()) {
-        auto it_events = trace_info.events_by_pid_tid.find(event->pid);
-        if (it_events != trace_info.events_by_pid_tid.end()) {
-          auto it_thread_events = it_events->second.find(it_op_tid->second);
-          if (it_thread_events != it_events->second.end()) {
-            for (const TraceEvent* op_event : it_thread_events->second) {
-              if (op_event->ts <= event->ts &&
-                  op_event->ts + op_event->dur >= event->ts) {
-                cur_args[*kHloOpStr] = op_event->name;
-                break;
-              }
-            }
-          }
-        }
+      size_t op_cursor = 0;
+      Microseconds last_op_ts = std::numeric_limits<Microseconds>::lowest();
+      const absl::string_view op_name = LookupTrackSpanAtTimestamp(
+          ResolveTrackSpanSource(event->pid, trace_info.xla_ops_tids,
+                                 trace_info),
+          op_cursor, last_op_ts, event->ts, /*default_name=*/"");
+      if (!op_name.empty()) {
+        cur_args[*kHloOpStr] = std::string(op_name);
       }
     } else if (!event->args.count(*kHloOpStr)) {
       cur_args[*kHloOpStr] = event->name;
@@ -664,10 +695,10 @@ void AppendEventToTimelineData(
         }
       }
     } else {
-      hlo_module_str = LookupHloModuleAtTimestamp(
-          module_events, event->ts, module_cursor, last_module_lookup_ts);
+      hlo_module_str = std::string(LookupTrackSpanAtTimestamp(
+          module_src, module_cursor, last_module_lookup_ts, event->ts));
     }
-    cur_args[*kHloModuleStr] = hlo_module_str;
+    cur_args[*kHloModuleStr] = std::move(hlo_module_str);
   } else {
     cur_args[*kHloModuleStr] = *kHloModuleDefaultStr;
   }
@@ -688,23 +719,28 @@ void PopulateThreadTrackEvents(absl::Span<const TraceEvent* const> events,
                                absl::string_view thread_group_name) {
   if (events.empty()) return;
 
-  absl::Span<const TraceEvent* const> module_events;
-  const ProcessId pid = events.front()->pid;
-  if (auto it_tid = trace_info.xla_modules_tids.find(pid);
-      it_tid != trace_info.xla_modules_tids.end()) {
-    if (auto it_events = trace_info.events_by_pid_tid.find(pid);
-        it_events != trace_info.events_by_pid_tid.end()) {
-      if (auto it_thread = it_events->second.find(it_tid->second);
-          it_thread != it_events->second.end()) {
-        module_events = it_thread->second;
+  auto cmp_events = [](const TraceEvent* a, const TraceEvent* b) {
+    return a->ts != b->ts ? a->ts < b->ts : a->dur > b->dur;
+  };
+
+  std::vector<const TraceEvent*> sorted_storage;
+  absl::Span<const TraceEvent* const> sorted_events = events;
+  for (size_t i = 0; i < events.size(); ++i) {
+    if (events[i] == nullptr || (i > 0 && events[i - 1] != nullptr &&
+                                 cmp_events(events[i], events[i - 1]))) {
+      sorted_storage.reserve(events.size());
+      for (const TraceEvent* event : events) {
+        if (event != nullptr) sorted_storage.push_back(event);
       }
+      std::sort(sorted_storage.begin(), sorted_storage.end(), cmp_events);
+      sorted_events = sorted_storage;
+      break;
     }
   }
-  size_t module_cursor = 0;
-  Microseconds last_module_lookup_ts =
-      std::numeric_limits<Microseconds>::lowest();
 
-  const size_t n = events.size();
+  const size_t n = sorted_events.size();
+  if (n == 0) return;
+
   std::vector<Microseconds> self_times(n);
   std::vector<int> relative_levels(n);
   std::vector<size_t> parent_stack;
@@ -713,19 +749,26 @@ void PopulateThreadTrackEvents(absl::Span<const TraceEvent* const> events,
   row_end_times.reserve(16);
 
   for (size_t i = 0; i < n; ++i) {
-    const TraceEvent* ev = events[i];
+    const TraceEvent* ev = sorted_events[i];
+    const Microseconds end_time = ev->ts + ev->dur;
     self_times[i] = ev->dur;
 
     while (!parent_stack.empty()) {
       const size_t p_idx = parent_stack.back();
-      const TraceEvent* p_ev = events[p_idx];
-      if (ev->ts + ev->dur <= p_ev->ts + p_ev->dur) {
-        self_times[p_idx] = std::max(0.0, self_times[p_idx] - ev->dur);
+      const Microseconds p_end =
+          sorted_events[p_idx]->ts + sorted_events[p_idx]->dur;
+      if (ev->ts < p_end) {
+        if (end_time <= p_end) {
+          self_times[p_idx] = std::max(0.0, self_times[p_idx] - ev->dur);
+          parent_stack.push_back(i);
+        }
         break;
       }
       parent_stack.pop_back();
     }
-    parent_stack.push_back(i);
+    if (parent_stack.empty()) {
+      parent_stack.push_back(i);
+    }
 
     int assigned_row = -1;
     for (size_t r = 0; r < row_end_times.size(); ++r) {
@@ -735,19 +778,37 @@ void PopulateThreadTrackEvents(absl::Span<const TraceEvent* const> events,
       }
     }
     if (assigned_row != -1) {
-      row_end_times[assigned_row] = ev->ts + ev->dur;
+      row_end_times[assigned_row] = end_time;
     } else {
       assigned_row = static_cast<int>(row_end_times.size());
-      row_end_times.push_back(ev->ts + ev->dur);
+      row_end_times.push_back(end_time);
     }
     relative_levels[i] = assigned_row;
   }
 
+  const ProcessId pid = sorted_events.front()->pid;
+  const TrackSpanSource module_src =
+      ResolveTrackSpanSource(pid, trace_info.xla_modules_tids, trace_info);
+
+  const size_t new_total = data.entry_start_times.size() + n;
+  data.entry_start_times.reserve(new_total);
+  data.entry_total_times.reserve(new_total);
+  data.entry_self_times.reserve(new_total);
+  data.entry_levels.reserve(new_total);
+  data.entry_names.reserve(new_total);
+  data.entry_event_ids.reserve(new_total);
+  data.entry_serials.reserve(new_total);
+  data.entry_arg_flags.reserve(new_total);
+  data.entry_hlo_module_ids.reserve(new_total);
+
+  size_t module_cursor = 0;
+  Microseconds last_module_lookup_ts =
+      std::numeric_limits<Microseconds>::lowest();
   for (size_t i = 0; i < n; ++i) {
     const int absolute_level = start_level + relative_levels[i];
     max_level = std::max(max_level, absolute_level);
-    AppendEventToTimelineData(events[i], absolute_level, data, bounds,
-                              trace_info, thread_group_name, module_events,
+    AppendEventToTimelineData(sorted_events[i], absolute_level, data, bounds,
+                              trace_info, thread_group_name, module_src,
                               module_cursor, last_module_lookup_ts,
                               self_times[i]);
   }
@@ -946,7 +1007,7 @@ ProcessEventGroups CollectProcessEventGroups(
   // have async events, which are already grouped into async tracks).
   for (auto it = trace_info.thread_names.lower_bound({pid, 0});
        it != trace_info.thread_names.end() && it->first.first == pid; ++it) {
-    if (it->first.second < 0x80000000 &&
+    if (it->first.second < kSyntheticOpenSpanTidBit &&
         !async_only_tids.contains(it->first.second)) {
       groups.sync_groups.try_emplace(it->first.second);
     }
@@ -955,7 +1016,8 @@ ProcessEventGroups CollectProcessEventGroups(
   // Include known sync threads for this pid so 0-event threads are not omitted.
   for (auto it = known_threads.lower_bound({pid, 0});
        it != known_threads.end() && it->first == pid; ++it) {
-    if (it->second < 0x80000000 && !async_only_tids.contains(it->second)) {
+    if (it->second < kSyntheticOpenSpanTidBit &&
+        !async_only_tids.contains(it->second)) {
       groups.sync_groups.try_emplace(it->second);
     }
   }
@@ -1296,11 +1358,89 @@ FlameChartTimelineData CreateTimelineData(
   }
   // Events are already packed by PackTraceEvents in chronological order (start
   // time ascending, duration descending), so the CSR layout preserves this
-  // order per level without needing a secondary sort pass.
+  // order per level without needing a secondary sort pass unless incremental
+  // out-of-order stitching occurred.
+  auto cmp_by_start_asc_then_dur_desc = [&](int idx_a, int idx_b) {
+    return data.entry_start_times[idx_a] < data.entry_start_times[idx_b] ||
+           (data.entry_start_times[idx_a] == data.entry_start_times[idx_b] &&
+            data.entry_total_times[idx_a] > data.entry_total_times[idx_b]);
+  };
+  for (int lvl = 0; lvl < current_level; ++lvl) {
+    auto begin = data.level_event_indices.begin() +
+                 static_cast<ptrdiff_t>(data.level_offsets[lvl]);
+    auto end = data.level_event_indices.begin() +
+               static_cast<ptrdiff_t>(data.level_offsets[lvl + 1]);
+    if (!std::is_sorted(begin, end, cmp_by_start_asc_then_dur_desc)) {
+      std::stable_sort(begin, end, cmp_by_start_asc_then_dur_desc);
+    }
+  }
 
   GenerateFlowLines(trace_info, thread_levels, top_5_flow_categories, data,
                     bounds, palette);
   return data;
+}
+
+void SortFlowEvents(std::vector<const TraceEvent*>& events) {
+  absl::c_stable_sort(events, [](const TraceEvent* a, const TraceEvent* b) {
+    return a->ts < b->ts;
+  });
+}
+
+void SortCounterEvents(std::vector<const CounterEvent*>& events) {
+  absl::c_stable_sort(events, [](const CounterEvent* a, const CounterEvent* b) {
+    const auto get_ts = [](const CounterEvent* e) {
+      return e->timestamps.empty() ? std::numeric_limits<Microseconds>::max()
+                                   : e->timestamps.front();
+    };
+    return get_ts(a) < get_ts(b);
+  });
+}
+
+void UpdateFlowCategories(const absl::btree_map<int, int>& flow_category_counts,
+                          std::vector<int>& present_flow_categories) {
+  present_flow_categories.clear();
+  for (const auto& [category, _] : flow_category_counts) {
+    present_flow_categories.push_back(category);
+  }
+}
+
+void UpdateTimelineTimeRanges(
+    Timeline& timeline, const TimeBounds& bounds, bool has_known_tracks,
+    const std::optional<std::pair<Milliseconds, Milliseconds>>&
+        visible_range_from_url,
+    const std::optional<std::pair<Milliseconds, Milliseconds>>& full_timespan) {
+  // Don't need to check for max_time because the TimeRange constructor will
+  // handle any potential issues with max_time.
+  if (bounds.min < std::numeric_limits<Microseconds>::max()) {
+    timeline.set_fetched_data_time_range({bounds.min, bounds.max});
+
+    // TODO: b/460265076 - Change the logic here for visible range after
+    // we decided how to handle the visible range in url.
+    if (visible_range_from_url.has_value()) {
+      const Microseconds start = MillisToMicros(visible_range_from_url->first);
+      const Microseconds end = MillisToMicros(visible_range_from_url->second);
+
+      if (timeline.visible_range() == TimeRange::Zero()) {
+        timeline.SetVisibleRange({start, end});
+      }
+    } else if (timeline.visible_range() == TimeRange::Zero()) {
+      // If the visible range is not zero, we just keep it. This happens when
+      // the incremental loading is triggered and we don't want to override the
+      // current visible range.
+      timeline.SetVisibleRange({bounds.min, bounds.max});
+    }
+  } else if (!has_known_tracks) {
+    timeline.set_fetched_data_time_range(TimeRange::Zero());
+    timeline.SetVisibleRange(TimeRange::Zero());
+  }
+
+  if (full_timespan.has_value()) {
+    const Microseconds start = MillisToMicros(full_timespan->first);
+    const Microseconds end = MillisToMicros(full_timespan->second);
+    timeline.set_data_time_range({start, end});
+  } else {
+    timeline.set_data_time_range(timeline.fetched_data_time_range());
+  }
 }
 
 }  // namespace
@@ -1374,10 +1514,7 @@ void DataProvider::ProcessTraceEvents(const ParsedTraceEvents& parsed_events,
   for (const TraceEvent& event : parsed_events.flow_events) {
     HandleFlowEvent(event, trace_info, flow_category_counts);
   }
-  present_flow_categories_.clear();
-  for (const auto& [category, _] : flow_category_counts) {
-    present_flow_categories_.push_back(category);
-  }
+  UpdateFlowCategories(flow_category_counts, present_flow_categories_);
 
   for (const CounterEvent& event : parsed_events.counter_events) {
     HandleCounterEvent(event, trace_info);
@@ -1408,7 +1545,7 @@ void DataProvider::ProcessTraceEvents(const ParsedTraceEvents& parsed_events,
   }
   for (const auto& [_, events] : trace_info.flow_events_by_id) {
     for (const TraceEvent* event : events) {
-      if (event->tid < 0x80000000) {
+      if (event->tid < kSyntheticOpenSpanTidBit) {
         known_threads_.insert({event->pid, event->tid});
       }
     }
@@ -1439,22 +1576,12 @@ void DataProvider::ProcessTraceEvents(const ParsedTraceEvents& parsed_events,
   }
 
   for (auto& [id, events] : trace_info.flow_events_by_id) {
-    absl::c_stable_sort(events, [](const TraceEvent* a, const TraceEvent* b) {
-      return a->ts < b->ts;
-    });
+    SortFlowEvents(events);
   }
 
   for (auto& [pid, counters_by_name] : trace_info.counters_by_pid_name) {
     for (auto& [name, events] : counters_by_name) {
-      absl::c_stable_sort(
-          events, [](const CounterEvent* a, const CounterEvent* b) {
-            const auto get_ts = [](const CounterEvent* e) {
-              return e->timestamps.empty()
-                         ? std::numeric_limits<Microseconds>::max()
-                         : e->timestamps.front();
-            };
-            return get_ts(a) < get_ts(b);
-          });
+      SortCounterEvents(events);
     }
   }
 
@@ -1478,42 +1605,9 @@ void DataProvider::ProcessTraceEvents(const ParsedTraceEvents& parsed_events,
         known_async_tracks_);
   });
 
-  // Don't need to check for max_time because the TimeRange constructor will
-  // handle any potential issues with max_time.
-  if (time_bounds.min < std::numeric_limits<Microseconds>::max()) {
-    timeline.set_fetched_data_time_range({time_bounds.min, time_bounds.max});
-
-    // TODO: b/460265076 - Change the logic here for visible range after
-    // we decided how to handle the visible range in url.
-    if (parsed_events.visible_range_from_url.has_value()) {
-      Microseconds start =
-          MillisToMicros(parsed_events.visible_range_from_url->first);
-      Microseconds end =
-          MillisToMicros(parsed_events.visible_range_from_url->second);
-
-      if (timeline.visible_range() == TimeRange::Zero()) {
-        timeline.SetVisibleRange({start, end});
-      }
-    } else {
-      // If the visible range is not zero, we just keep it. This happens when
-      // the incremental loading is triggered and we don't want to override the
-      // current visible range.
-      if (timeline.visible_range() == TimeRange::Zero()) {
-        timeline.SetVisibleRange({time_bounds.min, time_bounds.max});
-      }
-    }
-  } else if (!HasKnownTracks()) {
-    timeline.set_fetched_data_time_range(TimeRange::Zero());
-    timeline.SetVisibleRange(TimeRange::Zero());
-  }
-
-  if (parsed_events.full_timespan.has_value()) {
-    Microseconds start = MillisToMicros(parsed_events.full_timespan->first);
-    Microseconds end = MillisToMicros(parsed_events.full_timespan->second);
-    timeline.set_data_time_range({start, end});
-  } else {
-    timeline.set_data_time_range(timeline.fetched_data_time_range());
-  }
+  UpdateTimelineTimeRanges(timeline, time_bounds, HasKnownTracks(),
+                           parsed_events.visible_range_from_url,
+                           parsed_events.full_timespan);
 
   if (was_initial_overview_load ||
       (timeline.data_time_range().duration() > 0 &&
@@ -1549,7 +1643,7 @@ void AppendTraceEventForTesting(const TraceEvent* event, int level,
   Microseconds last_module_lookup_ts =
       std::numeric_limits<Microseconds>::lowest();
   AppendEventToTimelineData(event, level, data, bounds, trace_info,
-                            /*thread_name=*/"", /*module_events=*/{},
+                            /*thread_name=*/"", /*module_src=*/{},
                             module_cursor, last_module_lookup_ts);
 }
 }  // namespace internal

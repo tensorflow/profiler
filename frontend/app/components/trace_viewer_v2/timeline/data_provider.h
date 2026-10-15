@@ -30,10 +30,10 @@ class DataProvider {
   // Clears persistent session metadata and track registries.
   void Reset();
 
- private:
   // Returns true if any threads, counters, or async tracks are registered.
   bool HasKnownTracks() const;
 
+ private:
   std::vector<int> present_flow_categories_;
   absl::flat_hash_map<ProcessId, std::string> process_names_;
   absl::btree_map<std::pair<ProcessId, ThreadId>, std::string> thread_names_;
