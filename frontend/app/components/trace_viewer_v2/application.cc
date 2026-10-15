@@ -51,6 +51,19 @@ EM_JS(bool, GetFeatureFlagFromJS, (const char* name), {
   return false;
 });
 
+// Returns true if the user asked the OS / browser to minimize non-essential
+// motion (the CSS `prefers-reduced-motion: reduce` media query).
+bool PrefersReducedMotion() {
+  const emscripten::val window = emscripten::val::global("window");
+  if (window.isUndefined() || window.isNull() ||
+      window["matchMedia"].typeOf().as<std::string>() != "function") {
+    return false;
+  }
+  const emscripten::val query = window.call<emscripten::val>(
+      "matchMedia", std::string("(prefers-reduced-motion: reduce)"));
+  return !query.isUndefined() && !query.isNull() && query["matches"].as<bool>();
+}
+
 EM_BOOL OnResize(int eventType, const EmscriptenUiEvent* uiEvent,
                  void* userData) {
   Application::Instance().RequestRedraw();
@@ -309,6 +322,9 @@ void Application::Initialize() {
   timeline_->set_minimap_enabled(IsFeatureEnabled("enable_minimap"));
   timeline_->set_hlo_dependency_arrows_enabled(
       IsFeatureEnabled("enable_hlo_dependency_arrows"));
+  // Smooth expand / collapse, chevron and hover motion, unless the user
+  // prefers reduced motion.
+  timeline_->set_animations_enabled(!PrefersReducedMotion());
   timeline_->set_event_callback(
       [](absl::string_view type, const EventData& event_data) {
         EventManager::Instance().DispatchEvent(type, event_data);

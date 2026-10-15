@@ -10010,6 +10010,136 @@ TEST_F(RealTimelineImGuiFixture, ClickTrackNameOfExpandableTrackTogglesIt) {
   EXPECT_EQ(timeline_.get_copied_track_name_for_test(), "");
 }
 
+// Clicks the first track's name (press, then release on the next frame).
+void ClickFirstTrackName(const std::function<void()>& simulate_frame) {
+  ImGuiIO& io = ImGui::GetIO();
+  io.MousePos = kFirstTrackNamePos;
+  simulate_frame();
+  io.AddMouseButtonEvent(0, true);
+  simulate_frame();
+  io.AddMouseButtonEvent(0, false);
+  simulate_frame();
+}
+
+TEST_F(RealTimelineImGuiFixture, AnimatedCollapseFoldsRowThenSettles) {
+  timeline_.set_animations_enabled(true);
+  ImGui::GetIO().DeltaTime = 1.0f / 60.0f;
+  timeline_.SetTimelineData(CreateExpandableThreadTrackData());
+  SimulateFrame();
+  const Pixel expanded_height = timeline_.group_heights()[0];
+
+  ClickFirstTrackName([this] { SimulateFrame(); });
+  ASSERT_FALSE(timeline_.timeline_data().groups[0].expanded);
+  EXPECT_TRUE(timeline_.is_layout_transition_active());
+
+  // Mid-flight, the row is between its expanded and collapsed heights.
+  SimulateFrame();
+  const Pixel mid_height = timeline_.group_heights()[0];
+  EXPECT_LT(mid_height, expanded_height);
+  EXPECT_GT(mid_height, kEventHeight);
+
+  // The height only ever shrinks, then lands exactly on the collapsed height.
+  Pixel previous_height = mid_height;
+  for (int i = 0; i < 60 && timeline_.is_layout_transition_active(); ++i) {
+    SimulateFrame();
+    EXPECT_LE(timeline_.group_heights()[0], previous_height + 1e-3f);
+    previous_height = timeline_.group_heights()[0];
+  }
+  EXPECT_FALSE(timeline_.is_layout_transition_active());
+  EXPECT_FLOAT_EQ(timeline_.group_heights()[0], kEventHeight);
+}
+
+TEST_F(RealTimelineImGuiFixture, AnimationsDisabledSnapsLayoutImmediately) {
+  ASSERT_FALSE(timeline_.animations_enabled());
+  timeline_.SetTimelineData(CreateExpandableThreadTrackData());
+  SimulateFrame();
+
+  ClickFirstTrackName([this] { SimulateFrame(); });
+
+  EXPECT_FALSE(timeline_.is_layout_transition_active());
+  EXPECT_FLOAT_EQ(timeline_.group_heights()[0], kEventHeight);
+}
+
+TEST_F(RealTimelineImGuiFixture, ToggleDuringTransitionRetargetsSmoothly) {
+  timeline_.set_animations_enabled(true);
+  ImGui::GetIO().DeltaTime = 1.0f / 60.0f;
+  timeline_.SetTimelineData(CreateExpandableThreadTrackData());
+  SimulateFrame();
+  const Pixel expanded_height = timeline_.group_heights()[0];
+
+  ClickFirstTrackName([this] { SimulateFrame(); });  // Collapse.
+  SimulateFrame();
+  const Pixel height_before_reversal = timeline_.group_heights()[0];
+  ASSERT_LT(height_before_reversal, expanded_height);
+
+  // Expanding mid-collapse starts from the current height (no jump back to
+  // the collapsed height) and settles on the expanded height.
+  ImGuiIO& io = ImGui::GetIO();
+  io.AddMouseButtonEvent(0, true);
+  SimulateFrame();
+  io.AddMouseButtonEvent(0, false);
+  SimulateFrame();
+  ASSERT_TRUE(timeline_.timeline_data().groups[0].expanded);
+  EXPECT_TRUE(timeline_.is_layout_transition_active());
+  EXPECT_GE(timeline_.group_heights()[0], kEventHeight);
+  for (int i = 0; i < 60 && timeline_.is_layout_transition_active(); ++i) {
+    SimulateFrame();
+  }
+  EXPECT_FALSE(timeline_.is_layout_transition_active());
+  EXPECT_FLOAT_EQ(timeline_.group_heights()[0], expanded_height);
+}
+
+TEST_F(RealTimelineImGuiFixture, DataUpdateDuringTransitionSnapsLayout) {
+  timeline_.set_animations_enabled(true);
+  ImGui::GetIO().DeltaTime = 1.0f / 60.0f;
+  timeline_.SetTimelineData(CreateExpandableThreadTrackData());
+  SimulateFrame();
+  ClickFirstTrackName([this] { SimulateFrame(); });
+  ASSERT_TRUE(timeline_.is_layout_transition_active());
+
+  timeline_.SetTimelineData(CreateExpandableThreadTrackData());
+
+  EXPECT_FALSE(timeline_.is_layout_transition_active());
+}
+
+TEST_F(RealTimelineImGuiFixture, DisablingAnimationsFinishesTransition) {
+  timeline_.set_animations_enabled(true);
+  ImGui::GetIO().DeltaTime = 1.0f / 60.0f;
+  timeline_.SetTimelineData(CreateExpandableThreadTrackData());
+  SimulateFrame();
+  ClickFirstTrackName([this] { SimulateFrame(); });
+  ASSERT_TRUE(timeline_.is_layout_transition_active());
+
+  timeline_.set_animations_enabled(false);
+
+  EXPECT_FALSE(timeline_.is_layout_transition_active());
+  EXPECT_FLOAT_EQ(timeline_.group_heights()[0], kEventHeight);
+}
+
+TEST_F(RealTimelineImGuiFixture, TransitionRequestsRedrawsUntilSettled) {
+  int redraws = 0;
+  timeline_.set_redraw_callback([&redraws] { ++redraws; });
+  timeline_.set_animations_enabled(true);
+  ImGui::GetIO().DeltaTime = 1.0f / 60.0f;
+  timeline_.SetTimelineData(CreateExpandableThreadTrackData());
+  SimulateFrame();
+  ClickFirstTrackName([this] { SimulateFrame(); });
+  ASSERT_TRUE(timeline_.is_layout_transition_active());
+
+  redraws = 0;
+  SimulateFrame();
+  EXPECT_GT(redraws, 0) << "Motion in flight must schedule another frame.";
+
+  for (int i = 0; i < 120; ++i) SimulateFrame();
+  ASSERT_FALSE(timeline_.is_layout_transition_active());
+  // Move the pointer away so no hover fade is running either.
+  ImGui::GetIO().MousePos = ImVec2(-1.0f, -1.0f);
+  for (int i = 0; i < 120; ++i) SimulateFrame();
+  redraws = 0;
+  SimulateFrame();
+  EXPECT_EQ(redraws, 0) << "A settled timeline must not keep redrawing.";
+}
+
 TEST_F(RealTimelineImGuiFixture,
        HoverTrackNameOfExpandableTrackShowsHandCursor) {
   timeline_.SetTimelineData(CreateExpandableThreadTrackData());

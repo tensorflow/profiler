@@ -77,6 +77,7 @@ wasm_cc_library(
     deps = [
         ":constants",
         ":draw_helpers",
+        ":motion",
         ":time_range",
         "@com_google_absl//absl/algorithm:container",
         "@com_google_absl//absl/base:nullability",

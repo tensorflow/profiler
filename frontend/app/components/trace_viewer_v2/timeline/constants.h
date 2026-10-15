@@ -229,6 +229,32 @@ inline constexpr float kIconButtonPressedOpacity = 0.20f;
 inline constexpr float kStickyHeaderShadowOpacity = 0.18f;
 // go/keep-sorted end
 
+// Motion Constants
+// Timing for the track sidebar's motion (see Timeline::set_animations_enabled).
+// Rates are exponential smoothing rates in 1/s: ~3/rate seconds to settle.
+// go/keep-sorted start
+// The chevron rotation rate (~150 ms to settle).
+inline constexpr float kMotionChevronRate = 20.0f;
+// The duration over which the copy flash on a label row fades out.
+inline constexpr float kMotionCopyFlashSeconds = 0.6f;
+// The hover fade-in rate (~120 ms to settle).
+inline constexpr float kMotionHoverFadeInRate = 24.0f;
+// The hover fade-out rate (~250 ms to settle), slower than fade-in so the
+// highlight trails the pointer.
+inline constexpr float kMotionHoverFadeOutRate = 12.0f;
+// The scale at which an icon button's hover circle starts growing from.
+inline constexpr float kMotionIconRippleStartScale = 0.55f;
+// Collapsing is shorter than expanding: things leaving should not linger.
+inline constexpr float kMotionLayoutCollapseTimeScale = 0.85f;
+// The longest expand / collapse transition, for very large moves.
+inline constexpr float kMotionLayoutMaxSeconds = 0.34f;
+// The shortest expand / collapse transition.
+inline constexpr float kMotionLayoutMinSeconds = 0.18f;
+// The extra transition time per pixel of travel, so bigger moves take a little
+// longer and all moves feel equally fast.
+inline constexpr float kMotionLayoutSecondsPerPixel = 0.00035f;
+// go/keep-sorted end
+
 // Nesting Level Constants
 // go/keep-sorted start
 inline constexpr int kCounterNestingLevel = 2;

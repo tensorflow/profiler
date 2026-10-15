@@ -38,6 +38,7 @@
 #include "frontend/app/components/trace_viewer_v2/helper/time_formatter.h"
 #include "frontend/app/components/trace_viewer_v2/timeline/constants.h"
 #include "frontend/app/components/trace_viewer_v2/timeline/draw_helpers.h"
+#include "frontend/app/components/trace_viewer_v2/timeline/motion.h"
 #include "frontend/app/components/trace_viewer_v2/timeline/time_range.h"
 #include "frontend/app/components/trace_viewer_v2/timeline/timeline_hlo_dependencies.h"
 #include "frontend/app/components/trace_viewer_v2/trace_helper/trace_event.h"
@@ -369,6 +370,8 @@ Pixel CalculateTrackManagementButtonWidth() {
 struct IconButtonState {
   bool clicked = false;
   bool hovered = false;
+  // The animated hover emphasis in [0, 1].
+  float emphasis = 0.0f;
   ImVec2 center;
 };
 
@@ -378,9 +381,10 @@ struct IconButtonState {
 // persistent circle while `active` (e.g. the track is pinned). The caller draws
 // the icon at the returned center. `tooltip` is shown, card-styled, after the
 // standard hover delay.
-IconButtonState TrackIconButton(const char* id, Pixel row_height, bool active,
-                                absl::string_view tooltip,
-                                ImU32 foreground_color) {
+IconButtonState TrackIconButton(
+    const char* id, Pixel row_height, bool active, absl::string_view tooltip,
+    ImU32 foreground_color,
+    absl::FunctionRef<float(ImGuiID, bool)> hover_fade) {
   IconButtonState state;
   const ImVec2 cursor = ImGui::GetCursorScreenPos();
   const Pixel top = std::floor(
@@ -396,6 +400,7 @@ IconButtonState TrackIconButton(const char* id, Pixel row_height, bool active,
   ImGui::PopItemFlag();
   state.hovered = ImGui::IsItemHovered();
   const bool pressed = ImGui::IsItemActive();
+  state.emphasis = hover_fade(ImGui::GetItemID(), state.hovered);
 
   ImDrawList* const draw_list = ImGui::GetWindowDrawList();
   const Pixel radius = kTrackIconButtonSize * 0.5f;
@@ -410,10 +415,14 @@ IconButtonState TrackIconButton(const char* id, Pixel row_height, bool active,
         state.center, radius,
         WithOpacity(foreground_color, kIconButtonPressedOpacity),
         /*num_segments=*/24);
-  } else if (state.hovered) {
+  } else if (state.emphasis > 0.0f) {
+    // The hover circle grows out from the icon as it fades in, like a
+    // Material state layer.
+    const float scale = kMotionIconRippleStartScale +
+                        (1.0f - kMotionIconRippleStartScale) * state.emphasis;
     draw_list->AddCircleFilled(
-        state.center, radius,
-        WithOpacity(foreground_color, kIconButtonHoverOpacity),
+        state.center, radius * scale,
+        WithOpacity(foreground_color, kIconButtonHoverOpacity * state.emphasis),
         /*num_segments=*/24);
   }
   if (state.hovered) {
@@ -429,8 +438,10 @@ IconButtonState TrackIconButton(const char* id, Pixel row_height, bool active,
 // or active, muted otherwise.
 ImU32 TrackIconColor(const IconButtonState& state, bool active,
                      ImU32 foreground_color) {
-  return WithOpacity(foreground_color,
-                     (active || state.hovered) ? 1.0f : kTrackMutedTextOpacity);
+  const float emphasis = active ? 1.0f : state.emphasis;
+  return WithOpacity(
+      foreground_color,
+      kTrackMutedTextOpacity + (1.0f - kTrackMutedTextOpacity) * emphasis);
 }
 
 // Checks if a group is one of the virtual headers (Hidden or All).
@@ -664,6 +675,11 @@ void Timeline::UpdateLevelPositions(const FlameChartTimelineData& data) {
   const int level_count = data.total_levels();
   const int group_count = data.groups.size();
 
+  // The section header offsets currently on screen, so that an animated
+  // layout change starts from them.
+  const Pixel previous_header_offsets[3] = {
+      header_hidden_offset_, header_pinned_offset_, header_all_offset_};
+
   // Populate flattened_groups_ based on data
   BuildFlattenedGroups(data);
 
@@ -820,11 +836,343 @@ void Timeline::UpdateLevelPositions(const FlameChartTimelineData& data) {
   // Set the dummy offset at the very end
   new_group_offsets[group_count] = current_offset;
 
-  group_offsets_ = std::move(new_group_offsets);
-  group_heights_ = std::move(new_group_heights);
-  visible_level_offsets_ = std::move(new_visible_level_offsets);
+  ApplyLayout(data, std::move(new_group_offsets), std::move(new_group_heights),
+              std::move(new_visible_level_offsets), new_group_visible,
+              previous_header_offsets);
   group_visible_ = std::move(new_group_visible);
   group_striped_ = std::move(new_group_striped);
+}
+
+void Timeline::set_animations_enabled(bool enabled) {
+  animations_enabled_ = enabled;
+  if (!enabled) {
+    FinishLayoutTransition();
+    animate_next_layout_ = false;
+    chevron_openness_.clear();
+    hover_fades_.clear();
+  }
+}
+
+Pixel Timeline::AnimatedRowHeight(int group_index, Pixel full_height) const {
+  if (!layout_transition_.active || group_index < 0 ||
+      static_cast<size_t>(group_index) >= group_heights_.size()) {
+    return full_height;
+  }
+  return std::min(full_height, group_heights_[group_index]);
+}
+
+bool Timeline::IsGroupDrawn(int group_index) const {
+  if (group_index < 0) return false;
+  const size_t index = static_cast<size_t>(group_index);
+  if (index < group_visible_.size() && group_visible_[index]) return true;
+  return layout_transition_.active && index < layout_transition_.drawn.size() &&
+         layout_transition_.drawn[index];
+}
+
+void Timeline::BeginExpandToggleMotion(int chevron_key, bool was_expanded) {
+  if (!animations_enabled_) return;
+  animate_next_layout_ = true;
+  // If the chevron is already rotating (a quick double toggle), keep its
+  // current angle so it reverses smoothly instead of jumping.
+  chevron_openness_.try_emplace(chevron_key, was_expanded ? 1.0f : 0.0f);
+}
+
+float Timeline::ChevronOpenness(int chevron_key, bool expanded) {
+  const float target = expanded ? 1.0f : 0.0f;
+  auto it = chevron_openness_.find(chevron_key);
+  if (it == chevron_openness_.end()) return target;
+  it->second = motion::Approach(it->second, target, kMotionChevronRate,
+                                ImGui::GetIO().DeltaTime);
+  const float openness = it->second;
+  if (openness == target) {
+    chevron_openness_.erase(it);
+  } else {
+    motion_in_progress_ = true;
+  }
+  return openness;
+}
+
+float Timeline::HoverFade(ImGuiID id, bool hovered) {
+  const float target = hovered ? 1.0f : 0.0f;
+  if (!animations_enabled_) return target;
+  auto it = hover_fades_.find(id);
+  if (it == hover_fades_.end()) {
+    if (!hovered) return 0.0f;
+    it = hover_fades_.emplace(id, 0.0f).first;
+  }
+  it->second = motion::Approach(
+      it->second, target,
+      hovered ? kMotionHoverFadeInRate : kMotionHoverFadeOutRate,
+      ImGui::GetIO().DeltaTime);
+  const float emphasis = it->second;
+  if (emphasis != target) {
+    motion_in_progress_ = true;
+  } else if (!hovered) {
+    hover_fades_.erase(it);
+  }
+  return emphasis;
+}
+
+void Timeline::ApplyLayout(const FlameChartTimelineData& data,
+                           std::vector<Pixel> group_offsets,
+                           std::vector<Pixel> group_heights,
+                           std::vector<Pixel> level_offsets,
+                           const std::vector<bool>& group_visible,
+                           const Pixel (&from_header_offsets)[3]) {
+  // Only expand / collapse toggles animate, and only if the layout's shape is
+  // unchanged (a data update in between changes it and snaps instead).
+  const bool animate = animate_next_layout_ && animations_enabled_ &&
+                       group_offsets_.size() == group_offsets.size() &&
+                       group_heights_.size() == group_heights.size() &&
+                       visible_level_offsets_.size() == level_offsets.size() &&
+                       group_visible_.size() == group_visible.size();
+  animate_next_layout_ = false;
+  if (!animate) {
+    layout_transition_ = LayoutTransition();
+    group_offsets_ = std::move(group_offsets);
+    group_heights_ = std::move(group_heights);
+    visible_level_offsets_ = std::move(level_offsets);
+    return;
+  }
+
+  LayoutTransition& transition = layout_transition_;
+  // Rows visible before or after the change are drawn while it plays, so
+  // collapsing rows fold away instead of vanishing. This also covers rows
+  // still folding from an interrupted transition.
+  std::vector<bool> was_drawn(group_visible.size());
+  std::vector<bool> drawn(group_visible);
+  for (size_t i = 0; i < drawn.size(); ++i) {
+    was_drawn[i] = IsGroupDrawn(static_cast<int>(i));
+    drawn[i] = drawn[i] || was_drawn[i];
+  }
+  // Clip edges of rows that are mid-slide in an interrupted transition, so the
+  // new transition continues from them.
+  std::vector<bool> previously_clipped = std::move(transition.clipped);
+  std::vector<Pixel> previous_clip_tops = std::move(transition.clip_tops);
+
+  // Start from what is on screen right now, which may be mid-transition, so a
+  // quick second toggle retargets smoothly.
+  Pixel max_travel = 0.0f;
+  for (size_t i = 0; i < group_offsets.size(); ++i) {
+    max_travel =
+        std::max(max_travel, std::abs(group_offsets[i] - group_offsets_[i]));
+  }
+  for (size_t i = 0; i < group_heights.size(); ++i) {
+    max_travel =
+        std::max(max_travel, std::abs(group_heights[i] - group_heights_[i]));
+  }
+  const Pixel old_total = group_offsets_.empty() ? 0.0f : group_offsets_.back();
+  const Pixel new_total = group_offsets.empty() ? 0.0f : group_offsets.back();
+  transition.expanding = new_total >= old_total;
+  transition.duration = std::clamp(
+      kMotionLayoutMinSeconds + max_travel * kMotionLayoutSecondsPerPixel,
+      kMotionLayoutMinSeconds, kMotionLayoutMaxSeconds);
+  if (!transition.expanding) {
+    transition.duration *= kMotionLayoutCollapseTimeScale;
+  }
+  transition.elapsed = 0.0f;
+  transition.from_group_offsets = group_offsets_;
+  transition.from_group_heights = group_heights_;
+  transition.from_level_offsets = visible_level_offsets_;
+  transition.to_group_offsets = std::move(group_offsets);
+  transition.to_group_heights = std::move(group_heights);
+  transition.to_level_offsets = std::move(level_offsets);
+  transition.drawn = std::move(drawn);
+  transition.clipped = std::move(previously_clipped);
+  transition.clip_tops = std::move(previous_clip_tops);
+  transition.final_group_offsets = transition.to_group_offsets;
+  transition.final_group_heights = transition.to_group_heights;
+  SetUpAccordionRuns(data, was_drawn, group_visible_, group_visible);
+  // The rows on screen start where SetUpAccordionRuns placed them.
+  group_offsets_ = transition.from_group_offsets;
+  group_heights_ = transition.from_group_heights;
+  transition.to_header_offsets[0] = header_hidden_offset_;
+  transition.to_header_offsets[1] = header_pinned_offset_;
+  transition.to_header_offsets[2] = header_all_offset_;
+  for (int i = 0; i < 3; ++i) {
+    transition.from_header_offsets[i] = from_header_offsets[i];
+  }
+  header_hidden_offset_ = from_header_offsets[0];
+  header_pinned_offset_ = from_header_offsets[1];
+  header_all_offset_ = from_header_offsets[2];
+  transition.active = true;
+  motion_in_progress_ = true;
+}
+
+void Timeline::SetUpAccordionRuns(const FlameChartTimelineData& data,
+                                  const std::vector<bool>& was_drawn,
+                                  const std::vector<bool>& was_visible,
+                                  const std::vector<bool>& will_be_visible) {
+  LayoutTransition& transition = layout_transition_;
+  const size_t group_count = transition.to_group_offsets.empty()
+                                 ? 0
+                                 : transition.to_group_offsets.size() - 1;
+  // Clip state carried over from an interrupted transition, if any.
+  const std::vector<bool> previously_clipped = transition.clipped;
+  const std::vector<Pixel> previous_clip_tops = transition.clip_tops;
+  auto was_clipped = [&](size_t i) {
+    return i < previously_clipped.size() && previously_clipped[i] &&
+           i < previous_clip_tops.size();
+  };
+  transition.clipped.assign(group_count, false);
+  transition.from_clip_tops.assign(group_count, 0.0f);
+  transition.to_clip_tops.assign(group_count, 0.0f);
+  transition.clip_tops.assign(group_count, 0.0f);
+  if (group_count == 0 || was_drawn.size() < group_count ||
+      was_visible.size() < group_count ||
+      will_be_visible.size() < group_count) {
+    return;
+  }
+
+  std::vector<Pixel>& from_offsets = transition.from_group_offsets;
+  std::vector<Pixel>& to_offsets = transition.to_group_offsets;
+  std::vector<Pixel>& from_heights = transition.from_group_heights;
+  std::vector<Pixel>& to_heights = transition.to_group_heights;
+
+  enum class RunKind { kNone, kLeaving, kEntering };
+  std::vector<int> run;
+  RunKind run_kind = RunKind::kNone;
+
+  // Lays out one maximal run of consecutive rows that all leave (or all enter)
+  // the screen. Leaving rows keep their height and translate up so that the
+  // run's bottom ends exactly where the rows below it end up; entering rows
+  // start tucked above their final place the same way. A clip edge that
+  // moves with the boundary of the run hides whatever is above it, so rows
+  // appear to slide out from (or back under) the row above.
+  auto flush_run = [&]() {
+    if (run.empty()) return;
+    const int first = run.front();
+    if (run_kind == RunKind::kLeaving) {
+      const Pixel anchor = to_offsets[first];
+      Pixel block_end = from_offsets[first];
+      for (int i : run) {
+        block_end = std::max(block_end, from_offsets[i] + from_heights[i]);
+      }
+      const Pixel run_top =
+          was_clipped(first) ? previous_clip_tops[first] : from_offsets[first];
+      for (int i : run) {
+        to_offsets[i] = anchor - (block_end - from_offsets[i]);
+        to_heights[i] = from_heights[i];
+        transition.clipped[i] = true;
+        transition.from_clip_tops[i] =
+            was_clipped(i) ? previous_clip_tops[i] : run_top;
+        transition.to_clip_tops[i] = anchor;
+      }
+    } else if (run_kind == RunKind::kEntering) {
+      const Pixel anchor = from_offsets[first];
+      Pixel block_end = to_offsets[first];
+      for (int i : run) {
+        block_end = std::max(block_end, to_offsets[i] + to_heights[i]);
+      }
+      for (int i : run) {
+        if (!was_drawn[i]) {
+          // Truly hidden rows start tucked above the anchor; rows that are
+          // still on screen from an interrupted transition continue from
+          // where they are.
+          from_offsets[i] = anchor - (block_end - to_offsets[i]);
+          from_heights[i] = to_heights[i];
+        }
+        transition.clipped[i] = true;
+        transition.from_clip_tops[i] =
+            was_clipped(i) ? previous_clip_tops[i] : anchor;
+        transition.to_clip_tops[i] = to_offsets[first];
+      }
+    }
+    run.clear();
+    run_kind = RunKind::kNone;
+  };
+
+  for (const Group* group_ptr : flattened_groups_) {
+    if (IsVirtualHeader(group_ptr)) {
+      flush_run();
+      continue;
+    }
+    const size_t i = static_cast<size_t>(group_ptr - data.groups.data());
+    if (i >= group_count) continue;
+    const bool leaving = was_drawn[i] && !will_be_visible[i];
+    const bool entering = will_be_visible[i] && !was_visible[i];
+    if (!leaving && !entering) {
+      // Rows hidden both before and after do not interrupt a run; any other
+      // row ends it.
+      if (was_drawn[i] || will_be_visible[i]) flush_run();
+      continue;
+    }
+    const RunKind kind = leaving ? RunKind::kLeaving : RunKind::kEntering;
+    if (kind != run_kind) flush_run();
+    run_kind = kind;
+    run.push_back(static_cast<int>(i));
+  }
+  flush_run();
+  transition.clip_tops = transition.from_clip_tops;
+}
+
+std::optional<Pixel> Timeline::AccordionClipTop(int group_index) const {
+  const LayoutTransition& transition = layout_transition_;
+  if (!transition.active || group_index < 0) return std::nullopt;
+  const size_t i = static_cast<size_t>(group_index);
+  if (i >= transition.clipped.size() || !transition.clipped[i] ||
+      i >= transition.clip_tops.size()) {
+    return std::nullopt;
+  }
+  return tracks_start_screen_pos_.y + transition.clip_tops[i];
+}
+
+void Timeline::AdvanceLayoutTransition(float delta_time) {
+  LayoutTransition& transition = layout_transition_;
+  if (!transition.active) return;
+  transition.elapsed += std::max(0.0f, delta_time);
+  const float progress = transition.duration > 0.0f
+                             ? transition.elapsed / transition.duration
+                             : 1.0f;
+  if (progress >= 1.0f ||
+      group_offsets_.size() != transition.to_group_offsets.size()) {
+    FinishLayoutTransition();
+    return;
+  }
+  // Expanding uses an emphasized decelerate curve (content rushes in and
+  // settles); collapsing uses the standard curve.
+  const float eased = transition.expanding
+                          ? motion::EmphasizedDecelerate(progress)
+                          : motion::Standard(progress);
+  auto lerp = [eased](const std::vector<Pixel>& from,
+                      const std::vector<Pixel>& to, std::vector<Pixel>& out) {
+    for (size_t i = 0; i < out.size() && i < from.size() && i < to.size();
+         ++i) {
+      out[i] = from[i] + (to[i] - from[i]) * eased;
+    }
+  };
+  lerp(transition.from_group_offsets, transition.to_group_offsets,
+       group_offsets_);
+  lerp(transition.from_group_heights, transition.to_group_heights,
+       group_heights_);
+  lerp(transition.from_level_offsets, transition.to_level_offsets,
+       visible_level_offsets_);
+  lerp(transition.from_clip_tops, transition.to_clip_tops,
+       transition.clip_tops);
+  Pixel* const header_offsets[3] = {
+      &header_hidden_offset_, &header_pinned_offset_, &header_all_offset_};
+  for (int i = 0; i < 3; ++i) {
+    *header_offsets[i] =
+        transition.from_header_offsets[i] +
+        (transition.to_header_offsets[i] - transition.from_header_offsets[i]) *
+            eased;
+  }
+  motion_in_progress_ = true;
+}
+
+void Timeline::FinishLayoutTransition() {
+  LayoutTransition& transition = layout_transition_;
+  if (!transition.active) return;
+  if (transition.final_group_offsets.size() == group_offsets_.size()) {
+    group_offsets_ = std::move(transition.final_group_offsets);
+    group_heights_ = std::move(transition.final_group_heights);
+    visible_level_offsets_ = std::move(transition.to_level_offsets);
+    header_hidden_offset_ = transition.to_header_offsets[0];
+    header_pinned_offset_ = transition.to_header_offsets[1];
+    header_all_offset_ = transition.to_header_offsets[2];
+  }
+  // Releases the transient copies.
+  transition = LayoutTransition();
 }
 
 void Timeline::SetVisibleRange(const TimeRange& range, bool animate) {
@@ -1977,6 +2325,10 @@ void Timeline::ResetForNewDataset() {
   entry_colors_.clear();
   group_accent_colors_.clear();
   copied_track_group_index_ = -1;
+  layout_transition_ = LayoutTransition();
+  animate_next_layout_ = false;
+  chevron_openness_.clear();
+  hover_fades_.clear();
 
   // A zero visible range makes the next ProcessTraceEvents fit the new
   // dataset to width.
@@ -2010,6 +2362,8 @@ void Timeline::Draw() {
   event_clicked_this_frame_ = false;
   bool is_resizer_hovered = false;
   bool needs_layout_update = false;
+  motion_in_progress_ = false;
+  AdvanceLayoutTransition(ImGui::GetIO().DeltaTime);
 
   const ImGuiViewport* viewport = ImGui::GetMainViewport();
   ImGui::SetNextWindowPos(viewport->Pos);
@@ -2102,7 +2456,12 @@ void Timeline::Draw() {
   const Pixel window_height = ImGui::GetWindowHeight();
 
   // Find first visible item or item intersecting scroll_y using binary search.
-  auto it = std::lower_bound(flattened_groups_.begin(), flattened_groups_.end(),
+  // Rows tucked away by an accordion transition break the ordering the search
+  // relies on, so transitions (which last a few frames) scan from the start.
+  auto it =
+      layout_transition_.active
+          ? flattened_groups_.begin()
+          : std::lower_bound(flattened_groups_.begin(), flattened_groups_.end(),
                              scroll_y, [this](const Group* group, Pixel y) {
                                return this->GetGroupBottom(group) < y;
                              });
@@ -2114,7 +2473,7 @@ void Timeline::Draw() {
     int group_index = -1;
     if (!is_header) {
       group_index = group_ptr - &timeline_data_.groups[0];
-      if (!group_visible_[group_index]) {
+      if (!IsGroupDrawn(group_index)) {
         continue;
       }
     }
@@ -2124,6 +2483,11 @@ void Timeline::Draw() {
       continue;
     }
     const Pixel group_bottom = GetGroupBottom(group_ptr);
+    if (group_bottom < scroll_y) {
+      // Rows above the viewport (only reachable while scanning linearly during
+      // a transition; the binary search skips them).
+      continue;
+    }
 
     if (is_header) {
       if (DrawHeaderRow(group_ptr, tracks_start_screen_pos, group_top,
@@ -2319,6 +2683,9 @@ void Timeline::Draw() {
   if (needs_layout_update) {
     UpdateLevelPositions(timeline_data_);
     if (redraw_callback_) redraw_callback_();
+  } else if (motion_in_progress_ && redraw_callback_) {
+    // Keep rendering frames until all motion has settled.
+    redraw_callback_();
   }
 }
 
@@ -2364,10 +2731,12 @@ bool Timeline::DrawHeaderRow(const Group* group_ptr,
     hovered = ImGui::IsItemHovered();
   }
   if (toggled) {
+    BeginExpandToggleMotion(header_id, *expanded);
     *expanded = !*expanded;
     event_clicked_this_frame_ = true;
   }
-  const float hover_emphasis = hovered ? 1.0f : 0.0f;
+  const float hover_emphasis =
+      HoverFade(ImGui::GetID("##section_hover"), hovered);
   if (hovered) {
     ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
   }
@@ -2389,7 +2758,7 @@ bool Timeline::DrawHeaderRow(const Group* group_ptr,
       draw_list,
       ImVec2(row_min.x + kTrackLabelPaddingLeft + kTrackChevronSlotWidth * 0.5f,
              center_y),
-      *expanded ? 1.0f : 0.0f, hover_emphasis, foreground_color);
+      ChevronOpenness(header_id, *expanded), hover_emphasis, foreground_color);
 
   ImFont* const name_font = traceviewer::fonts::label_medium_strong;
   const ImVec2 name_pos(
@@ -2445,9 +2814,33 @@ bool Timeline::DrawTrackRow(int group_index, const ImVec2& tracks_start_pos,
                             Pixel content_region_avail_width,
                             double px_per_time_unit_val, Pixel scroll_y,
                             Pixel window_height) {
+  // Rows that are fully folded away during a layout transition have nothing to
+  // draw (and a zero-height child window would fill the remaining space).
+  if (layout_transition_.active &&
+      (static_cast<size_t>(group_index) >= group_heights_.size() ||
+       group_heights_[group_index] < 0.5f)) {
+    return false;
+  }
   bool needs_layout_update = false;
   Group& group = timeline_data_.groups[group_index];
+  // Rows sliding in or out during an accordion transition are clipped at a
+  // moving edge; rows entirely above it are not drawn.
+  const std::optional<Pixel> accordion_clip_top = AccordionClipTop(group_index);
+  if (accordion_clip_top.has_value() && tracks_start_screen_pos.y +
+                                                group_offsets_[group_index] +
+                                                group_heights_[group_index] <=
+                                            *accordion_clip_top) {
+    return false;
+  }
   ImGui::PushID(group_index);
+  if (accordion_clip_top.has_value()) {
+    ImGui::PushClipRect(
+        ImVec2(tracks_start_screen_pos.x, *accordion_clip_top),
+        ImVec2(tracks_start_screen_pos.x + content_region_avail_width +
+                   ImGui::GetStyle().ScrollbarSize,
+               std::numeric_limits<float>::max()),
+        /*intersect_with_current_clip_rect=*/true);
+  }
 
   const bool is_process = group.nesting_level == kProcessNestingLevel;
   const int own_level_count =
@@ -2475,7 +2868,10 @@ bool Timeline::DrawTrackRow(int group_index, const ImVec2& tracks_start_pos,
   const ImU32 foreground_color =
       palette_.GetColor(ColorPalette::Key::kForeground).value_or(kBlackColor);
   ImDrawList* const draw_list = ImGui::GetWindowDrawList();
-  const float openness = is_collapsed ? 0.0f : 1.0f;
+  // How expanded the row looks, animated while its chevron rotates. A toggle
+  // made this frame starts animating on the next one.
+  const float openness =
+      expandable ? ChevronOpenness(group_index, group.expanded) : 1.0f;
 
   // 1. Row background. Process headers get an elevated surface; child tracks
   // alternate a subtle stripe that spans both the label column and the canvas,
@@ -2569,6 +2965,7 @@ bool Timeline::DrawTrackRow(int group_index, const ImVec2& tracks_start_pos,
     // Clicking a label must not clear the current event selection.
     event_clicked_this_frame_ = true;
     if (expandable) {
+      BeginExpandToggleMotion(group_index, group.expanded);
       group.expanded = !group.expanded;
       needs_layout_update = true;
     } else {
@@ -2587,9 +2984,10 @@ bool Timeline::DrawTrackRow(int group_index, const ImVec2& tracks_start_pos,
   // its events' row on the canvas) whether the pointer is over the label or
   // over the canvas row.
   const Pixel splitter_x = row_left + label_width_;
-  const float label_emphasis = label_area_hovered ? 1.0f : 0.0f;
-  const float row_emphasis =
-      (label_area_hovered || canvas_row_hovered) ? 1.0f : 0.0f;
+  const float label_emphasis =
+      HoverFade(ImGui::GetID("##label_hover"), label_area_hovered);
+  const float row_emphasis = HoverFade(
+      ImGui::GetID("##row_hover"), label_area_hovered || canvas_row_hovered);
   if (row_emphasis > 0.0f) {
     draw_list->AddRectFilled(
         ImVec2(splitter_x, band_top), ImVec2(row_right, band_bottom),
@@ -2630,11 +3028,19 @@ bool Timeline::DrawTrackRow(int group_index, const ImVec2& tracks_start_pos,
         draw_list, ImVec2(row_left, pill_top), ImVec2(label_right, pill_bottom),
         WithOpacity(foreground_color, kTrackHoverOpacity * row_emphasis));
   }
-  if (copied_track_group_index_ == group_index &&
-      copy_notification_timer_ > 1.8f) {
-    DrawRowPill(draw_list, ImVec2(row_left, pill_top),
-                ImVec2(label_right, pill_bottom),
-                WithOpacity(kBlue60, kTrackCopyFlashOpacity));
+  if (copied_track_group_index_ == group_index) {
+    // The copy flash fades out (or, without motion, shows briefly).
+    const float flash = animations_enabled_
+                            ? std::clamp((copy_notification_timer_ -
+                                          (2.0f - kMotionCopyFlashSeconds)) /
+                                             kMotionCopyFlashSeconds,
+                                         0.0f, 1.0f)
+                            : (copy_notification_timer_ > 1.8f ? 1.0f : 0.0f);
+    if (flash > 0.0f) {
+      DrawRowPill(draw_list, ImVec2(row_left, pill_top),
+                  ImVec2(label_right, pill_bottom),
+                  WithOpacity(kBlue60, kTrackCopyFlashOpacity * flash));
+    }
   }
 
   // Chevron.
@@ -2754,6 +3160,9 @@ bool Timeline::DrawTrackRow(int group_index, const ImVec2& tracks_start_pos,
                                     content_region_avail_width)) {
     needs_layout_update = true;
   }
+  if (accordion_clip_top.has_value()) {
+    ImGui::PopClipRect();
+  }
   ImGui::PopID();
 
   return needs_layout_update;
@@ -2797,6 +3206,7 @@ bool Timeline::HandleProcessTrackHeaderClick(
       }
     }
     if (is_click) {
+      BeginExpandToggleMotion(group_index, group.expanded);
       group.expanded = !group.expanded;
       event_clicked_this_frame_ = true;
       return true;
@@ -4705,7 +5115,13 @@ void Timeline::DrawGroup(int group_index, double px_per_time_unit_val,
 
   const ImVec2 pos = ImGui::GetCursorScreenPos();
 
-  if (ImGui::BeginChild(timeline_child_id.c_str(), ImVec2(0, group_height), 0,
+  // During a layout transition the row may be partially open; the child window
+  // then clips the events like a drawer. A zero height would make ImGui fill
+  // the remaining space, so fully folded rows are skipped.
+  const Pixel drawn_height = AnimatedRowHeight(group_index, group_height);
+  if (drawn_height < 1.0f) return;
+
+  if (ImGui::BeginChild(timeline_child_id.c_str(), ImVec2(0, drawn_height), 0,
                         kTrackFlags)) {
     const ImVec2 max = ImGui::GetContentRegionMax();
 
@@ -4793,7 +5209,10 @@ void Timeline::DrawGroupPreview(int group_index, double px_per_time_unit_val) {
   }
   end_level = std::max(start_level, end_level);
 
-  if (ImGui::BeginChild(timeline_child_id.c_str(), ImVec2(0, group_height), 0,
+  const Pixel drawn_height = AnimatedRowHeight(group_index, group_height);
+  if (drawn_height < 1.0f) return;
+
+  if (ImGui::BeginChild(timeline_child_id.c_str(), ImVec2(0, drawn_height), 0,
                         kTrackFlags)) {
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
@@ -5690,10 +6109,11 @@ bool Timeline::DrawHideButton(int group_index, Pixel height,
   const ImU32 foreground_color =
       palette_.GetColor(ColorPalette::Key::kForeground).value_or(kBlackColor);
 
-  const IconButtonState state =
-      TrackIconButton("##hide", height, is_track_hidden,
-                      is_track_hidden ? kUnhideTrackTooltip : kHideTrackTooltip,
-                      foreground_color);
+  const IconButtonState state = TrackIconButton(
+      "##hide", height, is_track_hidden,
+      is_track_hidden ? kUnhideTrackTooltip : kHideTrackTooltip,
+      foreground_color,
+      [this](ImGuiID id, bool hovered) { return HoverFade(id, hovered); });
 
   bool toggled = false;
   if (state.clicked) {
@@ -5729,7 +6149,8 @@ bool Timeline::DrawPinButton(int group_index, Pixel height, bool is_pinned) {
 
   const IconButtonState state = TrackIconButton(
       "##pin", height, is_pinned,
-      is_pinned ? kUnpinTrackTooltip : kPinTrackTooltip, foreground_color);
+      is_pinned ? kUnpinTrackTooltip : kPinTrackTooltip, foreground_color,
+      [this](ImGuiID id, bool hovered) { return HoverFade(id, hovered); });
 
   bool toggled = false;
   if (state.clicked) {

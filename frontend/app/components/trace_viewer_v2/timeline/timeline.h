@@ -557,6 +557,18 @@ class Timeline {
   void RemoveBookmark(Microseconds time);
 
   const std::vector<Microseconds>& bookmarks() const { return bookmarks_; }
+  // Enables motion in the track sidebar: expand / collapse transitions that
+  // slide rows open and closed, rotating chevrons, and hover fades. Disabled by
+  // default (rendering snaps to the final state, which keeps tests and
+  // screenshots deterministic); the application enables it unless the user
+  // prefers reduced motion. Disabling it finishes any motion in flight.
+  void set_animations_enabled(bool enabled);
+  bool animations_enabled() const { return animations_enabled_; }
+  // Returns true while an expand / collapse layout transition is in flight.
+  bool is_layout_transition_active() const { return layout_transition_.active; }
+  // Returns the (possibly mid-transition) height of each group's row.
+  const std::vector<Pixel>& group_heights() const { return group_heights_; }
+
   void set_track_management_enabled(bool enabled) {
     track_management_enabled_ = enabled;
   }
@@ -971,6 +983,48 @@ class Timeline {
   // Copies a track's name to the clipboard and shows the copy notification.
   void CopyTrackName(int group_index);
 
+  // --- Motion -------------------------------------------------------------
+  // Returns true if the group's row should be drawn: it is visible, or it is
+  // folding away / sliding in as part of a layout transition.
+  bool IsGroupDrawn(int group_index) const;
+  // Returns the height to draw a row's events at: `full_height`, or less while
+  // the row is opening or folding during a layout transition.
+  Pixel AnimatedRowHeight(int group_index, Pixel full_height) const;
+  // Prepares the motion for an expand / collapse toggle of the row identified
+  // by `chevron_key` (a group index, or a virtual header id) whose expanded
+  // state is about to flip from `was_expanded`: the next layout update is
+  // animated and the chevron starts rotating.
+  void BeginExpandToggleMotion(int chevron_key, bool was_expanded);
+  // Returns the chevron "openness" of a row in [0, 1] (0 = collapsed, pointing
+  // right; 1 = expanded, pointing down), advancing its rotation if animating.
+  // Call at most once per row per frame.
+  float ChevronOpenness(int chevron_key, bool expanded);
+  // Returns the hover emphasis of the item `id` in [0, 1], fading it in and out
+  // instead of snapping. Call at most once per item per frame.
+  float HoverFade(ImGuiID id, bool hovered);
+  // Advances the layout transition by `delta_time` seconds, writing the
+  // interpolated offsets and heights into the live layout vectors.
+  void AdvanceLayoutTransition(float delta_time);
+  // Snaps the layout transition to its end state.
+  void FinishLayoutTransition();
+  // Stores a newly computed layout, animating to it if a toggle requested it.
+  void ApplyLayout(const FlameChartTimelineData& data,
+                   std::vector<Pixel> group_offsets,
+                   std::vector<Pixel> group_heights,
+                   std::vector<Pixel> level_offsets,
+                   const std::vector<bool>& group_visible,
+                   const Pixel (&from_header_offsets)[3]);
+  // Turns the rows entering or leaving in a layout transition into an
+  // accordion: instead of being squashed, they keep their height and slide in
+  // from / out under the row above them, behind a moving clip edge.
+  void SetUpAccordionRuns(const FlameChartTimelineData& data,
+                          const std::vector<bool>& was_drawn,
+                          const std::vector<bool>& was_visible,
+                          const std::vector<bool>& will_be_visible);
+  // Returns the screen-space top clip edge of a row sliding in or out during a
+  // layout transition, or nullopt if the row is not clipped.
+  std::optional<Pixel> AccordionClipTop(int group_index) const;
+
   // Returns the accent color of a track (used by collapsed-track cues): the
   // dominant event color for flame tracks, the chart color for process and
   // counter tracks, or a neutral color for tracks without events.
@@ -1297,6 +1351,51 @@ class Timeline {
   // Stores whether each group is visible (not hidden by a collapsed parent).
   // Precalculated in UpdateLevelPositions.
   std::vector<bool> group_visible_;
+  // Motion state (see set_animations_enabled).
+  struct LayoutTransition {
+    bool active = false;
+    // Whether the content grows (expanding) or shrinks (collapsing); picks the
+    // easing curve.
+    bool expanding = true;
+    float elapsed = 0.0f;
+    float duration = 0.0f;
+    std::vector<Pixel> from_group_offsets;
+    std::vector<Pixel> to_group_offsets;
+    std::vector<Pixel> from_group_heights;
+    std::vector<Pixel> to_group_heights;
+    std::vector<Pixel> from_level_offsets;
+    std::vector<Pixel> to_level_offsets;
+    // The real end-state layout. `to_group_offsets` / `to_group_heights` may
+    // differ for rows leaving the screen, which animate to a tucked-away
+    // position instead (see SetUpAccordionRuns).
+    std::vector<Pixel> final_group_offsets;
+    std::vector<Pixel> final_group_heights;
+    // Rows drawn during the transition: visible before or after it.
+    std::vector<bool> drawn;
+    // Accordion clipping of rows sliding in or out (see SetUpAccordionRuns):
+    // whether each row is clipped, and its clip edge (in track content
+    // coordinates) at the start, end and current point of the transition.
+    std::vector<bool> clipped;
+    std::vector<Pixel> from_clip_tops;
+    std::vector<Pixel> to_clip_tops;
+    std::vector<Pixel> clip_tops;
+    // Hidden, Pinned and All section header offsets.
+    Pixel from_header_offsets[3] = {};
+    Pixel to_header_offsets[3] = {};
+  };
+  bool animations_enabled_ = false;
+  // Set by BeginExpandToggleMotion; makes the next UpdateLevelPositions
+  // animate.
+  bool animate_next_layout_ = false;
+  // Set while drawing a frame if any motion still needs more frames.
+  bool motion_in_progress_ = false;
+  LayoutTransition layout_transition_;
+  // In-flight chevron rotations, keyed by group index or virtual header id.
+  absl::flat_hash_map<int, float> chevron_openness_;
+  // In-flight hover fades, keyed by ImGui item id. Only items that are
+  // hovered or fading out have entries, so this stays tiny.
+  absl::flat_hash_map<ImGuiID, float> hover_fades_;
+
   // Stores whether each visible child track gets the alternating (zebra) row
   // stripe. The alternation restarts below every process header so the first
   // child of each process is never striped. Precalculated in
