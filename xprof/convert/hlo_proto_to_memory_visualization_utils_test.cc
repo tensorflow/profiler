@@ -1520,6 +1520,93 @@ TEST(MemoryViewerTest, ReproUntracedTemporaryAllocationOffsetDesync) {
   }
 }
 
+// Thread-local allocations are never materialized on the heap by any backend,
+// so they must not contribute to the peak nor to the indefinite allocations.
+TEST(MemoryViewerTest, ThreadLocalAllocationsAreNotIndefinite) {
+  static constexpr char kHlo[] = R"pb(
+    hlo_module {
+      name: "test_module"
+      entry_computation_name: "test_computation"
+      computations {
+        name: "test_computation"
+        instructions {
+          name: "fusion.1"
+          id: 0
+          shape { tuple_shapes { element_type: U64 } }
+        }
+        instructions {
+          name: "constant.1"
+          id: 1
+          shape { tuple_shapes { element_type: U64 } }
+        }
+      }
+      computations {
+        name: "thread_local_computation"
+        instructions {
+          name: "add.1"
+          id: 2
+          shape { tuple_shapes { element_type: U64 } }
+        }
+      }
+    }
+    buffer_assignment {
+      buffer_allocations {
+        index: 0
+        size: 1048576
+        color: 0
+        assigned { logical_buffer_id: 1 offset: 0 size: 1048576 }
+      }
+      buffer_allocations {
+        index: 1
+        size: 1048576
+        color: 0
+        is_constant: true
+        assigned { logical_buffer_id: 2 offset: 0 size: 1048576 }
+      }
+      buffer_allocations {
+        index: 2
+        size: 1073741824
+        color: 0
+        is_thread_local: true
+        assigned { logical_buffer_id: 3 offset: 0 size: 1073741824 }
+      }
+      logical_buffers {
+        id: 1
+        size: 1048576
+        color: 0
+        defined_at { instruction_id: 0 shape_index: 0 }
+      }
+      logical_buffers {
+        id: 2
+        size: 1048576
+        color: 0
+        defined_at { instruction_id: 1 shape_index: 0 }
+      }
+      logical_buffers {
+        id: 3
+        size: 1073741824
+        color: 0
+        defined_at { instruction_id: 2 shape_index: 0 }
+      }
+      heap_simulator_traces {
+        events { kind: ALLOC buffer_id: 1 }
+        events { kind: FREE buffer_id: 1 }
+      }
+    }
+  )pb";
+  xla::HloProto hlo_proto;
+  ASSERT_TRUE(ParseTextFormatFromString(kHlo, &hlo_proto).ok());
+  TF_ASSERT_OK_AND_ASSIGN(
+      PreprocessResult preprocess_result,
+      ConvertHloProtoToPreprocessResult(hlo_proto, {.small_buffer_size = 0}));
+  // 1MB heap-simulated buffer + 1MB constant; the 1GB thread-local allocation
+  // is ignored.
+  EXPECT_EQ(preprocess_result.peak_heap_mib(), 2);
+  EXPECT_EQ(preprocess_result.total_buffer_allocation_mib(), 2);
+  EXPECT_EQ(preprocess_result.indefinite_buffer_allocation_mib(), 1);
+  EXPECT_EQ(preprocess_result.indefinite_lifetimes_size(), 1);
+}
+
 }  // namespace
 }  // namespace profiler
 }  // namespace tensorflow

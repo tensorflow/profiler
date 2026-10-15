@@ -153,8 +153,7 @@ class BufferAllocationStruct {
   explicit BufferAllocationStruct(const BufferAllocationProto& proto)
       : buffer_allocation_((proto)) {}
   bool IsIndefinite() const {
-    return buffer_allocation_.is_thread_local() ||
-           buffer_allocation_.is_entry_computation_parameter() ||
+    return buffer_allocation_.is_entry_computation_parameter() ||
            buffer_allocation_.is_constant() ||
            buffer_allocation_.maybe_live_out();
   }
