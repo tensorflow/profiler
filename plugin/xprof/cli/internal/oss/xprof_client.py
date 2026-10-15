@@ -2,6 +2,7 @@
 
 from collections.abc import Iterator, Sequence
 import contextlib
+import dataclasses
 import hashlib
 import logging
 import os
@@ -305,6 +306,84 @@ class LocalXprofClient:
       return self.get_xspace_paths(session_id)
     return sorted({self.resolve_host_path(session_id, n) for n in names})
 
+  def _resolve_op_stats_scope(
+      self,
+      session_id: str,
+      xspace_paths: Sequence[str] | None = None,
+  ) -> tuple[pathlib.Path, "_OpStatsScope"] | None:
+    """Resolves the run directory and op_stats scope metadata for `session_id`."""
+    try:
+      run_dir = self.get_run_dir(session_id)
+      paths = (
+          list(xspace_paths)
+          if xspace_paths is not None
+          else list(self.select_paths(session_id))
+      )
+    except (OSError, ValueError):
+      return None
+    if not paths:
+      return None
+    run_dir_path = pathlib.Path(run_dir)
+    return run_dir_path, _compute_op_stats_scope(run_dir_path, paths)
+
+  def get_owned_op_stats_path(
+      self,
+      session_id: str,
+      xspace_paths: Sequence[str] | None = None,
+  ) -> pathlib.Path | None:
+    """Returns `ALL_HOSTS.op_stats_v2.pb` if owned by the given trace scope.
+
+    Verifies under the run-directory lock that the saved
+    `ALL_HOSTS.op_stats_v2.pb` in the session's run directory was written for
+    the exact `xspace_paths` scope and current trace fingerprint.
+
+    Args:
+      session_id: The session ID, run name, or direct directory/file path.
+      xspace_paths: Selected trace paths. Defaults to
+        `select_paths(session_id)`.
+
+    Returns:
+      Path to `ALL_HOSTS.op_stats_v2.pb` when owned by this scope, or None.
+    """
+    resolved = self._resolve_op_stats_scope(session_id, xspace_paths)
+    if resolved is None:
+      return None
+    run_dir_path, scope = resolved
+    with _lock_run_dir(scope.owner_dir, scope.run_dir_hash):
+      return _find_owned_op_stats_unlocked(run_dir_path, scope)
+
+  def read_owned_op_stats_bytes(
+      self,
+      session_id: str,
+      xspace_paths: Sequence[str] | None = None,
+  ) -> bytes | None:
+    """Reads `ALL_HOSTS.op_stats_v2.pb` under the run-directory lock if owned.
+
+    Holds `_lock_run_dir` across both the ownership check and file read so a
+    concurrent CLI invocation cannot swap the file between check and read.
+
+    Args:
+      session_id: The session ID, run name, or direct directory/file path.
+      xspace_paths: Selected trace paths. Defaults to
+        `select_paths(session_id)`.
+
+    Returns:
+      Raw bytes of `ALL_HOSTS.op_stats_v2.pb` when owned by this scope, or None.
+    """
+    resolved = self._resolve_op_stats_scope(session_id, xspace_paths)
+    if resolved is None:
+      return None
+    run_dir_path, scope = resolved
+    with _lock_run_dir(scope.owner_dir, scope.run_dir_hash):
+      op_stats_path = _find_owned_op_stats_unlocked(run_dir_path, scope)
+      if op_stats_path is None:
+        return None
+      try:
+        return op_stats_path.read_bytes()
+      except OSError:
+        logging.exception("Failed to read %s", op_stats_path)
+        return None
+
   def describe_capture(
       self,
       session_id: str,
@@ -432,49 +511,26 @@ class LocalXprofClient:
 
     fetch_params = dict(kwargs)
     bypass_cache = fetch_params.pop("bypass_cache", False)
-    try:
-      from xprof.cli.internal import decorators  # pyrefly: ignore[missing-import]
-    except ImportError:
-      from xprof.cli.internal import decorators  # pyrefly: ignore[missing-import]
-
-    if xspace_paths:
-      try:
-        current_fp = decorators.compute_path_fingerprint(
-            run_dir, xspace_paths=xspace_paths
-        )
-      except Exception:  # pylint: disable=broad-exception-caught
-        current_fp = "NO_TRACE_INPUTS"
-    else:
-      current_fp = "NO_TRACE_INPUTS"
-
-    fp_dir = decorators.get_cache_dir() / "fingerprints"
-    fp_dir.mkdir(parents=True, exist_ok=True)
-    # Canonicalize paths so `./run`, `/abs/run`, and symlinks share one key,
-    # and key on the resolved trace scope rather than the directory alone.
-    real_run_dir = os.path.realpath(run_dir)
-    real_xspace_paths = [os.path.realpath(p) for p in xspace_paths]
-    scope_key = "|".join([real_run_dir, *real_xspace_paths])
-    scope_hash = hashlib.sha256(scope_key.encode("utf-8")).hexdigest()[:16]
-    fp_file = fp_dir / f"{scope_hash}.fp"
-
-    owner_dir = decorators.get_cache_dir() / "op_stats_owners"
-    run_dir_key = real_run_dir.encode("utf-8")
-    run_dir_hash = hashlib.sha256(run_dir_key).hexdigest()[:16]
-    owner_file = owner_dir / f"{run_dir_hash}.owner"
     run_dir_path = pathlib.Path(run_dir)
+    scope = _compute_op_stats_scope(run_dir_path, xspace_paths)
+    scope.fp_dir.mkdir(parents=True, exist_ok=True)
 
     if tb_tool not in OP_STATS_TB_TOOLS:
-      stored_fp = _read_text_or_none(fp_file)
+      stored_fp = _read_text_or_none(scope.fp_file)
       is_fresh = (
           (stored_fp is None)
-          or (current_fp == "NO_TRACE_INPUTS")
-          or (stored_fp != current_fp)
+          or (scope.current_fp == "NO_TRACE_INPUTS")
+          or (stored_fp != scope.current_fp)
       )
-      if is_fresh and current_fp and current_fp != "NO_TRACE_INPUTS":
-        _atomic_write_text(fp_dir, fp_file, current_fp)
+      if (
+          is_fresh
+          and scope.current_fp
+          and scope.current_fp != "NO_TRACE_INPUTS"
+      ):
+        _atomic_write_text(scope.fp_dir, scope.fp_file, scope.current_fp)
       if bypass_cache:
         fetch_params["use_saved_result"] = "0"
-        _unlink_quietly(owner_file)
+        _unlink_quietly(scope.owner_file)
         _remove_op_stats_files(run_dir_path)
       else:
         # Non-op_stats tools do not read `ALL_HOSTS.op_stats_v2.pb`, and
@@ -491,20 +547,17 @@ class LocalXprofClient:
     # scope. Serialize conversions per run directory and reuse the saved
     # files only when this scope and trace fingerprint wrote the exact files
     # currently on disk.
-    with _lock_run_dir(owner_dir, run_dir_hash):
-      stored_fp = _read_text_or_none(fp_file)
+    with _lock_run_dir(scope.owner_dir, scope.run_dir_hash):
+      stored_fp = _read_text_or_none(scope.fp_file)
       is_fresh = (
           (stored_fp is None)
-          or (current_fp == "NO_TRACE_INPUTS")
-          or (stored_fp != current_fp)
+          or (scope.current_fp == "NO_TRACE_INPUTS")
+          or (stored_fp != scope.current_fp)
       )
-      saved_sig = _op_stats_signature(run_dir_path)
       reuse_saved_result = (
           not bypass_cache
           and not is_fresh
-          and bool(saved_sig)
-          and _read_text_or_none(owner_file)
-          == f"{scope_hash}:{current_fp}:{saved_sig}"
+          and _has_valid_op_stats_owner(scope, run_dir_path)
       )
 
       claim_saved_result = False
@@ -512,14 +565,14 @@ class LocalXprofClient:
         fetch_params["use_saved_result"] = "1"
       else:
         fetch_params["use_saved_result"] = "0"
-        _unlink_quietly(owner_file)
+        _unlink_quietly(scope.owner_file)
         # Claim the saved files after conversion only if no foreign op_stats
         # file survived the reset (e.g. in a read-only directory); then any
         # op_stats file in run_dir comes from this conversion.
         claim_saved_result = _remove_op_stats_files(run_dir_path)
 
-        if current_fp and current_fp != "NO_TRACE_INPUTS":
-          _atomic_write_text(fp_dir, fp_file, current_fp)
+        if scope.current_fp and scope.current_fp != "NO_TRACE_INPUTS":
+          _atomic_write_text(scope.fp_dir, scope.fp_file, scope.current_fp)
         else:
           claim_saved_result = False
 
@@ -531,9 +584,9 @@ class LocalXprofClient:
         post_sig = _op_stats_signature(run_dir_path)
         if post_sig:
           _atomic_write_text(
-              owner_dir,
-              owner_file,
-              f"{scope_hash}:{current_fp}:{post_sig}",
+              scope.owner_dir,
+              scope.owner_file,
+              f"{scope.scope_hash}:{scope.current_fp}:{post_sig}",
           )
 
     return content_type, data
@@ -619,6 +672,94 @@ def _dedup_by_realpath(paths: Sequence[str]) -> list[str]:
 _INSTANCE: LocalXprofClient | None = None
 
 
+@dataclasses.dataclass(frozen=True)
+class _OpStatsScope:
+  """Resolved fingerprint and ownership metadata for a run directory scope."""
+
+  current_fp: str
+  fp_dir: pathlib.Path
+  fp_file: pathlib.Path
+  scope_hash: str
+  owner_dir: pathlib.Path
+  run_dir_hash: str
+  owner_file: pathlib.Path
+
+
+def _compute_op_stats_scope(
+    run_dir: pathlib.Path, xspace_paths: Sequence[str]
+) -> _OpStatsScope:
+  """Computes trace fingerprint and owner-file paths for a local trace scope."""
+  try:
+    from xprof.cli.internal import decorators  # pyrefly: ignore[missing-import]
+  except ImportError:
+    from xprof.cli.internal import decorators  # pyrefly: ignore[missing-import]
+
+  if xspace_paths:
+    try:
+      current_fp = decorators.compute_path_fingerprint(
+          run_dir, xspace_paths=xspace_paths
+      )
+    except Exception:  # pylint: disable=broad-exception-caught
+      current_fp = "NO_TRACE_INPUTS"
+  else:
+    current_fp = "NO_TRACE_INPUTS"
+
+  fp_dir = decorators.get_cache_dir() / "fingerprints"
+  # Canonicalize paths so `./run`, `/abs/run`, and symlinks share one key,
+  # and key on the resolved trace scope rather than the directory alone.
+  real_run_dir = os.path.realpath(run_dir)
+  real_xspace_paths = [os.path.realpath(p) for p in xspace_paths]
+  scope_key = "|".join([real_run_dir, *real_xspace_paths])
+  scope_hash = hashlib.sha256(scope_key.encode("utf-8")).hexdigest()[:16]
+  fp_file = fp_dir / f"{scope_hash}.fp"
+
+  owner_dir = decorators.get_cache_dir() / "op_stats_owners"
+  run_dir_hash = hashlib.sha256(real_run_dir.encode("utf-8")).hexdigest()[:16]
+  owner_file = owner_dir / f"{run_dir_hash}.owner"
+  return _OpStatsScope(
+      current_fp=current_fp,
+      fp_dir=fp_dir,
+      fp_file=fp_file,
+      scope_hash=scope_hash,
+      owner_dir=owner_dir,
+      run_dir_hash=run_dir_hash,
+      owner_file=owner_file,
+  )
+
+
+def _has_valid_op_stats_owner(
+    scope: _OpStatsScope, run_dir_path: pathlib.Path
+) -> bool:
+  """Returns True if `scope.owner_file` matches the current scope and files."""
+  if not scope.current_fp or scope.current_fp == "NO_TRACE_INPUTS":
+    return False
+  saved_sig = _op_stats_signature(run_dir_path)
+  return (
+      bool(saved_sig)
+      and _read_text_or_none(scope.owner_file)
+      == f"{scope.scope_hash}:{scope.current_fp}:{saved_sig}"
+  )
+
+
+def _find_owned_op_stats_unlocked(
+    run_dir_path: pathlib.Path, scope: _OpStatsScope
+) -> pathlib.Path | None:
+  """Returns `ALL_HOSTS.op_stats_v2.pb` in `run_dir_path` if owned by `scope`."""
+  op_stats_path = next(
+      (
+          p
+          for p in _op_stats_files(run_dir_path) or []
+          if p.name == "ALL_HOSTS.op_stats_v2.pb"
+      ),
+      None,
+  )
+  if op_stats_path is None or not _has_valid_op_stats_owner(
+      scope, run_dir_path
+  ):
+    return None
+  return op_stats_path
+
+
 def _read_text_or_none(path: pathlib.Path) -> str | None:
   """Returns the stripped text of `path`, or None if it cannot be read."""
   try:
@@ -642,9 +783,9 @@ def _op_stats_files(run_dir: pathlib.Path) -> list[pathlib.Path] | None:
   """Lists saved op_stats and smart_suggestion files in `run_dir`."""
   try:
     files: list[pathlib.Path] = []
-    for pattern in ("*op_stats*.pb", "*smart_suggestion*.pb"):
+    for pattern in ("**/*op_stats*.pb", "**/*smart_suggestion*.pb"):
       files.extend(p for p in run_dir.glob(pattern) if p.is_file())
-    return sorted(files)
+    return sorted(set(files))
   except OSError:
     logging.exception("Failed to list op_stats files in %s", run_dir)
     return None

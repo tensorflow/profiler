@@ -40,6 +40,41 @@ about a run.
     -   `run_environment`: Hardware type (`device_type`), core count
         (`device_core_count`), host count, and training mode.
 
+## Multi-Host Runs
+
+On a multi-host session or a run directory with more than one trace, the
+step-time fields (`steptime_ms_average`, `steptime_ms_standard_deviation`) take
+the per-step maximum across all non-SparseCore cores on all hosts
+(`ComputeStepTimeSummaryInMs`), while TPU per-step breakdown averages such as
+`tc_idle_ms_average` use the per-step minimum across all cores on all hosts
+(`ComputeTpuPerStepDataAcrossCores`). When one host is a CPU straggler and
+another blocks inside a collective on device, the merged summary can pair the
+longest device step duration with the shortest device idle duration and mask
+the straggler.
+
+On multi-host runs, `capture` (for local multi-trace directories) and
+`performance_summary` include:
+
+```json
+"step_time_scope": "per_step_max_across_hosts"
+```
+
+along with a warning and `performance_summary.per_host_step_time_ms` (mapping
+each host or trace stem to its own `steptime_ms_average`,
+`steptime_ms_standard_deviation`, `steptime_ms_minimum`, and
+`steptime_ms_maximum` from the owned `ALL_HOSTS.op_stats_v2.pb` on local runs or
+`pod_viewer` step records as a fallback / on remote sessions):
+
+-   For per-host step time and breakdown metrics, inspect
+    `performance_summary.per_host_step_time_ms` or run once per host with
+    `--host=<name>` (names from `capture.files_available`).
+-   `xprof get_step_trace <run_dir>` averages per-core step durations across
+    all hosts when `pod_viewer` step data is present, but its generic/GPU
+    `input_pipeline_analyzer` fallback reads core 0 of the first host only.
+
+A single-host selection (one file or `--host=<name>`) has no
+`step_time_scope` field.
+
 ## Example Usage
 
 If the user says: "What was the compute percent for session /path/to/logdir?",

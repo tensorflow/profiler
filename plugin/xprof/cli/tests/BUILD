@@ -165,6 +165,7 @@ py_test(
         "//plugin/xprof/cli/internal:decorators",
         "//plugin/xprof/cli/internal/oss:xprof_client",
         "//plugin/xprof/cli/tools:get_overview_tool",
+        "//plugin/xprof/protobuf:op_stats_proto_py",
         "@absl_py//absl/testing:absltest",
     ],
 )
@@ -208,6 +209,7 @@ pytype_strict_contrib_test(
     deps = [
         "//plugin/xprof:server",
         "//plugin/xprof/cli:xprof_cli_lib",
+        "//plugin/xprof/cli/internal:trace_selection",
         "//plugin/xprof/cli/tools:get_kernel_stats_tool",
         "//plugin/xprof/cli/tools:install_skills_tool",
         "//plugin/xprof/cli/tools/oss:diff_sessions_tool",

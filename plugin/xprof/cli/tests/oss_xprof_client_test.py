@@ -363,12 +363,17 @@ class OssXprofClientTest(unittest.TestCase):
         b'rank2',
     )
 
-  def _save_op_stats_like_converter(self, run_dir: pathlib.Path) -> None:
-    """Makes the mock converter save op_stats for the scope it computed."""
-    op_stats = run_dir / 'ALL_HOSTS.op_stats_v2.pb'
+  def _save_op_stats_like_converter(
+      self, run_dir: pathlib.Path | None = None
+  ) -> None:
+    """Makes the mock converter save op_stats in Dirname(xspace_paths[0])."""
+    del run_dir  # SessionSnapshot uses Dirname(xspace_paths[0]).
 
     def convert(xspace_paths, tool, params):
       del tool  # Unused.
+      op_stats = (
+          pathlib.Path(xspace_paths[0]).parent / 'ALL_HOSTS.op_stats_v2.pb'
+      )
       if params['use_saved_result'] == '0' or not op_stats.exists():
         op_stats.write_text(','.join(xspace_paths), encoding='utf-8')
       return op_stats.read_bytes(), 'application/json'
@@ -528,6 +533,53 @@ class OssXprofClientTest(unittest.TestCase):
     )
     self.assertEqual(self._use_saved_result(), '0')
     self.assertEqual(single, rank0.encode())
+
+  def test_get_owned_op_stats_path_tracks_scope_and_subdirectories(self):
+    """Verifies get_owned_op_stats_path checks scope ownership and subdirs."""
+    run_dir = pathlib.Path(self.temp_dir) / 'nested_run'
+    sub0 = run_dir / 'sub0'
+    sub1 = run_dir / 'sub1'
+    sub0.mkdir(parents=True)
+    sub1.mkdir(parents=True)
+    rank0 = sub0 / 'rank0_node0.xplane.pb'
+    rank2 = sub1 / 'rank2_node0.xplane.pb'
+    rank0.write_bytes(b'rank0')
+    rank2.write_bytes(b'rank2')
+    self._save_op_stats_like_converter()
+
+    client = xprof_client.LocalXprofClient()
+    all_paths = [str(rank0), str(rank2)]
+    self.assertIsNone(client.get_owned_op_stats_path(str(run_dir), all_paths))
+    self.assertIsNone(client.read_owned_op_stats_bytes(str(run_dir), all_paths))
+
+    client.fetch('overview_page.json', str(run_dir))
+    self.assertEqual(
+        client.get_owned_op_stats_path(str(run_dir), all_paths),
+        sub0 / 'ALL_HOSTS.op_stats_v2.pb',
+    )
+    self.assertEqual(
+        client.read_owned_op_stats_bytes(str(run_dir), all_paths),
+        f'{rank0},{rank2}'.encode('utf-8'),
+    )
+    self.assertIsNone(
+        client.get_owned_op_stats_path(str(run_dir), [str(rank0)])
+    )
+    self.assertIsNone(
+        client.read_owned_op_stats_bytes(str(run_dir), [str(rank0)])
+    )
+
+    client.fetch('overview_page.json', str(run_dir), host='rank2_node0')
+    self.assertFalse((sub0 / 'ALL_HOSTS.op_stats_v2.pb').exists())
+    self.assertIsNone(client.get_owned_op_stats_path(str(run_dir), all_paths))
+    self.assertIsNone(client.read_owned_op_stats_bytes(str(run_dir), all_paths))
+    self.assertEqual(
+        client.get_owned_op_stats_path(str(run_dir), [str(rank2)]),
+        sub1 / 'ALL_HOSTS.op_stats_v2.pb',
+    )
+    self.assertEqual(
+        client.read_owned_op_stats_bytes(str(run_dir), [str(rank2)]),
+        str(rank2).encode('utf-8'),
+    )
 
 
 if __name__ == '__main__':

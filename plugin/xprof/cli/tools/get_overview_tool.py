@@ -1,13 +1,26 @@
 """Tool to fetch overview page data from XProf."""
 
+from collections.abc import Iterable
 import json
 import logging
+import math
+import os
+import pathlib
 import re
+import statistics
 from typing import Any
 
 from xprof.cli.internal import decorators
+from xprof.cli.internal import trace_selection
 from xprof.cli.internal.oss import xprof_client
 from xprof.cli.tools import get_roofline_model_tool
+from xprof.protobuf import op_stats_pb2
+
+# Mirrors `kSparseCoreIndexStart` in
+# `third_party/xprof/convert/op_stats_to_input_pipeline_analysis.cc` and
+# `kMaxDevicesPerHost` in `third_party/xprof/convert/op_stats_combiner.h`.
+_SPARSE_CORE_INDEX_START = 1_000_000
+_MAX_DEVICES_PER_HOST = 1000
 
 # Keys to extract from overview_page.json for performance summary.
 # These keys supplement keys starting with stat_ or sc_.
@@ -196,6 +209,293 @@ def _populate_roofline_fallback(
     logging.exception("Failed to fetch roofline fallback")
 
 
+def _accumulate_step_host_maxes(
+    steps: Iterable[Iterable[tuple[int, str, float]]],
+) -> dict[tuple[int, str], list[float]]:
+  """Accumulates the per-step maximum duration in ms for each host across steps.
+
+  Args:
+    steps: For each step, an iterable of `(core_id, hostname, duration_ms)`
+      tuples across cores.
+
+  Returns:
+    Mapping from `(src_host_id, hostname)` to the list of per-step maximum
+    durations in milliseconds.
+  """
+  by_group: dict[tuple[int, str], list[float]] = {}
+  for step_records in steps:
+    per_host_step_max: dict[tuple[int, str], float] = {}
+    for core_id, raw_host, dur_ms in step_records:
+      if (
+          core_id >= _SPARSE_CORE_INDEX_START
+          or not math.isfinite(dur_ms)
+          or dur_ms <= 0
+      ):
+        continue
+      src_host_id = max(core_id, 0) // _MAX_DEVICES_PER_HOST
+      group_key = (src_host_id, raw_host)
+      if dur_ms > per_host_step_max.get(group_key, 0.0):
+        per_host_step_max[group_key] = dur_ms
+    for group_key, dur_ms in per_host_step_max.items():
+      by_group.setdefault(group_key, []).append(dur_ms)
+  return by_group
+
+
+def _format_per_host_summaries(
+    by_group: dict[tuple[int, str], list[float]],
+    local_stems: list[str],
+) -> dict[str, dict[str, str]]:
+  """Formats per-host step-time lists into `steptime_ms_*` summary dicts."""
+  groups = sorted(by_group)
+  if len(groups) < 2:
+    return {}
+
+  use_local_stems = (
+      bool(local_stems)
+      and len({g[0] for g in groups}) == len(groups)
+      and all(0 <= g[0] < len(local_stems) for g in groups)
+  )
+  distinct_raw_hosts = len({g[1] for g in groups if g[1]}) == len(groups)
+
+  per_host: dict[str, dict[str, str]] = {}
+  for src_host_id, raw_host in groups:
+    vals = by_group[(src_host_id, raw_host)]
+    if not vals:
+      continue
+    if use_local_stems:
+      label = local_stems[src_host_id]
+    elif distinct_raw_hosts:
+      label = raw_host
+    elif raw_host:
+      label = f"{raw_host}_{src_host_id}"
+    else:
+      label = f"host_{src_host_id}"
+    avg_ms = statistics.mean(vals)
+    std_ms = statistics.stdev(vals) if len(vals) > 1 else 0.0
+    per_host[label] = {
+        "steptime_ms_average": f"{avg_ms:.2f}",
+        "steptime_ms_standard_deviation": f"{std_ms:.2f}",
+        "steptime_ms_minimum": f"{min(vals):.2f}",
+        "steptime_ms_maximum": f"{max(vals):.2f}",
+    }
+  return per_host if len(per_host) >= 2 else {}
+
+
+def _extract_per_host_from_op_stats_file(
+    client: xprof_client.CachedXprofClient,
+    session_id: str,
+    local_paths: list[str],
+    local_stems: list[str],
+) -> dict[str, dict[str, str]]:
+  """Reads per-host step-time summaries from an owned `ALL_HOSTS.op_stats_v2.pb`."""
+  if len(local_paths) < 2 or len(local_stems) < 2:
+    return {}
+  try:
+    raw_bytes: bytes | None = None
+    read_owned_fn = getattr(client, "read_owned_op_stats_bytes", None)
+    if callable(read_owned_fn):
+      candidate = read_owned_fn(session_id, xspace_paths=local_paths)
+      if isinstance(candidate, bytes):
+        raw_bytes = candidate
+    if raw_bytes is None:
+      get_owned_fn = getattr(client, "get_owned_op_stats_path", None)
+      if callable(get_owned_fn):
+        op_stats_path = get_owned_fn(session_id, xspace_paths=local_paths)
+        if isinstance(op_stats_path, (str, os.PathLike)):
+          op_stats_file = pathlib.Path(op_stats_path)
+          if op_stats_file.is_file():
+            raw_bytes = op_stats_file.read_bytes()
+    if not raw_bytes:
+      return {}
+    op_stats = op_stats_pb2.OpStats()
+    op_stats.ParseFromString(raw_bytes)
+    env_hosts = op_stats.run_environment.host_count
+    if env_hosts > 0 and env_hosts != len(local_stems):
+      return {}
+    core_details = op_stats.core_id_to_details
+
+    def iter_op_stats_steps() -> Iterable[Iterable[tuple[int, str, float]]]:
+      for seq in op_stats.step_db.step_sequence:
+        yield (
+            (
+                int(core_id),
+                str(core_details[core_id].hostname or "").strip()
+                if core_id in core_details
+                else "",
+                float(step_info.duration_ps) / 1e9,
+            )
+            for core_id, step_info in seq.step_info_per_core.items()
+            if step_info.duration_ps > 0
+        )
+
+    by_group = _accumulate_step_host_maxes(iter_op_stats_steps())
+    if len(by_group) != len(local_stems) or {g[0] for g in by_group} != set(
+        range(len(local_stems))
+    ):
+      return {}
+    return _format_per_host_summaries(by_group, local_stems)
+  except Exception:  # pylint: disable=broad-exception-caught
+    logging.exception("Failed to read ALL_HOSTS.op_stats_v2.pb")
+    return {}
+
+
+def _extract_per_host_step_time_ms(
+    client: xprof_client.CachedXprofClient,
+    session_id: str,
+    local_stems: list[str],
+    local_paths: list[str] | None = None,
+) -> dict[str, dict[str, str]]:
+  """Computes per-host step-time summaries from OpStats or pod_viewer records.
+
+  Matches C++ `ComputeStepTimeSummaryInMs` in
+  `op_stats_to_input_pipeline_analysis`: for each step, takes the maximum
+  step duration across all non-SparseCore cores belonging to each host, then
+  computes average, sample standard deviation, minimum, and maximum across
+  steps.
+
+  Args:
+    client: The XProf client.
+    session_id: The XProf session ID.
+    local_stems: Trace stems in `SessionSnapshot` merge order for local runs.
+    local_paths: Selected local trace file paths for local runs.
+
+  Returns:
+    Mapping from host or trace stem to per-host `steptime_ms_*` strings, or an
+    empty dict when fewer than 2 hosts have step records.
+  """
+  if local_paths:
+    from_op_stats = _extract_per_host_from_op_stats_file(
+        client, session_id, local_paths, local_stems
+    )
+    if from_op_stats:
+      return from_op_stats
+
+  try:
+    result = client.fetch(
+        tool_name="pod_viewer.json",
+        session_id=session_id,
+    )
+    if not result or (isinstance(result, tuple) and not result[1]):
+      result = client.fetch(
+          tool_name="pod_viewer",
+          session_id=session_id,
+      )
+    if isinstance(result, tuple) and len(result) == 2:
+      _, data = result
+    else:
+      data = result
+    if not data:
+      return {}
+    if isinstance(data, bytes):
+      data = data.decode("utf-8", errors="replace")
+    pod_data = json.loads(data)
+    if not isinstance(pod_data, dict):
+      return {}
+    pod_map = pod_data.get("podStatsSequence", {}).get("podStatsMap", [])
+    if not isinstance(pod_map, list) or not pod_map:
+      return {}
+
+    def iter_pod_viewer_steps() -> Iterable[list[tuple[int, str, float]]]:
+      for entry in pod_map:
+        if not isinstance(entry, dict):
+          continue
+        cores = entry.get("podStatsPerCore", {})
+        if not isinstance(cores, dict):
+          continue
+        step_records: list[tuple[int, str, float]] = []
+        for core_id_str, record in cores.items():
+          if not isinstance(record, dict):
+            continue
+          try:
+            core_id = int(core_id_str)
+          except (ValueError, TypeError):
+            core_id = 0
+          raw_host = str(
+              record.get("hostName") or record.get("host_name") or ""
+          ).strip()
+          try:
+            dur_us = float(
+                record.get(
+                    "totalDurationUs", record.get("total_duration_us", 0)
+                )
+            )
+          except (ValueError, TypeError):
+            continue
+          step_records.append((core_id, raw_host, dur_us / 1000.0))
+        yield step_records
+
+    by_group = _accumulate_step_host_maxes(iter_pod_viewer_steps())
+    return _format_per_host_summaries(by_group, local_stems)
+  except (KeyError, ValueError, TypeError, json.JSONDecodeError, OSError):
+    logging.exception("Failed to extract per-host step time from pod_viewer")
+    return {}
+  except Exception:  # pylint: disable=broad-exception-caught
+    logging.exception("Unexpected error fetching pod_viewer for %s", session_id)
+    return {}
+
+
+def _populate_multi_host_step_time(
+    client: xprof_client.CachedXprofClient,
+    session_id: str,
+    performance_summary: dict[str, Any],
+    run_environment: dict[str, Any],
+) -> None:
+  """Annotates multi-host step-time scope and per-host step-time breakdown."""
+  try:
+    host_count = int(run_environment.get("host_count", 1))
+  except (ValueError, TypeError):
+    host_count = 1
+
+  is_local = False
+  local_paths: list[str] = []
+  local_stems: list[str] = []
+  is_local_fn = getattr(client, "is_local_session", None)
+  select_paths_fn = getattr(client, "select_paths", None)
+  if callable(is_local_fn) and callable(select_paths_fn):
+    try:
+      is_local_res = is_local_fn(session_id)
+      if isinstance(is_local_res, bool) and is_local_res:
+        is_local = True
+        raw_paths = list(select_paths_fn(session_id))
+        if all(isinstance(p, (str, os.PathLike)) for p in raw_paths):
+          local_paths = [str(p) for p in raw_paths]
+          local_stems = [trace_selection.trace_stem(p) for p in raw_paths]
+    except (OSError, ValueError, TypeError):
+      local_paths = []
+      local_stems = []
+
+  if is_local:
+    if len(local_stems) < 2:
+      return
+    num_hosts = len(local_stems)
+  else:
+    if host_count < 2:
+      return
+    num_hosts = host_count
+
+  per_host = _extract_per_host_step_time_ms(
+      client, session_id, local_stems, local_paths=local_paths
+  )
+  if per_host:
+    performance_summary["per_host_step_time_ms"] = per_host
+    num_hosts = max(num_hosts, len(per_host))
+
+  if (
+      "steptime_ms_average" not in performance_summary
+      and "steptime_ms_standard_deviation" not in performance_summary
+      and not per_host
+  ):
+    return
+
+  performance_summary["step_time_scope"] = "per_step_max_across_hosts"
+  performance_summary["step_time_warning"] = (
+      trace_selection.format_step_time_warning(
+          trace_selection.traits_for("get_overview").step_time_fields,
+          num_hosts=num_hosts,
+      )
+  )
+
+
 @decorators.cached(expire=86400)
 def get_overview(
     session_id: str,
@@ -298,6 +598,10 @@ def get_overview(
       )
       if match:
         run_environment["xid"] = match.group(1)
+
+    _populate_multi_host_step_time(
+        client, session_id, performance_summary, run_environment
+    )
 
     output = {
         "performance_summary": performance_summary,

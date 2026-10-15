@@ -8,6 +8,7 @@ import collections
 import json
 import logging
 
+from xprof.cli.internal import trace_selection
 from xprof.cli.tools import get_memory_profile_tool
 from xprof.cli.tools import get_overview_tool
 from xprof.cli.tools import get_roofline_model_tool
@@ -119,6 +120,34 @@ def get_kpi_metrics(session_id: str, *, bypass_cache: bool = False) -> str:
         "custom_call_share_pct"
     )
     payload["custom_call_warning"] = perf_summary_raw["custom_call_warning"]
+  if "step_time_scope" in perf_summary_raw:
+    per_host_raw = perf_summary_raw.get("per_host_step_time_ms")
+    num_hosts: int | None = (
+        len(per_host_raw)
+        if isinstance(per_host_raw, dict) and len(per_host_raw) >= 2
+        else None
+    )
+    if num_hosts is None:
+      try:
+        parsed_hosts = int(run_env_raw.get("host_count", 0))
+        if parsed_hosts >= 2:
+          num_hosts = parsed_hosts
+      except (ValueError, TypeError):
+        num_hosts = None
+    payload["step_time_scope"] = perf_summary_raw["step_time_scope"]
+    payload["step_time_warning"] = trace_selection.format_step_time_warning(
+        trace_selection.traits_for("get_kpi_metrics").step_time_fields,
+        num_hosts=num_hosts,
+    )
+  if isinstance(perf_summary_raw.get("per_host_step_time_ms"), dict):
+    payload["per_host_step_time_ms"] = {
+        host: (
+            stats.get("steptime_ms_average")
+            if isinstance(stats, dict)
+            else stats
+        )
+        for host, stats in perf_summary_raw["per_host_step_time_ms"].items()
+    }
 
   return json.dumps(
       payload,

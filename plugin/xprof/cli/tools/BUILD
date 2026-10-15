@@ -38,7 +38,9 @@ pytype_strict_library(
     deps = [
         ":get_roofline_model_tool",
         "//plugin/xprof/cli/internal:decorators",
+        "//plugin/xprof/cli/internal:trace_selection",
         "//plugin/xprof/cli/internal/oss:xprof_client",
+        "//plugin/xprof/protobuf:op_stats_proto_py",
     ],
 )
 
@@ -158,6 +160,7 @@ pytype_strict_library(
         ":get_memory_profile_tool",
         ":get_overview_tool",
         ":get_roofline_model_tool",
+        "//plugin/xprof/cli/internal:trace_selection",
     ],
 )
 

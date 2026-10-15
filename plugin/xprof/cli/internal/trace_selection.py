@@ -37,11 +37,16 @@ class ToolTraits:
     host_kind: What the tool's own `host` parameter means: "name" (a host or
       file name, routed by `--host=<name>`) or "index" (an integer index that is
       passed through unchanged).
+    step_time_fields: Step-time field names in the tool's output whose values in
+      the merged XProf all-hosts view come from the per-step maximum across all
+      non-SparseCore cores on all hosts (`ComputeStepTimeSummaryInMs`), rather
+      than a per-host value or cross-host mean.
   """
 
   combine: Combine = "merged"
   single_trace: bool = False
   host_kind: Literal["name", "index"] = "name"
+  step_time_fields: tuple[str, ...] = ()
 
 
 _DEFAULT_TRAITS = ToolTraits()
@@ -57,9 +62,16 @@ TOOL_TRAITS: types.MappingProxyType[str, ToolTraits] = types.MappingProxyType({
     "get_hosts": ToolTraits(combine="none"),
     "get_kernel_stats": ToolTraits(combine="summed"),
     "get_kernel_utilization": ToolTraits(single_trace=True),
+    "get_kpi_metrics": ToolTraits(step_time_fields=("step_time_ms",)),
     "get_llo_analysis": ToolTraits(single_trace=True),
     "get_llo_debug_string": ToolTraits(single_trace=True),
     "get_memory_profile": ToolTraits(single_trace=True),
+    "get_overview": ToolTraits(
+        step_time_fields=(
+            "steptime_ms_average",
+            "steptime_ms_standard_deviation",
+        )
+    ),
     "get_utilization_viewer": ToolTraits(single_trace=True, host_kind="index"),
     "get_xspace_proto": ToolTraits(single_trace=True),
     "list_xplane_events": ToolTraits(combine="listed"),
@@ -132,6 +144,75 @@ def attach_capture(result: Any, capture: dict[str, Any]) -> Any:
       return json.dumps({"capture": capture, **parsed}, indent=2)
   sys.stderr.write(f"xprof-capture: {json.dumps(capture)}\n")
   return result
+
+
+def format_step_time_warning(
+    fields: Sequence[str], num_hosts: int | None = None
+) -> str:
+  """Formats a tool-specific warning for merged multi-host step-time fields.
+
+  Args:
+    fields: The step-time field names emitted by the tool.
+    num_hosts: Optional number of merged hosts.
+
+  Returns:
+    The warning string explaining the cross-host aggregation semantics.
+  """
+  if len(fields) == 1:
+    prefix = f"Step-time field ({fields[0]}) takes"
+  else:
+    prefix = f"Step-time fields ({', '.join(fields)}) take"
+  host_phrase = (
+      f"all {num_hosts} hosts" if num_hosts is not None else "all hosts"
+  )
+  idle_clause = ""
+  if "steptime_ms_average" in fields:
+    idle_clause = (
+        ", while TPU breakdown averages such as tc_idle_ms_average use the"
+        " per-step minimum across all cores on all hosts, which can mask a"
+        " single-host straggler"
+    )
+  return (
+      f"{prefix} the per-step maximum across all non-SparseCore cores on"
+      f" {host_phrase}, not a per-host value or cross-host mean{idle_clause}."
+      " Inspect per_host_step_time_ms or run once per host with --host=<name>"
+      " for per-host step time. get_step_trace averages per-core step times"
+      " across hosts when pod_viewer data is available, but falls back to"
+      " core 0 of the first host on generic/GPU input-pipeline tables."
+  )
+
+
+def add_step_time_scope(
+    capture: dict[str, Any],
+    fields: Sequence[str] = (
+        "steptime_ms_average",
+        "steptime_ms_standard_deviation",
+    ),
+) -> dict[str, Any]:
+  """Marks the step-time fields of a merged multi-trace result.
+
+  In the XProf all-hosts view, `ComputeStepTimeSummaryInMs` takes each step's
+  duration from the slowest non-SparseCore core across all hosts, while TPU
+  per-step breakdown averages (`tc_idle_ms_average`) use the minimum step
+  duration across all cores on all hosts. For a combined capture, this adds
+  `step_time_scope` and a tool-specific warning. Other captures are returned
+  unchanged.
+
+  Args:
+    capture: The capture description from `describe_capture`; modified in place.
+    fields: The step-time field names emitted by the tool.
+
+  Returns:
+    The capture description.
+  """
+  files_used = capture.get("files_used") or []
+  if not capture.get("combined") or len(files_used) < 2 or not fields:
+    return capture
+  capture["step_time_scope"] = "per_step_max_across_hosts"
+  capture.setdefault("warnings", []).append(
+      format_step_time_warning(fields, num_hosts=len(files_used))
+  )
+  return capture
 
 
 def _has_empty_host_default(param: inspect.Parameter) -> bool:
@@ -330,7 +411,11 @@ class TraceSelector:
     except (OSError, ValueError):
       logging.exception("Failed to describe capture for %s", session_value)
       return args, kwargs, None
-    return args, kwargs, capture if isinstance(capture, dict) else None
+    if not isinstance(capture, dict):
+      return args, kwargs, None
+    if self._traits.step_time_fields:
+      add_step_time_scope(capture, fields=self._traits.step_time_fields)
+    return args, kwargs, capture
 
   def _pop_host(self, kwargs: dict[str, Any]) -> str | None:
     """Returns the `--host=<name>` value to route, or None.

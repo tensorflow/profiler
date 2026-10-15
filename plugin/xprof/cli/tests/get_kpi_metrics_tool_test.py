@@ -312,6 +312,61 @@ class GetKpiMetricsToolTest(parameterized.TestCase):
     self.assertEqual(result["step_time_ms"], "10.5")
     self.assertEqual(result["peak_hbm_gib"], "N/A")
 
+  def test_get_kpi_metrics_multi_host_with_slower_second_host(self):
+    def fetch_side_effect(tool_name, *_args, **_kwargs):
+      if tool_name in ("overview_page", "overview_page.json"):
+        return (
+            None,
+            json.dumps([{
+                "p": {
+                    "steptime_ms_average": "22.00",
+                    "steptime_ms_standard_deviation": "2.00",
+                    "device_duty_cycle_percent": "90.0%",
+                    "mxu_utilization_percent": "50.0%",
+                    "flop_rate_utilization_relative_to_roofline": "45.0%",
+                    "device_type": "TPU v7x",
+                    "device_core_count": "16",
+                    "host_count": "2",
+                }
+            }]).encode("utf-8"),
+        )
+      if tool_name in ("pod_viewer", "pod_viewer.json"):
+        return (
+            "application/json",
+            json.dumps({
+                "podStatsSequence": {
+                    "podStatsMap": [{
+                        "stepNum": 0,
+                        "podStatsPerCore": {
+                            "0": {
+                                "hostName": "a_fast_host",
+                                "stepNum": 0,
+                                "totalDurationUs": 12000.0,
+                            },
+                            "1000": {
+                                "hostName": "z_slow_host",
+                                "stepNum": 0,
+                                "totalDurationUs": 22000.0,
+                            },
+                        },
+                    }]
+                }
+            }).encode("utf-8"),
+        )
+      return None
+
+    self.mock_client.fetch.side_effect = fetch_side_effect
+    result = json.loads(get_kpi_metrics_tool.get_kpi_metrics("multi_session"))
+    self.assertEqual(result["step_time_ms"], "22.00")
+    self.assertEqual(result["step_time_scope"], "per_step_max_across_hosts")
+    self.assertEqual(
+        result["per_host_step_time_ms"],
+        {"a_fast_host": "12.00", "z_slow_host": "22.00"},
+    )
+    self.assertIn("step_time_ms", result["step_time_warning"])
+    self.assertNotIn("steptime_ms_average", result["step_time_warning"])
+    self.assertNotIn("steptime_ms_minimum", result["step_time_warning"])
+
 
 if __name__ == "__main__":
   absltest.main()

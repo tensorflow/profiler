@@ -135,6 +135,22 @@ print it to stderr as one `xprof-capture: {...}` line):
 Always check `capture.files_used` and `capture.warnings` before reporting
 numbers: when `combined` is true, values cover several hosts/ranks.
 
+On a combined multi-host run, `get_overview` (`steptime_ms_average`,
+`steptime_ms_standard_deviation`) and `get_kpi_metrics` (`step_time_ms`) take
+the per-step maximum across all non-SparseCore cores on all hosts
+(`ComputeStepTimeSummaryInMs`), while TPU breakdown averages such as
+`tc_idle_ms_average` use the per-step minimum across all cores on all hosts
+(`ComputeTpuPerStepDataAcrossCores`). This can pair the slowest host's step
+time with the fastest host's device idle time and mask a single-host straggler.
+Both `capture` and the tool output add
+`"step_time_scope": "per_step_max_across_hosts"`, a tool-specific warning, and
+`per_host_step_time_ms` (from the owned `ALL_HOSTS.op_stats_v2.pb` on local runs
+or `pod_viewer` per-core step records as a fallback / on remote sessions).
+Inspect `per_host_step_time_ms` or run once per host with `--host=<name>` for
+per-host step times. `get_step_trace` averages per-core step durations across
+all hosts when `pod_viewer` data is available, but falls back to core 0 of the
+first host on generic/GPU input-pipeline tables.
+
 ## Best Practices
 
 -   **Asynchronous Execution**: Some operations (such as processing large traces

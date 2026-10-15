@@ -10,6 +10,7 @@ from absl.testing import absltest
 from absl.testing import parameterized
 from xprof import server
 from xprof.cli import xprof_cli
+from xprof.cli.internal import trace_selection
 from xprof.cli.tools import get_kernel_stats_tool
 from xprof.cli.tools import install_skills_tool
 from xprof.cli.tools.oss import diff_sessions_tool
@@ -823,6 +824,68 @@ class MultiTraceSelectionTest(absltest.TestCase):
   def test_merged_warning_says_totals(self):
     out = json.loads(self._tool('get_overview')(str(self.run_dir)))
     self.assertIn('totals across hosts', out['capture']['warnings'][0])
+
+  def test_directory_marks_step_time_per_step_max_across_hosts(self):
+    overview_capture = json.loads(
+        self._tool('get_overview')(str(self.run_dir))
+    )['capture']
+    self.assertTrue(overview_capture['combined'])
+    self.assertEqual(
+        overview_capture['step_time_scope'], 'per_step_max_across_hosts'
+    )
+    self.assertNotIn('step_time_host', overview_capture)
+    self.assertLen(overview_capture['warnings'], 2)
+    overview_warning = overview_capture['warnings'][1]
+    self.assertIn('steptime_ms_average', overview_warning)
+    self.assertIn('steptime_ms_standard_deviation', overview_warning)
+    self.assertIn('tc_idle_ms_average', overview_warning)
+    self.assertNotIn('steptime_ms_minimum', overview_warning)
+    self.assertNotIn('steptime_ms_maximum', overview_warning)
+    self.assertNotRegex(overview_warning, r'(?<!per_host_)\bstep_time_ms\b')
+    self.assertIn('per_host_step_time_ms', overview_warning)
+    self.assertIn('--host=<name>', overview_warning)
+    self.assertIn('pod_viewer', overview_warning)
+
+    kpi_capture = json.loads(self._tool('get_kpi_metrics')(str(self.run_dir)))[
+        'capture'
+    ]
+    self.assertTrue(kpi_capture['combined'])
+    self.assertEqual(
+        kpi_capture['step_time_scope'], 'per_step_max_across_hosts'
+    )
+    self.assertNotIn('step_time_host', kpi_capture)
+    self.assertLen(kpi_capture['warnings'], 2)
+    kpi_warning = kpi_capture['warnings'][1]
+    self.assertRegex(kpi_warning, r'(?<!per_host_)\bstep_time_ms\b')
+    self.assertNotIn('steptime_ms_average', kpi_warning)
+    self.assertNotIn('steptime_ms_minimum', kpi_warning)
+    self.assertIn('per_host_step_time_ms', kpi_warning)
+    self.assertIn('--host=<name>', kpi_warning)
+
+  def test_single_file_has_no_step_time_scope(self):
+    for name in ('get_overview', 'get_kpi_metrics'):
+      for kwargs in ({}, {'host': 'rank2_node0'}):
+        with self.subTest(name=name, kwargs=kwargs):
+          session = str(self.rank0) if not kwargs else str(self.run_dir)
+          capture = json.loads(self._tool(name)(session, **kwargs))['capture']
+          self.assertFalse(capture['combined'])
+          self.assertNotIn('step_time_scope', capture)
+          self.assertNotIn('step_time_host', capture)
+          self.assertEqual(capture['warnings'], [])
+
+  def test_other_merged_tool_has_no_step_time_scope(self):
+    capture = json.loads(self._tool('get_hlo_stats')(str(self.run_dir)))[
+        'capture'
+    ]
+    self.assertTrue(capture['combined'])
+    self.assertNotIn('step_time_scope', capture)
+    self.assertLen(capture['warnings'], 1)
+
+  def test_add_step_time_scope_ignores_single_trace_capture(self):
+    capture = {'files_used': ['h0'], 'combined': False, 'warnings': []}
+    self.assertEqual(
+        trace_selection.add_step_time_scope(dict(capture)), capture
+    )
 
   def test_list_events_warning_says_listed(self):
     out = json.loads(self._tool('list_xplane_events')(str(self.run_dir)))
