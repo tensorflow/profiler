@@ -89,11 +89,22 @@ session /path/to/logdir?", you should:
     `primary_bottleneck` from `summary`.
 3.  Provide a concise summary to the user.
 
-## Related Fast Step Time Tool (`get_avg_step_time`)
+## Scalar Average Step Time
 
-To quickly retrieve the scalar average step duration (in milliseconds) without
-fetching the full per-step breakdown:
+To get only the scalar average step time (in milliseconds) without the full
+per-step breakdown, use `get_overview` (`steptime_ms_average`, see
+[get_overview](get_overview.md)) or `get_kpi_metrics` (`step_time_ms`, see
+[get_kpi_metrics](get_kpi_metrics.md)):
 
 ```bash
-xprof get_avg_step_time <logdir>
+xprof get_overview <logdir>
+xprof get_kpi_metrics <logdir>
 ```
+
+For per-module timing from `XLA Modules` events (or traces without step markers,
+such as inference and serving traces), run `xprof aggregate_xplane_events
+<logdir> --event_regex="<module_name>" --filter='line == "XLA Modules"'` (see
+[architecture_mapping](architecture_mapping.md)).
+
+(`get_avg_step_time` is removed; it averaged every `XLA Modules` event rather
+than training steps.)

@@ -95,9 +95,9 @@ A run directory may contain one `.xplane.pb` per host or per rank (JAX
 multi-host, vLLM/Ray ranks, Pathways client and workers).
 
 -   A **file** analyzes that host/rank only.
--   A **run directory** combines every trace in it. `get_kernel_stats`,
-    `get_avg_step_time` and `aggregate_xplane_events` sum counts and
-    durations; `list_xplane_events` mixes rows from every host/rank; other
+-   A **run directory** combines every trace in it. `get_kernel_stats` and
+    `aggregate_xplane_events` sum counts and durations;
+    `list_xplane_events` mixes rows from every host/rank; other
     XProf tools show the all-hosts view, where times and counts are totals
     across hosts, not per-host values. HLO text tools (`get_hlo_text`,
     `get_hlo_module_content`, `get_hlo_neighborhood`) are not combined.
@@ -275,10 +275,11 @@ Pallas or Mosaic):
     (`get_profile_summary`) of an XProf session.
 -   **[Get Memory Profile](references/get_memory_profile.md)**: Get a detailed
     memory profile analysis (Peak/device memory details) of an XProf session.
--   **[Get Step Trace & Average Step Time](references/get_step_trace.md)**:
-    Retrieve step-by-step execution breakdowns (`get_step_trace`) or scalar
-    average step duration (`get_avg_step_time`) to analyze step time variance
-    and communication overhead.
+-   **[Get Step Trace](references/get_step_trace.md)**: Retrieve step-by-step
+    execution breakdowns (`get_step_trace`) to analyze step time variance and
+    communication overhead. For a scalar average step time, use
+    `get_overview` (`steptime_ms_average`) or `get_kpi_metrics`
+    (`step_time_ms`).
 -   **[Get Peak Allocations](references/get_peak_allocations.md)**: Get HLO
     modules and buffers ordered by memory usage.
 -   **[Get Top HLO Operations](references/get_top_hlo_ops.md)**: Identify top

@@ -10,6 +10,7 @@ from absl.testing import absltest
 from absl.testing import parameterized
 from xprof import server
 from xprof.cli import xprof_cli
+from xprof.cli.tools import get_kernel_stats_tool
 from xprof.cli.tools import install_skills_tool
 from xprof.cli.tools.oss import diff_sessions_tool
 
@@ -555,6 +556,12 @@ class XProfCliTest(parameterized.TestCase):
   def test_server_cli_subcommands_cover_oss_tools(self):
     registered_tools = set(xprof_cli.cli_main().keys())
     self.assertContainsSubset(server._CLI_SUBCOMMANDS, registered_tools)
+
+  def test_get_avg_step_time_is_removed(self):
+    self.assertNotIn('get_avg_step_time', xprof_cli.cli_main())
+    self.assertNotIn('get_avg_step_time', server._CLI_SUBCOMMANDS)
+    self.assertFalse(hasattr(get_kernel_stats_tool, 'get_avg_step_time'))
+    self.assertFalse(hasattr(get_kernel_stats_tool, 'compute_avg_step_time'))
 
   @mock.patch.object(
       diff_sessions_tool.get_kernel_stats_tool,
