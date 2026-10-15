@@ -23,17 +23,19 @@
     [style.width.px]="isNewNavEnabled ? (isSideNavOpen ? 240 : 64) : null">
     @if (isNewNavEnabled) {
       <rack-navigation-drawer [collapsed]="!isSideNavOpen">
-        <rack-navigation-group label="Tools" [expanded]="true">
-          @for (tag of availableTools; track tag) {
-            <rack-navigation-item
-              [icon]="getToolIcon(tag)"
-              [label]="getToolLabel(tag)"
-              [active]="activeTool === tag"
-              (click)="selectTool(tag)">
-              {{getToolLabel(tag)}}
-            </rack-navigation-item>
-          }
-        </rack-navigation-group>
+        @for (group of getCategorizedTools(); track group.category) {
+          <rack-navigation-group [label]="group.category" [expanded]="true">
+            @for (tag of group.tools; track tag) {
+              <rack-navigation-item
+                [icon]="getToolIcon(tag)"
+                [label]="getToolLabel(tag)"
+                [active]="activeTool === tag"
+                (click)="selectTool(tag)">
+                {{getToolLabel(tag)}}
+              </rack-navigation-item>
+            }
+          </rack-navigation-group>
+        }
       </rack-navigation-drawer>
     }
     <sidenav [hidden]="isNewNavEnabled"></sidenav>

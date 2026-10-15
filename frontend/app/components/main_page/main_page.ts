@@ -7,6 +7,11 @@ import {
 } from '@angular/core';
 import {Router} from '@angular/router';
 import {Store} from '@ngrx/store';
+import {
+  CANONICAL_CATEGORY_ORDER,
+  TOOL_CATEGORIES,
+  ToolCategory,
+} from 'org_xprof/frontend/app/common/constants/constants';
 import {Diagnostics} from 'org_xprof/frontend/app/common/interfaces/diagnostics';
 import {NavigationEvent} from 'org_xprof/frontend/app/common/interfaces/navigation_event';
 import {RunToolsMap} from 'org_xprof/frontend/app/common/interfaces/tool';
@@ -24,6 +29,12 @@ import {
 import {LoadingState} from 'org_xprof/frontend/app/store/state';
 import {ReplaySubject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
+
+/** Representation of a categorized tool group for the rack navigation. */
+export interface CategorizedTools {
+  category: ToolCategory;
+  tools: string[];
+}
 
 /** A main page component. */
 @Component({
@@ -173,6 +184,40 @@ export class MainPage implements OnDestroy {
 
   get availableTools(): string[] {
     return this.runToolsMap[this.currentRun] || [];
+  }
+
+  getCategorizedTools(): CategorizedTools[] {
+    const activeTools = this.availableTools.filter((tag) => tag !== 'empty');
+    const groupsMap = new Map<ToolCategory, string[]>();
+    for (const category of CANONICAL_CATEGORY_ORDER) {
+      groupsMap.set(category, []);
+    }
+
+    for (const tag of activeTools) {
+      const cleanTag = tag && tag.endsWith('@') ? tag.slice(0, -1) : tag || '';
+      const category =
+        CANONICAL_CATEGORY_ORDER.find((cat) =>
+          TOOL_CATEGORIES[cat].includes(cleanTag),
+        ) || ToolCategory.OTHER;
+      groupsMap.get(category)!.push(tag);
+    }
+
+    const result: CategorizedTools[] = [];
+    for (const category of CANONICAL_CATEGORY_ORDER) {
+      const tools = groupsMap.get(category) || [];
+      if (tools.length > 0) {
+        const canonicalOrder = TOOL_CATEGORIES[category];
+        tools.sort((a, b) => {
+          const cleanA = a && a.endsWith('@') ? a.slice(0, -1) : a || '';
+          const cleanB = b && b.endsWith('@') ? b.slice(0, -1) : b || '';
+          return (
+            canonicalOrder.indexOf(cleanA) - canonicalOrder.indexOf(cleanB)
+          );
+        });
+        result.push({category, tools});
+      }
+    }
+    return result;
   }
 
   getToolIcon(tag: string): string {

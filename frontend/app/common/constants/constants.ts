@@ -137,3 +137,61 @@ export const PRIMARY_TOOL_ENDPOINTS = new Set([
   'op_profile',
   'megascale_stats',
 ]);
+
+/** Canonical categories for grouping XProf tools. */
+export enum ToolCategory {
+  CORE = 'Core',
+  OPERATIONS = 'Operations',
+  HARDWARE = 'Hardware',
+  INSIGHTS = 'Insights',
+  OTHER = 'Other',
+}
+
+/** Canonical category ordering. */
+export const CANONICAL_CATEGORY_ORDER: readonly ToolCategory[] = [
+  ToolCategory.CORE,
+  ToolCategory.OPERATIONS,
+  ToolCategory.HARDWARE,
+  ToolCategory.INSIGHTS,
+  ToolCategory.OTHER,
+];
+
+/** Canonical grouping and ordering of XProf tools within each category. */
+export const TOOL_CATEGORIES: Record<ToolCategory, readonly string[]> = {
+  [ToolCategory.CORE]: [
+    'overview_page',
+    'trace_viewer',
+    'trace_viewer_v2',
+    'graph_viewer',
+    'kernel_viewer',
+  ],
+  [ToolCategory.OPERATIONS]: [
+    'memory_viewer',
+    'hlo_op_profile',
+    'op_profile',
+    'hlo_op_stats',
+    'hlo_stats',
+    'framework_op_stats',
+  ],
+  [ToolCategory.HARDWARE]: [
+    'memory_profile',
+    'host_profile',
+    'perf_counters',
+    'utilization_viewer',
+    'barna_core_stats',
+    'sparse_core_stats',
+    'kernel_stats',
+  ],
+  [ToolCategory.INSIGHTS]: [
+    'kpi_metrics',
+    'input_pipeline',
+    'input_pipeline_analyzer',
+    'inference_profile',
+    'roofline_model',
+    'events_db',
+    'pod_viewer',
+    'megascale_stats',
+    'megascale_perfetto',
+  ],
+  [ToolCategory.OTHER]: [],
+};
