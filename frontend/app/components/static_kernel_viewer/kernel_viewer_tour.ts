@@ -645,17 +645,6 @@ function regionMetrics(
       caption: 'How busy each unit is, on average',
     });
   }
-  const bound = content?.meanUtilization?.boundUnit;
-  if (!content || bound) {
-    metrics.push({
-      label: 'Likely bound',
-      value: bound ? `${bound}-bound` : '',
-      color: bound ? unitColor(bound) : DEFAULT_ACCENT_COLOR,
-      meaning: 'Its busiest unit, if that averages 20% or more',
-      selector: `${panelCard('range', 2)} .section-badge.highlight-badge`,
-      caption: 'Its likely bottleneck',
-    });
-  }
   // Measured ranges sum up the memory and register counters too.
   const resource = content?.resourceCounterMetrics?.[0];
   if (resource) {

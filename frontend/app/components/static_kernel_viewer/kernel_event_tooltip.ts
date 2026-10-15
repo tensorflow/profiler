@@ -58,8 +58,6 @@ export interface SchedulePosition {
 /** Summary of mean unit utilization across a region. */
 export interface RegionUtilizationSummary {
   readonly items: readonly UtilizationBar[];
-  /** Label of the likely bottleneck unit when one unit is dominant. */
-  readonly boundUnit?: string;
 }
 
 /** Single-value gauge shown when hovering a counter or process track. */
@@ -853,10 +851,8 @@ export function buildKernelEventTooltip(
       density = `${DENSITY_FORMAT.format(mixResult.totalInstructions / event.duration)} instr / bundle`;
     }
     if (utilizationBars && utilizationBars.length > 0) {
-      const top = utilizationBars[0];
       meanUtilization = {
         items: utilizationBars.slice(0, 3),
-        ...(top.percent >= 20 ? {boundUnit: top.unit.label} : {}),
       };
     }
   }

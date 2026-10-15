@@ -1039,13 +1039,10 @@ export function buildKernelSelectionFromRange(
 
   let meanUtilization: RegionUtilizationSummary | undefined = undefined;
   if (utilizationBars && utilizationBars.length > 0) {
-    const top = utilizationBars[0];
     meanUtilization = {
       items: utilizationBars,
-      ...(top.percent >= 20 ? {boundUnit: top.unit.label} : {}),
     };
   } else if (utilizationMetrics && utilizationMetrics.length > 0) {
-    const top = utilizationMetrics[0];
     const synthesizedBars: UtilizationBar[] = utilizationMetrics.map(
       (item) => ({
         unit: item.unit,
@@ -1056,7 +1053,6 @@ export function buildKernelSelectionFromRange(
     );
     meanUtilization = {
       items: synthesizedBars,
-      ...(top.meanPercent >= 20 ? {boundUnit: top.unit.label} : {}),
     };
   }
 
@@ -1065,9 +1061,11 @@ export function buildKernelSelectionFromRange(
       ? `${DENSITY_FORMAT.format(totalInstructions / rangeExtent)} instr / bundle`
       : undefined;
 
-  const dominantUnit = meanUtilization?.boundUnit
-    ? FUNCTIONAL_UNITS_BY_LANE.get(meanUtilization.boundUnit)
-    : mixResult.mix?.[0]?.unit;
+  const topUtilizationBar = meanUtilization?.items[0];
+  const dominantUnit =
+    topUtilizationBar && topUtilizationBar.percent >= 20
+      ? FUNCTIONAL_UNITS_BY_LANE.get(topUtilizationBar.unit.label)
+      : mixResult.mix?.[0]?.unit;
   const accentColor = dominantUnit?.color ?? DEFAULT_ACCENT_COLOR;
 
   return {

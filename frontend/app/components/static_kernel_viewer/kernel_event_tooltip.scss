@@ -536,22 +536,6 @@
   color: color-mix(in srgb, var(--unit-color) 45%, var(--mat-sys-on-surface));
 }
 
-.bound-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: color-mix(
-    in srgb,
-    var(--accent-color) 14%,
-    var(--mat-sys-surface-container)
-  );
-  color: color-mix(in srgb, var(--accent-color) 55%, var(--mat-sys-on-surface));
-  font-size: 10.5px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
 // Region breadcrumb path.
 .region-crumbs {
   display: flex;

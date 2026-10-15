@@ -53,6 +53,12 @@ $search-bar-height: 56px;
   }
 }
 
+:host ::ng-deep as-split[direction='vertical']:has(.custom-drawer-container:not([hidden])) > .as-split-gutter {
+  .as-split-gutter-icon {
+    transform: translateY(4px);
+  }
+}
+
 iframe {
   position: absolute;
   width: 100%;
