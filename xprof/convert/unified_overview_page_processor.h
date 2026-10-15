@@ -17,10 +17,12 @@
 #define THIRD_PARTY_XPROF_CONVERT_UNIFIED_OVERVIEW_PAGE_PROCESSOR_H_
 
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "tsl/profiler/protobuf/xplane.pb.h"
 #include "xprof/convert/base_op_stats_processor.h"
 #include "xprof/convert/tool_options.h"
 #include "xprof/convert/unified_session_snapshot.h"
+#include "plugin/xprof/protobuf/inference_stats.pb.h"
 #include "plugin/xprof/protobuf/op_stats.pb.h"
 
 namespace xprof {
@@ -35,6 +37,17 @@ class UnifiedOverviewPageProcessor : public BaseOpStatsProcessor {
       const XprofSessionSnapshot& session_snapshot,
       const tensorflow::profiler::OpStats& combined_op_stats,
       const tensorflow::profiler::ToolOptions& options) override;
+
+ protected:
+  // Returns the inference stats that back the inference latency section of the
+  // overview page. Only called for profiles that are not training runs.
+  // The default derives them from the session's XSpaces; environments that
+  // keep precomputed inference stats next to the OpStats (1P stores them in
+  // its TfOpStats cache and never loads XSpaces in the analysis server)
+  // override this to return those instead.
+  virtual absl::StatusOr<tensorflow::profiler::InferenceStats>
+  GetInferenceStats(const XprofSessionSnapshot& session_snapshot,
+                    const tensorflow::profiler::OpStats& combined_op_stats);
 };
 
 }  // namespace xprof

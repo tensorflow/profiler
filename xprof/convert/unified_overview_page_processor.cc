@@ -19,9 +19,11 @@
 
 #include "absl/log/log.h"
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/time/clock.h"
 #include "absl/time/time.h"
 #include "xla/tsl/platform/errors.h"
+#include "xla/tsl/platform/statusor.h"
 #include "tsl/profiler/protobuf/xplane.pb.h"
 #include "xprof/convert/compute_inference_latency.h"
 #include "xprof/convert/multi_xspace_to_inference_stats.h"
@@ -42,6 +44,15 @@ using tensorflow::profiler::OpStats;
 using tensorflow::profiler::OverviewPage;
 using tensorflow::profiler::OverviewPageToJson;
 
+absl::StatusOr<InferenceStats> UnifiedOverviewPageProcessor::GetInferenceStats(
+    const XprofSessionSnapshot& session_snapshot,
+    const OpStats& /*combined_op_stats*/) {
+  InferenceStats inference_stats;
+  TF_RETURN_IF_ERROR(ConvertMultiXSpaceToInferenceStats(session_snapshot, "",
+                                                        "", &inference_stats));
+  return inference_stats;
+}
+
 absl::Status UnifiedOverviewPageProcessor::ProcessCombinedOpStats(
     const XprofSessionSnapshot& session_snapshot,
     const OpStats& combined_op_stats,
@@ -55,9 +66,8 @@ absl::Status UnifiedOverviewPageProcessor::ProcessCombinedOpStats(
     LOG(INFO) << "UnifiedOverviewPageProcessor::ProcessCombinedOpStats: "
                  "Starting to convert "
                  "InferenceStats";
-    InferenceStats inference_stats;
-    TF_RETURN_IF_ERROR(ConvertMultiXSpaceToInferenceStats(
-        session_snapshot, "", "", &inference_stats));
+    TF_ASSIGN_OR_RETURN(InferenceStats inference_stats,
+                        GetInferenceStats(session_snapshot, combined_op_stats));
     LOG(INFO) << "UnifiedOverviewPageProcessor::ProcessCombinedOpStats: "
                  "Starting to compute "
                  "InferenceLatency";
