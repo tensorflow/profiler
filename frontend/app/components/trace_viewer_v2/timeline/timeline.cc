@@ -5724,7 +5724,7 @@ void Timeline::DrawFlows(Pixel timeline_width, Pixel timeline_y_start) {
 }
 
 void Timeline::DrawDependencyArrow(int from_event, int to_event, ImU32 color,
-                                   Pixel timeline_x_start,
+                                   int slot, Pixel timeline_x_start,
                                    Pixel timeline_y_start, double px_per_time,
                                    ImDrawList* draw_list) {
   const uint16_t from_level = timeline_data_.entry_levels[from_event];
@@ -5733,38 +5733,47 @@ void Timeline::DrawDependencyArrow(int from_event, int to_event, ImU32 color,
       to_level >= visible_level_offsets_.size()) {
     return;
   }
-  const ImVec2 start(
-      TimeToScreenX(timeline_data_.entry_start_times[from_event] +
-                        timeline_data_.entry_total_times[from_event],
-                    timeline_x_start, px_per_time),
-      timeline_y_start + visible_level_offsets_[from_level]);
-  const ImVec2 end(TimeToScreenX(timeline_data_.entry_start_times[to_event],
-                                 timeline_x_start, px_per_time),
-                   timeline_y_start + visible_level_offsets_[to_level]);
+  const auto bar_geometry = [&](int event, uint16_t level) {
+    const Microseconds start_time = timeline_data_.entry_start_times[event];
+    return BarGeometry{
+        .left = TimeToScreenX(start_time, timeline_x_start, px_per_time),
+        .right =
+            TimeToScreenX(start_time + timeline_data_.entry_total_times[event],
+                          timeline_x_start, px_per_time),
+        .row_y = timeline_y_start + visible_level_offsets_[level]};
+  };
+  // Operand arrows arrive at the selected event from above the rows, consumer
+  // arrows leave it below them.
+  const DependencyArrowRoute route = RouteDependencyArrow(
+      bar_geometry(from_event, from_level), bar_geometry(to_event, to_level),
+      /*above=*/to_event == selected_event_index_, slot);
 
-  ImVec2 cp0, cp1;
-  CalculateBezierControlPoints(start.x, start.y, end.x, end.y, cp0, cp1);
-  draw_list->AddBezierCubic(start, cp0, cp1, end, color,
-                            kHloDependencyArrowThickness);
-  draw_list->AddCircleFilled(start, kPointRadius, color);
-
-  // The arrowhead points along the end of the curve. If the curve ends
-  // vertically, its last control point coincides with the end, so fall back to
-  // the overall direction.
-  ImVec2 direction(end.x - cp1.x, end.y - cp1.y);
-  if (direction.x == 0.0f && direction.y == 0.0f) {
-    direction = ImVec2(end.x - start.x, end.y - start.y);
+  const float toward_lane = route.lane_y < route.start.y ? -1.0f : 1.0f;
+  const float direction_x = route.end.x >= route.start.x ? 1.0f : -1.0f;
+  const Pixel radius = route.corner_radius;
+  const Pixel head_length =
+      route.with_head ? kHloDependencyArrowHeadLength : 0.0f;
+  draw_list->PathLineTo(route.start);
+  draw_list->PathLineTo(
+      ImVec2(route.start.x, route.lane_y - toward_lane * radius));
+  draw_list->PathBezierQuadraticCurveTo(
+      ImVec2(route.start.x, route.lane_y),
+      ImVec2(route.start.x + direction_x * radius, route.lane_y));
+  draw_list->PathLineTo(
+      ImVec2(route.end.x - direction_x * radius, route.lane_y));
+  draw_list->PathBezierQuadraticCurveTo(
+      ImVec2(route.end.x, route.lane_y),
+      ImVec2(route.end.x, route.lane_y - toward_lane * radius));
+  const Pixel head_base_y = route.end.y + toward_lane * head_length;
+  draw_list->PathLineTo(ImVec2(route.end.x, head_base_y));
+  draw_list->PathStroke(color, ImDrawFlags_None, kHloDependencyArrowThickness);
+  if (route.with_head) {
+    draw_list->AddTriangleFilled(
+        route.end,
+        ImVec2(route.end.x - kHloDependencyArrowHeadHalfWidth, head_base_y),
+        ImVec2(route.end.x + kHloDependencyArrowHeadHalfWidth, head_base_y),
+        color);
   }
-  const float length = std::hypot(direction.x, direction.y);
-  if (length == 0.0f) return;
-  direction = ImVec2(direction.x / length, direction.y / length);
-  const ImVec2 base(end.x - direction.x * kHloDependencyArrowHeadSize,
-                    end.y - direction.y * kHloDependencyArrowHeadSize);
-  const ImVec2 half_width(-direction.y * kHloDependencyArrowHeadSize * 0.5f,
-                          direction.x * kHloDependencyArrowHeadSize * 0.5f);
-  draw_list->AddTriangleFilled(
-      end, ImVec2(base.x + half_width.x, base.y + half_width.y),
-      ImVec2(base.x - half_width.x, base.y - half_width.y), color);
 }
 
 void Timeline::DrawDependencyArrows(Pixel timeline_width,
@@ -5793,18 +5802,20 @@ void Timeline::DrawDependencyArrows(Pixel timeline_width,
   const ImU32 producer_color =
       palette_.GetColor(ColorPalette::Key::kHloProducerArrow)
           .value_or(kHloProducerArrowColor);
+  int slot = 0;
   for (const int producer : producers.first(
            std::min(producers.size(), kMaxHloDependencyArrowsPerSide))) {
-    DrawDependencyArrow(producer, selected_event_index_, producer_color,
+    DrawDependencyArrow(producer, selected_event_index_, producer_color, slot++,
                         timeline_x_start, timeline_y_start, px_per_time,
                         draw_list);
   }
   const ImU32 consumer_color =
       palette_.GetColor(ColorPalette::Key::kHloConsumerArrow)
           .value_or(kHloConsumerArrowColor);
+  slot = 0;
   for (const int consumer : consumers.first(
            std::min(consumers.size(), kMaxHloDependencyArrowsPerSide))) {
-    DrawDependencyArrow(selected_event_index_, consumer, consumer_color,
+    DrawDependencyArrow(selected_event_index_, consumer, consumer_color, slot++,
                         timeline_x_start, timeline_y_start, px_per_time,
                         draw_list);
   }

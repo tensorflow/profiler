@@ -1110,9 +1110,11 @@ class Timeline {
   // level).
   void DrawFlows(Pixel timeline_width, Pixel timeline_y_start);
 
-  // Draws an arrow from the end of `from_event` to the start of `to_event`,
-  // as a Bezier curve like a flow line, with an arrowhead at the end.
-  void DrawDependencyArrow(int from_event, int to_event, ImU32 color,
+  // Draws the arrow from `from_event` to `to_event` along the route from
+  // RouteDependencyArrow: out of the row, along a lane, and into the other bar,
+  // with an arrowhead where there is room for one. `slot` is the arrow's index
+  // on its side of the selected event.
+  void DrawDependencyArrow(int from_event, int to_event, ImU32 color, int slot,
                            Pixel timeline_x_start, Pixel timeline_y_start,
                            double px_per_time, ImDrawList* draw_list);
 

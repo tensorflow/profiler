@@ -169,4 +169,32 @@ EventDependencies ResolveEventDependencies(
   return dependencies;
 }
 
+DependencyArrowRoute RouteDependencyArrow(const BarGeometry& from,
+                                          const BarGeometry& to, bool above,
+                                          int slot) {
+  const float toward_lane = above ? -1.0f : 1.0f;
+  const Pixel half_height = kEventHeight * 0.5f;
+  const Pixel rows_edge = above ? std::min(from.row_y, to.row_y) - half_height
+                                : std::max(from.row_y, to.row_y) + half_height;
+  const Pixel lane_y =
+      rows_edge + toward_lane * (kHloDependencyArrowLaneGap +
+                                 slot * kHloDependencyArrowLaneStep);
+  const auto inset = [](const BarGeometry& bar) {
+    return std::min(kHloDependencyArrowInset, (bar.right - bar.left) * 0.25f);
+  };
+  const Pixel start_x =
+      above ? (from.left + from.right) * 0.5f : from.right - inset(from);
+  const Pixel end_x = above ? to.left + inset(to) : (to.left + to.right) * 0.5f;
+  const Pixel start_y = from.row_y + toward_lane * half_height;
+  const Pixel end_y = to.row_y + toward_lane * half_height;
+  const Pixel span = std::abs(end_x - start_x);
+  return {.start = ImVec2(start_x, start_y),
+          .lane_y = lane_y,
+          .end = ImVec2(end_x, end_y),
+          .corner_radius =
+              std::min({kHloDependencyArrowCornerRadius, span * 0.5f,
+                        std::abs(lane_y - start_y), std::abs(lane_y - end_y)}),
+          .with_head = span >= kHloDependencyArrowMinSpanForHead};
+}
+
 }  // namespace traceviewer

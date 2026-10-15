@@ -1,4 +1,7 @@
-// Tests for the HLO dependency lookup in timeline_hlo_dependencies.cc.
+// Tests for the HLO dependency lookup and the arrow routing in
+// timeline_hlo_dependencies.cc.
+
+#include "frontend/app/components/trace_viewer_v2/timeline/timeline_hlo_dependencies.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -700,6 +703,270 @@ TEST(TimelineTest, SelectedEventDependenciesAreLimitedOnlyByXlaModulesTrack) {
   EXPECT_THAT(timeline.consumer_event_indices(), ElementsAre(3));
 }
 
+// The route of an arrow between two bars.
+
+constexpr Pixel kRowY = 100.0f;
+constexpr Pixel kHalfBarHeight = kEventHeight * 0.5f;
+
+TEST(RouteDependencyArrowTest, RunsOperandArrowsAboveTheRow) {
+  //  operand: [100     150]    selected: [200       260]
+  const DependencyArrowRoute route = RouteDependencyArrow(
+      {.left = 100.0f, .right = 150.0f, .row_y = kRowY},
+      {.left = 200.0f, .right = 260.0f, .row_y = kRowY}, /*above=*/true,
+      /*slot=*/0);
+
+  // From the middle of the operand's top edge, along a lane above the row, to
+  // the top edge of the selected op 10 px inside its left end.
+  EXPECT_FLOAT_EQ(route.start.x, 125.0f);
+  EXPECT_FLOAT_EQ(route.start.y, kRowY - kHalfBarHeight);
+  EXPECT_FLOAT_EQ(route.lane_y,
+                  kRowY - kHalfBarHeight - kHloDependencyArrowLaneGap);
+  EXPECT_FLOAT_EQ(route.end.x, 210.0f);
+  EXPECT_FLOAT_EQ(route.end.y, kRowY - kHalfBarHeight);
+  EXPECT_FLOAT_EQ(route.corner_radius, kHloDependencyArrowCornerRadius);
+  EXPECT_TRUE(route.with_head);
+}
+
+TEST(RouteDependencyArrowTest, RunsConsumerArrowsBelowTheRow) {
+  //  selected: [100     150]    consumer: [200       260]
+  const DependencyArrowRoute route = RouteDependencyArrow(
+      {.left = 100.0f, .right = 150.0f, .row_y = kRowY},
+      {.left = 200.0f, .right = 260.0f, .row_y = kRowY}, /*above=*/false,
+      /*slot=*/0);
+
+  // From the bottom edge of the selected op 10 px inside its right end, along
+  // a lane below the row, to the middle of the consumer's bottom edge.
+  EXPECT_FLOAT_EQ(route.start.x, 140.0f);
+  EXPECT_FLOAT_EQ(route.start.y, kRowY + kHalfBarHeight);
+  EXPECT_FLOAT_EQ(route.lane_y,
+                  kRowY + kHalfBarHeight + kHloDependencyArrowLaneGap);
+  EXPECT_FLOAT_EQ(route.end.x, 230.0f);
+  EXPECT_FLOAT_EQ(route.end.y, kRowY + kHalfBarHeight);
+  EXPECT_TRUE(route.with_head);
+}
+
+TEST(RouteDependencyArrowTest, PutsParallelArrowsIntoSeparateLanes) {
+  const DependencyArrowRoute first = RouteDependencyArrow(
+      {.left = 100.0f, .right = 150.0f, .row_y = kRowY},
+      {.left = 200.0f, .right = 260.0f, .row_y = kRowY}, /*above=*/true,
+      /*slot=*/0);
+  const DependencyArrowRoute third = RouteDependencyArrow(
+      {.left = 0.0f, .right = 50.0f, .row_y = kRowY},
+      {.left = 200.0f, .right = 260.0f, .row_y = kRowY}, /*above=*/true,
+      /*slot=*/2);
+
+  EXPECT_FLOAT_EQ(third.lane_y, first.lane_y - 2 * kHloDependencyArrowLaneStep);
+}
+
+TEST(RouteDependencyArrowTest, RunsAroundBothRowsWhenTheBarsDiffer) {
+  // The operand is on the row below the selected op: the lane lies above the
+  // upper row, and the arrow leaves the operand through its own top edge.
+  const DependencyArrowRoute route = RouteDependencyArrow(
+      {.left = 100.0f, .right = 150.0f, .row_y = kRowY + 20.0f},
+      {.left = 200.0f, .right = 260.0f, .row_y = kRowY}, /*above=*/true,
+      /*slot=*/0);
+
+  EXPECT_FLOAT_EQ(route.start.y, kRowY + 20.0f - kHalfBarHeight);
+  EXPECT_FLOAT_EQ(route.lane_y,
+                  kRowY - kHalfBarHeight - kHloDependencyArrowLaneGap);
+  EXPECT_FLOAT_EQ(route.end.y, kRowY - kHalfBarHeight);
+}
+
+TEST(RouteDependencyArrowTest, KeepsTheInsetWithinAQuarterOfTheBar) {
+  // A 12 px wide selected op: the arrow ends 3 px inside it, not 10 px.
+  const DependencyArrowRoute route = RouteDependencyArrow(
+      {.left = 100.0f, .right = 150.0f, .row_y = kRowY},
+      {.left = 200.0f, .right = 212.0f, .row_y = kRowY}, /*above=*/true,
+      /*slot=*/0);
+
+  EXPECT_FLOAT_EQ(route.end.x, 203.0f);
+}
+
+TEST(RouteDependencyArrowTest, DropsTheHeadAndTightensTheCornersWhenClose) {
+  // Two 4 px wide bars right next to each other: the route is 4 px wide, so
+  // it gets 2 px corners and no arrowhead.
+  const DependencyArrowRoute route = RouteDependencyArrow(
+      {.left = 100.0f, .right = 104.0f, .row_y = kRowY},
+      {.left = 105.0f, .right = 109.0f, .row_y = kRowY}, /*above=*/true,
+      /*slot=*/0);
+
+  EXPECT_FLOAT_EQ(route.start.x, 102.0f);
+  EXPECT_FLOAT_EQ(route.end.x, 106.0f);
+  EXPECT_FLOAT_EQ(route.corner_radius, 2.0f);
+  EXPECT_FALSE(route.with_head);
+}
+
+TEST(RouteDependencyArrowTest, DropsTheHeadForACloseConsumerToo) {
+  //  selected: [100 104]  consumer: [105 109]
+  const DependencyArrowRoute route = RouteDependencyArrow(
+      {.left = 100.0f, .right = 104.0f, .row_y = kRowY},
+      {.left = 105.0f, .right = 109.0f, .row_y = kRowY}, /*above=*/false,
+      /*slot=*/0);
+
+  EXPECT_FLOAT_EQ(route.start.x, 103.0f);
+  EXPECT_FLOAT_EQ(route.end.x, 107.0f);
+  EXPECT_FLOAT_EQ(route.corner_radius, 2.0f);
+  EXPECT_FALSE(route.with_head);
+}
+
+TEST(RouteDependencyArrowTest, KeepsTheHeadBetweenTouchingWideBars) {
+  // Two 40 px bars with no gap between them, the usual case on a busy row:
+  // the arrow still spans half of the operand plus the inset into the
+  // selected op, 30 px, so it keeps its head and full corners.
+  const DependencyArrowRoute from_operand = RouteDependencyArrow(
+      {.left = 100.0f, .right = 140.0f, .row_y = kRowY},
+      {.left = 140.0f, .right = 180.0f, .row_y = kRowY}, /*above=*/true,
+      /*slot=*/0);
+  const DependencyArrowRoute to_consumer = RouteDependencyArrow(
+      {.left = 100.0f, .right = 140.0f, .row_y = kRowY},
+      {.left = 140.0f, .right = 180.0f, .row_y = kRowY}, /*above=*/false,
+      /*slot=*/0);
+
+  EXPECT_FLOAT_EQ(from_operand.start.x, 120.0f);
+  EXPECT_FLOAT_EQ(from_operand.end.x, 150.0f);
+  EXPECT_FLOAT_EQ(from_operand.corner_radius, kHloDependencyArrowCornerRadius);
+  EXPECT_TRUE(from_operand.with_head);
+  EXPECT_FLOAT_EQ(to_consumer.start.x, 130.0f);
+  EXPECT_FLOAT_EQ(to_consumer.end.x, 160.0f);
+  EXPECT_FLOAT_EQ(to_consumer.corner_radius, kHloDependencyArrowCornerRadius);
+  EXPECT_TRUE(to_consumer.with_head);
+}
+
+TEST(RouteDependencyArrowTest, GrowsTheHeadFromTheMinimumSpan) {
+  // Touching bars of the same width span three quarters of that width: half
+  // of the first bar plus the quarter-width inset into the second. 20 px bars
+  // span 15 px and get no head; 22 px bars span 16.5 px and do.
+  const DependencyArrowRoute just_too_close = RouteDependencyArrow(
+      {.left = 100.0f, .right = 120.0f, .row_y = kRowY},
+      {.left = 120.0f, .right = 140.0f, .row_y = kRowY}, /*above=*/true,
+      /*slot=*/0);
+  const DependencyArrowRoute far_enough = RouteDependencyArrow(
+      {.left = 100.0f, .right = 122.0f, .row_y = kRowY},
+      {.left = 122.0f, .right = 144.0f, .row_y = kRowY}, /*above=*/true,
+      /*slot=*/0);
+
+  EXPECT_FLOAT_EQ(just_too_close.end.x - just_too_close.start.x, 15.0f);
+  EXPECT_LT(just_too_close.end.x - just_too_close.start.x,
+            kHloDependencyArrowMinSpanForHead);
+  EXPECT_FALSE(just_too_close.with_head);
+  EXPECT_FLOAT_EQ(far_enough.end.x - far_enough.start.x, 16.5f);
+  EXPECT_GE(far_enough.end.x - far_enough.start.x,
+            kHloDependencyArrowMinSpanForHead);
+  EXPECT_TRUE(far_enough.with_head);
+}
+
+TEST(RouteDependencyArrowTest, RunsBackwardsWhenTheOperandReachesPastTheOp) {
+  // A long operand on the row below overlaps the selected op in time, as an
+  // asynchronous op can: its middle lies to the right of where the arrow
+  // enters the selected op, so the lane runs leftwards. The span counts either
+  // way, and the route keeps its head and corners.
+  const DependencyArrowRoute route = RouteDependencyArrow(
+      {.left = 100.0f, .right = 300.0f, .row_y = kRowY + 20.0f},
+      {.left = 150.0f, .right = 400.0f, .row_y = kRowY}, /*above=*/true,
+      /*slot=*/0);
+
+  EXPECT_FLOAT_EQ(route.start.x, 200.0f);
+  EXPECT_FLOAT_EQ(route.end.x, 160.0f);
+  EXPECT_FLOAT_EQ(route.corner_radius, kHloDependencyArrowCornerRadius);
+  EXPECT_TRUE(route.with_head);
+}
+
+TEST(RouteDependencyArrowTest, BracketsNarrowBarsThatAreCloseTogether) {
+  // 8 px bars 2 px apart, as on a dense row zoomed out. The arrow from the
+  // neighbour spans 8 px (half of its bar, the gap and the 2 px inset), so it
+  // is a bracket with 4 px corners and no head; the arrow from the bar before
+  // it spans 18 px and gets its head back, one lane further out.
+  const BarGeometry selected{.left = 120.0f, .right = 128.0f, .row_y = kRowY};
+  const DependencyArrowRoute from_neighbour = RouteDependencyArrow(
+      {.left = 110.0f, .right = 118.0f, .row_y = kRowY}, selected,
+      /*above=*/true, /*slot=*/0);
+  const DependencyArrowRoute from_next = RouteDependencyArrow(
+      {.left = 100.0f, .right = 108.0f, .row_y = kRowY}, selected,
+      /*above=*/true, /*slot=*/1);
+
+  EXPECT_FLOAT_EQ(from_neighbour.start.x, 114.0f);
+  EXPECT_FLOAT_EQ(from_neighbour.end.x, 122.0f);
+  EXPECT_FLOAT_EQ(from_neighbour.corner_radius, 4.0f);
+  EXPECT_FALSE(from_neighbour.with_head);
+  EXPECT_FLOAT_EQ(from_next.start.x, 104.0f);
+  EXPECT_FLOAT_EQ(from_next.end.x, 122.0f);
+  EXPECT_FLOAT_EQ(from_next.corner_radius, kHloDependencyArrowCornerRadius);
+  EXPECT_TRUE(from_next.with_head);
+  EXPECT_FLOAT_EQ(from_next.lane_y,
+                  from_neighbour.lane_y - kHloDependencyArrowLaneStep);
+}
+
+// Events much shorter than the time of a pixel at the current zoom map to
+// hairline bars (the timeline draws them at a minimum width, see
+// kEventMinimumDrawWidth).
+
+TEST(RouteDependencyArrowTest, StaysOnHairlineBars) {
+  // A 1 px wide selected op between a 1 px operand and a 1 px consumer, far
+  // enough apart for arrowheads: the arrows still touch the hairline bars, a
+  // quarter pixel inside the ends of the selected op and in the middle of the
+  // others.
+  const BarGeometry operand{.left = 100.0f, .right = 101.0f, .row_y = kRowY};
+  const BarGeometry selected{.left = 300.0f, .right = 301.0f, .row_y = kRowY};
+  const BarGeometry consumer{.left = 500.0f, .right = 501.0f, .row_y = kRowY};
+
+  const DependencyArrowRoute from_operand =
+      RouteDependencyArrow(operand, selected, /*above=*/true, /*slot=*/0);
+  const DependencyArrowRoute to_consumer =
+      RouteDependencyArrow(selected, consumer, /*above=*/false, /*slot=*/0);
+
+  EXPECT_FLOAT_EQ(from_operand.start.x, 100.5f);
+  EXPECT_FLOAT_EQ(from_operand.end.x, 300.25f);
+  EXPECT_TRUE(from_operand.with_head);
+  EXPECT_FLOAT_EQ(to_consumer.start.x, 300.75f);
+  EXPECT_FLOAT_EQ(to_consumer.end.x, 500.5f);
+  EXPECT_TRUE(to_consumer.with_head);
+}
+
+TEST(RouteDependencyArrowTest, RoutesZeroWidthBars) {
+  // Bars of zero width: the arrow starts and ends on their pixel, and keeps
+  // its corners and head.
+  const DependencyArrowRoute route = RouteDependencyArrow(
+      {.left = 100.0f, .right = 100.0f, .row_y = kRowY},
+      {.left = 300.0f, .right = 300.0f, .row_y = kRowY}, /*above=*/true,
+      /*slot=*/0);
+
+  EXPECT_FLOAT_EQ(route.start.x, 100.0f);
+  EXPECT_FLOAT_EQ(route.end.x, 300.0f);
+  EXPECT_FLOAT_EQ(route.corner_radius, kHloDependencyArrowCornerRadius);
+  EXPECT_TRUE(route.with_head);
+}
+
+TEST(RouteDependencyArrowTest, CollapsesToATickBetweenTouchingHairlineBars) {
+  // Two 1 px bars next to each other, as on a dense row zoomed far out: the
+  // route is under a pixel wide, so it has no head and almost no corners, but
+  // still rises the full lane gap above the row, where it reads as a tick
+  // between the two bars.
+  const DependencyArrowRoute route = RouteDependencyArrow(
+      {.left = 100.0f, .right = 101.0f, .row_y = kRowY},
+      {.left = 101.0f, .right = 102.0f, .row_y = kRowY}, /*above=*/true,
+      /*slot=*/0);
+
+  EXPECT_FLOAT_EQ(route.start.x, 100.5f);
+  EXPECT_FLOAT_EQ(route.end.x, 101.25f);
+  EXPECT_FLOAT_EQ(route.corner_radius, 0.375f);
+  EXPECT_FALSE(route.with_head);
+  EXPECT_FLOAT_EQ(route.lane_y,
+                  kRowY - kHalfBarHeight - kHloDependencyArrowLaneGap);
+}
+
+TEST(RouteDependencyArrowTest, CollapsesToAVerticalTickOnASharedPixel) {
+  // Zoomed out far enough, an op and its operand land on the same pixel. The
+  // route goes straight up to the lane and back down: no corners, no head.
+  const DependencyArrowRoute route = RouteDependencyArrow(
+      {.left = 100.0f, .right = 100.0f, .row_y = kRowY},
+      {.left = 100.0f, .right = 100.0f, .row_y = kRowY}, /*above=*/true,
+      /*slot=*/0);
+
+  EXPECT_FLOAT_EQ(route.start.x, 100.0f);
+  EXPECT_FLOAT_EQ(route.end.x, 100.0f);
+  EXPECT_FLOAT_EQ(route.corner_radius, 0.0f);
+  EXPECT_FALSE(route.with_head);
+}
 }  // namespace
 }  // namespace testing
 }  // namespace traceviewer

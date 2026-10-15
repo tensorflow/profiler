@@ -91,9 +91,22 @@ inline constexpr ImU32 kCounterHoverColor = kBlue80;
 inline constexpr ImU32 kHoverMaskColor = kTransparentWhiteColor;
 inline constexpr ImU32 kSelectedBorderColor = kBlueColor;
 inline constexpr Pixel kCounterHoverThickness = 3.5f;
-// The arrows between the selected HLO op and its operands and consumers.
-inline constexpr Pixel kHloDependencyArrowHeadSize = 7.0f;
-inline constexpr Pixel kHloDependencyArrowThickness = 2.0f;
+// The arrows between the selected HLO op and its operands and consumers run
+// up or down from a bar, along a lane outside the rows involved, and up or
+// down again to the other bar (see RouteDependencyArrow).
+inline constexpr Pixel kHloDependencyArrowCornerRadius = 6.0f;
+inline constexpr Pixel kHloDependencyArrowHeadHalfWidth = 3.5f;
+inline constexpr Pixel kHloDependencyArrowHeadLength = 5.0f;
+// The arrows touch the selected op this far inside its near end, at most a
+// quarter of the bar.
+inline constexpr Pixel kHloDependencyArrowInset = 10.0f;
+// The first lane is this far from the rows involved; each further arrow on the
+// same side gets its own lane, another step away.
+inline constexpr Pixel kHloDependencyArrowLaneGap = 8.0f;
+inline constexpr Pixel kHloDependencyArrowLaneStep = 6.0f;
+// Arrows between bars closer than this have no room for an arrowhead.
+inline constexpr Pixel kHloDependencyArrowMinSpanForHead = 16.0f;
+inline constexpr Pixel kHloDependencyArrowThickness = 1.5f;
 inline constexpr Pixel kHoverCornerRounding = 4.0f;
 inline constexpr Pixel kHoverPadding = 2.0f;
 // The radius of the circle used to draw points in the counter track.

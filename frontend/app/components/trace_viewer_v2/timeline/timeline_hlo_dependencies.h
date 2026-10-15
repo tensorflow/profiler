@@ -4,6 +4,9 @@
 #include <string>
 #include <vector>
 
+#include "imgui.h"
+#include "frontend/app/components/trace_viewer_v2/timeline/constants.h"
+
 namespace traceviewer {
 
 struct FlameChartTimelineData;
@@ -41,6 +44,37 @@ EventDependencies ResolveEventDependencies(
     const FlameChartTimelineData& data, int selected_event_index,
     std::vector<std::string> operand_names,
     std::vector<std::string> consumer_names);
+
+// The screen extent of a bar and the vertical center of its row.
+struct BarGeometry {
+  Pixel left;
+  Pixel right;
+  Pixel row_y;
+};
+
+// The route of an HLO dependency arrow: from `start` on the edge of one bar,
+// vertically to `lane_y`, along the lane, and vertically to `end` on the edge
+// of the other bar, with corners of `corner_radius`. Routes between bars that
+// are too close for an arrowhead have `with_head` unset.
+struct DependencyArrowRoute {
+  ImVec2 start;
+  Pixel lane_y;
+  ImVec2 end;
+  Pixel corner_radius;
+  bool with_head;
+};
+
+// Routes the arrow from `from` to `to` around the rows involved, so that it
+// does not run through the bars in between. With `above` (the arrows from the
+// operands of the selected op) the lane is above the rows, and the arrow runs
+// from the middle of the operand to just inside the left end of the selected
+// op; otherwise (the arrows to its consumers) the lane is below, from just
+// inside the right end of the selected op to the middle of the consumer.
+// Anchoring the other bar in its middle keeps a visible span for neighbouring
+// ops. `slot` puts parallel arrows on the same side into separate lanes.
+DependencyArrowRoute RouteDependencyArrow(const BarGeometry& from,
+                                          const BarGeometry& to, bool above,
+                                          int slot);
 
 }  // namespace traceviewer
 
