@@ -1,4 +1,5 @@
 import json
+from typing import Any
 from unittest import mock
 from absl.testing import absltest
 from xprof.cli.internal import decorators
@@ -129,6 +130,9 @@ class GetRooflineModelToolTest(absltest.TestCase):
     )
     self.assertEqual(parsed["program"]["measured_flop_rate_gflops"], 7181.72)
     self.assertEqual(parsed["program"]["hbm_bw_gibs"], 205.79)
+    self.assertEqual(parsed["program"]["flops_provenance"], "xla_cost_model")
+    self.assertEqual(parsed["program"]["derived_flops_fraction"], 0.0)
+    self.assertFalse(parsed["program"]["has_opaque_custom_calls"])
 
     self.assertEqual(parsed["device_info"]["device_type"], "TPU v6 Lite")
     self.assertEqual(parsed["device_info"]["peak_flop_rate"], 946700.0)
@@ -234,6 +238,11 @@ class GetRooflineModelToolTest(absltest.TestCase):
     parsed = json.loads(result)
 
     self.assertEqual(parsed["program"]["bound_by"], "CustomCall (opaque)")
+    self.assertEqual(
+        parsed["program"]["flops_provenance"], "opaque_custom_call"
+    )
+    self.assertEqual(parsed["program"]["derived_flops_fraction"], 0.0)
+    self.assertTrue(parsed["program"]["has_opaque_custom_calls"])
     self.assertLen(parsed["top_operations"], 1)
     self.assertEqual(
         parsed["top_operations"][0]["bound_by"], "CustomCall (opaque)"
@@ -389,6 +398,473 @@ class GetRooflineModelToolTest(absltest.TestCase):
     self.assertEqual(op["bound_by"], "Compute")
     self.assertEqual(op["compute_efficiency_percent"], "75.55%")
     self.assertEqual(op["roofline_efficiency_percent"], "75.55%")
+    self.assertEqual(parsed["program"]["derived_flops_fraction"], 1.0)
+
+  def _mock_roofline_session(
+      self,
+      program_row: dict[str, Any],
+      op_rows: list[dict[str, Any]],
+  ) -> None:
+    """Mocks a session from rows keyed by roofline column id.
+
+    Only custom-call.1 has an op_profile expression. It computes
+    bf16[4,4096,2048] x bf16[2048,4096], which is 2 * 4 * 4096 * 4096 * 2048
+    = 2**38 shape-derived FLOPs. Any other custom call is opaque.
+
+    Args:
+      program_row: Program row values by column id. Missing columns are None.
+      op_rows: Per-op row values by column id. Missing columns are None.
+    """
+    cols = [
+        "step_id",
+        "rank",
+        "category",
+        "operation",
+        "total_time",
+        "total_self_time",
+        "total_self_time_percent",
+        "measured_flop_rate",
+        "model_flop_rate",
+        "measured_memory_bw",
+        "hbm_bw",
+        "operational_intensity",
+        "hbm_operational_intensity",
+        "bottleneck_operational_intensity",
+        "bound_by",
+        "compute_efficiency",
+        "max_mem_bw_utilization",
+        "optimal_flop_rate",
+    ]
+
+    def row(values: dict[str, Any]) -> dict[str, Any]:
+      return {"c": [{"v": values.get(c)} for c in cols]}
+
+    program = {"step_id": "Total", "rank": 0.0, "category": "Program"}
+    program["operation"] = "Program"
+    program.update(program_row)
+    roofline_raw_data = [{
+        "cols": [{"id": c} for c in cols],
+        "p": {
+            "device_type": "TPU v6 Lite",
+            "peak_flop_rate": "946700.0",
+            "peak_hbm_bw": "1525.5",
+            "hbm_ridge_point": "577.963",
+        },
+        "rows": (
+            [row(program)] + [row({"step_id": "Total", **op}) for op in op_rows]
+        ),
+    }]
+    op_profile_json = json.dumps({
+        "by_program": {
+            "name": "main",
+            "children": [{
+                "name": "custom-call.1",
+                "xla": {
+                    "expression": (
+                        "%custom-call.1 = bf16[4,4096,4096] custom-call("
+                        "bf16[4,4096,2048] %p0, bf16[2048,4096] %p1)"
+                    )
+                },
+            }],
+        }
+    }).encode("utf-8")
+
+    def fake_fetch(tool_name, session_id, bypass_cache=False):
+      del session_id, bypass_cache
+      if tool_name == "roofline_model.json":
+        return (
+            "application/json",
+            json.dumps(roofline_raw_data).encode("utf-8"),
+        )
+      if tool_name == "hlo_op_profile.json":
+        return ("application/json", op_profile_json)
+      return ("application/json", None)
+
+    self.mock_client.fetch.side_effect = fake_fetch
+
+  def _mock_derived_custom_call_session(
+      self,
+      prog_total_time_us: float,
+      prog_flop_rate: float,
+      prog_mem_bw_gibs: float,
+      custom_call_flop_rate: float,
+      *,
+      prog_model_flop_rate: float = 0.0,
+      custom_call_model_flop_rate: float = 0.0,
+      prog_operational_intensity: float = 0.0,
+  ) -> None:
+    """Mocks a session whose only custom call has shape-derived FLOPs.
+
+    Args:
+      prog_total_time_us: Program total time in microseconds.
+      prog_flop_rate: Program measured FLOP rate in GFLOP/s.
+      prog_mem_bw_gibs: Program measured memory bandwidth in GiB/s.
+      custom_call_flop_rate: XLA cost-model measured FLOP rate of the custom
+        call in GFLOP/s.
+      prog_model_flop_rate: Program model FLOP rate in GFLOP/s.
+      custom_call_model_flop_rate: Model FLOP rate of the custom call in
+        GFLOP/s.
+      prog_operational_intensity: Backend program operational intensity.
+    """
+    custom_call_time_us = 396.32
+    self._mock_roofline_session(
+        program_row={
+            "total_time": prog_total_time_us,
+            "total_self_time": prog_total_time_us,
+            "total_self_time_percent": 1.0,
+            "measured_flop_rate": prog_flop_rate,
+            "model_flop_rate": prog_model_flop_rate,
+            "measured_memory_bw": prog_mem_bw_gibs,
+            "hbm_bw": 752.54,
+            "operational_intensity": prog_operational_intensity,
+            "bound_by": "HBM",
+            "compute_efficiency": 0.0,
+            "max_mem_bw_utilization": 0.4933,
+        },
+        op_rows=[{
+            "rank": 1.0,
+            "category": "custom-call",
+            "operation": "custom-call.1",
+            "total_time": custom_call_time_us,
+            "total_self_time": custom_call_time_us,
+            "total_self_time_percent": (
+                custom_call_time_us / prog_total_time_us
+            ),
+            "measured_flop_rate": custom_call_flop_rate,
+            "model_flop_rate": custom_call_model_flop_rate,
+            "measured_memory_bw": 77.15,
+            "hbm_bw": 77.15,
+            "bound_by": "Unknown",
+            "compute_efficiency": 0.0,
+            "max_mem_bw_utilization": 0.0471,
+        }],
+    )
+
+  def _get_program(self, top_n: int = 15) -> dict[str, Any]:
+    return json.loads(
+        get_roofline_model_tool.get_roofline_model(
+            "test_session", top_n=top_n, bypass_cache=True
+        )
+    )["program"]
+
+  def test_program_operational_intensity_converts_gibs_to_gb(self):
+    # Pick the cost-model remainder so the recomputed program rate is
+    # 312,992.93 GFLOP/s over 1000 us: 312992.93e6 - 2**38 FLOPs.
+    cost_model_flops = 312992.93e6 - 2**38
+    self._mock_derived_custom_call_session(
+        prog_total_time_us=1000.0,
+        prog_flop_rate=cost_model_flops / 1e6,
+        prog_mem_bw_gibs=1011.98,
+        custom_call_flop_rate=0.0,
+    )
+
+    parsed = json.loads(
+        get_roofline_model_tool.get_roofline_model(
+            "test_session", bypass_cache=True
+        )
+    )
+
+    program = parsed["program"]
+    self.assertAlmostEqual(
+        program["measured_flop_rate_gflops"], 312992.93, places=2
+    )
+    # 312992.93 GFLOP/s / (1011.98 GiB/s * 2**30 / 1e9) = 288.04 FLOP/byte.
+    # Dividing by GiB/s directly would give 309.29 (7.37 % too high).
+    self.assertAlmostEqual(
+        program["operational_intensity_flop_per_byte"], 288.04, delta=0.01
+    )
+
+  def test_program_flops_provenance_is_mixed_with_cost_model_remainder(self):
+    cost_model_flops = 312992.93e6 - 2**38
+    self._mock_derived_custom_call_session(
+        prog_total_time_us=1000.0,
+        prog_flop_rate=cost_model_flops / 1e6,
+        prog_mem_bw_gibs=1011.98,
+        custom_call_flop_rate=0.0,
+    )
+
+    parsed = json.loads(
+        get_roofline_model_tool.get_roofline_model(
+            "test_session", bypass_cache=True
+        )
+    )
+
+    program = parsed["program"]
+    self.assertEqual(program["flops_provenance"], "mixed")
+    self.assertAlmostEqual(
+        program["derived_flops_fraction"], 2**38 / 312992.93e6, places=4
+    )
+    self.assertEqual(
+        parsed["top_operations"][0]["flops_provenance"], "derived_from_shapes"
+    )
+
+  def test_program_flops_provenance_is_derived_when_all_flops_replaced(self):
+    # The custom call carries all of the program's cost-model FLOPs, so
+    # replacing them leaves no cost-model remainder.
+    self._mock_derived_custom_call_session(
+        prog_total_time_us=396.32,
+        prog_flop_rate=1234.5,
+        prog_mem_bw_gibs=77.15,
+        custom_call_flop_rate=1234.5,
+    )
+
+    parsed = json.loads(
+        get_roofline_model_tool.get_roofline_model(
+            "test_session", bypass_cache=True
+        )
+    )
+
+    program = parsed["program"]
+    self.assertEqual(program["flops_provenance"], "derived_from_shapes")
+    self.assertEqual(program["derived_flops_fraction"], 1.0)
+
+  def test_cost_model_remainder_just_under_tolerance_is_derived(self):
+    # The remainder is 0.999e-3 of the program FLOPs, inside the 1e-3
+    # tolerance, so it is clamped to 0 before the totals are computed.
+    self._mock_derived_custom_call_session(
+        prog_total_time_us=396.32,
+        prog_flop_rate=1000.0,
+        prog_mem_bw_gibs=77.15,
+        custom_call_flop_rate=1000.0 * (1.0 - 0.999e-3),
+    )
+
+    program = self._get_program()
+
+    self.assertEqual(program["flops_provenance"], "derived_from_shapes")
+    self.assertEqual(program["derived_flops_fraction"], 1.0)
+    self.assertAlmostEqual(
+        program["measured_flop_rate_gflops"], 2**38 / 396.32e3, places=2
+    )
+
+  def test_cost_model_remainder_just_over_tolerance_is_mixed(self):
+    self._mock_derived_custom_call_session(
+        prog_total_time_us=396.32,
+        prog_flop_rate=1000.0,
+        prog_mem_bw_gibs=77.15,
+        custom_call_flop_rate=1000.0 * (1.0 - 1.001e-3),
+    )
+
+    program = self._get_program()
+
+    remainder = 1000.0 * 1.001e-3 * 396.32e3
+    self.assertEqual(program["flops_provenance"], "mixed")
+    self.assertAlmostEqual(
+        program["derived_flops_fraction"],
+        2**38 / (2**38 + remainder),
+        places=4,
+    )
+
+  def test_replaced_flops_use_program_rate_column(self):
+    # The program has measured FLOPs, so the custom call's replaced FLOPs
+    # must also come from measured_flop_rate (0 here), not from its
+    # model_flop_rate. All program measured FLOPs then belong to other ops.
+    self._mock_derived_custom_call_session(
+        prog_total_time_us=396.32,
+        prog_flop_rate=1000.0,
+        prog_mem_bw_gibs=77.15,
+        custom_call_flop_rate=0.0,
+        prog_model_flop_rate=1000.0,
+        custom_call_model_flop_rate=1000.0,
+    )
+
+    program = self._get_program()
+
+    cost_model_flops = 1000.0 * 396.32e3
+    self.assertEqual(program["flops_provenance"], "mixed")
+    self.assertAlmostEqual(
+        program["measured_flop_rate_gflops"],
+        (cost_model_flops + 2**38) / 396.32e3,
+        places=2,
+    )
+
+  def test_program_without_measured_flops_uses_model_column(self):
+    self._mock_derived_custom_call_session(
+        prog_total_time_us=396.32,
+        prog_flop_rate=0.0,
+        prog_mem_bw_gibs=77.15,
+        custom_call_flop_rate=0.0,
+        prog_model_flop_rate=1000.0,
+        custom_call_model_flop_rate=500.0,
+    )
+
+    program = self._get_program()
+
+    cost_model_flops = 500.0 * 396.32e3
+    self.assertEqual(program["flops_provenance"], "mixed")
+    self.assertAlmostEqual(
+        program["derived_flops_fraction"],
+        2**38 / (2**38 + cost_model_flops),
+        places=4,
+    )
+
+  def test_opaque_and_derived_custom_calls_are_mixed_for_any_top_n(self):
+    self._mock_roofline_session(
+        program_row={
+            "total_time": 1000.0,
+            "measured_flop_rate": 0.0,
+            "measured_memory_bw": 77.15,
+            "hbm_bw": 77.15,
+            "bound_by": "HBM",
+            "max_mem_bw_utilization": 0.0471,
+        },
+        op_rows=[
+            {
+                "rank": 1.0,
+                "category": "custom-call",
+                "operation": "custom-call.1",
+                "total_self_time": 600.0,
+                "total_self_time_percent": 0.6,
+                "bound_by": "Unknown",
+                "max_mem_bw_utilization": 0.0471,
+            },
+            {
+                "rank": 2.0,
+                "category": "custom-call",
+                "operation": "custom-call.2",
+                "total_self_time": 400.0,
+                "total_self_time_percent": 0.4,
+                "bound_by": "Unknown",
+            },
+        ],
+    )
+
+    program_top_1 = self._get_program(top_n=1)
+    program_top_5 = self._get_program(top_n=5)
+
+    self.assertEqual(program_top_1["flops_provenance"], "mixed")
+    self.assertTrue(program_top_1["has_opaque_custom_calls"])
+    self.assertEqual(program_top_1, program_top_5)
+
+  def test_bottleneck_intensity_recomputed_when_bound_flips_to_hbm(self):
+    prog_time_us = 1000.0
+    # The custom call carries 5e11 of the program's 6e11 cost-model FLOPs;
+    # replacing them with 2**38 shape-derived FLOPs drops compute efficiency
+    # below the 49.33% HBM utilization.
+    self._mock_roofline_session(
+        program_row={
+            "total_time": prog_time_us,
+            "measured_flop_rate": 600000.0,
+            "measured_memory_bw": 1011.98,
+            "hbm_bw": 752.54,
+            "operational_intensity": 555.0,
+            "hbm_operational_intensity": 745.0,
+            "bottleneck_operational_intensity": 555.0,
+            "bound_by": "Compute",
+            "compute_efficiency": 600000.0 / 946700.0,
+            "max_mem_bw_utilization": 0.4933,
+            "optimal_flop_rate": 946700.0,
+        },
+        op_rows=[{
+            "rank": 1.0,
+            "category": "custom-call",
+            "operation": "custom-call.1",
+            "total_self_time": 396.32,
+            "total_self_time_percent": 0.39632,
+            "measured_flop_rate": 5e11 / 396.32e3,
+            "measured_memory_bw": 77.15,
+            "hbm_bw": 77.15,
+            "bottleneck_operational_intensity": 123.0,
+            "bound_by": "Compute",
+            "max_mem_bw_utilization": 0.0471,
+            "optimal_flop_rate": 999.0,
+        }],
+    )
+
+    parsed = json.loads(
+        get_roofline_model_tool.get_roofline_model(
+            "test_session", bypass_cache=True
+        )
+    )
+    program = parsed["program"]
+
+    new_rate = (1e11 + 2**38) / (prog_time_us * 1e3)
+    peak_hbm_gb = 1525.5 * 2**30 / 1e9
+    self.assertEqual(program["bound_by"], "HBM")
+    self.assertEqual(program["bound_by_ridge_point_flop_per_byte"], 577.963)
+    self.assertAlmostEqual(
+        program["bottleneck_operational_intensity_flop_per_byte"],
+        new_rate / (752.54 * 2**30 / 1e9),
+        places=3,
+    )
+    self.assertLess(
+        program["bottleneck_operational_intensity_flop_per_byte"],
+        program["bound_by_ridge_point_flop_per_byte"],
+    )
+    self.assertAlmostEqual(
+        program["optimal_flop_rate_gflops"], new_rate / 0.4933, places=1
+    )
+    # optimal_flop_rate = bottleneck_OI x peak_hbm_bw_GB, to within the
+    # rounding of max_mem_bw_utilization (752.54 / 1525.5 = 0.49331).
+    self.assertAlmostEqual(
+        program["optimal_flop_rate_gflops"]
+        / (
+            program["bottleneck_operational_intensity_flop_per_byte"]
+            * peak_hbm_gb
+        ),
+        1.0,
+        places=3,
+    )
+    op = parsed["top_operations"][0]
+    self.assertEqual(op["bound_by"], "Compute")
+    self.assertEqual(
+        op["bottleneck_operational_intensity_flop_per_byte"],
+        op["operational_intensity_flop_per_byte"],
+    )
+    self.assertAlmostEqual(op["optimal_flop_rate_gflops"], 946700.0, places=1)
+
+  def test_intensity_fallback_scales_backend_value_without_memory_bw(self):
+    self._mock_derived_custom_call_session(
+        prog_total_time_us=1000.0,
+        prog_flop_rate=1000.0,
+        prog_mem_bw_gibs=0.0,
+        custom_call_flop_rate=500.0,
+        prog_operational_intensity=100.0,
+    )
+
+    program = self._get_program()
+
+    orig_flops = 1000.0 * 1000.0e3
+    new_flops = orig_flops - 500.0 * 396.32e3 + 2**38
+    self.assertEqual(program["flops_provenance"], "mixed")
+    self.assertAlmostEqual(
+        program["operational_intensity_flop_per_byte"],
+        100.0 * new_flops / orig_flops,
+        places=3,
+    )
+
+  def test_intensity_fallback_uses_derived_bytes_when_fully_derived(self):
+    self._mock_derived_custom_call_session(
+        prog_total_time_us=396.32,
+        prog_flop_rate=0.0,
+        prog_mem_bw_gibs=0.0,
+        custom_call_flop_rate=0.0,
+    )
+
+    program = self._get_program()
+
+    # Operand and result bytes: 2 * (4*4096*2048 + 2048*4096 + 4*4096*4096).
+    derived_bytes = 2 * (4 * 4096 * 2048 + 2048 * 4096 + 4 * 4096 * 4096)
+    self.assertEqual(program["flops_provenance"], "derived_from_shapes")
+    self.assertAlmostEqual(
+        program["operational_intensity_flop_per_byte"],
+        2**38 / derived_bytes,
+        places=3,
+    )
+
+  def test_intensity_fallback_keeps_backend_value_when_mixed(self):
+    # Mixed program, no memory bandwidth and no backend intensity: the
+    # custom call's bytes are not the program bytes, so keep the backend 0.
+    self._mock_derived_custom_call_session(
+        prog_total_time_us=1000.0,
+        prog_flop_rate=1000.0,
+        prog_mem_bw_gibs=0.0,
+        custom_call_flop_rate=0.0,
+    )
+
+    program = self._get_program()
+
+    self.assertEqual(program["flops_provenance"], "mixed")
+    self.assertEqual(program["operational_intensity_flop_per_byte"], 0.0)
 
 
 if __name__ == "__main__":

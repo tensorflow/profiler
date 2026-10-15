@@ -12,6 +12,82 @@ from xprof.cli.internal import hlo_shape_utils
 from xprof.cli.internal.oss import xprof_client
 from xprof.protobuf import op_profile_pb2
 
+# Relative tolerance, as a fraction of the original program FLOPs, below which
+# leftover XLA cost-model FLOPs count as zero. It absorbs separately totalled
+# backend rows (the Program row and the per-op rows are summed independently
+# and rounded on export), not only float rounding.
+_FLOPS_REL_TOLERANCE = 1e-3
+
+# Per-memory-space columns that the backend uses for the bottleneck operational
+# intensity of each `bound_by` value (convert/op_metrics_to_record.h). Each
+# entry is (bandwidth column in GiB/s, operational intensity column). On GPU,
+# `Shm/L1` uses the HBM bandwidth and HBM operational intensity.
+_BOUND_BY_SPACE_COLUMNS: dict[str, tuple[str, str]] = {
+    "HBM": ("hbm_bw", "hbm_operational_intensity"),
+    "Shm/L1": ("hbm_bw", "hbm_operational_intensity"),
+    "CMEM Read": ("cmem_read_bw", "cmem_read_operational_intensity"),
+    "CMEM Write": ("cmem_write_bw", "cmem_write_operational_intensity"),
+    "VMEM Read": ("vmem_read_bw", "vmem_read_operational_intensity"),
+    "VMEM Write": ("vmem_write_bw", "vmem_write_operational_intensity"),
+}
+
+
+def _gibi_to_giga(gibi: float) -> float:
+  """Converts a GiB-based quantity (2**30) to its GB-based value (1e9)."""
+  return gibi * (2**30) / 1e9
+
+
+def _safe_float(val: Any, default: float = 0.0) -> float:
+  """Converts `val` to float, returning `default` if that is not possible."""
+  if val is None:
+    return default
+  try:
+    return float(val)
+  except (ValueError, TypeError):
+    return default
+
+
+def _recompute_bottleneck_intensity(
+    row: dict[str, Any],
+    bound_by: str,
+    flop_rate_gflops: float,
+    operational_intensity: float,
+    flops_scale: float | None,
+) -> float:
+  """Recomputes the bottleneck operational intensity after a FLOP change.
+
+  Mirrors the backend: the bottleneck intensity is the all-memory-spaces
+  intensity when the row is compute bound, and the intensity of the bound
+  memory space otherwise.
+
+  Args:
+    row: The roofline table row (column id to value).
+    bound_by: The recomputed `bound_by` value of the row.
+    flop_rate_gflops: The recomputed FLOP rate of the row in GFLOP/s.
+    operational_intensity: The recomputed all-memory-spaces operational
+      intensity of the row in FLOPs/byte.
+    flops_scale: The ratio of recomputed to original FLOPs, or None if the
+      original FLOPs are 0.
+
+  Returns:
+    The bottleneck operational intensity in FLOPs/byte. Falls back to the
+    backend value when it cannot be recomputed.
+  """
+  backend_value = _safe_float(row.get("bottleneck_operational_intensity"))
+  if bound_by == "Compute":
+    return operational_intensity
+  columns = _BOUND_BY_SPACE_COLUMNS.get(bound_by)
+  if columns is None:
+    return backend_value
+  bw_key, intensity_key = columns
+  space_bw_gibs = _safe_float(row.get(bw_key))
+  if space_bw_gibs > 0:
+    return flop_rate_gflops / _gibi_to_giga(space_bw_gibs)
+  space_intensity = _safe_float(row.get(intensity_key))
+  if flops_scale is not None and space_intensity > 0:
+    return space_intensity * flops_scale
+  return backend_value
+
 
 def _fetch_op_profile_expressions(
     session_id: str, client: Any, bypass_cache: bool
@@ -204,36 +280,28 @@ def get_roofline_model(
 
     prog_dict = row_to_dict(rows[0].get("c", []))
 
-    def safe_float(val: Any, default: float = 0.0) -> float:
-      if val is None:
-        return default
-      try:
-        return float(val)
-      except (ValueError, TypeError):
-        return default
-
     def to_percent_str(val: Any) -> str:
-      f = safe_float(val)
+      f = _safe_float(val)
       return f"{f * 100.0:.2f}%"
 
     def calc_mem_util_str(
         util_key: str, bw_key: str, peak_keys: list[str]
     ) -> str:
       val = prog_dict.get(util_key)
-      if val is not None and safe_float(val) > 0:
+      if val is not None and _safe_float(val) > 0:
         return to_percent_str(val)
-      bw = safe_float(prog_dict.get(bw_key))
+      bw = _safe_float(prog_dict.get(bw_key))
       peak = 0.0
       for pk in peak_keys:
         resolved_pk = bw_renames.get(pk, pk)
         if (
             resolved_pk in device_info
-            and safe_float(device_info[resolved_pk]) > 0
+            and _safe_float(device_info[resolved_pk]) > 0
         ):
-          peak = safe_float(device_info[resolved_pk])
+          peak = _safe_float(device_info[resolved_pk])
           break
-        if pk in device_info and safe_float(device_info[pk]) > 0:
-          peak = safe_float(device_info[pk])
+        if pk in device_info and _safe_float(device_info[pk]) > 0:
+          peak = _safe_float(device_info[pk])
           break
       if peak > 0:
         return f"{(bw / peak) * 100.0:.2f}%"
@@ -258,7 +326,7 @@ def get_roofline_model(
       if key is None:
         return None
       val = device_info.get(key)
-      return None if val is None else round(safe_float(val), 4)
+      return None if val is None else round(_safe_float(val), 4)
 
     prog_bound_by = prog_dict.get("bound_by", "Unknown")
 
@@ -266,10 +334,10 @@ def get_roofline_model(
         "bound_by": prog_bound_by,
         "bound_by_ridge_point_flop_per_byte": ridge_point_for(prog_bound_by),
         "operational_intensity_flop_per_byte": round(
-            safe_float(prog_dict.get("operational_intensity")), 4
+            _safe_float(prog_dict.get("operational_intensity")), 4
         ),
         "bottleneck_operational_intensity_flop_per_byte": round(
-            safe_float(prog_dict.get("bottleneck_operational_intensity")), 4
+            _safe_float(prog_dict.get("bottleneck_operational_intensity")), 4
         ),
         "roofline_efficiency_percent": to_percent_str(
             prog_dict.get("roofline_efficiency")
@@ -281,19 +349,19 @@ def get_roofline_model(
             prog_dict.get("max_mem_bw_utilization")
         ),
         "optimal_flop_rate_gflops": round(
-            safe_float(prog_dict.get("optimal_flop_rate")), 2
+            _safe_float(prog_dict.get("optimal_flop_rate")), 2
         ),
         "dma_stall_percent": to_percent_str(prog_dict.get("dma_stall_percent")),
         "measured_flop_rate_gflops": round(
-            safe_float(prog_dict.get("measured_flop_rate")), 2
+            _safe_float(prog_dict.get("measured_flop_rate")), 2
         ),
         "model_flop_rate_gflops": round(
-            safe_float(prog_dict.get("model_flop_rate")), 2
+            _safe_float(prog_dict.get("model_flop_rate")), 2
         ),
         "measured_memory_bw_gibs": round(
-            safe_float(prog_dict.get("measured_memory_bw")), 2
+            _safe_float(prog_dict.get("measured_memory_bw")), 2
         ),
-        "hbm_bw_gibs": round(safe_float(prog_dict.get("hbm_bw")), 2),
+        "hbm_bw_gibs": round(_safe_float(prog_dict.get("hbm_bw")), 2),
         "hbm_bw_utilization_percent": calc_mem_util_str(
             "hbm_bw_utilization", "hbm_bw", ["peak_hbm_bw"]
         ),
@@ -310,7 +378,7 @@ def get_roofline_model(
             "vmem_write_bw_utilization", "vmem_write_bw", ["peak_vmem_write_bw"]
         ),
         "total_time_ms": round(
-            safe_float(prog_dict.get("total_time")) / 1000.0, 3
+            _safe_float(prog_dict.get("total_time")) / 1000.0, 3
         ),
         "flops_provenance": "xla_cost_model",
         "metric_semantics": {
@@ -332,7 +400,9 @@ def get_roofline_model(
                 " spaces. Because the denominator includes non-HBM bytes it is"
                 " always <= bottleneck_operational_intensity_flop_per_byte,"
                 " and comparing it against a single-space ridge point"
-                " overstates memory boundness."
+                " overstates memory boundness. Recomputed values convert"
+                " GiB/s to GB/s first, so they are FLOPs per byte like the"
+                " backend value."
             ),
             "bound_by": (
                 "Argmax over resource utilizations (Compute wins ties)."
@@ -341,16 +411,42 @@ def get_roofline_model(
                 " bound_by_ridge_point_flop_per_byte, not with"
                 " operational_intensity_flop_per_byte."
             ),
+            "flops_provenance": (
+                "Source of the program FLOPs: 'xla_cost_model' (XLA static"
+                " cost model), 'derived_from_shapes' (no cost-model FLOPs"
+                " remain; all FLOPs come from shape-derived custom calls),"
+                " 'mixed' (shape-derived custom call FLOPs plus cost-model"
+                " FLOPs for the other ops, or plus opaque custom calls that"
+                " count as 0; see derived_flops_fraction and"
+                " has_opaque_custom_calls), or 'opaque_custom_call'."
+            ),
+            "derived_flops_fraction": (
+                "Share of program FLOPs that is shape-derived (0.0 to 1.0)."
+                " 0.0 when no custom call FLOPs were derived from shapes."
+            ),
+            "has_opaque_custom_calls": (
+                "True if any analyzed op (not only top_operations) is a"
+                " custom call whose FLOPs could not be derived."
+            ),
         },
     }
 
-    peak_flop_rate = safe_float(device_info.get("peak_flop_rate"))
+    peak_flop_rate = _safe_float(device_info.get("peak_flop_rate"))
     expressions_by_name: dict[str, str] | None = None
+    # Pick the FLOP rate column once from the program row. The backend sums
+    # flops_v2 into measured_flop_rate and model_flops_v2 into
+    # model_flop_rate, so mixing the two columns between the program and its
+    # ops makes the subtraction below meaningless.
+    flop_rate_key = (
+        "measured_flop_rate"
+        if _safe_float(prog_dict.get("measured_flop_rate")) > 0
+        else "model_flop_rate"
+    )
 
     op_records = []
     for r in rows[1:]:
       r_dict = row_to_dict(r.get("c", []))
-      self_time_us = safe_float(r_dict.get("total_self_time"))
+      self_time_us = _safe_float(r_dict.get("total_self_time"))
       if self_time_us <= 0:
         continue
 
@@ -360,10 +456,10 @@ def get_roofline_model(
       op_name = r_dict.get("operation") or r_dict.get("hlo_name", "")
       op_category = r_dict.get("category") or r_dict.get("hlo_category", "")
       bound_by_val = r_dict.get("bound_by") or "Unknown"
-      op_compute_eff = safe_float(r_dict.get("compute_efficiency"))
-      op_roofline_eff = safe_float(r_dict.get("roofline_efficiency"))
-      op_max_mem_eff = safe_float(r_dict.get("max_mem_bw_utilization"))
-      op_intensity = safe_float(r_dict.get("operational_intensity"))
+      op_compute_eff = _safe_float(r_dict.get("compute_efficiency"))
+      op_roofline_eff = _safe_float(r_dict.get("roofline_efficiency"))
+      op_max_mem_eff = _safe_float(r_dict.get("max_mem_bw_utilization"))
+      op_intensity = _safe_float(r_dict.get("operational_intensity"))
       provenance = "xla_cost_model"
       derived_flops: float | None = None
       derived_bytes: float | None = None
@@ -392,10 +488,15 @@ def get_roofline_model(
           or "custom_call" in expr.lower()
           or "custom_call_target" in expr.lower()
       )
-      orig_op_flop_rate = safe_float(
-          r_dict.get("measured_flop_rate")
-      ) or safe_float(r_dict.get("model_flop_rate"))
-      orig_op_flops = orig_op_flop_rate * (self_time_us * 1e3)
+      # Use the same rate column as the program row so that the replaced
+      # FLOPs and the program FLOPs they are subtracted from are comparable.
+      orig_op_flops = _safe_float(r_dict.get(flop_rate_key)) * (
+          self_time_us * 1e3
+      )
+      op_bottleneck_intensity = _safe_float(
+          r_dict.get("bottleneck_operational_intensity")
+      )
+      op_optimal_flop_rate = _safe_float(r_dict.get("optimal_flop_rate"))
 
       backend_bound_by = str(r_dict.get("bound_by") or "Unknown")
 
@@ -427,19 +528,31 @@ def get_roofline_model(
             bound_by_val = backend_bound_by
           else:
             bound_by_val = "HBM"
+          op_bottleneck_intensity = _recompute_bottleneck_intensity(
+              r_dict,
+              bound_by_val,
+              op_flop_rate_gflops,
+              op_intensity,
+              derived_flops / orig_op_flops if orig_op_flops > 0 else None,
+          )
+          if op_roofline_eff > 0:
+            op_optimal_flop_rate = op_flop_rate_gflops / op_roofline_eff
         else:
           provenance = "opaque_custom_call"
           bound_by_val = "CustomCall (opaque)"
           op_compute_eff = 0.0
           op_roofline_eff = op_max_mem_eff
           op_intensity = 0.0
+          # The op counts 0 FLOPs, so no FLOP-based intensity or rate holds.
+          op_bottleneck_intensity = 0.0
+          op_optimal_flop_rate = 0.0
 
       orig_replaced_flops = 0.0
       if is_custom and (derived_flops or provenance == "opaque_custom_call"):
         orig_replaced_flops = orig_op_flops
 
       op_records.append({
-          "rank": int(safe_float(r_dict.get("rank"))),
+          "rank": int(_safe_float(r_dict.get("rank"))),
           "name": op_name,
           "category": op_category,
           "total_self_time_ms": round(self_time_us / 1000.0, 3),
@@ -448,14 +561,12 @@ def get_roofline_model(
           ),
           "operational_intensity_flop_per_byte": round(op_intensity, 4),
           "bottleneck_operational_intensity_flop_per_byte": round(
-              safe_float(r_dict.get("bottleneck_operational_intensity")), 4
+              op_bottleneck_intensity, 4
           ),
           "roofline_efficiency_percent": to_percent_str(op_roofline_eff),
           "compute_efficiency_percent": to_percent_str(op_compute_eff),
           "max_mem_bw_utilization_percent": to_percent_str(op_max_mem_eff),
-          "optimal_flop_rate_gflops": round(
-              safe_float(r_dict.get("optimal_flop_rate")), 2
-          ),
+          "optimal_flop_rate_gflops": round(op_optimal_flop_rate, 2),
           "dma_stall_percent": to_percent_str(r_dict.get("dma_stall_percent")),
           "bound_by": bound_by_val,
           "flops_provenance": provenance,
@@ -492,34 +603,94 @@ def get_roofline_model(
     unique_op_records.sort(key=lambda x: x["total_self_time_ms"], reverse=True)
     top_ops = unique_op_records[:top_n]
 
+    # Scan every analyzed op, not only the returned top_ops, so that --top_n
+    # cannot change any program-level field.
+    has_opaque_custom_call = any(
+        op.get("flops_provenance") == "opaque_custom_call"
+        or op.get("bound_by") == "CustomCall (opaque)"
+        for op in unique_op_records
+    )
+    program_metrics["has_opaque_custom_calls"] = has_opaque_custom_call
+    program_metrics["derived_flops_fraction"] = 0.0
+
     if total_derived_flops > 0:
-      prog_total_time_us = safe_float(prog_dict.get("total_time"))
+      prog_total_time_us = _safe_float(prog_dict.get("total_time"))
       if prog_total_time_us <= 0:
         prog_total_time_us = sum(
             op["total_self_time_ms"] * 1000.0 for op in unique_op_records
         )
       if prog_total_time_us > 0:
-        orig_prog_flops = safe_float(prog_dict.get("measured_flop_rate")) * (
-            prog_total_time_us * 1e3
+        prog_time_ns = prog_total_time_us * 1e3
+        orig_prog_flops = _safe_float(prog_dict.get(flop_rate_key)) * (
+            prog_time_ns
         )
-        new_prog_flops = max(
-            0.0, orig_prog_flops - total_orig_replaced_flops
-        ) + total_derived_flops
-        new_prog_flop_rate = new_prog_flops / (prog_total_time_us * 1e3)
+        flops_tolerance = _FLOPS_REL_TOLERANCE * orig_prog_flops
+        # The replaced FLOPs come from the same rate column as the program,
+        # so they cannot exceed the program total unless the backend rows
+        # disagree. Do not claim a clean provenance in that case.
+        rates_inconsistent = (
+            total_orig_replaced_flops - orig_prog_flops > flops_tolerance
+        )
+        if rates_inconsistent:
+          logging.warning(
+              "Replaced custom call FLOPs (%g) exceed program FLOPs (%g) from"
+              " column %s for session %s; labelling provenance as mixed.",
+              total_orig_replaced_flops,
+              orig_prog_flops,
+              flop_rate_key,
+              session_id,
+          )
+        # Shape-derived FLOPs replace only the custom calls; every other op
+        # keeps its XLA cost-model FLOPs. Clamp a remainder within tolerance
+        # to 0 before it enters the totals, so "derived_from_shapes" always
+        # pairs with a derived_flops_fraction of 1.0.
+        cost_model_flops = max(0.0, orig_prog_flops - total_orig_replaced_flops)
+        if cost_model_flops <= flops_tolerance:
+          cost_model_flops = 0.0
+        new_prog_flops = cost_model_flops + total_derived_flops
+        new_prog_flop_rate = new_prog_flops / prog_time_ns
+        derived_flops_fraction = (
+            total_derived_flops / new_prog_flops if new_prog_flops > 0 else 0.0
+        )
+        if (
+            cost_model_flops > 0
+            or rates_inconsistent
+            or has_opaque_custom_call
+        ):
+          prog_flops_provenance = "mixed"
+        else:
+          prog_flops_provenance = "derived_from_shapes"
+        flops_scale = (
+            new_prog_flops / orig_prog_flops if orig_prog_flops > 0 else None
+        )
+
         prog_compute_eff = (
             new_prog_flop_rate / peak_flop_rate
             if peak_flop_rate > 0
-            else safe_float(prog_dict.get("compute_efficiency"))
+            else _safe_float(prog_dict.get("compute_efficiency"))
         )
-        prog_max_mem_eff = safe_float(prog_dict.get("max_mem_bw_utilization"))
+        prog_max_mem_eff = _safe_float(prog_dict.get("max_mem_bw_utilization"))
         prog_roofline_eff = max(prog_compute_eff, prog_max_mem_eff)
-        prog_mem_bw = safe_float(prog_dict.get("measured_memory_bw"))
+        prog_mem_bw = _safe_float(prog_dict.get("measured_memory_bw"))
+        backend_prog_intensity = _safe_float(
+            prog_dict.get("operational_intensity")
+        )
         if prog_mem_bw > 0:
-          prog_op_intensity = new_prog_flop_rate / prog_mem_bw
-        elif total_derived_bytes > 0:
+          # `new_prog_flop_rate` is in GFLOP/s (1e9) while
+          # `measured_memory_bw` is in GiB/s (2**30). Convert to GB/s so the
+          # result is FLOPs per byte, matching the backend's value.
+          prog_op_intensity = new_prog_flop_rate / _gibi_to_giga(prog_mem_bw)
+        elif backend_prog_intensity > 0 and flops_scale is not None:
+          prog_op_intensity = backend_prog_intensity * flops_scale
+        elif (
+            prog_flops_provenance == "derived_from_shapes"
+            and total_derived_bytes > 0
+        ):
+          # Only shape-derived ops remain, so their bytes are the program
+          # bytes (for example a pure Pallas program).
           prog_op_intensity = new_prog_flops / total_derived_bytes
         else:
-          prog_op_intensity = safe_float(prog_dict.get("operational_intensity"))
+          prog_op_intensity = backend_prog_intensity
 
         # Mirror the backend rule (argmax over resource utilizations, Compute
         # wins ties) rather than testing the all-memory-spaces intensity
@@ -531,6 +702,13 @@ def get_roofline_model(
           prog_bound_by = backend_prog_bound_by
         else:
           prog_bound_by = "HBM"
+        prog_bottleneck_intensity = _recompute_bottleneck_intensity(
+            prog_dict,
+            prog_bound_by,
+            new_prog_flop_rate,
+            prog_op_intensity,
+            flops_scale,
+        )
 
         program_metrics["measured_flop_rate_gflops"] = round(
             new_prog_flop_rate, 2
@@ -544,6 +722,13 @@ def get_roofline_model(
         program_metrics["operational_intensity_flop_per_byte"] = round(
             prog_op_intensity, 4
         )
+        program_metrics["bottleneck_operational_intensity_flop_per_byte"] = (
+            round(prog_bottleneck_intensity, 4)
+        )
+        if prog_roofline_eff > 0:
+          program_metrics["optimal_flop_rate_gflops"] = round(
+              new_prog_flop_rate / prog_roofline_eff, 2
+          )
         program_metrics["bound_by"] = prog_bound_by
         program_metrics["bound_by_ridge_point_flop_per_byte"] = (
             ridge_point_for(prog_bound_by)
@@ -551,9 +736,12 @@ def get_roofline_model(
         program_metrics["bound_by_provenance"] = (
             "recomputed_from_derived_custom_call_flops"
         )
-        program_metrics["flops_provenance"] = "derived_from_shapes"
+        program_metrics["flops_provenance"] = prog_flops_provenance
+        program_metrics["derived_flops_fraction"] = round(
+            derived_flops_fraction, 4
+        )
 
-    prog_total = safe_float(prog_dict.get("total_self_time_percent"), 1.0)
+    prog_total = _safe_float(prog_dict.get("total_self_time_percent"), 1.0)
     percent_scale = 100.0 if prog_total <= 1.0 + 1e-6 else 1.0
     custom_call_share_pct = 0.0
     seen_custom_call_keys = set()
@@ -563,7 +751,7 @@ def get_roofline_model(
       op_category = str(
           row_dict.get("category") or row_dict.get("hlo_category", "")
       )
-      op_key = (int(safe_float(row_dict.get("rank"))), op_name)
+      op_key = (int(_safe_float(row_dict.get("rank"))), op_name)
       if op_key in seen_custom_call_keys:
         continue
       if op_name.startswith("custom-call") or op_category.lower() in (
@@ -571,18 +759,11 @@ def get_roofline_model(
           "custom_call",
       ):
         seen_custom_call_keys.add(op_key)
-        val = safe_float(row_dict.get("total_self_time_percent"))
+        val = _safe_float(row_dict.get("total_self_time_percent"))
         custom_call_share_pct += val * percent_scale
     custom_call_share_pct = min(round(custom_call_share_pct, 2), 100.0)
 
-    has_opaque_custom_call = any(
-        op.get("flops_provenance") == "opaque_custom_call" for op in top_ops
-    )
-    has_custom_call = (
-        has_opaque_custom_call
-        or any(op.get("bound_by") == "CustomCall (opaque)" for op in top_ops)
-        or custom_call_share_pct >= 10.0
-    )
+    has_custom_call = has_opaque_custom_call or custom_call_share_pct >= 10.0
     if has_opaque_custom_call and total_derived_flops == 0:
       if program_metrics.get("flops_provenance") == "xla_cost_model":
         program_metrics["flops_provenance"] = "opaque_custom_call"

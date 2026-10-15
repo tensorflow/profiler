@@ -6,6 +6,7 @@ from absl.testing import parameterized
 from xprof.cli.internal import decorators
 from xprof.cli.internal.oss import xprof_client
 from xprof.cli.tools import get_kpi_metrics_tool
+from xprof.cli.tools import get_roofline_model_tool
 
 
 class GetKpiMetricsToolTest(parameterized.TestCase):
@@ -80,6 +81,7 @@ class GetKpiMetricsToolTest(parameterized.TestCase):
         "mxu_utilization_percent": "80.0",
         "roofline_utilization": "45.0",
         "flops_provenance": "xla_cost_model",
+        "derived_flops_fraction": 0.0,
         "peak_hbm_gib": 12.5,
         "accelerator_info": {
             "device_type": "TPU",
@@ -229,6 +231,51 @@ class GetKpiMetricsToolTest(parameterized.TestCase):
 
     self.assertEqual(result["flops_provenance"], "derived_from_shapes")
     self.assertEqual(result["roofline_utilization"], "75.55%")
+
+  @parameterized.named_parameters(
+      ("derived_from_shapes", "derived_from_shapes", 1.0, "75.55%"),
+      ("mixed", "mixed", 0.25, "75.55%"),
+      ("xla_cost_model", "xla_cost_model", 0.0, "4.71%"),
+  )
+  def test_get_kpi_metrics_roofline_override_by_provenance(
+      self, provenance, derived_flops_fraction, expected_roofline_util
+  ):
+    def fetch_side_effect(tool_name, *_args, **_kwargs):
+      if tool_name == "overview_page.json":
+        return (
+            None,
+            json.dumps([{
+                "p": {
+                    "steptime_ms_average": "0.396",
+                    "flop_rate_utilization_relative_to_roofline": "4.71%",
+                    "device_type": "TPU v7x",
+                    "device_core_count": "8",
+                }
+            }]).encode("utf-8"),
+        )
+      return None
+
+    self.mock_client.fetch.side_effect = fetch_side_effect
+    self.enter_context(
+        mock.patch.object(
+            get_roofline_model_tool,
+            "get_roofline_model",
+            return_value=json.dumps({
+                "program": {
+                    "flops_provenance": provenance,
+                    "derived_flops_fraction": derived_flops_fraction,
+                    "roofline_efficiency_percent": "75.55%",
+                }
+            }),
+            autospec=True,
+        )
+    )
+
+    result = json.loads(get_kpi_metrics_tool.get_kpi_metrics("test_session"))
+
+    self.assertEqual(result["flops_provenance"], provenance)
+    self.assertEqual(result["derived_flops_fraction"], derived_flops_fraction)
+    self.assertEqual(result["roofline_utilization"], expected_roofline_util)
 
   def test_get_kpi_metrics_overview_error(self):
     self.mock_client.fetch.return_value = (None, b"")

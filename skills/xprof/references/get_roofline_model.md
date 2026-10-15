@@ -239,7 +239,7 @@ High utilization is not evidence of compute-boundness.
 | `Compute` | Limited by the compute roofline. |
 | `CMEM` / `VMEM` | Limited by an on-chip memory band. Compare against `cmem_*_ridge_point` / `vmem_*_ridge_point`, not `hbm_ridge_point`. |
 | `Unknown` | FLOPs/bytes could not be inferred. See below. |
-| `CustomCall (opaque)` | An opaque custom call was detected among the returned ops. |
+| `CustomCall (opaque)` | An opaque custom call was detected among the analyzed ops. |
 
 ### `Unknown` and Pallas kernels — do not report the zeros
 
@@ -257,10 +257,53 @@ xprof get_llo_analysis <logdir>                     # if built with embedded fea
 ```
 
 When an opaque custom call is present, the response gains a top-level
-`guidance` field saying exactly this. Note the detection is computed over the
-**returned** `top_operations` only — a custom call ranked below `--top_n` will
-not trigger it. If you suspect Pallas, raise `--top_n` before concluding the
-field's absence means anything.
+`guidance` field saying exactly this, and `program.has_opaque_custom_calls` is
+`true`. The detection covers **all** analyzed ops, not only the returned
+`top_operations`, so `--top_n` does not change any `program` field.
+
+### `flops_provenance` and `derived_flops_fraction`
+
+When a custom call has tensor shape annotations, the tool replaces its XLA
+cost-model FLOPs with shape-derived contraction FLOPs and recomputes the
+program block. `program.flops_provenance` then says where the program FLOPs
+come from:
+
+| value | meaning |
+|---|---|
+| `xla_cost_model` | All FLOPs come from the XLA static cost model. |
+| `derived_from_shapes` | No cost-model FLOPs remain; all counted program FLOPs are shape-derived. |
+| `mixed` | Shape-derived custom call FLOPs plus cost-model FLOPs for the other ops, or plus opaque custom calls that count as 0. |
+| `opaque_custom_call` | An opaque custom call was found and no FLOPs could be derived. |
+
+`program.derived_flops_fraction` (0.0 to 1.0) gives the share of program FLOPs
+that is shape-derived. It is always present and is 0.0 when no FLOPs were
+derived. `derived_from_shapes` always comes with a fraction of 1.0. A `mixed`
+program with a small fraction is still mostly the XLA cost model.
+
+The tool reads the program FLOPs and the replaced custom call FLOPs from the
+same column: `measured_flop_rate` if the program value is above 0, else
+`model_flop_rate`. A cost-model remainder of at most 1e-3 of the original
+program FLOPs counts as 0; it absorbs rounding between the separately totalled
+backend rows. If the replaced FLOPs exceed the program FLOPs by more than that,
+the label is `mixed`.
+
+Opaque custom calls lose their cost-model FLOPs and add none. If an opaque
+custom call and a shape-derived one are in the same program, the label is
+`mixed` and `program.has_opaque_custom_calls` is `true`.
+
+The recompute also updates `bottleneck_operational_intensity_flop_per_byte`
+and `optimal_flop_rate_gflops`, for the program and for each replaced op, so
+the identities in section 3 still hold. The recomputed
+`operational_intensity_flop_per_byte` converts `measured_memory_bw_gibs` to
+GB/s first, so it is in FLOPs per byte like the backend value. It still counts
+bytes across all memory spaces. To justify `bound_by`, compare
+`bottleneck_operational_intensity_flop_per_byte` against
+`bound_by_ridge_point_flop_per_byte`, not this value.
+
+`get_kpi_metrics` passes `flops_provenance` and `derived_flops_fraction`
+through. For `derived_from_shapes` and `mixed` it reports the recomputed
+roofline efficiency, because the recompute replaces only custom call FLOPs and
+is exact at any derived share.
 
 --------------------------------------------------------------------------------
 

@@ -27,7 +27,13 @@ def get_kpi_metrics(session_id: str, *, bypass_cache: bool = False) -> str:
         - mxu_utilization_percent: MXU utilization as a percentage.
         - roofline_utilization: Flop rate utilization relative to roofline.
         - flops_provenance: Provenance of FLOP calculations ('xla_cost_model',
-          'derived_from_shapes', or 'opaque_custom_call').
+          'derived_from_shapes', 'mixed', or 'opaque_custom_call').
+        - derived_flops_fraction: Share of program FLOPs that is derived from
+          custom call shapes (0.0 to 1.0). When flops_provenance is
+          'derived_from_shapes' or 'mixed', roofline_utilization is the
+          corrected get_roofline_model efficiency. The correction replaces
+          only custom call FLOPs and keeps cost-model FLOPs for the other ops,
+          so it is exact at any derived share.
         - peak_hbm_gib: Peak memory usage in GiB.
         - accelerator_info: Dictionary with device_type and device_core_count.
         - error: (Optional) Error message if the operation failed.
@@ -71,6 +77,7 @@ def get_kpi_metrics(session_id: str, *, bypass_cache: bool = False) -> str:
 
   roofline_util = perf_summary["flop_rate_utilization_relative_to_roofline"]
   flops_provenance = "xla_cost_model"
+  derived_flops_fraction = 0.0
   try:
     roofline_json = get_roofline_model_tool.get_roofline_model(
         session_id, bypass_cache=bypass_cache
@@ -79,8 +86,11 @@ def get_kpi_metrics(session_id: str, *, bypass_cache: bool = False) -> str:
     prog_roofline = roofline_data.get("program", {})
     if prog_roofline.get("flops_provenance"):
       flops_provenance = prog_roofline["flops_provenance"]
+    derived_flops_fraction = float(
+        prog_roofline.get("derived_flops_fraction") or 0.0
+    )
     if (
-        flops_provenance == "derived_from_shapes"
+        flops_provenance in ("derived_from_shapes", "mixed")
         and prog_roofline.get("roofline_efficiency_percent")
     ):
       roofline_util = prog_roofline["roofline_efficiency_percent"]
@@ -97,6 +107,7 @@ def get_kpi_metrics(session_id: str, *, bypass_cache: bool = False) -> str:
       "mxu_utilization_percent": perf_summary["mxu_utilization_percent"],
       "roofline_utilization": roofline_util,
       "flops_provenance": flops_provenance,
+      "derived_flops_fraction": derived_flops_fraction,
       "peak_hbm_gib": peak_hbm["peak_memory_usage_gib"],
       "accelerator_info": {
           "device_type": run_env["device_type"],
