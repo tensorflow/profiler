@@ -372,6 +372,22 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /**
+   * Returns true if all feature flags are set to their default values.
+   */
+  get isFeatureFlagsDefault(): boolean {
+    return this.featureFlags.every((f): boolean => f.value === f.default);
+  }
+
+  /**
+   * Resets all feature flags in the dialog to their default values.
+   */
+  resetFeatureFlags(): void {
+    for (const flag of this.featureFlags) {
+      flag.value = flag.default;
+    }
+  }
+
+  /**
    * Updates the local value of a feature flag.
    */
   onFeatureFlagChange(id: string, value: boolean): void {

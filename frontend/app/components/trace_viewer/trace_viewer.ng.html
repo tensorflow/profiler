@@ -333,9 +333,21 @@
 
         <!-- Tab 3: Feature flags -->
         <div *ngIf="activeSettingsTab === SettingsTab.FLAGS" class="settings-tab-pane">
-          <div class="settings-section-header">
-            <div class="settings-section-title">Experimental Feature Flags</div>
-            <div class="settings-section-subtitle">Enable or disable preview features in XProf Trace Viewer</div>
+          <div class="settings-section-header settings-section-header-with-actions">
+            <div>
+              <div class="settings-section-title">Experimental Feature Flags</div>
+              <div class="settings-section-subtitle">Enable or disable preview features in XProf Trace Viewer</div>
+            </div>
+            <button
+              type="button"
+              class="settings-reset-btn"
+              [disabled]="isFeatureFlagsDefault"
+              [class.active]="!isFeatureFlagsDefault"
+              (click)="resetFeatureFlags()"
+            >
+              <mat-icon class="settings-reset-icon">refresh</mat-icon>
+              <span>Reset to default</span>
+            </button>
           </div>
 
           <div class="feature-flags-list">
