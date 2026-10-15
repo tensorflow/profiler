@@ -1,7 +1,9 @@
 #ifndef THIRD_PARTY_XPROF_CONVERT_TRACE_VIEWER_DELTA_SERIES_TRACE_DATA_TO_COMPRESSED_DELTA_SERIES_PROTO_H_
 #define THIRD_PARTY_XPROF_CONVERT_TRACE_VIEWER_DELTA_SERIES_TRACE_DATA_TO_COMPRESSED_DELTA_SERIES_PROTO_H_
 
+#include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <utility>
 #include <variant>
@@ -24,6 +26,8 @@
 namespace tensorflow {
 namespace profiler {
 
+inline constexpr absl::string_view kXChunkMagic = "XCHN";
+
 struct DeltaSeriesProtoConversionOptions {
   bool mpmd_pipeline_view = false;
   bool mpmd_single_device_per_stage = false;
@@ -31,6 +35,96 @@ struct DeltaSeriesProtoConversionOptions {
   // Device IDs whose resource threads should omit numerical sort indices,
   // enabling alphabetical sorting by resource name.
   absl::flat_hash_set<uint32_t> sort_resources_by_name;
+};
+
+// Shared string-interning table and flow/group metadata helper used by both
+// one-shot (`DeltaSeriesProtoConverter`) and streaming
+// (`StreamingDeltaSeriesProtoConverter`) delta-series encoders.
+class DeltaSeriesStringTable {
+ public:
+  DeltaSeriesStringTable();
+
+  // Interns `str` in the string table (index 0 is reserved for "") and
+  // returns its 32-bit reference ID.
+  uint32_t InternString(absl::string_view str);
+
+  // Looks up a previously interned string by its reference ID.
+  absl::string_view InternedString(uint32_t id) const {
+    return id < interned_strings_.size()
+               ? absl::string_view(interned_strings_[id])
+               : absl::string_view();
+  }
+
+  // Appends any strings interned since the previous call to `response`.
+  void FlushInternedStringsIncrement(xprof::TraceDataResponse* response);
+
+  // Moves all interned strings into `response`.
+  void MoveAllInternedStrings(xprof::TraceDataResponse* response) &&;
+
+  // Populates flow and group metadata fields on `metadata`, interning any
+  // non-generic flow category string.
+  void PopulateFlowAndGroupMetadata(std::optional<uint64_t> flow_id,
+                                    std::optional<uint32_t> flow_category,
+                                    std::optional<int64_t> group_id,
+                                    xprof::TraceEventMetadata* metadata);
+
+ private:
+  std::vector<std::string> interned_strings_;
+  absl::flat_hash_map<std::string, uint32_t> interned_strings_map_;
+  size_t num_interned_strings_flushed_ = 0;
+};
+
+// Stateful helper for incremental/streaming `TraceDataResponse` encoding and
+// `"XCHN"` frame emission.
+class StreamingDeltaSeriesProtoConverter {
+ public:
+  static constexpr absl::string_view kMagic = kXChunkMagic;
+
+  StreamingDeltaSeriesProtoConverter() = default;
+
+  // Interns `str` in the converter's string table (index 0 is reserved for "")
+  // and returns its 32-bit reference ID.
+  uint32_t InternString(absl::string_view str) {
+    return string_table_.InternString(str);
+  }
+
+  // Looks up a previously interned string by its reference ID.
+  absl::string_view InternedString(uint32_t id) const {
+    return string_table_.InternedString(id);
+  }
+
+  // Appends any strings interned since the previous call to `response`.
+  void FlushInternedStringsIncrement(xprof::TraceDataResponse* response) {
+    string_table_.FlushInternedStringsIncrement(response);
+  }
+
+  // Populates flow and group metadata fields on `metadata`, interning any
+  // non-generic flow category string.
+  void PopulateFlowAndGroupMetadata(std::optional<uint64_t> flow_id,
+                                    std::optional<uint32_t> flow_category,
+                                    std::optional<int64_t> group_id,
+                                    xprof::TraceEventMetadata* metadata) {
+    string_table_.PopulateFlowAndGroupMetadata(flow_id, flow_category, group_id,
+                                               metadata);
+  }
+
+  // Serializes `frame`, Zstd-compresses it, and appends a length-prefixed frame
+  // to `out` using the `"XCHN"` streaming wire format:
+  // - The 4-byte `kXChunkMagic` (`"XCHN"`) magic header appears once at the
+  //   start of the stream (`include_magic_header == true`, first frame only)
+  //   so clients can distinguish framed streams from a legacy single Zstd blob.
+  // - It is followed by repeated
+  //   `[uint32 little-endian compressed byte length][zstd(TraceDataResponse)]`
+  //   frames.
+  // - `interned_strings` are incremental across frames, so clients must decode
+  //   frames in order and append each frame's `interned_strings` to a running
+  //   string table.
+  static absl::Status AppendCompressedFrame(
+      const xprof::TraceDataResponse& frame, bool include_magic_header,
+      std::string* out);
+
+ private:
+  DeltaSeriesStringTable string_table_;
 };
 
 // Internal class handling the stateful conversion of trace events.
@@ -56,7 +150,9 @@ class DeltaSeriesProtoConverter {
  private:
   xprof::TraceMetadata GetTraceMetadata() const;
 
-  uint32_t MaybeInternString(absl::string_view str);
+  uint32_t MaybeInternString(absl::string_view str) {
+    return string_table_.InternString(str);
+  }
 
   void PopulateTraceEventMetadata(const TraceEvent& event,
                                   xprof::TraceEventMetadata* metadata);
@@ -72,11 +168,7 @@ class DeltaSeriesProtoConverter {
                             xprof::TraceDataResponse* response);
 
   const Trace* trace_;
-
-  // String interning state.
-  std::vector<std::string> interned_strings_;
-  absl::flat_hash_map<std::string, uint32_t> interned_strings_map_;
-
+  DeltaSeriesStringTable string_table_;
   CounterExtractor counter_extractor_;
   DeltaSeriesProtoConversionOptions options_;
   absl::flat_hash_map<uint32_t, uint32_t> mpmd_sort_indices_;
@@ -177,9 +269,7 @@ absl::Status DeltaSeriesProtoConverter::GenerateResponse(
     return true;
   });
 
-  for (std::string& str : interned_strings_) {
-    response->add_interned_strings(std::move(str));
-  }
+  std::move(string_table_).MoveAllInternedStrings(response);
   return absl::OkStatus();
 }
 }  // namespace profiler
