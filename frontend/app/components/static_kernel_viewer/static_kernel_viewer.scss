@@ -954,6 +954,48 @@ $card-width: 320px;
   }
 }
 
+.tour-button {
+  @include compact-icon-button(36px, 20px);
+  border-radius: 50%;
+  color: var(--mat-sys-on-surface-variant);
+  transition:
+    background-color 150ms var(--motion-easing-standard),
+    color 150ms var(--motion-easing-standard);
+
+  &:hover {
+    color: var(--mat-sys-on-surface);
+  }
+
+  // Receives the closing tour, to show that it can be replayed from here.
+  &.pulsing {
+    color: var(--mat-sys-primary);
+    animation: tour-button-pulse 900ms
+      var(--motion-easing-emphasized-decelerate) 180ms backwards;
+  }
+}
+
+@keyframes tour-button-pulse {
+  0% {
+    box-shadow: 0 0 0 0
+      color-mix(in srgb, var(--mat-sys-primary) 45%, transparent);
+    transform: scale(1);
+  }
+
+  30% {
+    background-color: color-mix(
+      in srgb,
+      var(--mat-sys-primary) 14%,
+      transparent
+    );
+    transform: scale(1.14);
+  }
+
+  100% {
+    box-shadow: 0 0 0 14px transparent;
+    transform: scale(1);
+  }
+}
+
 // Details tooltip card of a hovered kernel row or tab.
 .kernel-card {
   position: absolute;
@@ -1206,7 +1248,9 @@ $card-width: 320px;
   .kernel-row,
   .kernel-tab,
   .kernel-card,
-  .unit-fill {
+  .unit-fill,
+  .tour-button,
+  .tour-button.pulsing {
     transition: none;
     animation: none;
   }

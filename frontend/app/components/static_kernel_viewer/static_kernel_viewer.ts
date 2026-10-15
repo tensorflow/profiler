@@ -13,7 +13,18 @@ import {
 import {ActivatedRoute, Params} from '@angular/router';
 import {Store} from '@ngrx/store';
 import {DEFAULT_HOST} from 'org_xprof/frontend/app/common/constants/constants';
+import {
+  KernelMinimap,
+  MinimapRegionMarker,
+} from 'org_xprof/frontend/app/components/static_kernel_viewer/kernel_minimap';
 import {KernelSelectionPanel} from 'org_xprof/frontend/app/components/static_kernel_viewer/kernel_selection_panel';
+import {
+  DetailsKind,
+  hasSeenKernelViewerTour,
+  KernelViewerTour,
+  KernelViewerTourSummary,
+  TourKernel,
+} from 'org_xprof/frontend/app/components/static_kernel_viewer/kernel_viewer_tour';
 import {
   LOADING_STATUS_UPDATE_EVENT_NAME,
   shutdownTraceViewerV2,
@@ -221,6 +232,15 @@ const CARD_WIDTH = 320;
 
 /** Distance between the details card and its kernel. */
 const CARD_GAP = 8;
+
+/**
+ * Delay before the tour starts on the first visit, so that the kernel list
+ * and tabs settle first.
+ */
+const TOUR_AUTO_START_DELAY_MS = 900;
+
+/** How long the tour button pulses as the tour closes; see the stylesheet. */
+const TOUR_BUTTON_PULSE_MS = 1100;
 
 /** Keys that only modify other keys. */
 const MODIFIER_KEYS = new Set(['Alt', 'Control', 'Meta', 'Shift']);
@@ -545,6 +565,24 @@ function isEditableTarget(target: EventTarget | null): boolean {
   );
 }
 
+/**
+ * Returns the longest of the region or scope `markers` of the minimap. The
+ * minimap merges runs of tiny events into one marker, which is as long as the
+ * run but selects only one of its events, so these come last.
+ */
+function longestMarker(
+  markers: readonly MinimapRegionMarker[],
+): MinimapRegionMarker | undefined {
+  const events = markers.filter((marker) => marker.count === 1);
+  return (events.length > 0 ? events : markers).reduce<
+    MinimapRegionMarker | undefined
+  >(
+    (best, marker) =>
+      best && best.durationUs >= marker.durationUs ? best : marker,
+    undefined,
+  );
+}
+
 /** Scrolls `container` horizontally just enough to show all of `child`. */
 function revealHorizontally(container: HTMLElement, child: HTMLElement) {
   const start = child.offsetLeft;
@@ -631,8 +669,19 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
   traceViewerModule: TraceViewerV2Module | null = null;
   isSelectionPanelOpen = false;
 
+  /** Whether the guided tour is showing. */
+  isTourOpen = false;
+  /** Whether the tour holds the kernel rail open while it explains it. */
+  isRailHeldOpen = false;
+  /** Whether the tour button shows that the tour can be replayed from it. */
+  isTourButtonPulsing = false;
+
   @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
   @ViewChild(KernelSelectionPanel) selectionPanel?: KernelSelectionPanel;
+  @ViewChild(KernelMinimap) minimap?: KernelMinimap;
+  @ViewChild(KernelViewerTour) tour?: KernelViewerTour;
+  @ViewChild('tourButton', {read: ElementRef})
+  tourButton?: ElementRef<HTMLElement>;
 
   private readonly collapsedModules = new Set<string>();
   private listKey = '';
@@ -652,6 +701,11 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
   private highlightTimer: ReturnType<typeof setTimeout> | undefined = undefined;
   private linkCopiedTimer: ReturnType<typeof setTimeout> | undefined =
     undefined;
+  private tourTimer: ReturnType<typeof setTimeout> | undefined = undefined;
+  private tourButtonTimer: ReturnType<typeof setTimeout> | undefined =
+    undefined;
+  /** Whether the tour was considered for this visit, so it starts once. */
+  private hasConsideredTour = false;
   private isInitializing = false;
   private isDestroyed = false;
   // Kernel trace URL currently loaded into the WASM instance.
@@ -680,7 +734,7 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
   };
 
   get isRailExpanded(): boolean {
-    return this.isRailPinned || this.isRailPeeking;
+    return this.isRailPinned || this.isRailPeeking || this.isRailHeldOpen;
   }
 
   /** Whether the search narrows down the kernel rail. */
@@ -726,6 +780,8 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
     clearTimeout(this.cardTimer);
     clearTimeout(this.highlightTimer);
     clearTimeout(this.linkCopiedTimer);
+    clearTimeout(this.tourTimer);
+    clearTimeout(this.tourButtonTimer);
     this.destroyed.next();
     this.destroyed.complete();
     window.removeEventListener(
@@ -1128,6 +1184,49 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
     );
   }
 
+  /** Starts the guided tour of the viewer. */
+  startTour(): void {
+    const tour = this.tour;
+    if (!tour) {
+      return;
+    }
+    clearTimeout(this.tourTimer);
+    this.hideCard();
+    this.isTourOpen = true;
+    tour.start(this.buildTourSummary(), {
+      returnFocus: this.tourButton?.nativeElement,
+    });
+  }
+
+  /** Holds the kernel rail open while the tour explains it. */
+  onTourStepChange(stepId: string): void {
+    const holdRail = stepId === 'rail' || stepId === 'search';
+    if (holdRail === this.isRailHeldOpen) {
+      return;
+    }
+    this.isRailHeldOpen = holdRail;
+    if (!holdRail) {
+      this.collapseRailAfterTour();
+    }
+    this.changeDetectorRef.markForCheck();
+  }
+
+  /** Lets go of the rail, and shows where the tour can be replayed from. */
+  onTourClosed(): void {
+    this.isTourOpen = false;
+    if (this.isRailHeldOpen) {
+      this.isRailHeldOpen = false;
+      this.collapseRailAfterTour();
+    }
+    this.isTourButtonPulsing = true;
+    clearTimeout(this.tourButtonTimer);
+    this.tourButtonTimer = setTimeout(() => {
+      this.isTourButtonPulsing = false;
+      this.changeDetectorRef.markForCheck();
+    }, TOUR_BUTTON_PULSE_MS);
+    this.changeDetectorRef.markForCheck();
+  }
+
   trackByModule(index: number, group: KernelGroup): string {
     return group.module;
   }
@@ -1196,6 +1295,62 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
     } else {
       this.updateUrlQueryParams();
     }
+    this.considerTour();
+  }
+
+  /** Starts the tour soon on the first visit to a profile with kernels. */
+  private considerTour(): void {
+    if (
+      this.hasConsideredTour ||
+      this.entries.length === 0 ||
+      hasSeenKernelViewerTour()
+    ) {
+      return;
+    }
+    this.hasConsideredTour = true;
+    this.tourTimer = setTimeout(() => {
+      if (!this.isDestroyed && !this.isTourOpen) {
+        this.startTour();
+        this.changeDetectorRef.markForCheck();
+      }
+    }, TOUR_AUTO_START_DELAY_MS);
+  }
+
+  /** Summarizes the profile for the tour, which features its kernels. */
+  private buildTourSummary(): KernelViewerTourSummary {
+    const topKernels: TourKernel[] = this.entries
+      .filter((entry) => entry.stats !== undefined)
+      .sort((a, b) => (b.stats?.bundles ?? 0) - (a.stats?.bundles ?? 0))
+      .slice(0, 4)
+      .map((entry) => ({
+        name: entry.kernel,
+        module: entry.module,
+        monogram: entry.monogram,
+        color: entry.color,
+        bundles: entry.stats?.bundles ?? 0,
+        bundlesLabel: entry.bundlesLabel,
+        busiestUnit: entry.busiestUnit,
+        busiestUnitColor: entry.busiestUnitColor,
+      }));
+    return {
+      kernelCount: this.entries.length,
+      moduleCount: this.groups.filter((group) => group.module).length,
+      topKernels,
+      backgroundClickKey: BACKGROUND_CLICK_KEY,
+      canCopyLink: this.canCopyLink,
+    };
+  }
+
+  /** Collapses the rail once the tour lets go of it, unless it is in use. */
+  private collapseRailAfterTour(): void {
+    if (this.isRailExpanded) {
+      return;
+    }
+    // Like when the rail collapses on its own, the search only narrows down
+    // the rail while it is open.
+    this.clearFilter();
+    this.hideCardFrom('rail');
+    this.releasePointerFocus('.kernel-rail');
   }
 
   private findRequestedEntry(): KernelEntry | undefined {
@@ -1228,6 +1383,42 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
     this.traceViewerModule?.application
       ?.instance?.()
       ?.selectEvent?.(eventIndex);
+  }
+
+  /**
+   * Opens the details panel for the tour, which teaches it to users who never
+   * clicked a block. For an instruction, selects the most frequent instruction
+   * of the longest region or scope, or else of the first block of the
+   * timeline. For a region, selects the longest region.
+   */
+  onTourOpenDetails(kind: DetailsKind): void {
+    const timeline = this.traceViewerModule?.application?.instance?.();
+    // The minimap reports the regions once the trace shows.
+    const state = this.minimap?.state;
+    if (!timeline?.selectEvent || !state) {
+      return;
+    }
+    if (kind === 'region') {
+      // Only blocks of the Regions lane show their details as a region.
+      const region = longestMarker(state.regions);
+      if (region) {
+        timeline.selectEvent(region.eventIndex);
+      }
+      return;
+    }
+    const longest = longestMarker([
+      ...state.regions,
+      ...state.pallasPrimitives,
+    ]);
+    timeline.selectEvent(longest?.eventIndex ?? 0);
+    // Trace Viewer v2 reports the selection right away, and the details of a
+    // region or scope list its most frequent instructions.
+    const top = this.selectionPanel?.content?.topInstructions?.find(
+      (item) => item.firstEventIndex >= 0,
+    );
+    if (top) {
+      timeline.selectEvent(top.firstEventIndex);
+    }
   }
 
   onSearchTimelineQuery(query: string): void {
@@ -1416,6 +1607,10 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
   private scheduleCard(build: () => KernelCard | undefined): void {
     clearTimeout(this.cardTimer);
     this.cardTimer = undefined;
+    // The tour covers the page, and its card takes the place of details cards.
+    if (this.isTourOpen) {
+      return;
+    }
     const show = () => {
       this.cardTimer = undefined;
       this.hoverCard = build();
@@ -1512,13 +1707,22 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
       }
       this.changeDetectorRef.markForCheck();
     }
-    if (event.defaultPrevented || isEditableTarget(event.target)) {
+    // The WASM viewer's capture listener calls preventDefault() on every key
+    // once initialized, even keys it does not use (like K, [ and ]).
+    if (
+      (event.defaultPrevented && this.traceViewerModule === null) ||
+      isEditableTarget(event.target) ||
+      this.isHelpDialogOpen()
+    ) {
       return;
     }
     if (event.ctrlKey || event.metaKey || event.altKey) {
       return;
     }
-    if (event.key === '[' || event.key === ']') {
+    if (
+      (event.key === '[' || event.key === ']') &&
+      !this.isSourceFrameNavOpen()
+    ) {
       event.preventDefault();
       // Holding the key down would queue up a trace load per repeat.
       if (!event.repeat) {
@@ -1533,6 +1737,23 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
       this.selectionPanel?.close();
       this.changeDetectorRef.markForCheck();
     }
+  }
+
+  /** Whether the shortcut help dialog (?) of Trace Viewer v2 is open. */
+  private isHelpDialogOpen(): boolean {
+    const dialog = this.elementRef.nativeElement.querySelector(
+      'trace-viewer-help-dialog',
+    ) as (Element & {open?: boolean}) | null;
+    return Boolean(dialog?.open);
+  }
+
+  /** Whether the hovered source tooltip is cycling stack frames with [ / ]. */
+  private isSourceFrameNavOpen(): boolean {
+    return Boolean(
+      this.elementRef.nativeElement.querySelector(
+        'trace-viewer-container .hovered-tooltip-frame-nav',
+      ),
+    );
   }
 
   /** Switches to the next (`delta` = 1) or previous (`delta` = -1) open tab. */

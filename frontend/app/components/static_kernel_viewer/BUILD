@@ -22,6 +22,11 @@ sass_binary(
     src = "kernel_minimap.scss",
 )
 
+sass_binary(
+    name = "kernel_viewer_tour_css",
+    src = "kernel_viewer_tour.scss",
+)
+
 xprof_ng_module(
     name = "kernel_minimap",
     srcs = [
@@ -45,15 +50,19 @@ xprof_ng_module(
     srcs = [
         "kernel_event_tooltip.ts",
         "kernel_selection_panel.ts",
+        "kernel_viewer_tour.ts",
+        "kernel_viewer_tour_demo.ts",
         "static_kernel_viewer.ts",
         "static_kernel_viewer_module.ts",
     ],
     assets = [
         ":kernel_event_tooltip_css",
         ":kernel_selection_panel_css",
+        ":kernel_viewer_tour_css",
         ":static_kernel_viewer_css",
         "kernel_event_tooltip.ng.html",
         "kernel_selection_panel.ng.html",
+        "kernel_viewer_tour.ng.html",
         "static_kernel_viewer.ng.html",
     ],
     deps = [
@@ -82,6 +91,8 @@ xprof_ng_module(
         "kernel_event_tooltip_test.ts",
         "kernel_minimap_test.ts",
         "kernel_selection_panel_test.ts",
+        "kernel_viewer_tour_demo_test.ts",
+        "kernel_viewer_tour_test.ts",
         "static_kernel_viewer_test.ts",
     ],
     deps = [

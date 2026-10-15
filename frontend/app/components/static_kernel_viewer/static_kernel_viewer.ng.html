@@ -233,6 +233,18 @@
       >
         <mat-icon>{{ linkCopied ? 'check' : 'link' }}</mat-icon>
       </button>
+      <button
+        #tourButton
+        mat-icon-button
+        class="tour-button"
+        type="button"
+        [class.pulsing]="isTourButtonPulsing"
+        (click)="startTour()"
+        matTooltip="Take the tour"
+        aria-label="Take the tour"
+      >
+        <mat-icon>tour</mat-icon>
+      </button>
     </div>
 
     <!--
@@ -312,4 +324,11 @@
       <ng-container *ngFor="let part of card.hintParts"><kbd *ngIf="part.isKey; else hintText" class="hint-key">{{ part.text }}</kbd><ng-template #hintText>{{ part.text }}</ng-template></ng-container>
     </div>
   </div>
+
+  <kernel-viewer-tour
+    (stepChange)="onTourStepChange($event)"
+    (selectEvent)="onSelectTimelineEvent($event)"
+    (openDetails)="onTourOpenDetails($event)"
+    (closed)="onTourClosed()"
+  ></kernel-viewer-tour>
 </div>

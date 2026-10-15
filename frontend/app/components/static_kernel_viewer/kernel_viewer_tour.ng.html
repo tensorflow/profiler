@@ -1,0 +1,542 @@
+<div
+  #root
+  class="tour-root"
+  popover="manual"
+  [class.open]="isOpen()"
+  [class.closing]="isClosing()"
+  [attr.inert]="isClosing() ? '' : null"
+>
+  <div #backdrop class="tour-backdrop" (click)="onBackdropClick()"></div>
+  <div #ring class="tour-ring" aria-hidden="true"></div>
+
+  <!-- Numbered markers on the parts of the viewer that a step lists. -->
+  <div #hotspots class="tour-hotspots" aria-hidden="true">
+    <span class="demo-hotspot">1</span>
+    <span class="demo-hotspot">2</span>
+    <span class="demo-hotspot">3</span>
+    <span class="demo-hotspot">4</span>
+    <span class="demo-hotspot">5</span>
+    <span class="demo-hotspot">6</span>
+  </div>
+
+  <!-- The demo pointer, which shows how to use the spotlighted elements. -->
+  <div #demo class="tour-demo" aria-hidden="true">
+    <div class="demo-ghost"><span class="demo-ghost-label"></span></div>
+    <div class="demo-beacon"><span class="beacon-ring"></span><span class="beacon-dot"></span></div>
+    <div class="demo-ripple"></div>
+    <div class="demo-pointer">
+      <svg class="pointer-svg" viewBox="0 0 24 24" width="24" height="24">
+        <path class="pointer-shape" d="M4.5 2.5V19.4L8.9 15.1L11.8 21.6L14.7 20.3L11.8 13.9H18Z"></path>
+      </svg>
+    </div>
+    <div class="demo-caption">
+      <span class="demo-keys">
+        <kbd class="keycap small"></kbd>
+        <kbd class="keycap small"></kbd>
+        <kbd class="keycap small"></kbd>
+      </span>
+      <span class="demo-caption-text"></span>
+    </div>
+  </div>
+
+  <section
+    #card
+    class="tour-card"
+    role="dialog"
+    aria-modal="false"
+    [attr.aria-labelledby]="titleId"
+    [attr.aria-describedby]="bodyId"
+  >
+    <span class="card-arrow" aria-hidden="true"></span>
+    <div #surface class="card-surface">
+      <div #content class="card-content" [class.welcome]="isWelcome()">
+        <header class="card-header">
+          <div class="progress" aria-hidden="true">
+            @for (item of steps(); track item.id; let i = $index) {
+              <span
+                class="segment"
+                [class.done]="i < index()"
+                [class.current]="i === index()"
+              ></span>
+            }
+          </div>
+          <span class="step-count">{{ index() + 1 }} of {{ steps().length }}</span>
+          <button
+            mat-icon-button
+            class="close-button"
+            type="button"
+            (click)="close('dismissed')"
+            aria-label="Close tour"
+          >
+            <mat-icon>close</mat-icon>
+          </button>
+        </header>
+
+        @for (item of stepView(); track item.id) {
+          <div class="step" [attr.data-direction]="direction()">
+            <div
+              class="visual"
+              [attr.data-visual]="item.visual"
+              [attr.aria-hidden]="item.visual === 'legend' || item.visual === 'fields' || item.visual === 'panel' || item.visual === 'region' ? null : 'true'"
+            >
+              <!-- The details steps share the illustration of the panel. -->
+              @switch (item.visual === 'region' ? 'panel' : item.visual) {
+                @case ('welcome') {
+                  <div class="welcome-visual">
+                    <svg class="welcome-util" viewBox="0 0 300 40" preserveAspectRatio="none">
+                      <path
+                        class="util-area"
+                        d="M0 40V30C18 29 26 12 44 13S70 31 92 26 120 7 142 9 170 25 192 21 226 5 250 10 282 22 300 17V40Z"
+                      ></path>
+                      <path
+                        class="util-line"
+                        pathLength="1"
+                        d="M0 30C18 29 26 12 44 13S70 31 92 26 120 7 142 9 170 25 192 21 226 5 250 10 282 22 300 17"
+                      ></path>
+                    </svg>
+                    <div class="welcome-lanes">
+                      @for (lane of welcomeLanes; track lane.unit; let i = $index) {
+                        <div class="welcome-lane" [style.--unit-color]="lane.color" [style.--lane]="i">
+                          <span class="lane-label">{{ lane.unit }}</span>
+                          <span class="lane-track">
+                            @for (block of lane.blocks; track block.start) {
+                              <span
+                                class="lane-block"
+                                [style.left.%]="block.start"
+                                [style.width.%]="block.width"
+                                [style.--start]="block.start"
+                              ></span>
+                            }
+                          </span>
+                        </div>
+                      }
+                      <span class="playhead-track"><span class="playhead"></span></span>
+                    </div>
+                    <div class="welcome-ruler">
+                      <span>0</span>
+                      <span>2K</span>
+                      <span>4K</span>
+                      <span>6K</span>
+                      <span class="ruler-unit">bundles</span>
+                    </div>
+                  </div>
+                }
+                @case ('rail') {
+                  <div class="rail-visual">
+                    <div class="mini-rail">
+                      @for (row of railRows(); track row.name; let i = $index) {
+                        <div
+                          class="mini-row"
+                          [class.leader]="i === 0"
+                          [style.--group-color]="row.color"
+                          [style.--from]="row.from"
+                          [style.--i]="i"
+                        >
+                          <span class="mini-monogram">{{ row.monogram }}</span>
+                          <span class="mini-name">{{ row.name }}</span>
+                          <span class="mini-meter">
+                            <span class="mini-meter-fill" [style.width.%]="row.fraction * 100"></span>
+                          </span>
+                          <span class="mini-bundles">{{ row.bundlesLabel }}</span>
+                        </div>
+                      }
+                    </div>
+                    <div class="legend">
+                      @if (featured().busiestUnit) {
+                        <span class="legend-item">
+                          <span class="unit-chip" [style.--unit-color]="featured().busiestUnitColor">
+                            {{ featured().busiestUnit }}
+                          </span>
+                          busiest unit
+                        </span>
+                      }
+                      <span class="legend-item">
+                        <span class="bundle-chip">{{ featured().bundlesLabel }}</span>
+                        bundles
+                      </span>
+                    </div>
+                  </div>
+                }
+                @case ('search') {
+                  <div class="search-visual">
+                    <div class="search-stage">
+                      <kbd class="keycap large press-k">K</kbd>
+                      <div class="mini-search">
+                        <mat-icon class="mini-search-icon">search</mat-icon>
+                        <span class="typed" [style.--chars]="searchQuery().length">{{ searchQuery() }}</span>
+                        <span class="caret"></span>
+                      </div>
+                    </div>
+                    <div class="mini-result" [style.--group-color]="featured().color">
+                      <span class="mini-monogram">{{ featured().monogram }}</span>
+                      <span class="mini-name">{{ searchResult()[0] }}<mark>{{ searchResult()[1] }}</mark>{{ searchResult()[2] }}</span>
+                      <kbd class="keycap small press-enter">Enter</kbd>
+                    </div>
+                  </div>
+                }
+                @case ('tabs') {
+                  <div class="tabs-visual">
+                    <div class="mini-strip">
+                      <span class="mini-pill"></span>
+                      @for (tab of tabRows(); track tab.name; let i = $index) {
+                        <span
+                          class="mini-tab"
+                          [class.opened]="i === 2"
+                          [style.--group-color]="tab.color"
+                          [style.--i]="i"
+                        >
+                          <span class="mini-monogram">{{ tab.monogram }}</span>
+                          <span class="mini-tab-name">{{ tab.name }}</span>
+                        </span>
+                      }
+                    </div>
+                    <div class="tabs-legend">
+                      <span class="legend-item">
+                        <kbd class="keycap small">{{ summary().backgroundClickKey }}</kbd>
+                        <span class="plus">+</span>
+                        <span class="click-chip"><mat-icon>mouse</mat-icon>click</span>
+                        background tab
+                      </span>
+                      <span class="legend-item">
+                        <kbd class="keycap small press-prev">[</kbd>
+                        <kbd class="keycap small press-next">]</kbd>
+                        switch tabs
+                      </span>
+                    </div>
+                  </div>
+                }
+                @case ('share') {
+                  <div class="share-visual">
+                    <div class="share-bar">
+                      <span class="mini-stepper">
+                        <mat-icon>chevron_left</mat-icon>
+                        <span class="odometer"><span class="odometer-digits"><span>1</span><span>2</span></span></span>
+                        <span class="odometer-total">/ {{ kernelTotal() }}</span>
+                        <mat-icon class="press-step">chevron_right</mat-icon>
+                      </span>
+                      @if (summary().canCopyLink) {
+                        <span class="mini-link">
+                          <mat-icon class="icon-link">link</mat-icon>
+                          <mat-icon class="icon-check">check</mat-icon>
+                        </span>
+                      }
+                    </div>
+                    @if (summary().canCopyLink) {
+                      <div class="mini-url">
+                        <span class="url-path">…/kernel_viewer/…?</span>
+                        <span class="url-param">kernel_name=<b>{{ featured().name }}</b></span>
+                      </div>
+                      <span class="copied-chip"><mat-icon>check_circle</mat-icon>Link copied</span>
+                    } @else {
+                      <div class="rank-trail">
+                        @for (row of railRows(); track row.name; let i = $index) {
+                          <span class="rank-dot" [class.current]="i === 1" [style.--group-color]="row.color"></span>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+                @case ('legend') {
+                  <div class="rows-visual" [class.pointing]="isPointing()">
+                    <ul class="row-list" aria-label="Rows of the timeline">
+                      @for (row of timelineRows; track row.section; let i = $index) {
+                        <li
+                          class="row-item"
+                          [class.active]="activeSection() === row.section"
+                          [style.--row-color]="row.color"
+                          [style.--i]="i"
+                        >
+                          <span class="row-icon"><mat-icon>{{ row.icon }}</mat-icon></span>
+                          <span class="row-label">{{ row.label }}</span>
+                          <span class="row-meaning">{{ row.meaning }}</span>
+                          <span class="row-ping" aria-hidden="true"></span>
+                        </li>
+                      }
+                    </ul>
+                    <div class="pointer-readout" [class.stale]="pointerReadout() && !isPointing()">
+                      @if (pointerReadout(); as readout) {
+                        <span class="unit-chip" [style.--unit-color]="readout.color">{{ readout.lane }}</span>
+                        <span class="readout-name">{{ readout.name }}</span>
+                        <span class="readout-bundles">{{ readout.bundles }}</span>
+                      } @else {
+                        <mat-icon class="readout-icon">near_me</mat-icon>
+                        <span class="readout-hint">Point at a block in the timeline</span>
+                      }
+                    </div>
+                  </div>
+                }
+                @case ('keys') {
+                  <div class="keys-visual">
+                    <div class="wasd">
+                      <kbd class="keycap large key-w">W</kbd>
+                      <kbd class="keycap large key-a">A</kbd>
+                      <kbd class="keycap large key-s">S</kbd>
+                      <kbd class="keycap large key-d">D</kbd>
+                    </div>
+                    <div class="nav-demo">
+                      <div class="nav-viewport">
+                        <div class="nav-content">
+                          @for (lane of navigationLanes; track lane.unit) {
+                            <span class="nav-lane" [style.--unit-color]="lane.color">
+                              @for (block of lane.blocks; track block.start) {
+                                <span
+                                  class="nav-block"
+                                  [style.left.%]="block.start"
+                                  [style.width.%]="block.width"
+                                ></span>
+                              }
+                            </span>
+                          }
+                        </div>
+                      </div>
+                      <div class="nav-captions">
+                        <span class="caption caption-w">Zoom in</span>
+                        <span class="caption caption-s">Zoom out</span>
+                        <span class="caption caption-a">Pan left</span>
+                        <span class="caption caption-d">Pan right</span>
+                      </div>
+                    </div>
+                    <div class="measure-hint">
+                      <mat-icon>straighten</mat-icon>
+                      <kbd class="keycap small">Shift</kbd>
+                      + drag to measure
+                    </div>
+                  </div>
+                }
+                @case ('fields') {
+                  <div
+                    class="fields-visual"
+                    [class.empty]="!fieldSheet().name"
+                    [attr.data-kind]="fieldSheet().kind"
+                    [style.--lane-color]="fieldSheet().color"
+                  >
+                    <div class="sheet-caption">
+                      <span class="caption-text">{{ sheetCaption() }}</span>
+                      @for (sheet of selectedSheet(); track sheet.lane + sheet.name) {
+                        <span class="unit-chip sheet-chip" [style.--unit-color]="sheet.color">{{ sheet.lane }}</span>
+                      } @empty {
+                        <span class="click-hint"><mat-icon>mouse</mat-icon>Click a block</span>
+                      }
+                    </div>
+                    <dl class="field-list">
+                      @for (field of fieldSheet().fields; track field.key + field.value; let i = $index) {
+                        <div class="field" [style.--i]="i">
+                          <dt class="field-key">{{ field.key }}</dt>
+                          <dd class="field-detail">
+                            <span class="field-value" [attr.title]="field.value">{{ field.value }}</span>
+                            <span class="field-meaning">{{ field.meaning }}</span>
+                          </dd>
+                        </div>
+                      }
+                    </dl>
+                  </div>
+                }
+                @case ('panel') {
+                  <div class="panel-visual">
+                    <!-- Whose selection the panel shows, e.g. one the tour picked. -->
+                    <div class="sheet-caption">
+                      <span class="caption-text">{{ panelCaption() }}</span>
+                      @for (chip of panelChips(); track chip.label) {
+                        <span class="unit-chip sheet-chip" [style.--unit-color]="chip.color">{{ chip.label }}</span>
+                      } @empty {
+                        <span class="click-hint"><mat-icon>mouse</mat-icon>Click a block</span>
+                      }
+                    </div>
+                    <!-- Numbered like the markers on the metrics of the real panel. -->
+                    <ol class="metric-list" aria-label="What the details panel shows">
+                      @for (metric of panelMetrics(); track metric.label; let i = $index) {
+                        <li class="metric-item" [style.--i]="i">
+                          <span class="area-number" aria-hidden="true">{{ i + 1 }}</span>
+                          <span class="metric-label">{{ metric.label }}</span>
+                          @if (metric.value) {
+                            <span class="metric-value" [style.--metric-color]="metric.color">{{ metric.value }}</span>
+                          }
+                          <span class="metric-meaning">{{ metric.meaning }}</span>
+                        </li>
+                      }
+                    </ol>
+                    <div class="panel-actions" aria-hidden="true">
+                      @for (action of panelActions(); track action.label) {
+                        <span class="action-group">
+                          @for (icon of action.icons; track icon; let last = $last) {
+                            <span class="mini-icon-button" [class.press-lane]="last && action.icons.length > 1">
+                              <mat-icon>{{ icon }}</mat-icon>
+                            </span>
+                          }
+                          {{ action.label }}
+                        </span>
+                      }
+                    </div>
+                  </div>
+                }
+                @case ('minimap') {
+                  <div class="minimap-visual">
+                    <div class="mm-frame">
+                      <div class="mm-ruler">
+                        <span>0</span>
+                        <span>2K</span>
+                        <span>4K</span>
+                        <span class="ruler-unit">6K bundles</span>
+                      </div>
+                      <div class="mm-track">
+                        <div class="mm-util">
+                          @for (height of minimapUtilization; track $index) {
+                            <span class="mm-util-bar" [style.height.%]="height"></span>
+                          }
+                        </div>
+                        <div class="mm-regions">
+                          @for (region of minimapRegions; track region.name) {
+                            <span
+                              class="mm-region"
+                              [style.left.%]="region.start"
+                              [style.width.%]="region.width"
+                            >{{ region.name }}</span>
+                          }
+                        </div>
+                        <div class="mm-units">
+                          @for (lane of navigationLanes; track lane.unit) {
+                            <span class="mm-unit-row" [style.--unit-color]="lane.color">
+                              @for (block of lane.blocks; track block.start) {
+                                <span
+                                  class="mm-unit-block"
+                                  [style.left.%]="block.start"
+                                  [style.width.%]="block.width"
+                                ></span>
+                              }
+                            </span>
+                          }
+                        </div>
+                        <span class="mm-curtain mm-curtain-left"></span>
+                        <span class="mm-curtain mm-curtain-right"></span>
+                        <span class="mm-lens">
+                          <span class="mm-grip mm-grip-left"></span>
+                          <span class="mm-grip mm-grip-right"></span>
+                        </span>
+                        <span class="mm-pointer">
+                          <svg class="pointer-svg" viewBox="0 0 24 24" width="16" height="16">
+                            <path class="pointer-shape" d="M4.5 2.5V19.4L8.9 15.1L11.8 21.6L14.7 20.3L11.8 13.9H18Z"></path>
+                          </svg>
+                        </span>
+                      </div>
+                    </div>
+                    <div class="mm-view">
+                      <div class="mm-view-content">
+                        @for (lane of navigationLanes; track lane.unit) {
+                          <span class="nav-lane" [style.--unit-color]="lane.color">
+                            @for (block of lane.blocks; track block.start) {
+                              <span
+                                class="nav-block"
+                                [style.left.%]="block.start"
+                                [style.width.%]="block.width"
+                              ></span>
+                            }
+                          </span>
+                        }
+                      </div>
+                    </div>
+                    <div class="mm-captions">
+                      <span class="mm-caption mm-caption-pan">Drag the lens to pan</span>
+                      <span class="mm-caption mm-caption-zoom">Drag an edge to zoom</span>
+                      <span class="mm-caption mm-caption-fit">Double-click to see it all</span>
+                    </div>
+                  </div>
+                }
+                @case ('done') {
+                  <div class="done-visual">
+                    <div class="burst">
+                      @for (particle of particles; track $index) {
+                        <span
+                          class="particle"
+                          [style.--angle]="particle.angle"
+                          [style.--distance]="particle.distance"
+                          [style.--color]="particle.color"
+                        ></span>
+                      }
+                      <svg class="check" viewBox="0 0 56 56">
+                        <circle class="check-ring" cx="28" cy="28" r="25" pathLength="1"></circle>
+                        <path class="check-mark" d="M17 29.5l7.5 7.5L40 21" pathLength="1"></path>
+                      </svg>
+                    </div>
+                    <div class="cheatsheet">
+                      @for (item of cheatsheet; track item.label; let i = $index) {
+                        <span class="cheat" [style.--i]="i">
+                          <span class="cheat-label">{{ item.label }}</span>
+                          <span class="cheat-keys">
+                            @for (key of item.keys; track key) {
+                              <kbd class="keycap small">{{ key }}</kbd>
+                            }
+                          </span>
+                        </span>
+                      }
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+
+            <div class="eyebrow">{{ item.eyebrow }}</div>
+            <h2 class="title" [id]="titleId">{{ item.title }}</h2>
+            <p class="body" [id]="bodyId">{{ item.body }}</p>
+
+            @if (item.task; as task) {
+              <div class="task" [class.done]="isTaskDone()">
+                <span class="task-icon">
+                  <mat-icon>{{ taskIcon() }}</mat-icon>
+                </span>
+                @if (isTaskDone()) {
+                  <span class="task-text">{{ task.success }}</span>
+                } @else {
+                  <span class="task-text">{{ task.prompt }}</span>
+                  @if (task.keyLabels) {
+                    <span class="task-keys">
+                      @for (key of task.keyLabels; track key) {
+                        <kbd class="keycap small">{{ key }}</kbd>
+                      }
+                    </span>
+                  }
+                }
+              </div>
+            }
+
+            @if (isWelcome()) {
+              <div class="key-hints">
+                <kbd class="keycap small">←</kbd>
+                <kbd class="keycap small">→</kbd>
+                <span>to move</span>
+                <span class="hint-separator">·</span>
+                <kbd class="keycap small">Esc</kbd>
+                <span>to exit</span>
+              </div>
+            }
+          </div>
+        }
+
+        <footer class="card-footer">
+          @if (!isLast()) {
+            <button mat-button type="button" class="skip-button" (click)="close('dismissed')">
+              {{ isFirst() ? 'Maybe later' : 'Skip tour' }}
+            </button>
+          }
+          <span class="footer-spacer"></span>
+          @if (!isFirst()) {
+            <button mat-stroked-button type="button" class="back-button" (click)="back()">
+              Back
+            </button>
+          }
+          <button
+            mat-flat-button
+            type="button"
+            class="tour-primary"
+            [class.ready]="isTaskDone()"
+            (click)="next()"
+          >
+            {{ primaryLabel() }}
+            <mat-icon iconPositionEnd>{{ isLast() ? 'check' : 'arrow_forward' }}</mat-icon>
+          </button>
+        </footer>
+      </div>
+    </div>
+  </section>
+
+  <div class="visually-hidden" aria-live="polite">{{ announcement() }}</div>
+</div>
