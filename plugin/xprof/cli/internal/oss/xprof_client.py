@@ -1,6 +1,7 @@
 """Local XProf Client using OSS xprof converters."""
 
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
+import contextlib
 import hashlib
 import logging
 import os
@@ -11,6 +12,11 @@ from typing import Any
 from xprof.cli.internal import trace_selection
 
 # pylint: disable=g-import-not-at-top
+try:
+  import fcntl
+except ImportError:  # pragma: no cover
+  fcntl = None  # type: ignore[assignment]
+
 try:
   from xprof.convert import raw_to_tool_data as convert  # pyrefly: ignore[missing-import]
 except ImportError:
@@ -46,6 +52,20 @@ SINGLE_HOST_TB_TOOLS: frozenset[str] = frozenset({
     "memory_profile",
     "kernel_utilization",
     "utilization_viewer",
+})
+
+# Converters that read or write shared per-directory `*op_stats*.pb` (or
+# `*smart_suggestion*.pb`) files in the run directory.
+OP_STATS_TB_TOOLS: frozenset[str] = frozenset({
+    "overview_page",
+    "input_pipeline_analyzer",
+    "framework_op_stats",
+    "kernel_stats",
+    "pod_viewer",
+    "op_profile",
+    "hlo_stats",
+    "roofline_model",
+    "smart_suggestion",
 })
 
 trace_stem = trace_selection.trace_stem
@@ -429,49 +449,92 @@ class LocalXprofClient:
 
     fp_dir = decorators.get_cache_dir() / "fingerprints"
     fp_dir.mkdir(parents=True, exist_ok=True)
-    # Key on the resolved trace scope, not just the containing directory.
-    # Sibling ranks of a multi-host capture live in one directory, so a
-    # directory-only key would make rank0 and rank2 share freshness state.
-    scope_key = "|".join([str(run_dir), *xspace_paths])
+    # Canonicalize paths so `./run`, `/abs/run`, and symlinks share one key,
+    # and key on the resolved trace scope rather than the directory alone.
+    real_run_dir = os.path.realpath(run_dir)
+    real_xspace_paths = [os.path.realpath(p) for p in xspace_paths]
+    scope_key = "|".join([real_run_dir, *real_xspace_paths])
     scope_hash = hashlib.sha256(scope_key.encode("utf-8")).hexdigest()[:16]
     fp_file = fp_dir / f"{scope_hash}.fp"
 
-    stored_fp = None
-    if fp_file.exists():
-      try:
-        stored_fp = fp_file.read_text(encoding="utf-8").strip()
-      except Exception:  # pylint: disable=broad-exception-caught
-        pass
+    owner_dir = decorators.get_cache_dir() / "op_stats_owners"
+    run_dir_key = real_run_dir.encode("utf-8")
+    run_dir_hash = hashlib.sha256(run_dir_key).hexdigest()[:16]
+    owner_file = owner_dir / f"{run_dir_hash}.owner"
+    run_dir_path = pathlib.Path(run_dir)
 
-    is_fresh = (
-        (stored_fp is None)
-        or (current_fp == "NO_TRACE_INPUTS")
-        or (stored_fp != current_fp)
-    )
+    if tb_tool not in OP_STATS_TB_TOOLS:
+      stored_fp = _read_text_or_none(fp_file)
+      is_fresh = (
+          (stored_fp is None)
+          or (current_fp == "NO_TRACE_INPUTS")
+          or (stored_fp != current_fp)
+      )
+      if is_fresh and current_fp and current_fp != "NO_TRACE_INPUTS":
+        _atomic_write_text(fp_dir, fp_file, current_fp)
+      if bypass_cache:
+        fetch_params["use_saved_result"] = "0"
+        _unlink_quietly(owner_file)
+        _remove_op_stats_files(run_dir_path)
+      else:
+        # Non-op_stats tools do not read `ALL_HOSTS.op_stats_v2.pb`, and
+        # passing `use_saved_result='0'` to C++ calls `ClearCacheFiles()` on
+        # the whole run directory.
+        fetch_params["use_saved_result"] = "1"
+      data, content_type = convert.xspace_to_tool_data(
+          xspace_paths=xspace_paths, tool=tb_tool, params=fetch_params
+      )
+      return content_type, data
 
-    if bypass_cache or is_fresh:
-      fetch_params["use_saved_result"] = "0"
-      try:
-        for osp in pathlib.Path(run_dir).glob("*op_stats*.pb"):
-          if osp.is_file():
-            osp.unlink(missing_ok=True)
-      except Exception as e:  # pylint: disable=broad-exception-caught
-        logging.warning("Failed to reset stale op_stats files: %s", e)
+    # The native converter saves one set of `*op_stats*.pb` files per run
+    # directory (e.g. `ALL_HOSTS.op_stats_v2.pb`), whatever the selected
+    # scope. Serialize conversions per run directory and reuse the saved
+    # files only when this scope and trace fingerprint wrote the exact files
+    # currently on disk.
+    with _lock_run_dir(owner_dir, run_dir_hash):
+      stored_fp = _read_text_or_none(fp_file)
+      is_fresh = (
+          (stored_fp is None)
+          or (current_fp == "NO_TRACE_INPUTS")
+          or (stored_fp != current_fp)
+      )
+      saved_sig = _op_stats_signature(run_dir_path)
+      reuse_saved_result = (
+          not bypass_cache
+          and not is_fresh
+          and bool(saved_sig)
+          and _read_text_or_none(owner_file)
+          == f"{scope_hash}:{current_fp}:{saved_sig}"
+      )
 
-      if current_fp and current_fp != "NO_TRACE_INPUTS":
-        try:
-          fd, tmp_path = tempfile.mkstemp(dir=fp_dir, prefix="fp_tmp_")
-          with os.fdopen(fd, "w", encoding="utf-8") as f:
-            f.write(current_fp)
-          os.replace(tmp_path, fp_file)
-        except Exception as e:  # pylint: disable=broad-exception-caught
-          logging.warning("Failed to write fingerprint file: %s", e)
-    else:
-      fetch_params["use_saved_result"] = "1"
+      claim_saved_result = False
+      if reuse_saved_result:
+        fetch_params["use_saved_result"] = "1"
+      else:
+        fetch_params["use_saved_result"] = "0"
+        _unlink_quietly(owner_file)
+        # Claim the saved files after conversion only if no foreign op_stats
+        # file survived the reset (e.g. in a read-only directory); then any
+        # op_stats file in run_dir comes from this conversion.
+        claim_saved_result = _remove_op_stats_files(run_dir_path)
 
-    data, content_type = convert.xspace_to_tool_data(
-        xspace_paths=xspace_paths, tool=tb_tool, params=fetch_params
-    )
+        if current_fp and current_fp != "NO_TRACE_INPUTS":
+          _atomic_write_text(fp_dir, fp_file, current_fp)
+        else:
+          claim_saved_result = False
+
+      data, content_type = convert.xspace_to_tool_data(
+          xspace_paths=xspace_paths, tool=tb_tool, params=fetch_params
+      )
+
+      if claim_saved_result:
+        post_sig = _op_stats_signature(run_dir_path)
+        if post_sig:
+          _atomic_write_text(
+              owner_dir,
+              owner_file,
+              f"{scope_hash}:{current_fp}:{post_sig}",
+          )
 
     return content_type, data
 
@@ -554,6 +617,143 @@ def _dedup_by_realpath(paths: Sequence[str]) -> list[str]:
 
 # Global instance
 _INSTANCE: LocalXprofClient | None = None
+
+
+def _read_text_or_none(path: pathlib.Path) -> str | None:
+  """Returns the stripped text of `path`, or None if it cannot be read."""
+  try:
+    return path.read_text(encoding="utf-8").strip()
+  except FileNotFoundError:
+    return None
+  except (OSError, UnicodeDecodeError):
+    logging.exception("Failed to read %s", path)
+    return None
+
+
+def _unlink_quietly(path: pathlib.Path) -> None:
+  """Removes `path` if it exists; logs instead of raising on failure."""
+  try:
+    path.unlink(missing_ok=True)
+  except OSError:
+    logging.exception("Failed to remove %s", path)
+
+
+def _op_stats_files(run_dir: pathlib.Path) -> list[pathlib.Path] | None:
+  """Lists saved op_stats and smart_suggestion files in `run_dir`."""
+  try:
+    files: list[pathlib.Path] = []
+    for pattern in ("*op_stats*.pb", "*smart_suggestion*.pb"):
+      files.extend(p for p in run_dir.glob(pattern) if p.is_file())
+    return sorted(files)
+  except OSError:
+    logging.exception("Failed to list op_stats files in %s", run_dir)
+    return None
+
+
+def _op_stats_signature(run_dir: pathlib.Path) -> str:
+  """Returns a stat and content digest of saved op_stats files in `run_dir`."""
+  files = _op_stats_files(run_dir)
+  if not files:
+    return ""
+  hasher = hashlib.sha256()
+  for path in files:
+    try:
+      st = path.stat()
+      hasher.update(
+          f"{path.name}:{st.st_size}:{st.st_mtime_ns}:{st.st_ino}:".encode(
+              "utf-8"
+          )
+      )
+      with open(path, "rb") as f:
+        hasher.update(f.read(64 * 1024))
+        if st.st_size > 128 * 1024:
+          f.seek(-64 * 1024, os.SEEK_END)
+          hasher.update(f.read(64 * 1024))
+    except OSError:
+      logging.exception("Failed to stat op_stats file %s", path)
+      return ""
+  return hasher.hexdigest()[:16]
+
+
+def _remove_op_stats_files(run_dir: pathlib.Path) -> bool:
+  """Removes saved `*op_stats*.pb` and `*smart_suggestion*.pb` files.
+
+  Args:
+    run_dir: The run directory that the native converter writes into.
+
+  Returns:
+    True if no op_stats file remains in `run_dir`. False if a file could not
+    be removed, e.g. because the directory is read-only.
+  """
+  stale_files = _op_stats_files(run_dir)
+  if stale_files is None:
+    return False
+  if not stale_files:
+    return True
+  if not os.access(run_dir, os.W_OK):
+    logging.warning(
+        "Run directory %s is read-only; cannot remove %d stale op_stats"
+        " file(s).",
+        run_dir,
+        len(stale_files),
+    )
+    return False
+  all_removed = True
+  for path in stale_files:
+    try:
+      path.unlink(missing_ok=True)
+    except OSError:
+      logging.exception("Failed to reset stale op_stats file %s", path)
+      all_removed = False
+  return all_removed
+
+
+@contextlib.contextmanager
+def _lock_run_dir(
+    lock_dir: pathlib.Path, run_dir_hash: str
+) -> Iterator[None]:
+  """Serializes op_stats conversions for the same run directory."""
+  if fcntl is None:
+    yield
+    return
+  lock_file = None
+  try:
+    lock_dir.mkdir(parents=True, exist_ok=True)
+    lock_path = lock_dir / f"{run_dir_hash}.lock"
+    lock_file = open(lock_path, "a+", encoding="utf-8")
+    fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+  except OSError:
+    logging.exception("Failed to lock %s", lock_dir)
+    if lock_file is not None:
+      lock_file.close()
+      lock_file = None
+  try:
+    yield
+  finally:
+    if lock_file is not None:
+      try:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+      except OSError:
+        logging.exception("Failed to unlock %s", lock_dir)
+      finally:
+        lock_file.close()
+
+
+def _atomic_write_text(
+    tmp_dir: pathlib.Path, path: pathlib.Path, text: str
+) -> None:
+  """Writes `text` to `path` via a temp file in `tmp_dir`; logs on failure."""
+  tmp_path = None
+  try:
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    fd, tmp_path = tempfile.mkstemp(dir=tmp_dir, prefix="fp_tmp_")
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+      f.write(text)
+    os.replace(tmp_path, path)
+  except OSError:
+    logging.exception("Failed to write %s", path)
+    if tmp_path is not None:
+      _unlink_quietly(pathlib.Path(tmp_path))
 
 
 def get_client() -> LocalXprofClient:

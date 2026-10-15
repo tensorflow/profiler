@@ -107,6 +107,11 @@ multi-host, vLLM/Ray ranks, Pathways client and workers).
     `xprof get_hosts <dir>`. An unknown or empty name fails and lists the valid
     ones. `get_utilization_viewer` takes an integer `--host` index instead;
     pass it a file path to pick a host/rank.
+-   Sequential calls can switch between `--host` values and the combined
+    directory view in any order: the CLI recomputes the saved per-directory
+    op_stats when the selected traces change, so `--bypass_cache` is not needed
+    for that. Do not run local commands on the same run directory in parallel,
+    because they share per-directory cache files on disk.
 -   `get_memory_profile`, `get_kernel_utilization` / `compute_utilization`,
     `get_utilization_viewer`, `get_llo_analysis`, `get_llo_debug_string`,
     `get_llo_static_analysis`, `get_xspace_proto`, and `create_events_db` need

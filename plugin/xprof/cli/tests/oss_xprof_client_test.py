@@ -20,6 +20,14 @@ class OssXprofClientTest(unittest.TestCase):
     super().setUp()
     self.temp_dir = tempfile.mkdtemp()
     self.addCleanup(lambda: shutil.rmtree(self.temp_dir, ignore_errors=True))
+    self.cache_dir = pathlib.Path(self.temp_dir) / 'cli_cache'
+    self.cache_dir.mkdir(parents=True, exist_ok=True)
+    mock.patch.object(
+        decorators, '_get_cache_dir', return_value=self.cache_dir
+    ).start()
+    mock.patch.object(
+        decorators, 'get_cache_dir', return_value=self.cache_dir
+    ).start()
     if hasattr(xprof_client.convert, 'xspace_to_tool_data'):
       self.mock_converter = mock.patch.object(
           xprof_client.convert,
@@ -354,6 +362,172 @@ class OssXprofClientTest(unittest.TestCase):
         client.get_serialized_xspace(str(run_dir), host='rank2_node0'),
         b'rank2',
     )
+
+  def _save_op_stats_like_converter(self, run_dir: pathlib.Path) -> None:
+    """Makes the mock converter save op_stats for the scope it computed."""
+    op_stats = run_dir / 'ALL_HOSTS.op_stats_v2.pb'
+
+    def convert(xspace_paths, tool, params):
+      del tool  # Unused.
+      if params['use_saved_result'] == '0' or not op_stats.exists():
+        op_stats.write_text(','.join(xspace_paths), encoding='utf-8')
+      return op_stats.read_bytes(), 'application/json'
+
+    self.mock_converter.side_effect = convert
+
+  def _use_saved_result(self) -> str:
+    return self.mock_converter.call_args[1]['params']['use_saved_result']
+
+  def test_host_switch_does_not_reuse_other_scope_op_stats(self):
+    """Verifies H0, H1, combined, H1 recomputes instead of reusing combined."""
+    run_dir, rank0, rank2 = self._make_two_rank_run()
+    self._save_op_stats_like_converter(run_dir)
+    client = xprof_client.LocalXprofClient()
+
+    client.fetch('overview_page.json', str(run_dir), host='rank0_node0')
+    client.fetch('overview_page.json', str(run_dir), host='rank2_node0')
+    _, combined = client.fetch('overview_page.json', str(run_dir))
+    self.assertEqual(combined, f'{rank0},{rank2}'.encode())
+
+    with mock.patch.object(
+        pathlib.Path, 'unlink', autospec=True, side_effect=pathlib.Path.unlink
+    ) as mock_unlink:
+      _, data = client.fetch(
+          'hlo_stats.json', str(run_dir), host='rank2_node0'
+      )
+    self.assertEqual(self._use_saved_result(), '0')
+    self.assertIn(
+        run_dir / 'ALL_HOSTS.op_stats_v2.pb',
+        [c.args[0] for c in mock_unlink.call_args_list],
+    )
+    self.assertEqual(data, rank2.encode())
+
+  def test_repeated_same_scope_reuses_saved_op_stats(self):
+    """Verifies a scope that wrote the op_stats files reuses them."""
+    run_dir, _, rank2 = self._make_two_rank_run()
+    self._save_op_stats_like_converter(run_dir)
+    client = xprof_client.LocalXprofClient()
+
+    client.fetch('overview_page.json', str(run_dir), host='rank2_node0')
+    self.assertEqual(self._use_saved_result(), '0')
+    _, data = client.fetch('hlo_stats.json', str(run_dir), host='rank2_node0')
+    self.assertEqual(self._use_saved_result(), '1')
+    self.assertEqual(data, rank2.encode())
+
+  def test_unowned_op_stats_file_is_not_reused(self):
+    """Verifies op_stats written outside this CLI scope are recomputed."""
+    run_dir, _, rank2 = self._make_two_rank_run()
+    op_stats = run_dir / 'ALL_HOSTS.op_stats_v2.pb'
+    op_stats.write_bytes(b'written_by_tensorboard')
+    # An older CLI stored a matching fingerprint but no owner marker.
+    scope_key = '|'.join([str(run_dir), rank2])
+    scope_hash = hashlib.sha256(scope_key.encode('utf-8')).hexdigest()[:16]
+    fp_dir = decorators._get_cache_dir() / 'fingerprints'
+    fp_dir.mkdir(parents=True, exist_ok=True)
+    (fp_dir / f'{scope_hash}.fp').write_text(
+        decorators.compute_path_fingerprint(run_dir, xspace_paths=[rank2]),
+        encoding='utf-8',
+    )
+
+    client = xprof_client.LocalXprofClient()
+    client.fetch('hlo_stats.json', str(run_dir), host='rank2_node0')
+
+    self.assertEqual(self._use_saved_result(), '0')
+    self.assertFalse(op_stats.exists())
+
+  def test_readonly_dir_with_foreign_op_stats_never_reuses(self):
+    """Verifies an undeletable foreign op_stats file is never claimed."""
+    run_dir, _, _ = self._make_two_rank_run()
+    op_stats = run_dir / 'ALL_HOSTS.op_stats_v2.pb'
+    op_stats.write_bytes(b'written_by_tensorboard')
+    os.chmod(run_dir, 0o555)
+    self.addCleanup(os.chmod, run_dir, 0o755)
+    if os.access(run_dir, os.W_OK):
+      self.skipTest('Running with permissions that ignore read-only dirs.')
+
+    client = xprof_client.LocalXprofClient()
+    for _ in range(2):
+      content_type, _ = client.fetch(
+          'overview_page.json', str(run_dir), host='rank2_node0'
+      )
+      self.assertEqual(content_type, 'application/json')
+      self.assertEqual(self._use_saved_result(), '0')
+    self.assertTrue(op_stats.exists())
+
+  def test_same_run_dir_via_symlink_and_relpath_shares_owner(self):
+    """Verifies relative, symlink, and absolute paths share one owner record."""
+    run_dir, rank0, _ = self._make_two_rank_run()
+    self._save_op_stats_like_converter(run_dir)
+    alias_dir = pathlib.Path(self.temp_dir) / 'run_alias'
+    os.symlink(run_dir, alias_dir)
+    rel_dir = os.path.relpath(run_dir, os.getcwd())
+    client = xprof_client.LocalXprofClient()
+
+    client.fetch('overview_page.json', str(alias_dir), host='rank0_node0')
+    client.fetch('overview_page.json', str(run_dir), host='rank2_node0')
+    _, data = client.fetch('hlo_stats.json', rel_dir, host='rank0_node0')
+    self.assertEqual(self._use_saved_result(), '0')
+    self.assertEqual(data, os.path.relpath(rank0, os.getcwd()).encode())
+
+  def test_external_rewrite_of_op_stats_invalidates_owner(self):
+    """Verifies an external rewrite of ALL_HOSTS.op_stats_v2.pb is detected."""
+    run_dir, _, rank2 = self._make_two_rank_run()
+    self._save_op_stats_like_converter(run_dir)
+    client = xprof_client.LocalXprofClient()
+
+    client.fetch('overview_page.json', str(run_dir), host='rank2_node0')
+    self.assertEqual(self._use_saved_result(), '0')
+
+    # Simulate TensorBoard or the XProf UI rewriting op_stats after the CLI.
+    (run_dir / 'ALL_HOSTS.op_stats_v2.pb').write_bytes(
+        b'overwritten_by_tensorboard_all_hosts'
+    )
+
+    _, data = client.fetch('hlo_stats.json', str(run_dir), host='rank2_node0')
+    self.assertEqual(self._use_saved_result(), '0')
+    self.assertEqual(data, rank2.encode())
+
+  def test_non_op_stats_tool_preserves_saved_op_stats_and_owner(self):
+    """Verifies tools like trace_viewer do not delete op_stats or steal owner."""
+    run_dir, rank0, rank2 = self._make_two_rank_run()
+    op_stats = run_dir / 'ALL_HOSTS.op_stats_v2.pb'
+
+    def convert(xspace_paths, tool, params):
+      if tool in ('overview_page', 'hlo_stats'):
+        if params['use_saved_result'] == '0' or not op_stats.exists():
+          op_stats.write_text(','.join(xspace_paths), encoding='utf-8')
+        return op_stats.read_bytes(), 'application/json'
+      return b'{"traceEvents": []}', 'application/json'
+
+    self.mock_converter.side_effect = convert
+    client = xprof_client.LocalXprofClient()
+
+    client.fetch('overview_page.json', str(run_dir))
+    self.assertEqual(self._use_saved_result(), '0')
+    self.assertTrue(op_stats.exists())
+
+    # Running trace_viewer and memory_profile on a single host must not delete
+    # the combined op_stats file or claim ownership for rank0_node0.
+    client.fetch('trace_viewer.json', str(run_dir), host='rank0_node0')
+    self.assertEqual(self._use_saved_result(), '1')
+    self.assertTrue(op_stats.exists())
+
+    client.fetch('memory_profile.json', str(run_dir), host='rank0_node0')
+    self.assertEqual(self._use_saved_result(), '1')
+    self.assertTrue(op_stats.exists())
+
+    # Combined hlo_stats still reuses the combined op_stats file.
+    _, combined = client.fetch('hlo_stats.json', str(run_dir))
+    self.assertEqual(self._use_saved_result(), '1')
+    self.assertEqual(combined, f'{rank0},{rank2}'.encode())
+
+    # And single-host hlo_stats for rank0_node0 still knows it does not own
+    # the combined op_stats file, so it recomputes.
+    _, single = client.fetch(
+        'hlo_stats.json', str(run_dir), host='rank0_node0'
+    )
+    self.assertEqual(self._use_saved_result(), '0')
+    self.assertEqual(single, rank0.encode())
 
 
 if __name__ == '__main__':
