@@ -72,5 +72,67 @@ TEST(CounterFormatterTest, FormatCounterTooltipOnUnitlessAxis) {
             "Bundle: 0\nValue: 0.50");
 }
 
+TEST(CounterFormatterTest, FormatCounterAxisLabelCanaryPrefix) {
+  EXPECT_EQ(
+      FormatCounterAxisLabel(kCanaryCounterPrefix, 0.0, CounterUnit::kNone),
+      "[sci:0]");
+  EXPECT_EQ(FormatCounterAxisLabel("[xpress_sandbox_sci3]_counter", 1.5,
+                                   CounterUnit::kNone),
+            "[sci:1.5]");
+  EXPECT_EQ(FormatCounterAxisLabel("[xpress_sandbox_sci3] Memory", 12.0,
+                                   CounterUnit::kNone),
+            "[sci:12]");
+  EXPECT_EQ(
+      FormatCounterAxisLabel("[xpress_sandbox_sci3]", 12.3, CounterUnit::kNone),
+      "[sci:12.3]");
+  EXPECT_EQ(FormatCounterAxisLabel("[xpress_sandbox_sci3]", 0.12345,
+                                   CounterUnit::kNone),
+            "[sci:0.123]");
+  EXPECT_EQ(FormatCounterAxisLabel("[xpress_sandbox_sci3]", 123456.0,
+                                   CounterUnit::kNone),
+            "[sci:1.23e+05]");
+  EXPECT_EQ(FormatCounterAxisLabel("[xpress_sandbox_sci3]", -42.5,
+                                   CounterUnit::kNone),
+            "[sci:-42.5]");
+
+  // Canary format takes precedence regardless of the declared CounterUnit.
+  EXPECT_EQ(FormatCounterAxisLabel("[xpress_sandbox_sci3]BytesTrack", 1024.0,
+                                   CounterUnit::kBytes),
+            "[sci:1.02e+03]");
+  EXPECT_EQ(FormatCounterAxisLabel("[xpress_sandbox_sci3]FractionTrack", 0.75,
+                                   CounterUnit::kFraction),
+            "[sci:0.75]");
+}
+
+TEST(CounterFormatterTest, FormatCounterAxisLabelNonCanaryFallsBackToStandard) {
+  // Plain track names fall back to FormatCounterValue.
+  EXPECT_EQ(FormatCounterAxisLabel("Regular Track", 0.75, CounterUnit::kNone),
+            "0.75");
+  EXPECT_EQ(FormatCounterAxisLabel("Regular Track", 12.0, CounterUnit::kNone),
+            "12.00");
+  EXPECT_EQ(FormatCounterAxisLabel("", -3.14159, CounterUnit::kNone), "-3.14");
+
+  EXPECT_EQ(
+      FormatCounterAxisLabel("Fraction Track", 0.75, CounterUnit::kFraction),
+      "75%");
+  EXPECT_EQ(
+      FormatCounterAxisLabel("Fraction Track", 0.125, CounterUnit::kFraction),
+      "12.5%");
+
+  EXPECT_EQ(FormatCounterAxisLabel("Bytes Track", 1024.0, CounterUnit::kBytes),
+            WithUnit("1.0", "KiB"));
+  EXPECT_EQ(
+      FormatCounterAxisLabel("Bytes Track", 12345678.0, CounterUnit::kBytes),
+      WithUnit("11.8", "MiB"));
+
+  // Track name containing the canary substring but not as a prefix falls back.
+  EXPECT_EQ(FormatCounterAxisLabel("prefix_[xpress_sandbox_sci3]", 0.75,
+                                   CounterUnit::kFraction),
+            "75%");
+  EXPECT_EQ(FormatCounterAxisLabel("[xpress_sandbox_sci", 1024.0,
+                                   CounterUnit::kBytes),
+            WithUnit("1.0", "KiB"));
+}
+
 }  // namespace
 }  // namespace traceviewer

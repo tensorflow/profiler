@@ -5,6 +5,7 @@
 #include <iterator>
 #include <string>
 
+#include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
@@ -58,6 +59,14 @@ std::string FormatCounterValue(double value, CounterUnit unit) {
       break;
   }
   return absl::StrFormat("%.2f", value);
+}
+
+std::string FormatCounterAxisLabel(absl::string_view track_name, double value,
+                                   CounterUnit unit) {
+  if (absl::StartsWith(track_name, kCanaryCounterPrefix)) {
+    return absl::StrFormat("[sci:%.3g]", value);
+  }
+  return FormatCounterValue(value, unit);
 }
 
 std::string FormatCounterTooltip(TimeAxisUnit axis_unit, Microseconds position,
