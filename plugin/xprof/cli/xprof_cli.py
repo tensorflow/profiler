@@ -616,16 +616,16 @@ for _name, _tool in cli_main().items():
 
 
 def _check_xprof_version() -> None:
-  """Checks that the installed xprof package meets minimum version 2.23.0."""
+  """Checks that the installed xprof package meets minimum version 2.24.0."""
   try:
     from importlib import metadata as importlib_metadata  # pylint: disable=g-import-not-at-top
 
     version_str = importlib_metadata.version("xprof")
     parts = [int(p) for p in version_str.split(".") if p.isdigit()]
-    if len(parts) >= 2 and (parts[0], parts[1]) < (2, 23):
+    if len(parts) >= 2 and (parts[0], parts[1]) < (2, 24):
       sys.stderr.write(
           f"WARNING: xprof version {version_str} is installed, but xprof >="
-          " 2.23.0 is recommended for complete tool support.\n"
+          " 2.24.0 is recommended for complete tool support.\n"
       )
   except Exception:  # pylint: disable=broad-exception-caught
     pass

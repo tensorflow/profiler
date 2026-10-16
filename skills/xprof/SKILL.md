@@ -21,11 +21,22 @@ This skill consolidates various tools related to XProf operations and analysis.
 ## CLI
 
 The primary tool for interacting with XProf data is the XProf CLI bundled with
-the `xprof` package.
+the `xprof` package. These skills require `xprof >= 2.24.0`. Install or
+upgrade it from PyPI:
+
+```bash
+pip install -U 'xprof>=2.24.0'
+```
+
+Then run:
 
 ```bash
 xprof <subcommand> [flags]
 ```
+
+Run `xprof -h` to list the subcommands available in the installed version. If
+a subcommand documented here is missing, the installed `xprof` is older than
+2.24.0; upgrade it.
 
 All `xprof` subcommands emit **JSON** to stdout. There is no output-format flag;
 pipe the output to `jq` or redirect it to a file if you need another
@@ -188,14 +199,10 @@ analysis:
 
 ### Low Level Optimizer (LLO) & Custom Call Profiling
 
-> ⚠️ **EXPERIMENTAL FEATURE**: Low Level Optimizer (LLO) analysis and custom
-> call profiling are **experimental**. To access these features and all CLI
-> subcommands (`get_kernel_stats`,
-> `get_llo_analysis`, `get_llo_debug_string`, `get_llo_static_analysis`),
-> users **MUST install
-> `xprof-nightly`** (`pip install xprof-nightly` or `uv pip install
-> xprof-nightly 'jax[tpu]'`), as the main `xprof` PyPI release (2.23.1) lacks
-> these subcommands.
+> [!NOTE] LLO analysis and custom call profiling (`get_kernel_stats`,
+> `get_llo_analysis`, `get_llo_debug_string`, `get_llo_static_analysis`) need
+> the same `xprof >= 2.24.0` as the rest of this skill (see [CLI](#cli)), plus
+> the TPU toolchain below.
 
 When capturing or analyzing fine-grained LLO traces for custom kernels (e.g.
 Pallas or Mosaic):
@@ -259,7 +266,7 @@ Pallas or Mosaic):
         `get_kernel_stats`). When that happens, tune the vtrace frequency by
         increasing `trace_best_effort_frequency` and
         `trace_guaranteed_frequency` (e.g., to `50` or `100`). See
-        [custom call profiling](../../docs/custom_call_profiling.md#how-to-tune).
+        [custom call profiling](https://openxla.org/xprof/custom_call_profiling#how-to-tune).
 6.  **Analysis Execution & Metrics Interpretation**:
 
     *   `xprof get_llo_analysis <logdir_or_session_id>`: Extracts instruction

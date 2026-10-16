@@ -130,7 +130,7 @@ python your_jax_workload.py
 >   happens, tune the vtrace frequency by increasing
 >   `trace_best_effort_frequency` and `trace_guaranteed_frequency` (e.g., to
 >   `50` or `100`). See
->   [custom call profiling](../../../docs/custom_call_profiling.md#how-to-tune).
+>   [custom call profiling](https://openxla.org/xprof/custom_call_profiling#how-to-tune).
 
 --------------------------------------------------------------------------------
 

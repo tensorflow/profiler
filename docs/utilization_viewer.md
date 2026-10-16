@@ -1,9 +1,5 @@
 # Utilization Viewer
 
-```{note}
-This tool is currently only available in nightly builds.
-```
-
 ## Goal
 
 The goal of this tool is to provide a bird's eye view of the performance of a

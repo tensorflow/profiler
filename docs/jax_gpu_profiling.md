@@ -154,7 +154,7 @@ RUN pip install --upgrade "jax[cuda13]" -f https://storage.googleapis.com/jax-re
 # Install ML Diagnostics SDK and XProf tools
 RUN pip install --no-cache-dir \
     google-cloud-mldiagnostics \
-    xprof-nightly
+    xprof
 
 WORKDIR /app
 COPY train.py .

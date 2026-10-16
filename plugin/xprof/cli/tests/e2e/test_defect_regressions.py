@@ -578,7 +578,7 @@ class DefectRegressionsTest(parameterized.TestCase):
       self.assertNotIn("it adds no LLO data", res["remediation"])
       self.assertIn("Python 3.11+", res["remediation"])
       self.assertIn("JAX >= 0.11.0", res["remediation"])
-      self.assertIn("xprof-nightly", res["remediation"])
+      self.assertIn("pip install -U xprof", res["remediation"])
       self.assertEqual(
           res["required_flags"], ["--xla_xprof_register_llo_debug_info=true"]
       )
@@ -622,7 +622,7 @@ class DefectRegressionsTest(parameterized.TestCase):
       self.assertIn("trace_best_effort_frequency", res_dbg["remediation"])
       self.assertIn("how-to-tune", res_dbg["remediation"])
       self.assertNotIn("it adds no LLO data", res_dbg["remediation"])
-      self.assertIn("xprof-nightly", res_dbg["remediation"])
+      self.assertIn("pip install -U xprof", res_dbg["remediation"])
       self.assertEqual(
           res_dbg["required_flags"],
           ["--xla_xprof_register_llo_debug_info=true"],

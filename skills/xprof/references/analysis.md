@@ -11,7 +11,7 @@ All examples use the open-source `xprof` CLI (and the standalone `xparity`
 console script for numerical parity verification). Install both via pip:
 
 ```bash
-pip install xprof-nightly
+pip install -U xprof
 ```
 
 All tools accept a `<logdir>` (or a direct run folder / `.xplane.pb` file) as a

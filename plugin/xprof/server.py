@@ -252,7 +252,7 @@ def get_abs_path(logdir: str) -> str:
   return str(epath.Path(logdir).expanduser().resolve())
 
 
-# CLI subcommands introduced in xprof-nightly >= 2.24.0. Stable xprof wheels
+# CLI subcommands introduced in xprof 2.24.0. Older xprof wheels
 # (<= 2.23.1) shipped zero CLI subcommands and routed the `xprof` console script
 # to the TensorBoard-style server, whose argument parser rejects these tokens
 # with an opaque "unrecognized arguments" error. `main` intercepts them and
@@ -307,20 +307,20 @@ def cli_subcommand_required_message(subcommand: str) -> str:
       `get_overview`).
 
   Returns:
-    An actionable, single-line error message directing the user to install
-    xprof-nightly (or upgrade to xprof >= 2.24.0).
+    An actionable, single-line error message directing the user to upgrade to
+    xprof >= 2.24.0.
   """
   return (
-      f"Error: 'xprof {subcommand}' CLI tools require xprof-nightly >= 2.24.0."
-      " Please run 'pip install -U xprof-nightly' or upgrade to xprof >="
-      " 2.24.0. For TensorBoard server usage, run 'xprof --help'."
+      f"Error: 'xprof {subcommand}' CLI tools require xprof >= 2.24.0."
+      " Please run 'pip install -U xprof'. For TensorBoard server usage, run"
+      " 'xprof --help'."
   )
 
 
 def main(argv: Optional[list[str]] = None) -> int:
   """Console entry point for the standalone XProf server.
 
-  Intercepts CLI subcommands (introduced in xprof-nightly >= 2.24.0) that would
+  Intercepts CLI subcommands (introduced in xprof 2.24.0) that would
   otherwise fall through to the server argument parser and fail with an opaque
   "unrecognized arguments" error, printing an actionable upgrade message
   instead. Any other arguments are parsed as standard server flags and used to

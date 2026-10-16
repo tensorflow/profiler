@@ -5,14 +5,6 @@ This reference explains how to fetch and interpret Roofline Model analysis from
 XProf, to diagnose compute vs. memory-bandwidth bottlenecks at both the program
 level and the per-operation level.
 
-> [!IMPORTANT]
->
-> `get_roofline_model` is **not in the released wheel** (`xprof==2.23.1` and
-> earlier). It requires a nightly:
-> `pip install 'xprof-nightly>=2.24.1a20260827'`.
-> If `xprof get_roofline_model` reports an unknown command, you are on a stable
-> wheel — check with `xprof -h` and count the subcommands.
-
 --------------------------------------------------------------------------------
 
 ## 1. Prerequisites & Invocation

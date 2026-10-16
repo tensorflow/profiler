@@ -898,5 +898,28 @@ class MultiTraceSelectionTest(absltest.TestCase):
     self.assertIn('"warnings": []', written)
 
 
+class CheckXprofVersionTest(parameterized.TestCase):
+
+  @parameterized.parameters('2.23.3', '2.22.0', '1.99.0')
+  def test_warns_below_minimum_version(self, version_str):
+    with mock.patch(
+        'importlib.metadata.version', return_value=version_str
+    ), mock.patch.object(sys, 'stderr') as mock_stderr:
+      xprof_cli._check_xprof_version()  # pylint: disable=protected-access
+
+    written = ''.join(call.args[0] for call in mock_stderr.write.call_args_list)
+    self.assertIn(f'xprof version {version_str} is installed', written)
+    self.assertIn('xprof >= 2.24.0 is recommended', written)
+
+  @parameterized.parameters('2.24.0', '2.24.1', '2.25.0', '3.0.0')
+  def test_silent_at_or_above_minimum_version(self, version_str):
+    with mock.patch(
+        'importlib.metadata.version', return_value=version_str
+    ), mock.patch.object(sys, 'stderr') as mock_stderr:
+      xprof_cli._check_xprof_version()  # pylint: disable=protected-access
+
+    mock_stderr.write.assert_not_called()
+
+
 if __name__ == '__main__':
   absltest.main()

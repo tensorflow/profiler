@@ -14,8 +14,9 @@ confirmed the trace carries LLO data.
 
 -   A trace captured with `--xla_xprof_register_llo_debug_info=true` (see the
     LLO section of `SKILL.md`).
--   An `xprof` build with embedded LLO analysis support (`xprof-nightly`).
-    Other builds return `"status": "UNAVAILABLE"` (see
+-   An `xprof` build with embedded LLO analysis support. Official `xprof`
+    wheels on PyPI are built with it. Builds from the public source do not
+    include the embedded library and return `"status": "UNAVAILABLE"` (see
     [Status values](#status-values)).
 -   A single trace: pass a `.xplane.pb` file, or a directory whose first
     `*.xplane.pb` file (in sorted order) is the one to analyze. `--host` is not
@@ -66,7 +67,7 @@ descriptions for them.
 | `OK` | The analysis ran. | Read `data`. |
 | `ERROR` | The analysis could not run (unreadable file, no module matches `--hlo_op`). | Fix the input; use `--mode=list_ops` to see valid names. |
 | `UNIMPLEMENTED` | Unknown `--mode`. | Pick a mode from the table above. |
-| `UNAVAILABLE` | This `xprof` build has no embedded LLO analysis support (`reason: LLO_STATIC_ANALYSIS_UNSUPPORTED_IN_BUILD`). | Install `xprof-nightly`, or fall back to `get_llo_analysis` and `get_llo_debug_string`. |
+| `UNAVAILABLE` | This `xprof` build has no embedded LLO analysis support (`reason: LLO_STATIC_ANALYSIS_UNSUPPORTED_IN_BUILD`). | Install an `xprof` wheel from PyPI, or fall back to `get_llo_analysis` and `get_llo_debug_string`. |
 
 ## Example Usage
 

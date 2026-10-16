@@ -6,11 +6,11 @@ custom calls within the [Trace Viewer](trace_viewer.md), you can use specific
 XLA flags to enable detailed tracing and LLO (Low-Level Optimizer) debug
 information.
 
-> ⚠️ **EXPERIMENTAL FEATURE**: Low Level Optimizer (LLO) analysis and custom
-> call profiling are **experimental**. To access these features and all CLI
-> analysis tools (`get_kernel_stats`,
-> `get_llo_analysis`, `get_llo_debug_string`), **install `xprof-nightly`**.
-> The standard `xprof` PyPI release (2.23.1) lacks these subcommands.
+> **Requires `xprof >= 2.24.0`**: Low Level Optimizer (LLO) analysis and
+> custom call profiling, including the CLI analysis tools (`get_kernel_stats`,
+> `get_llo_analysis`, `get_llo_debug_string`, `get_llo_static_analysis`), are
+> supported in `xprof` 2.24.0 and later. If a subcommand is missing, upgrade
+> with `pip install -U 'xprof>=2.24.0'`.
 
 ## Prerequisites & Toolchain Requirements
 
@@ -23,17 +23,16 @@ requirements:
     definitions, causing `ERROR: Unknown command line flag` or returning empty
     LLO profiles. Using `uv` to manage a Python 3.12 virtual environment is
     strongly recommended.
-*   **Package Installation (`xprof-nightly`)**: Install `xprof-nightly`
-    alongside `jax[tpu]`:
+*   **Package Installation (`xprof`)**: Install `xprof` alongside `jax[tpu]`:
     ```bash
     # 1. Setup Python 3.12 environment
     pip install uv
     uv python install 3.12
     uv venv --python 3.12 ~/venvs/v312
 
-    # 2. Install xprof-nightly and JAX
+    # 2. Install xprof and JAX
     uv pip install --python ~/venvs/v312/bin/python \
-        'jax[tpu]>=0.11.0' xprof-nightly numpy ml_dtypes absl-py fire
+        'jax[tpu]>=0.11.0' 'xprof>=2.24.0' numpy ml_dtypes absl-py fire
     ```
 *   **JAX >= 0.11.0**: Recommended toolchain version (`libtpu >= 0.0.44`). Note
     that compile-time LLO debug info
@@ -273,10 +272,10 @@ Viewer.*
 
 ### Best Practices & Field Gotchas
 
--   **Use `xprof-nightly`**: Standard `xprof` 2.23.1 lacks `get_kernel_stats`
-    and LLO CLI subcommands (as well as the standalone `xparity` console script
-    for numerical parity verification). In non-Google3 environments, always
-    install `xprof-nightly`.
+-   **Use `xprof >= 2.24.0`**: `get_kernel_stats`, the LLO CLI subcommands,
+    and the standalone `xparity` console script (numerical parity
+    verification) ship in `xprof` 2.24.0 and later. If a subcommand is
+    missing, run `pip install -U 'xprof>=2.24.0'`.
 -   **Metrics Interpretation for Pallas Kernels (Roofline Blind Spot)**:
     XLA has no cost model for `tpu_custom_call`. Therefore,
     `get_roofline_model` and `get_overview` will report `0.0 GFLOP/s`,

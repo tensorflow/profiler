@@ -186,7 +186,7 @@ class ServerTest(parameterized.TestCase):
     # launched.
     self.assertEqual(exit_code, 2)
     message = stderr.getvalue()
-    self.assertIn('xprof-nightly >= 2.24.0', message)
+    self.assertIn('xprof >= 2.24.0', message)
     self.assertIn(subcommand, message)
     self.mock_launch_server.assert_not_called()
 
@@ -205,9 +205,9 @@ class ServerTest(parameterized.TestCase):
     message = server.cli_subcommand_required_message('get_overview')
     self.assertEqual(
         message,
-        "Error: 'xprof get_overview' CLI tools require xprof-nightly >= 2.24.0."
-        " Please run 'pip install -U xprof-nightly' or upgrade to xprof >="
-        " 2.24.0. For TensorBoard server usage, run 'xprof --help'.",
+        "Error: 'xprof get_overview' CLI tools require xprof >= 2.24.0."
+        " Please run 'pip install -U xprof'. For TensorBoard server usage, run"
+        " 'xprof --help'.",
     )
 
 

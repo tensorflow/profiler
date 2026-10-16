@@ -26,7 +26,9 @@ speedup.
 
 ### 1. CLI Execution (`xparity`)
 
-Run the `xparity` console script installed via `pip install xprof` (or `bazel run //plugin/xprof/xparity:xparity_cli --`):
+Run the `xparity` console script installed with the `xprof` package
+(`pip install -U xprof`), or build it from source with
+`bazel run //plugin/xprof/xparity:xparity_cli --`:
 
 ```bash
 # Verify numerical parity + Float64 Oracle Audit between two callables

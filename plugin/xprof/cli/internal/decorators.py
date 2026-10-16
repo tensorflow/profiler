@@ -52,7 +52,8 @@ LLO_DATA_ABSENT_REMEDIATION: str = (
     f" xla_tpu_bundle_instrumentation_options; see {_CUSTOM_CALL_TUNE_DOC})."
     " Prerequisites: Python 3.11+ (Python 3.12 recommended via uv),"
     " JAX >= 0.11.0 (default Cloud TPU VM images running Python 3.10 cap JAX"
-    " at 0.6.2 and lack LLO flag support), and xprof-nightly."
+    " at 0.6.2 and lack LLO flag support), and xprof >= 2.24.0"
+    " ('pip install -U xprof')."
 )
 
 
