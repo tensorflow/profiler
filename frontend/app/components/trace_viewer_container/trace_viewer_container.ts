@@ -591,11 +591,19 @@ export class TraceViewerContainer
       const orderB = RIGHT_SIDE_PROPERTY_ORDER[b.property ?? ''] ?? 100;
       return orderA - orderB;
     });
+    const prevHloText = this.rightSideProperties.find(
+      (p) => p.property === 'HLO Text',
+    )?.value;
+    const nextHloText = rightProps.find(
+      (p) => p.property === 'HLO Text',
+    )?.value;
     this.rightSideProperties = rightProps;
-    this.isHloTextCollapsed = false;
+    if (prevHloText !== nextHloText) {
+      this.isHloTextCollapsed = true;
+    }
   }
 
-  isHloTextCollapsed = false;
+  isHloTextCollapsed = true;
 
   toggleHloTextCollapse() {
     this.isHloTextCollapsed = !this.isHloTextCollapsed;
