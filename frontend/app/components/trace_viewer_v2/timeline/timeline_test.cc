@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <functional>
 #include <initializer_list>
 #include <ios>
 #include <limits>
@@ -5758,198 +5759,6 @@ TEST_F(RealTimelineImGuiFixture, DrawCounterTrackConstantValue) {
   ImGui::EndFrame();
 }
 
-TEST_F(RealTimelineImGuiFixture, DrawUtilizationAreaChartLastBinOnly) {
-  FlameChartTimelineData data;
-  data.groups.push_back(
-      {.type = Group::Type::kFlame,
-       .name = "Process Group",
-       .start_level = 0,
-       .nesting_level = kProcessNestingLevel,  // Process level
-       .expanded = true});
-
-  // Add one event covering the very end of visible range [99.95, 100.0]
-  data.level_offsets = {0, 1};
-  data.level_event_indices = {0};
-  data.entry_names.push_back("event");
-  data.entry_levels.push_back(0);
-  data.entry_start_times.push_back(99.95);
-  data.entry_total_times.push_back(0.05);
-  data.entry_event_ids.push_back(1);
-  data.entry_args.push_back({});
-
-  timeline_.SetTimelineData(std::move(data));
-  timeline_.SetVisibleRange({0.0, 100.0});
-
-  ImGui::NewFrame();
-  timeline_.Draw();
-
-  ImGuiWindow* process_window = nullptr;
-  const std::string child_id = "TimelineChild_Process Group_0";
-  for (ImGuiWindow* w : ImGui::GetCurrentContext()->Windows) {
-    if (std::string(w->Name).find(child_id) != std::string::npos) {
-      process_window = w;
-      break;
-    }
-  }
-  ASSERT_NE(process_window, nullptr);
-
-  // Check if the utilization bar was drawn.
-  ImU32 bar_color = color_palette_.GetColor(ColorPalette::Key::kFlameHeader)
-                        .value_or(kBlue70);
-
-  bool bar_found = false;
-  for (const auto& v : process_window->DrawList->VtxBuffer) {
-    if (v.col == bar_color) {
-      bar_found = true;
-      break;
-    }
-  }
-
-  EXPECT_TRUE(bar_found);
-
-  ImGui::EndFrame();
-}
-
-TEST_F(RealTimelineImGuiFixture,
-       DrawUtilizationAreaChart_ShortProcessBurstInLongTraceDoesNotOverflow) {
-  FlameChartTimelineData data;
-  // Pack 800 parallel 100 us events into [0, 100] us so
-  // ProcessUtilizationPyramid MIP level 2 has bin_width_us = 100 / 2048
-  // (inv_bw = 20.48) and total occupancy 80,000 us (~0.66 px at 200 s zoom),
-  // then view a 200 s range ([0, 200e6] us) where
-  // (visible_end - pmip.min_ts) * inv_bw > INT_MAX.
-  constexpr int kNumLevels = 800;
-  data.groups.push_back({.type = Group::Type::kFlame,
-                         .name = "Process Group",
-                         .start_level = 0,
-                         .nesting_level = kProcessNestingLevel,
-                         .expanded = true,
-                         .level_count = kNumLevels});
-
-  data.level_offsets.reserve(kNumLevels + 1);
-  data.level_offsets.push_back(0);
-  data.level_event_indices.reserve(kNumLevels);
-  for (int i = 0; i < kNumLevels; ++i) {
-    data.level_event_indices.push_back(i);
-    data.level_offsets.push_back(i + 1);
-    data.entry_names.push_back("burst");
-    data.entry_levels.push_back(i);
-    data.entry_start_times.push_back(0.0);
-    data.entry_total_times.push_back(100.0);
-    data.entry_event_ids.push_back(i + 1);
-    data.entry_args.push_back({});
-  }
-
-  timeline_.SetTimelineData(std::move(data));
-  timeline_.set_data_time_range({0.0, 200'000'000.0});
-  timeline_.SetVisibleRange({0.0, 200'000'000.0});
-
-  ImGui::NewFrame();
-  timeline_.Draw();
-
-  ImGuiWindow* process_window = nullptr;
-  const std::string child_id = "TimelineChild_Process Group_0";
-  for (ImGuiWindow* w : ImGui::GetCurrentContext()->Windows) {
-    if (std::string(w->Name).find(child_id) != std::string::npos) {
-      process_window = w;
-      break;
-    }
-  }
-  ASSERT_NE(process_window, nullptr);
-
-  const ImU32 bar_color =
-      color_palette_.GetColor(ColorPalette::Key::kFlameHeader)
-          .value_or(kBlue70);
-  bool bar_found = false;
-  for (const auto& v : process_window->DrawList->VtxBuffer) {
-    if (v.col == bar_color) {
-      bar_found = true;
-      break;
-    }
-  }
-  EXPECT_TRUE(bar_found);
-
-  ImGui::EndFrame();
-}
-
-TEST_F(RealTimelineImGuiFixture,
-       DrawUtilizationAreaChart_ViewportEdgeMipTileClipsOccupancy) {
-  FlameChartTimelineData data;
-  constexpr int kNumLevels = 4;
-  constexpr int kEventsPerLevel = 512;
-  constexpr double kEventDurUs = 10.0;  // Total span [0, 5120] us
-  data.groups.push_back({.type = Group::Type::kFlame,
-                         .name = "Process Group",
-                         .start_level = 0,
-                         .nesting_level = kProcessNestingLevel,
-                         .expanded = true,
-                         .level_count = kNumLevels});
-
-  data.level_offsets.push_back(0);
-  int event_id = 0;
-  for (int lvl = 0; lvl < kNumLevels; ++lvl) {
-    for (int i = 0; i < kEventsPerLevel; ++i) {
-      data.level_event_indices.push_back(event_id);
-      data.entry_names.push_back("busy");
-      data.entry_levels.push_back(lvl);
-      data.entry_start_times.push_back(i * kEventDurUs);
-      data.entry_total_times.push_back(kEventDurUs);
-      data.entry_event_ids.push_back(event_id + 1);
-      data.entry_args.push_back({});
-      ++event_id;
-    }
-    data.level_offsets.push_back(event_id);
-  }
-
-  timeline_.SetTimelineData(std::move(data));
-  timeline_.set_data_time_range({0.0, 5120.0});
-
-  const ImU32 bar_color =
-      color_palette_.GetColor(ColorPalette::Key::kFlameHeader)
-          .value_or(kBlue70);
-
-  auto measure_chart_bar_height = [&](double visible_start,
-                                      double visible_end) -> float {
-    timeline_.SetVisibleRange({visible_start, visible_end});
-    ImGui::NewFrame();
-    timeline_.Draw();
-
-    ImGuiWindow* process_window = nullptr;
-    const std::string child_id = "TimelineChild_Process Group_0";
-    for (ImGuiWindow* w : ImGui::GetCurrentContext()->Windows) {
-      if (std::string(w->Name).find(child_id) != std::string::npos) {
-        process_window = w;
-        break;
-      }
-    }
-    if (process_window == nullptr) {
-      ImGui::EndFrame();
-      return 0.0f;
-    }
-
-    float min_y = std::numeric_limits<float>::max();
-    float max_y = std::numeric_limits<float>::lowest();
-    const float interior_x_limit = process_window->Pos.x + 500.0f;
-    for (const auto& v : process_window->DrawList->VtxBuffer) {
-      if (v.col == bar_color && v.pos.x < interior_x_limit) {
-        min_y = std::min(min_y, v.pos.y);
-        max_y = std::max(max_y, v.pos.y);
-      }
-    }
-    ImGui::EndFrame();
-    return (max_y > min_y) ? (max_y - min_y) : 0.0f;
-  };
-
-  // At MIP level 2, bin_width_us = 5120 / 2048 = 2.5 us. Choose a visible range
-  // where a 2.5 us bin ([1755.0, 1757.5]) starts inside the last pixel column
-  // and extends past visible_end, then compare interior bar height with a
-  // 1.25 us pan offset where it does not.
-  const float h_straddling = measure_chart_bar_height(100.6, 1755.6);
-  const float h_shifted = measure_chart_bar_height(101.85, 1756.85);
-  EXPECT_GT(h_straddling, 0.0f);
-  EXPECT_NEAR(h_straddling, h_shifted, 0.5f);
-}
-
 TEST_F(RealTimelineImGuiFixture, DrawFlameGroupPreview) {
   FlameChartTimelineData data;
   data.groups.push_back({.type = Group::Type::kFlame,
@@ -6255,71 +6064,70 @@ TEST_F(RealTimelineImGuiFixture, DrawFlowsWithZeroViewDuration) {
   ImGui::EndFrame();
 }
 
-TEST_F(RealTimelineImGuiFixture, DrawProcessTrackUtilizationAreaChart) {
+TEST_F(RealTimelineImGuiFixture, ProcessTrackDoesNotDrawUtilizationAreaChart) {
   FlameChartTimelineData data;
-  // Group 0: Process track at nesting level 0
-  data.groups.push_back({.type = Group::Type::kFlame,
-                         .name = "Process Track",
-                         .start_level = 0,
-                         .nesting_level = 1,
-                         .expanded = false});
-  // Group 1: Next track at same nesting level, starts at level 1.
-  // This will cause the loop in timeline.cc to break and set end_level to 1.
-  data.groups.push_back({.type = Group::Type::kFlame,
-                         .name = "Next Track",
-                         .start_level = 1,
-                         .nesting_level = 1,
-                         .expanded = false});
+  // Group 0: Process (starts at level 0, ends at level 0 - no direct events)
+  // Group 1: Thread (starts at level 0, ends at level 1 - 1 level of events)
+  data.groups = {{.type = Group::Type::kFlame,
+                  .name = "Process 1",
+                  .start_level = 0,
+                  .nesting_level = kProcessNestingLevel,
+                  .expanded = true,
+                  .child_indices = {1},
+                  .has_children = true},
+                 {.type = Group::Type::kFlame,
+                  .name = "Thread 1",
+                  .start_level = 0,
+                  .nesting_level = kThreadNestingLevel,
+                  .expanded = true,
+                  .parent_index = 0}};
 
-  data.level_offsets = {0, 1, 2};
-  data.level_event_indices = {0, 1};
+  data.level_offsets = {0, 1};
+  data.level_event_indices = {0};
 
-  // Event 0 on level 0
-  data.entry_names.push_back("event1");
-  data.entry_levels.push_back(0);
-  data.entry_start_times.push_back(10.0);
-  data.entry_total_times.push_back(20.0);
-  data.entry_args.push_back({});
+  data.entry_start_times = {10.0};
+  data.entry_total_times = {50.0};
+  data.entry_names = {"Event 1"};
+  data.entry_levels = {0};
+  data.entry_args = {{}};
 
-  // Event 1 on level 1
-  data.entry_names.push_back("event2");
-  data.entry_levels.push_back(1);
-  data.entry_start_times.push_back(40.0);
-  data.entry_total_times.push_back(20.0);
-  data.entry_args.push_back({});
-
-  timeline_.SetTimelineData(std::move(data));
+  timeline_.SetTimelineData(data);
   timeline_.SetVisibleRange({0.0, 100.0});
 
+  // 1. Check when Process 1 is expanded.
   ImGui::NewFrame();
   timeline_.Draw();
+  ImGui::EndFrame();
 
-  ImGuiWindow* utilization_window = nullptr;
-  const std::string child_id = "TimelineChild_Process Track_0";
+  ImGuiWindow* expanded_win = nullptr;
+  const std::string expanded_child_id = "TimelineChild_Process 1_0";
   for (ImGuiWindow* w : ImGui::GetCurrentContext()->Windows) {
-    if (std::string(w->Name).find(child_id) != std::string::npos) {
-      utilization_window = w;
+    if (std::string(w->Name).find(expanded_child_id) != std::string::npos) {
+      expanded_win = w;
       break;
     }
   }
-  ASSERT_NE(utilization_window, nullptr);
+  ASSERT_NE(expanded_win, nullptr);
+  EXPECT_EQ(expanded_win->DrawList->VtxBuffer.Size, 0);
 
-  // We count the total number of vertices instead of just checking for
-  // existence (as found_utilization_rect did) because mutants can cause extra
-  // shapes to be drawn (e.g., by incorrectly processing deeper levels).
-  // Counting allows us to detect these incorrect additions.
-  int blue_vtx_count = 0;
-  for (const auto& vtx : utilization_window->DrawList->VtxBuffer) {
-    if (vtx.col == 0xFFF7AA7B) {
-      blue_vtx_count++;
+  // 2. Check when Process 1 is collapsed.
+  data.groups[0].expanded = false;
+  timeline_.SetTimelineData(data);
+
+  ImGui::NewFrame();
+  timeline_.Draw();
+  ImGui::EndFrame();
+
+  ImGuiWindow* preview_win = nullptr;
+  const std::string preview_child_id = "TimelineChildPreview_Process 1_0";
+  for (ImGuiWindow* w : ImGui::GetCurrentContext()->Windows) {
+    if (std::string(w->Name).find(preview_child_id) != std::string::npos) {
+      preview_win = w;
+      break;
     }
   }
-
-  // We expect a specific number of vertices for level 0 only.
-  // If any mutant causes level 1 to be processed, this count will increase.
-  EXPECT_EQ(blue_vtx_count, 1328);
-
-  ImGui::EndFrame();
+  ASSERT_NE(preview_win, nullptr);
+  EXPECT_EQ(preview_win->DrawList->VtxBuffer.Size, 0);
 }
 
 TEST_F(RealTimelineImGuiFixture, DrawRulerRendersProperly) {
@@ -7205,24 +7013,6 @@ TEST_F(RealTimelineImGuiFixture,
             "MXU utilization");
   EXPECT_NEAR(std::any_cast<double>(hovered_event.at("counterValue")), 0.8,
               1e-5);
-
-  // 4. Hover over process header utilization chart at t = 25: ImGui tooltip is
-  // shown and emits process hover.
-  ImGuiWindow* proc_win =
-      find_child_window("TimelineChild_<late-finalization>_0");
-  ASSERT_NE(proc_win, nullptr);
-  ImGui::GetIO().MousePos = ImVec2(proc_win->Pos.x + proc_win->Size.x * 0.25f,
-                                   proc_win->Pos.y + proc_win->Size.y * 0.5f);
-  ImGui::NewFrame();
-  timeline_.Draw();
-  EXPECT_TRUE(IsTooltipShown());
-  ImGui::EndFrame();
-
-  EXPECT_EQ(std::any_cast<int>(hovered_event.at(kEventSelectedIndex)), -1);
-  EXPECT_EQ(std::any_cast<std::string>(hovered_event.at("trackType")),
-            "process");
-  EXPECT_EQ(std::any_cast<std::string>(hovered_event.at("trackName")),
-            "<late-finalization>");
 }
 
 TEST_F(RealTimelineImGuiFixture, PanLeftBeyondDataRangeShouldBeConstrained) {

@@ -5133,24 +5133,6 @@ void Timeline::DrawGroup(int group_index, double px_per_time_unit_val,
                          group_height);
       }
     } else if (group.type == Group::Type::kFlame) {
-      if (group.nesting_level == kProcessNestingLevel) {
-        ImDrawList* const draw_list = ImGui::GetWindowDrawList();
-        if (draw_list) {
-          // Find the next group that is NOT a child of the current group to
-          // determine the end level for the utilization chart.
-          int proc_end_level = timeline_data_.total_levels();
-          for (size_t i = group_index + 1; i < timeline_data_.groups.size();
-               ++i) {
-            if (timeline_data_.groups[i].nesting_level <= group.nesting_level) {
-              proc_end_level = timeline_data_.groups[i].start_level;
-              break;
-            }
-          }
-          DrawUtilizationAreaChart(group_index, start_level, proc_end_level,
-                                   px_per_time_unit_val, pos, group_height,
-                                   draw_list);
-        }
-      }
       const Pixel level_stride = kEventHeight + kEventPaddingBottom;
       const Pixel group_offset = group_offsets_[group_index];
 
@@ -5224,11 +5206,7 @@ void Timeline::DrawGroupPreview(int group_index, double px_per_time_unit_val) {
                          group_height);
       }
     } else if (group.type == Group::Type::kFlame) {
-      if (group.nesting_level == kProcessNestingLevel) {
-        DrawUtilizationAreaChart(group_index, start_level, end_level,
-                                 px_per_time_unit_val, pos, group_height,
-                                 draw_list);
-      } else {
+      if (group.nesting_level != kProcessNestingLevel) {
         DrawFlameGroupPreview(start_level, end_level, px_per_time_unit_val, pos,
                               group_height, draw_list);
       }
