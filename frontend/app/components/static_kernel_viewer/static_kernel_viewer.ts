@@ -175,6 +175,16 @@ export interface KernelCard {
   readonly bottom?: number;
 }
 
+/** Context menu popup opened by right-clicking a kernel row or tab. */
+export interface KernelContextMenu {
+  readonly entry: KernelEntry;
+  /** Whether the menu was opened from a row of the kernel rail or a tab. */
+  readonly source: 'rail' | 'tab';
+  /** Position relative to the component, in pixels. */
+  readonly left: number;
+  readonly top: number;
+}
+
 /** Colors assigned to module groups, in order (browser tab group colors). */
 const GROUP_COLORS = [
   '#1a73e8',
@@ -232,6 +242,10 @@ const CARD_WIDTH = 320;
 
 /** Distance between the details card and its kernel. */
 const CARD_GAP = 8;
+
+/** Approximate dimensions of the kernel context menu, for viewport clamping. */
+const CONTEXT_MENU_WIDTH = 180;
+const CONTEXT_MENU_HEIGHT = 44;
 
 /**
  * Delay before the tour starts on the first visit, so that the kernel list
@@ -647,6 +661,8 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
   highlightedTab: KernelTab | undefined = undefined;
   /** Details card of the hovered kernel row or tab. */
   hoverCard: KernelCard | undefined = undefined;
+  /** Context menu of a right-clicked kernel row or tab. */
+  contextMenu: KernelContextMenu | undefined = undefined;
   url = '';
   loadingKernels = false;
   loadFailed = false;
@@ -732,6 +748,15 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
   private readonly keydownListener = (event: KeyboardEvent) => {
     this.onWindowKeydown(event);
   };
+  private readonly pointerDownListener = (event: MouseEvent) => {
+    this.onWindowPointerOrClick(event);
+  };
+  private readonly windowClickListener = (event: MouseEvent) => {
+    this.onWindowPointerOrClick(event);
+  };
+  private readonly windowContextMenuListener = (event: MouseEvent) => {
+    this.onWindowContextMenu(event);
+  };
 
   get isRailExpanded(): boolean {
     return this.isRailPinned || this.isRailPeeking || this.isRailHeldOpen;
@@ -771,11 +796,17 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
     // ngAfterViewInit, which runs before this one. Registering afterwards lets
     // the shortcuts below skip keys the container already handled.
     window.addEventListener('keydown', this.keydownListener);
+    window.addEventListener('mousedown', this.pointerDownListener);
+    window.addEventListener('click', this.windowClickListener);
+    window.addEventListener('contextmenu', this.windowContextMenuListener);
   }
 
   ngOnDestroy(): void {
     this.isDestroyed = true;
     window.removeEventListener('keydown', this.keydownListener);
+    window.removeEventListener('mousedown', this.pointerDownListener);
+    window.removeEventListener('click', this.windowClickListener);
+    window.removeEventListener('contextmenu', this.windowContextMenuListener);
     clearTimeout(this.railTimer);
     clearTimeout(this.cardTimer);
     clearTimeout(this.highlightTimer);
@@ -931,6 +962,7 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
     this.hideCard();
+    this.closeContextMenu();
     this.tabs.splice(index, 1);
     if (tab === this.activeTab) {
       this.activeTab = undefined;
@@ -949,6 +981,8 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
     if (count === 0) {
       return;
     }
+    this.hideCard();
+    this.closeContextMenu();
     const current = this.selectedEntry?.index;
     const next =
       current === undefined
@@ -961,6 +995,7 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
 
   onKernelRowClick(entry: KernelEntry, event: MouseEvent): void {
     this.hideCard();
+    this.closeContextMenu();
     this.openEntry(entry, event.ctrlKey || event.metaKey);
   }
 
@@ -969,12 +1004,18 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
     if (event.button === 1) {
       event.preventDefault();
       this.hideCard();
+      this.closeContextMenu();
       this.openEntry(entry, true);
     }
   }
 
+  onKernelRowContextMenu(entry: KernelEntry, event: MouseEvent): void {
+    this.openContextMenu(entry, 'rail', event);
+  }
+
   onTabClick(tab: KernelTab): void {
     this.hideCard();
+    this.closeContextMenu();
     this.activateTab(tab);
   }
 
@@ -983,6 +1024,35 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
     if (event.button === 1) {
       event.preventDefault();
       this.closeTab(tab);
+    }
+  }
+
+  onTabContextMenu(tab: KernelTab, event: MouseEvent): void {
+    this.openContextMenu(tab.entry, 'tab', event);
+  }
+
+  /** Copies the kernel name of `entry` (or the context menu target) to the clipboard. */
+  copyKernelName(
+    entry: KernelEntry | undefined = this.contextMenu?.entry,
+  ): void {
+    this.closeContextMenu();
+    if (!entry || !navigator.clipboard?.writeText) {
+      return;
+    }
+    navigator.clipboard.writeText(entry.kernel).then(
+      () => {},
+      () => {
+        // Clipboard access can be denied; there is nothing else to do.
+      },
+    );
+  }
+
+  /** Closes the kernel context menu. */
+  closeContextMenu(): void {
+    const wasRailMenu = this.contextMenu?.source === 'rail';
+    this.contextMenu = undefined;
+    if (wasRailMenu && !this.isPointerInRail && !this.isFocusInRail) {
+      this.setRailPeeking(false, RAIL_COLLAPSE_DELAY_MS);
     }
   }
 
@@ -1047,14 +1117,18 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
 
   onRailScroll(): void {
     this.hideCardFrom('rail');
+    this.closeContextMenuFrom('rail');
   }
 
   onTabListScroll(): void {
     this.hideCardFrom('tab');
+    this.closeContextMenuFrom('tab');
   }
 
   onFilterChange(query: string): void {
     this.filterQuery = query;
+    this.hideCardFrom('rail');
+    this.closeContextMenuFrom('rail');
     this.updateVisibleGroups();
   }
 
@@ -1074,7 +1148,9 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
       this.dismissRail();
     } else if (event.key === 'Escape') {
       event.preventDefault();
-      if (this.filterQuery) {
+      if (this.contextMenu) {
+        this.closeContextMenu();
+      } else if (this.filterQuery) {
         this.clearFilter();
       } else {
         this.dismissRail();
@@ -1088,6 +1164,8 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
   }
 
   toggleGroup(group: KernelGroup): void {
+    this.hideCardFrom('rail');
+    this.closeContextMenuFrom('rail');
     if (this.collapsedModules.has(group.module)) {
       this.collapsedModules.delete(group.module);
     } else {
@@ -1104,6 +1182,7 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
     if (!this.isRailPinned) {
       this.clearFilter();
       this.hideCardFrom('rail');
+      this.closeContextMenuFrom('rail');
     }
     writeRailPinned(this.isRailPinned);
     this.notifyResize();
@@ -1111,11 +1190,18 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
 
   onRailMouseEnter(): void {
     this.isPointerInRail = true;
-    this.setRailPeeking(true, RAIL_EXPAND_DELAY_MS);
+    if (this.contextMenu?.source !== 'rail') {
+      this.setRailPeeking(true, RAIL_EXPAND_DELAY_MS);
+    }
   }
 
   onRailMouseLeave(): void {
     this.isPointerInRail = false;
+    if (this.contextMenu?.source === 'rail') {
+      clearTimeout(this.railTimer);
+      this.railTimer = undefined;
+      return;
+    }
     if (!this.isFocusInRail) {
       this.setRailPeeking(false, RAIL_COLLAPSE_DELAY_MS);
     }
@@ -1140,7 +1226,7 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
     this.isFocusInRail = false;
-    if (!this.isPointerInRail) {
+    if (!this.isPointerInRail && this.contextMenu?.source !== 'rail') {
       this.setRailPeeking(false, RAIL_COLLAPSE_DELAY_MS);
     }
   }
@@ -1155,6 +1241,7 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
   /** Expands the kernel rail and focuses its search box. */
   focusSearch(): void {
     this.hideCard();
+    this.closeContextMenu();
     this.setRailPeeking(true, 0);
     this.searchInput?.nativeElement.focus();
     this.searchInput?.nativeElement.select();
@@ -1192,6 +1279,7 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
     }
     clearTimeout(this.tourTimer);
     this.hideCard();
+    this.closeContextMenu();
     this.isTourOpen = true;
     tour.start(this.buildTourSummary(), {
       returnFocus: this.tourButton?.nativeElement,
@@ -1288,6 +1376,7 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
     this.highlightedTab = undefined;
     this.backgroundTabCount = 0;
     this.hideCard();
+    this.closeContextMenu();
     this.url = '';
     const initialEntry = this.findRequestedEntry() ?? this.entries[0];
     if (initialEntry) {
@@ -1350,6 +1439,7 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
     // the rail while it is open.
     this.clearFilter();
     this.hideCardFrom('rail');
+    this.closeContextMenuFrom('rail');
     this.releasePointerFocus('.kernel-rail');
   }
 
@@ -1574,6 +1664,7 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
         // The search only narrows down the rail while it is open.
         this.clearFilter();
         this.hideCardFrom('rail');
+        this.closeContextMenuFrom('rail');
         this.releasePointerFocus('.kernel-rail');
       }
       this.changeDetectorRef.markForCheck();
@@ -1592,6 +1683,7 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
     clearTimeout(this.railTimer);
     this.isRailPeeking = false;
     this.hideCardFrom('rail');
+    this.closeContextMenuFrom('rail');
   }
 
   /** Whether `event` is a pointer hover, or focus from the keyboard. */
@@ -1608,7 +1700,7 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
     clearTimeout(this.cardTimer);
     this.cardTimer = undefined;
     // The tour covers the page, and its card takes the place of details cards.
-    if (this.isTourOpen) {
+    if (this.isTourOpen || this.contextMenu) {
       return;
     }
     const show = () => {
@@ -1627,6 +1719,95 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
     if (this.hoverCard?.source === source) {
       this.hideCard();
     }
+  }
+
+  private openContextMenu(
+    entry: KernelEntry,
+    source: KernelContextMenu['source'],
+    event: MouseEvent,
+  ): void {
+    event.preventDefault();
+    this.hideCard();
+    if (source === 'rail') {
+      clearTimeout(this.railTimer);
+      this.railTimer = undefined;
+    } else if (this.contextMenu?.source === 'rail') {
+      this.closeContextMenu();
+    }
+    const host = this.elementRef.nativeElement.getBoundingClientRect();
+    const target =
+      event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+    const targetRect = target?.getBoundingClientRect();
+    const hasPointerPosition = event.clientX !== 0 || event.clientY !== 0;
+    const rawLeft = hasPointerPosition
+      ? event.clientX - host.left
+      : (targetRect?.left ?? host.left) - host.left + CARD_GAP;
+    let rawTop = event.clientY - host.top;
+    if (!hasPointerPosition) {
+      const belowTop = (targetRect?.bottom ?? host.top) - host.top + 4;
+      const aboveTop =
+        (targetRect?.top ?? host.top) - host.top - CONTEXT_MENU_HEIGHT - 4;
+      rawTop =
+        belowTop + CONTEXT_MENU_HEIGHT + CARD_GAP > host.height &&
+        aboveTop >= CARD_GAP
+          ? aboveTop
+          : belowTop;
+    }
+    const left =
+      host.width > CONTEXT_MENU_WIDTH + 2 * CARD_GAP
+        ? Math.min(
+            Math.max(rawLeft, CARD_GAP),
+            host.width - CONTEXT_MENU_WIDTH - CARD_GAP,
+          )
+        : Math.max(0, rawLeft);
+    const top =
+      host.height > CONTEXT_MENU_HEIGHT + 2 * CARD_GAP
+        ? Math.min(
+            Math.max(rawTop, CARD_GAP),
+            host.height - CONTEXT_MENU_HEIGHT - CARD_GAP,
+          )
+        : Math.max(0, rawTop);
+    this.contextMenu = {entry, source, left, top};
+  }
+
+  private closeContextMenuFrom(source: KernelContextMenu['source']): void {
+    if (this.contextMenu?.source === source) {
+      this.closeContextMenu();
+    }
+  }
+
+  private isInsideContextMenu(target: EventTarget | null): boolean {
+    if (!(target instanceof Node)) {
+      return false;
+    }
+    return Boolean(
+      this.elementRef.nativeElement
+        .querySelector('.kernel-context-menu')
+        ?.contains(target),
+    );
+  }
+
+  private onWindowPointerOrClick(event: MouseEvent): void {
+    if (!this.contextMenu || this.isInsideContextMenu(event.target)) {
+      return;
+    }
+    this.closeContextMenu();
+    this.changeDetectorRef.markForCheck();
+  }
+
+  private onWindowContextMenu(event: MouseEvent): void {
+    if (!this.contextMenu) {
+      return;
+    }
+    if (
+      event.target instanceof Element &&
+      this.elementRef.nativeElement.contains(event.target) &&
+      event.target.closest('.kernel-row, .kernel-tab, .kernel-context-menu')
+    ) {
+      return;
+    }
+    this.closeContextMenu();
+    this.changeDetectorRef.markForCheck();
   }
 
   private cardBesideRow(entry: KernelEntry, row: HTMLElement): KernelCard {
@@ -1700,12 +1881,45 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private onWindowKeydown(event: KeyboardEvent): void {
+    const wasContextMenuOpen = this.contextMenu !== undefined;
+    if (
+      this.contextMenu &&
+      this.isInsideContextMenu(event.target) &&
+      (event.key === 'Enter' || event.key === ' ') &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey
+    ) {
+      event.preventDefault();
+      this.copyKernelName(this.contextMenu.entry);
+      this.changeDetectorRef.markForCheck();
+      return;
+    }
+    if (
+      this.contextMenu &&
+      (event.key === 'ArrowDown' || event.key === 'ArrowUp') &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey &&
+      !isEditableTarget(event.target)
+    ) {
+      event.preventDefault();
+      this.elementRef.nativeElement
+        .querySelector<HTMLElement>('.copy-kernel-name-button')
+        ?.focus();
+      return;
+    }
     if (!MODIFIER_KEYS.has(event.key)) {
       this.hideCard();
       if (event.key !== 'Tab') {
+        this.closeContextMenu();
         this.releasePointerFocus('.kernel-rail, .kernel-bar');
       }
       this.changeDetectorRef.markForCheck();
+    }
+    if (wasContextMenuOpen && event.key === 'Escape') {
+      event.preventDefault();
+      return;
     }
     // The WASM viewer's capture listener calls preventDefault() on every key
     // once initialized, even keys it does not use (like K, [ and ]).
