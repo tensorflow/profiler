@@ -1,9 +1,30 @@
+import {CommonModule} from '@angular/common';
+import {FormsModule} from '@angular/forms';
+import {MatAutocompleteModule} from '@angular/material/autocomplete';
+import {MatButtonModule} from '@angular/material/button';
+import {MatCheckboxModule} from '@angular/material/checkbox';
+import {MatChipsModule} from '@angular/material/chips';
+import {
+  MatDialogActions,
+  MatDialogClose,
+  MatDialogContent,
+  MatDialogTitle,
+} from '@angular/material/dialog';
+import {MatDividerModule} from '@angular/material/divider';
+import {MatIconModule} from '@angular/material/icon';
+import {MatMenuModule} from '@angular/material/menu';
+import {MatProgressBarModule} from '@angular/material/progress-bar';
+import {MatTooltipModule} from '@angular/material/tooltip';
 import 'org_xprof/frontend/app/common/interfaces/window';
+import {SafePipe} from 'org_xprof/frontend/app/pipes/safe_pipe';
+import {FilterChips} from './filter_chips';
+import {FilterInput} from './filter_input';
 
 import {PlatformLocation} from '@angular/common';
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   ElementRef,
   inject,
@@ -93,7 +114,6 @@ import {
   STACK_TRACE_TOOL_NAME,
   TRACE_VIEWER_TOOL_NAME,
 } from './constants';
-import {FilterInput} from './filter_input';
 import {AdjacentNodesResponse} from './interfaces';
 import {
   FilterChangeEvent,
@@ -183,13 +203,35 @@ function loadFeatureFlagsFromStorage(): FeatureFlagWithValue[] {
 
 /** A trace viewer component. */
 @Component({
-  changeDetection: ChangeDetectionStrategy.Default,
-  standalone: false,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    CommonModule,
+    FilterChips,
+    FilterInput,
+    FormsModule,
+    MatAutocompleteModule,
+    MatButtonModule,
+    MatCheckboxModule,
+    MatChipsModule,
+    MatDialogActions,
+    MatDialogClose,
+    MatDialogContent,
+    MatDialogTitle,
+    MatDividerModule,
+    MatIconModule,
+    MatMenuModule,
+    MatProgressBarModule,
+    MatTooltipModule,
+    SafePipe,
+    TraceViewerContainer,
+  ],
   selector: 'trace-viewer',
   templateUrl: './trace_viewer.ng.html',
   styleUrls: ['./trace_viewer.scss'],
 })
 export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyed = new ReplaySubject<void>(1);
   private isDestroyed = false;
   private isInitializing = false;
@@ -562,6 +604,7 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
         }
         this.navigationEvent = {...params, ...queryParams};
         this.update(this.navigationEvent);
+        this.cdr.markForCheck();
       });
 
     // Event listeners are handled by TraceViewerContainer.
@@ -585,6 +628,7 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
       .pipe(takeUntil(this.destroyed))
       .subscribe((isAvailable) => {
         this.sourceCodeServiceIsAvailable = isAvailable;
+        this.cdr.markForCheck();
       });
   }
 
@@ -636,6 +680,7 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
           } as MainTraceData);
           this.container?.updateSearchResultCountText();
         }
+        this.cdr.markForCheck();
       });
   }
 
@@ -686,8 +731,10 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
       }
       this.update(this.navigationEvent);
       this.setupColorOnboarding();
+      this.cdr.markForCheck();
     } finally {
       this.isInitializing = false;
+      this.cdr.markForCheck();
     }
   }
 
@@ -767,6 +814,7 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
           this.updateFlowCategories();
           this.updateWasmFlowCategories();
           this.updateWasmProcessMappings();
+          this.cdr.markForCheck();
         });
       }
     } else {
@@ -807,6 +855,7 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
     if (this.areDetailsChanged(eventDetails)) {
       this.traceDetails = new Map(eventDetails);
       void this.update(this.navigationEvent);
+      this.cdr.markForCheck();
     }
   };
 
@@ -845,6 +894,7 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
       this.selectedEventProperties = [];
       this.selectionStartFormat = undefined;
       this.selectionExtentFormat = undefined;
+      this.cdr.markForCheck();
       return;
     }
     this.updateWasmProcessMappings();
@@ -891,6 +941,7 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
       this.addArgsToSelectedEvent(event.args);
     }
     this.maybeFetchAdjacentNodes();
+    this.cdr.markForCheck();
   }
 
   updateWasmProcessMappings() {
@@ -920,9 +971,11 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
       this.hostList = Array.from(uniqueHosts).sort();
     }
 
+    const nextProcesses: Record<string, string[]> = {...this.processes};
     for (const host of Object.keys(hostToProcessList)) {
-      this.processes[host] = Array.from(hostToProcessList[host]).sort();
+      nextProcesses[host] = Array.from(hostToProcessList[host]).sort();
     }
+    this.processes = nextProcesses;
   }
 
   onEventsSelected(event: EventsSelectedEventDetail | null) {
@@ -931,6 +984,7 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
       this.selectedEventProperties = [];
       this.selectionStartFormat = undefined;
       this.selectionExtentFormat = undefined;
+      this.cdr.markForCheck();
       return;
     }
 
@@ -960,6 +1014,7 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
       this.selectedEventProperties = [];
       this.eventDetailColumns = [...DEFAULT_EVENT_DETAIL_COLUMNS];
     }
+    this.cdr.markForCheck();
   }
 
   onSearchEvents(detail: SearchEventsEventDetail): void {
@@ -975,6 +1030,7 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
   onInitializeWasm() {
     setTimeout(() => {
       this.initializeWasmApp();
+      this.cdr.markForCheck();
     });
   }
 
@@ -1022,6 +1078,7 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
           this.eventArgsCache.set(cacheKey, details);
           this.hoveredEventArgs = {...details.rawEvent.args};
         }
+        this.cdr.markForCheck();
       });
   }
 
@@ -1078,6 +1135,7 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
           this.eventArgsCache.set(cacheKey, details);
           this.applyEventDetails(details);
         }
+        this.cdr.markForCheck();
       });
   }
 
@@ -1366,6 +1424,7 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
             targetModuleName: module,
           });
         }
+        this.cdr.markForCheck();
       });
   }
 
@@ -1534,13 +1593,16 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onFilterAdd(filter: FilterEntry) {
-    this.selectedFilters.push(filter);
+    this.selectedFilters = [...this.selectedFilters, filter];
     this.refreshDataAfterFilterChange();
   }
 
   onFilterRemove(event: FilterRemoveEvent) {
     const {index} = event;
-    this.selectedFilters.splice(index, 1);
+    this.selectedFilters = [
+      ...this.selectedFilters.slice(0, index),
+      ...this.selectedFilters.slice(index + 1),
+    ];
     this.refreshDataAfterFilterChange();
   }
 
@@ -1557,7 +1619,9 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
     if (!value.length || value === this.selectedFilters[index].value) {
       return;
     }
-    this.selectedFilters[index].value = value;
+    this.selectedFilters = this.selectedFilters.map((f, i) =>
+      i === index ? {...f, value} : f,
+    );
     this.refreshDataAfterFilterChange();
   }
 
@@ -1784,21 +1848,25 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
     });
     this.settingsDialogRef = dialogRef;
 
-    dialogRef?.afterClosed().subscribe((result: string | undefined) => {
-      this.settingsDialogRef = null;
-      if (result && this.traceViewerModule) {
-        this.selectedPalette = result;
-        if (result === CUSTOM_PALETTE_NAME) {
-          this.saveCustomColors();
-          this.applyCustomColors();
-        } else {
-          this.traceViewerModule?.SetPalette?.(result);
+    dialogRef
+      ?.afterClosed()
+      .pipe(takeUntil(this.destroyed))
+      .subscribe((result: string | undefined) => {
+        this.settingsDialogRef = null;
+        if (result && this.traceViewerModule) {
+          this.selectedPalette = result;
+          if (result === CUSTOM_PALETTE_NAME) {
+            this.saveCustomColors();
+            this.applyCustomColors();
+          } else {
+            this.traceViewerModule?.SetPalette?.(result);
+          }
+          window.localStorage.setItem(COLOR_PALETTE_STORAGE_KEY, result);
         }
-        window.localStorage.setItem(COLOR_PALETTE_STORAGE_KEY, result);
-      }
-      this.loadGeneralSettings();
-      this.loadCustomColors();
-    });
+        this.loadGeneralSettings();
+        this.loadCustomColors();
+        this.cdr.markForCheck();
+      });
   }
 
   saveColorSettings(): void {
@@ -1906,6 +1974,7 @@ export class TraceViewer implements OnInit, AfterViewInit, OnDestroy {
           setTimeout(() => {
             if (!this.destroyed.isStopped) {
               this.showColorOnboarding = true;
+              this.cdr.markForCheck();
             }
           }, 2000); // Delay 2 seconds after load complete
           window.removeEventListener(
