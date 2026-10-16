@@ -46,6 +46,7 @@ wasm_cc_library(
     srcs = ["time_range.cc"],
     hdrs = ["time_range.h"],
     deps = [
+        ":constants",
         "@com_google_absl//absl/log",
         "@org_xprof//frontend/app/components/trace_viewer_v2:animation",
         "@org_xprof//frontend/app/components/trace_viewer_v2/trace_helper:trace_event",
@@ -56,6 +57,7 @@ cc_test(
     name = "time_range_test",
     srcs = ["time_range_test.cc"],
     deps = [
+        ":constants",
         ":time_range",
         "@com_google_googletest//:gtest_main",
         "@org_xprof//frontend/app/components/trace_viewer_v2:animation",

@@ -1,9 +1,11 @@
 #include "frontend/app/components/trace_viewer_v2/timeline/time_range.h"
 
 #include <cmath>
+#include <optional>
 
 #include <gtest/gtest.h>
 #include "frontend/app/components/trace_viewer_v2/animation.h"
+#include "frontend/app/components/trace_viewer_v2/timeline/constants.h"
 
 namespace traceviewer {
 namespace {
@@ -332,6 +334,25 @@ TEST(TimeRangeTest, ContainsWithTolerance_ZeroBoundary) {
   TimeRange inner_bad(large_negative, 100.0);
 
   EXPECT_FALSE(outer.Contains(inner_bad));
+}
+
+TEST(TimeRangeTest,
+     GetXpressSandboxClampedCenterReturnsCenterWhenDurationMeetsThreshold) {
+  TimeRange range(10.0, 20.0);
+  EXPECT_EQ(range.GetXpressSandboxClampedCenter(), std::make_optional(15.0));
+
+  TimeRange boundary_range(0.0, kXpressSandboxMinHighlightUs);
+  EXPECT_EQ(boundary_range.GetXpressSandboxClampedCenter(),
+            std::make_optional(kXpressSandboxMinHighlightUs / 2.0));
+}
+
+TEST(TimeRangeTest,
+     GetXpressSandboxClampedCenterReturnsNulloptWhenDurationBelowThreshold) {
+  TimeRange sub_threshold_range(0.0, kXpressSandboxMinHighlightUs / 2.0);
+  EXPECT_EQ(sub_threshold_range.GetXpressSandboxClampedCenter(), std::nullopt);
+
+  TimeRange zero_range(10.0, 10.0);
+  EXPECT_EQ(zero_range.GetXpressSandboxClampedCenter(), std::nullopt);
 }
 
 }  // namespace

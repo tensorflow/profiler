@@ -3,10 +3,9 @@
 
 #include <algorithm>
 #include <cmath>
-#include <functional>
-#include <utility>
+#include <optional>
 
-#include "frontend/app/components/trace_viewer_v2/animation.h"
+#include "frontend/app/components/trace_viewer_v2/timeline/constants.h"
 #include "frontend/app/components/trace_viewer_v2/trace_helper/trace_event.h"
 
 namespace traceviewer {
@@ -59,6 +58,13 @@ class TimeRange {
   Microseconds duration() const { return end_ - start_; }
 
   Microseconds center() const { return start_ + duration() / 2.0; }
+
+  std::optional<Microseconds> GetXpressSandboxClampedCenter() const {
+    if (duration() >= kXpressSandboxMinHighlightUs) {
+      return center();
+    }
+    return std::nullopt;
+  }
 
   // Expands this time range to include the given time range.
   void Encompass(const TimeRange& other) {

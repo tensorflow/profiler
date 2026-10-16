@@ -90,6 +90,7 @@ inline constexpr double kEpsilon = 0.001;
 inline constexpr ImU32 kCounterHoverColor = kBlue80;
 inline constexpr ImU32 kHoverMaskColor = kTransparentWhiteColor;
 inline constexpr ImU32 kSelectedBorderColor = kBlueColor;
+inline constexpr Microseconds kXpressSandboxMinHighlightUs = 0.01;
 inline constexpr Pixel kCounterHoverThickness = 3.5f;
 // The arrows between the selected HLO op and its operands and consumers run
 // up or down from a bar, along a lane outside the rows involved, and up or
