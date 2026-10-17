@@ -287,10 +287,10 @@ http_archive(
     name = "xla",
     patch_args = ["-p1"],
     patches = ["//third_party:xla.patch"],
-    sha256 = "445fcda34044166cd145cd0c764ba437ac55da4f7c1c47edd9f7629af369fae9",
-    strip_prefix = "xla-0e4e6b63d1d41fad4dccf2dcd9e84535b1ede2f0",
+    sha256 = "95ec0daa8f3edb4ab2aba4b3fa68f46e1e30bb645222f87bec24d52471e283bc",
+    strip_prefix = "xla-0a1ec466320a2f8b234693a326227961525d92e6",
     urls = [
-        "https://github.com/openxla/xla/archive/0e4e6b63d1d41fad4dccf2dcd9e84535b1ede2f0.zip",
+        "https://github.com/openxla/xla/archive/0a1ec466320a2f8b234693a326227961525d92e6.zip",
     ],
 )
 
@@ -306,6 +306,10 @@ xla_workspace3()
 load("@bazel_features//:deps.bzl", "bazel_features_deps")
 
 bazel_features_deps()
+
+load("@rules_cc//cc:extensions.bzl", "compatibility_proxy_repo")
+
+compatibility_proxy_repo()
 
 _GRPC_PATCHES = [
     "@xla//third_party/grpc:grpc.patch",
