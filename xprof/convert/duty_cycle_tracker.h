@@ -32,6 +32,8 @@ class DutyCycleTracker {
   void AddInterval(tsl::profiler::Timespan time_span, bool is_active);
   void Union(const DutyCycleTracker& other);
   uint64_t GetActiveTimePs() const;
+  // Returns the active time that falls within the given window.
+  uint64_t GetActiveTimePs(tsl::profiler::Timespan window) const;
   uint64_t GetIdleTimePs() const;
   uint64_t GetDurationPs() const { return total_time_span_.duration_ps(); }
   double DutyCycle() const {

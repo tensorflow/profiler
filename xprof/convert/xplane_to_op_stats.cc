@@ -15,6 +15,7 @@ limitations under the License.
 
 #include "xprof/convert/xplane_to_op_stats.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -33,8 +34,10 @@ limitations under the License.
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/match.h"
+#include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "absl/strings/strip.h"
 #include "xla/hlo/ir/hlo_opcode.h"
 #include "xla/tsl/profiler/convert/xla_op_utils.h"
 #include "xla/tsl/profiler/utils/math_utils.h"
@@ -75,6 +78,7 @@ limitations under the License.
 #include "xprof/utils/hlo_module_map.h"
 #include "xprof/utils/hlo_proto_map.h"
 #include "xprof/utils/kernel_stats_utils.h"
+#include "xprof/utils/op_metrics_db_utils.h"
 #include "xprof/utils/op_utils.h"
 #include "xprof/utils/xprof_gpu_cost_analysis_types.h"
 
@@ -87,6 +91,18 @@ using tsl::profiler::FindPlanesWithPrefix;
 using tsl::profiler::FindTensorCorePlanes;
 using ::tsl::profiler::kGpuPlanePrefix;
 using ::tsl::profiler::kTpuPlanePrefix;
+
+// Name prefix of the SparseCore Tile Execution Core (TEC) op lines, e.g.
+// "TEC 0".
+constexpr absl::string_view kSparseCoreTecLinePrefix = "TEC ";
+
+// Returns true for the SparseCore TEC op lines ("TEC 0", "TEC 1", ...), and
+// false for other lines with the same prefix, such as "TEC TraceMe 0".
+bool IsSparseCoreTecOpLine(absl::string_view line_name) {
+  uint32_t tec_index;
+  return absl::ConsumePrefix(&line_name, kSparseCoreTecLinePrefix) &&
+         absl::SimpleAtoi(line_name, &tec_index);
+}
 
 std::string Hostname(const XSpace& space) {
   if (space.hostnames().empty()) return "localhost";
@@ -395,8 +411,64 @@ void UpdateFlatOpMetricsDbFromHloModuleMap(FlatOpMetricsDb& op_metrics_db,
 DutyCycleTrackers ConstructDutyCycleTrackers(XPlaneVisitor& visitor) {
   DutyCycleTracker duty_cycle_tracker;
   DutyCycleTracker duty_cycle_hc_tracker;
+  struct OpEventNode {
+    tsl::profiler::Timespan timespan;
+    uint64_t cursor_ps = 0;
+    bool is_active = false;
+    bool is_active_hc = false;
+    bool has_active_descendant = false;
+    // True for a SparseCore event without an HLO category, such as an HLO
+    // module event on a TEC line. Once it has an active child, only its
+    // children count, so its own time is idle. (Note: if a tile reports a
+    // module marker without any active op markers inside it, or an
+    // unsymbolized op wraps only an off-duty wait, the unoccluded part of the
+    // parent still counts as active.)
+    bool is_idle_if_parent = false;
+    std::vector<tsl::profiler::Timespan> unoccluded_spans;
+  };
+  auto flush_op_event_node = [&](const OpEventNode& node) {
+    duty_cycle_tracker.AddInterval(node.timespan, /*is_active=*/false);
+    duty_cycle_hc_tracker.AddInterval(node.timespan, /*is_active=*/false);
+    if (!node.is_active && !node.is_active_hc) {
+      return;
+    }
+    for (const tsl::profiler::Timespan& span : node.unoccluded_spans) {
+      duty_cycle_tracker.AddInterval(span, node.is_active);
+      duty_cycle_hc_tracker.AddInterval(span, node.is_active_hc);
+    }
+    if (node.cursor_ps < node.timespan.end_ps()) {
+      tsl::profiler::Timespan tail_span =
+          tsl::profiler::Timespan::FromEndPoints(node.cursor_ps,
+                                                 node.timespan.end_ps());
+      duty_cycle_tracker.AddInterval(tail_span, node.is_active);
+      duty_cycle_hc_tracker.AddInterval(tail_span, node.is_active_hc);
+    }
+  };
+  auto link_parent_child = [&](OpEventNode& parent, OpEventNode& child) {
+    if (child.is_active || child.has_active_descendant) {
+      parent.has_active_descendant = true;
+      if (parent.is_idle_if_parent) {
+        parent.is_active = false;
+        parent.is_active_hc = false;
+      }
+    }
+    if (child.timespan.begin_ps() > parent.cursor_ps) {
+      parent.unoccluded_spans.push_back(tsl::profiler::Timespan::FromEndPoints(
+          parent.cursor_ps, child.timespan.begin_ps()));
+    }
+    parent.cursor_ps = std::max(parent.cursor_ps, child.timespan.end_ps());
+  };
   visitor.ForEachLine([&](const XLineVisitor& line) {
-    if (line.Name() == tsl::profiler::kXlaOpLineName) {
+    if (line.Name() == tsl::profiler::kXlaOpLineName ||
+        line.Name() == tsl::profiler::kSparseCoreOpLineName ||
+        IsSparseCoreTecOpLine(line.Name())) {
+      const bool is_tc_line = (line.Name() == tsl::profiler::kXlaOpLineName);
+      tsl::profiler::AncestorStack<OpEventNode> event_stack(
+          flush_op_event_node,
+          [](const OpEventNode& parent, const OpEventNode& child) {
+            return parent.timespan.Includes(child.timespan);
+          },
+          link_parent_child);
       line.ForEachEvent([&](const XEventVisitor& event) {
         auto hlo_category_stat =
             event.Metadata().GetStat(StatType::kHloCategory);
@@ -404,28 +476,32 @@ DutyCycleTrackers ConstructDutyCycleTrackers(XPlaneVisitor& visitor) {
           hlo_category_stat = event.GetStat(StatType::kHloCategory);
         }
 
-        duty_cycle_tracker.AddInterval(
-            event.GetTimespan(),
-            !(hlo_category_stat &&
-              tsl::profiler::IsOffDutyOp(hlo_category_stat->StrOrRefValue())));
+        // For HLO ops, Name() is the full HLO text (operands included), so
+        // only the short op name is matched.
+        absl::string_view op_name =
+            event.HasDisplayName() ? event.DisplayName() : event.Name();
+        bool is_off_duty =
+            (hlo_category_stat &&
+             tsl::profiler::IsOffDutyOp(hlo_category_stat->StrOrRefValue())) ||
+            IsSyncWaitDoneOp(op_name);
 
         bool is_custom_call =
-            hlo_category_stat &&
+            is_tc_line && hlo_category_stat &&
             hlo_category_stat->StrOrRefValue() ==
                 xla::HloOpcodeString(xla::HloOpcode::kCustomCall);
         bool is_off_duty_hc =
-            hlo_category_stat &&
-            (tsl::profiler::IsOffDutyOp(hlo_category_stat->StrOrRefValue()) ||
-             (is_custom_call && xprof::IsCustomCallEventOffDuty(event)));
-        duty_cycle_hc_tracker.AddInterval(event.GetTimespan(), !is_off_duty_hc);
+            is_off_duty ||
+            (is_custom_call && xprof::IsCustomCallEventOffDuty(event));
+        tsl::profiler::Timespan span = event.GetTimespan();
+        event_stack.Push(OpEventNode{
+            .timespan = span,
+            .cursor_ps = span.begin_ps(),
+            .is_active = !is_off_duty,
+            .is_active_hc = !is_off_duty_hc,
+            .is_idle_if_parent = !is_tc_line && !hlo_category_stat,
+        });
       });
-    } else if (line.Name() == tsl::profiler::kSparseCoreOpLineName) {
-      line.ForEachEvent([&](const XEventVisitor& event) {
-        //  TODO(b/397774568): Add support for SC off-duty ops.
-        duty_cycle_tracker.AddInterval(event.GetTimespan(), /*is_active=*/true);
-        duty_cycle_hc_tracker.AddInterval(event.GetTimespan(),
-                                          /*is_active=*/true);
-      });
+      event_stack.Flush();
     } else if (line.Name() == tsl::profiler::kXlaModuleLineName ||
                line.Name() == tsl::profiler::kSparseCoreModuleLineName) {
       line.ForEachEvent([&](const XEventVisitor& event) {
@@ -518,6 +594,12 @@ absl::StatusOr<OpStats> ConvertXSpaceToOpStats(const XSpace& space,
   }
   DutyCycleCombiner duty_cycle_combiner;
   DutyCycleCombiner duty_cycle_hc_combiner;
+  struct DeviceTraceResult {
+    DutyCycleTracker duty_cycle_tracker;
+    DutyCycleTracker duty_cycle_hc_tracker;
+    std::optional<CoreDetails> core_details;
+  };
+  std::vector<DeviceTraceResult> device_trace_results;
   // TODO(b/161942993) parallelize XPlane processing per thread.
   HloModuleMap hlo_module_map;
 
@@ -718,13 +800,6 @@ absl::StatusOr<OpStats> ConvertXSpaceToOpStats(const XSpace& space,
     }
 
     // Device Trace generation.
-    struct DeviceTraceResult {
-      DutyCycleTracker duty_cycle_tracker;
-      DutyCycleTracker duty_cycle_hc_tracker;
-      std::optional<CoreDetails> core_details;
-    };
-    std::vector<DeviceTraceResult> device_trace_results;
-
     // Ensure device_trace threads are joined and results processed when the
     // function exits.
     auto device_trace_cleanup = absl::MakeCleanup(
@@ -859,6 +934,71 @@ absl::StatusOr<OpStats> ConvertXSpaceToOpStats(const XSpace& space,
       // already dropped the incomplete steps at both beginning and end.
       *op_stats.mutable_step_db() = ConvertStepEventsToStepDb(
           has_device, /*maybe_drop_incomplete_steps=*/false, step_events);
+      // A SparseCore step's idle time is the part of the step that is neither
+      // active, per the SparseCore duty cycle, nor infeed or outfeed. Its other
+      // off-duty categories, such as sync waits, become idle time.
+      GenericStepBreakdown generic;
+      for (PerCoreStepInfo& per_core_step_info :
+           *op_stats.mutable_step_db()->mutable_step_sequence()) {
+        auto& step_info_map = *per_core_step_info.mutable_step_info_per_core();
+        auto step_events_it = step_events.find(per_core_step_info.step_num());
+        for (size_t i = 0; i < device_planes.size(); ++i) {
+          if (!tsl::profiler::GetSparseCoreId(device_planes[i]->name())
+                   .has_value()) {
+            continue;
+          }
+          uint32_t sc_core_id = kSparseCoreIndexStart + device_planes[i]->id();
+          auto it = step_info_map.find(sc_core_id);
+          if (it == step_info_map.end()) {
+            if (step_events_it == step_events.end()) continue;
+            tsl::profiler::Timespan marker_span =
+                step_events_it->second.StepTimeOnCore(sc_core_id);
+            if (marker_span.Empty()) continue;
+            StepInfoResult sc_step_info;
+            sc_step_info.set_step_num(per_core_step_info.step_num());
+            sc_step_info.set_begin_ps(marker_span.begin_ps());
+            sc_step_info.set_duration_ps(marker_span.duration_ps());
+            generic.Clear();
+            sc_step_info.mutable_step_breakdown()->PackFrom(generic);
+            it = step_info_map.emplace(sc_core_id, std::move(sc_step_info))
+                     .first;
+          }
+          StepInfoResult& sc_step_info = it->second;
+          generic.Clear();
+          if (!sc_step_info.step_breakdown().UnpackTo(&generic)) continue;
+          tsl::profiler::Timespan sc_step_span(sc_step_info.begin_ps(),
+                                               sc_step_info.duration_ps());
+          uint64_t sc_active_ps = std::min(
+              sc_step_span.duration_ps(),
+              device_trace_results[i].duty_cycle_tracker.GetActiveTimePs(
+                  sc_step_span));
+          auto& category_ps = *generic.mutable_category_ps();
+          uint64_t infeed_outfeed_ps = 0;
+          uint64_t active_category_ps = 0;
+          for (auto cat_it = category_ps.begin();
+               cat_it != category_ps.end();) {
+            if (cat_it->first == tsl::profiler::kHloInfeed ||
+                cat_it->first == tsl::profiler::kHloOutfeed) {
+              infeed_outfeed_ps += cat_it->second;
+              ++cat_it;
+            } else if (tsl::profiler::IsOffDutyOp(cat_it->first) ||
+                       cat_it->first == kIdle) {
+              category_ps.erase(cat_it++);
+            } else {
+              active_category_ps += cat_it->second;
+              ++cat_it;
+            }
+          }
+          if (sc_active_ps > active_category_ps) {
+            category_ps[std::string(tsl::profiler::kSparseCoreOpLineName)] +=
+                sc_active_ps - active_category_ps;
+          }
+          uint64_t non_idle_ps = std::min(sc_step_span.duration_ps(),
+                                          sc_active_ps + infeed_outfeed_ps);
+          category_ps[kIdle] = sc_step_span.duration_ps() - non_idle_ps;
+          sc_step_info.mutable_step_breakdown()->PackFrom(generic);
+        }
+      }
       auto set_precision_stats = [&](auto* db) {
         *db->mutable_precision_stats() = ComputePrecisionStats(step_events);
       };

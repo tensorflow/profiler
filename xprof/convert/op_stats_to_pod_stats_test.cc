@@ -180,6 +180,35 @@ TEST(OpStatsToPodStats, TpuPodStatsFromCategoryBreakdown) {
   EXPECT_EQ(GetGenericEventTypeStr(kInput), record2.bottleneck());
 }
 
+TEST(OpStatsToPodStats, TpuPodStatsReportsAsyncDoneAsDeviceToDevice) {
+  OpStats op_stats;
+  PerCoreStepInfo* info = op_stats.mutable_step_db()->add_step_sequence();
+  info->set_step_num(kStepNum);
+  StepInfoResult& step_info = (*info->mutable_step_info_per_core())[kCoreId];
+  step_info.set_step_num(kStepNum);
+  step_info.set_duration_ps(kStepTimePs);
+  GenericStepBreakdown breakdown;
+  auto& category_ps = *breakdown.mutable_category_ps();
+  category_ps["convolution"] = 600;
+  category_ps["async-done"] = 300;
+  category_ps["IDLE"] = 100;
+  step_info.mutable_step_breakdown()->PackFrom(breakdown);
+  (*op_stats.mutable_core_id_to_details())[kCoreId].set_hostname(kHostname);
+
+  PodStatsDatabase pod_stats_db = ConvertOpStatsToPodStats(op_stats);
+  ASSERT_EQ(1, pod_stats_db.pod_stats_record_size());
+  const auto& step_breakdown =
+      pod_stats_db.pod_stats_record(0).step_breakdown_us();
+  // Async-done time is off-duty, so it is not compute. It is reported as
+  // device-to-device time, and the breakdown still adds up to the step time.
+  EXPECT_NEAR(tsl::profiler::PicoToMicro(600),
+              step_breakdown.at(kDeviceCompute), kMaxError);
+  EXPECT_NEAR(tsl::profiler::PicoToMicro(300),
+              step_breakdown.at(kDeviceToDevice), kMaxError);
+  EXPECT_NEAR(tsl::profiler::PicoToMicro(100), step_breakdown.at(kAllOthers),
+              kMaxError);
+}
+
 }  // namespace
 }  // namespace profiler
 }  // namespace tensorflow

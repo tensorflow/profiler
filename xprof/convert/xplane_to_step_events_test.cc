@@ -16,11 +16,13 @@ limitations under the License.
 #include "xprof/convert/xplane_to_step_events.h"
 
 #include <cstdint>
+#include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/str_cat.h"
+#include "xla/tsl/profiler/convert/xla_op_utils.h"
 #include "xla/tsl/profiler/utils/group_events.h"
 #include "xla/tsl/profiler/utils/preprocess_xplane.h"
 #include "xla/tsl/profiler/utils/tf_xplane_visitor.h"
@@ -300,6 +302,11 @@ TEST(ConvertXPlaneToStepEvents, SparseCoreShouldHaveStepMarkers) {
                               /*event_name=*/"Step 1",
                               /*offset_ps=*/0, /*duration_ps=*/1000,
                               {{StatType::kGroupId, int64_t{1}}});
+  tsl::profiler::CreateXEventMetadata(&sc_plane_builder, "Step 2");
+  tsl::profiler::CreateXEvent(&sc_plane_builder, &step_line,
+                              /*event_name=*/"Step 2",
+                              /*offset_ps=*/1000, /*duration_ps=*/1000,
+                              {{StatType::kGroupId, int64_t{2}}});
   XLineBuilder op_line = sc_plane_builder.GetOrCreateLine(1);
   op_line.SetName(tsl::profiler::kSparseCoreOpLineName);
   tsl::profiler::CreateXEventMetadata(
@@ -310,8 +317,8 @@ TEST(ConvertXPlaneToStepEvents, SparseCoreShouldHaveStepMarkers) {
                               /*offset_ps=*/100, /*duration_ps=*/880,
                               {{StatType::kGroupId, int64_t{1}}});
   StepEvents step_events = ConvertDeviceTraceXPlaneToStepEvents(*sc_plane);
-  EXPECT_EQ(step_events.size(), 1);
-  EXPECT_TRUE(step_events.contains(1));
+  EXPECT_EQ(step_events.size(), 2);
+  ASSERT_TRUE(step_events.contains(1));
   StepDetails step_1 = step_events[/*group_id=*/1];
   EXPECT_EQ(step_1.Markers().size(), 1);
   EXPECT_EQ(step_1.StepTime(), tsl::profiler::Timespan(0, 1000));
@@ -323,6 +330,11 @@ TEST(ConvertXPlaneToStepEvents, SparseCoreShouldHaveStepMarkers) {
   EXPECT_EQ(sparse_core_op->time_ps(), 880);
   EXPECT_EQ(sparse_core_op->self_time_ps(), 880);
   EXPECT_EQ(sparse_core_op->hlo_module_id(), 1);
+  ASSERT_TRUE(step_events.contains(2));
+  const StepDetails& step_2 = step_events[/*group_id=*/2];
+  EXPECT_EQ(step_2.Markers().size(), 1);
+  EXPECT_EQ(step_2.StepTime(), tsl::profiler::Timespan(1000, 1000));
+  EXPECT_TRUE(step_2.PerCoreOpMetricsDb().empty());
 }
 
 TEST(ConvertXPlaneToStepEvents, SparseCoreShouldHaveStepMarkers_SkipOpMetrics) {
@@ -427,6 +439,90 @@ TEST(ConvertXPlaneToStepEvents, TpuDevicePlaneNoStepLine) {
 
   StepEvents step_events = ConvertDeviceTraceXPlaneToStepEvents(raw_plane);
   EXPECT_EQ(step_events.size(), 0);
+}
+
+TEST(ConvertXPlaneToStepEvents, TpuSyncWaitOpsAreMatchedByShortOpName) {
+  XPlane raw_plane;
+  XPlaneBuilder plane(&raw_plane);
+  int64_t device_id = 1;
+  plane.SetId(device_id);
+  plane.SetName("/device:TPU:0");
+  XLineBuilder op_line = plane.GetOrCreateLine(0);
+  op_line.SetName(tsl::profiler::kXlaOpLineName);
+  const XStatMetadata& program_id_stat =
+      *plane.GetOrCreateStatMetadata(GetStatTypeStr(StatType::kProgramId));
+  const XStatMetadata& symbol_id_stat =
+      *plane.GetOrCreateStatMetadata(GetStatTypeStr(StatType::kSymbolId));
+  const XStatMetadata& group_id_stat =
+      *plane.GetOrCreateStatMetadata(GetStatTypeStr(StatType::kGroupId));
+  const XStatMetadata& hlo_category_stat =
+      *plane.GetOrCreateStatMetadata(GetStatTypeStr(StatType::kHloCategory));
+  // HLO op events are named by their full HLO text and display the short op
+  // name. This sync wait has no off-duty category, so only its short name marks
+  // it as a wait.
+  {
+    XEventMetadata* event_metadata = plane.GetOrCreateEventMetadata(
+        "%call-done.3 = f32[8]{0} call-done(f32[8]{0} %call-start.3)");
+    event_metadata->set_display_name("call-done.3");
+    XStatsBuilder<XEventMetadata> stats(event_metadata, &plane);
+    stats.AddStatValue(program_id_stat, 1);
+    stats.AddStatValue(symbol_id_stat, 1);
+    XEventBuilder event = op_line.AddEvent(*event_metadata);
+    event.SetOffsetPs(0);
+    event.SetDurationPs(30);
+    event.AddStatValue(group_id_stat, 1);
+  }
+  // This fusion consumes the call-done result, so its HLO text names
+  // %call-done.3 as an operand. It does real work and keeps its category.
+  {
+    XEventMetadata* event_metadata = plane.GetOrCreateEventMetadata(
+        "%fusion.5 = f32[8]{0} fusion(f32[8]{0} %call-done.3), kind=kLoop");
+    event_metadata->set_display_name("fusion.5");
+    XStatsBuilder<XEventMetadata> stats(event_metadata, &plane);
+    stats.AddStatValue(program_id_stat, 1);
+    stats.AddStatValue(symbol_id_stat, 2);
+    stats.AddStatValue(hlo_category_stat, "loop fusion");
+    XEventBuilder event = op_line.AddEvent(*event_metadata);
+    event.SetOffsetPs(30);
+    event.SetDurationPs(60);
+    event.AddStatValue(group_id_stat, 1);
+  }
+  // A wait that already has a more specific off-duty category keeps it.
+  {
+    XEventMetadata* event_metadata = plane.GetOrCreateEventMetadata(
+        "%host-send-done.2 = token[] send-done(token[] %host-send.2)");
+    event_metadata->set_display_name("host-send-done.2");
+    XStatsBuilder<XEventMetadata> stats(event_metadata, &plane);
+    stats.AddStatValue(program_id_stat, 1);
+    stats.AddStatValue(symbol_id_stat, 3);
+    stats.AddStatValue(hlo_category_stat, tsl::profiler::kHloHostSendDone);
+    XEventBuilder event = op_line.AddEvent(*event_metadata);
+    event.SetOffsetPs(90);
+    event.SetDurationPs(10);
+    event.AddStatValue(group_id_stat, 1);
+  }
+  XLineBuilder step_line = plane.GetOrCreateLine(1);
+  step_line.SetName(tsl::profiler::kStepLineName);
+  {
+    XEventBuilder event = step_line.AddEvent(*plane.CreateEventMetadata());
+    event.SetOffsetPs(0);
+    event.SetDurationPs(100);
+    event.AddStatValue(group_id_stat, 1);
+  }
+
+  StepEvents step_events = ConvertDeviceTraceXPlaneToStepEvents(raw_plane);
+  ASSERT_TRUE(step_events.contains(1));
+  const auto& per_core_op_metrics_db = step_events[1].PerCoreOpMetricsDb();
+  ASSERT_TRUE(per_core_op_metrics_db.contains(device_id));
+  absl::flat_hash_map<std::string, std::string> category_by_op_name;
+  for (const OpMetrics& metrics :
+       per_core_op_metrics_db.at(device_id).metrics_db()) {
+    category_by_op_name[metrics.name()] = metrics.category();
+  }
+  EXPECT_EQ(category_by_op_name["call-done.3"], tsl::profiler::kHloAsyncDone);
+  EXPECT_EQ(category_by_op_name["fusion.5"], "loop fusion");
+  EXPECT_EQ(category_by_op_name["host-send-done.2"],
+            tsl::profiler::kHloHostSendDone);
 }
 
 TEST(ConvertXPlaneToOpStats, CpuOnlyPyGrainSingleProcessInputPipelineTest) {

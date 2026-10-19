@@ -65,7 +65,7 @@ DutyCycleTracker::MergeOrInsert(const Timespan& timespan,
 void DutyCycleTracker::AddInterval(tsl::profiler::Timespan time_span,
                                    bool is_active) {
   total_time_span_.ExpandToInclude(time_span);
-  if (!is_active) {
+  if (!is_active || time_span.Instant()) {
     return;
   }
 
@@ -90,6 +90,30 @@ uint64_t DutyCycleTracker::GetActiveTimePs() const {
   for (const auto& interval : active_time_spans_) {
     DCHECK(!interval.Empty());
     active_time_ps += interval.duration_ps();
+  }
+  return active_time_ps;
+}
+
+uint64_t DutyCycleTracker::GetActiveTimePs(
+    tsl::profiler::Timespan window) const {
+  if (window.Instant() || active_time_spans_.empty()) {
+    return 0;
+  }
+  uint64_t active_time_ps = 0;
+  auto it = active_time_spans_.lower_bound(window);
+  if (it != active_time_spans_.begin()) {
+    --it;
+  }
+  for (; it != active_time_spans_.end() && it->begin_ps() < window.end_ps();
+       ++it) {
+    if (it->end_ps() <= window.begin_ps()) {
+      continue;
+    }
+    uint64_t start_ps = std::max(it->begin_ps(), window.begin_ps());
+    uint64_t end_ps = std::min(it->end_ps(), window.end_ps());
+    if (end_ps > start_ps) {
+      active_time_ps += end_ps - start_ps;
+    }
   }
   return active_time_ps;
 }
