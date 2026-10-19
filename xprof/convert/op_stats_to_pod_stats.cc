@@ -77,9 +77,12 @@ PodStatsRecord CreatePodStatsRecord(absl::string_view host_name,
                           time_breakdown.HostSendTimePs() +
                           time_breakdown.SparseCoreV0OutfeedTimePs();
     uint64_t collectives_ps = time_breakdown.AllReduceOrAllToAllTimePs();
+    // Megacore fusion and async-done ops are off-duty waits for other device
+    // work, so their time is reported as device-to-device time.
     uint64_t d2d_ps = time_breakdown.SendTimePs() +
                       time_breakdown.RecvTimePs() +
-                      time_breakdown.MegacoreFusionTimePs();
+                      time_breakdown.MegacoreFusionTimePs() +
+                      time_breakdown.AsyncDoneTimePs();
     uint64_t non_compute_busy_ps =
         collectives_ps + time_breakdown.SendTimePs() +
         time_breakdown.RecvTimePs() +

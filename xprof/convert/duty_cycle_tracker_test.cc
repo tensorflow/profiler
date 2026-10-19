@@ -83,6 +83,29 @@ TEST(DutyCycleTrackerTest, OverlappingMixedIntervalsTest) {
   EXPECT_EQ(tracker.GetIdleTimePs(), 10);
 }
 
+TEST(DutyCycleTrackerTest, GetActiveTimePsInWindowTest) {
+  DutyCycleTracker tracker;
+  EXPECT_EQ(tracker.GetActiveTimePs(Timespan::FromEndPoints(0, 100)), 0);
+  tracker.AddInterval(Timespan(), true);
+  tracker.AddInterval(Timespan::FromEndPoints(15, 15), true);
+  EXPECT_EQ(tracker.GetActiveTimePs(), 0);
+
+  tracker.AddInterval(Timespan::FromEndPoints(10, 20), true);
+  tracker.AddInterval(Timespan::FromEndPoints(30, 50), true);
+  tracker.AddInterval(Timespan::FromEndPoints(50, 70), false);
+  tracker.AddInterval(Timespan::FromEndPoints(70, 90), true);
+
+  EXPECT_EQ(tracker.GetActiveTimePs(Timespan()), 0);
+  EXPECT_EQ(tracker.GetActiveTimePs(Timespan::FromEndPoints(15, 15)), 0);
+  EXPECT_EQ(tracker.GetActiveTimePs(Timespan::FromEndPoints(0, 10)), 0);
+  EXPECT_EQ(tracker.GetActiveTimePs(Timespan::FromEndPoints(15, 40)), 15);
+  EXPECT_EQ(tracker.GetActiveTimePs(Timespan::FromEndPoints(35, 45)), 10);
+  EXPECT_EQ(tracker.GetActiveTimePs(Timespan::FromEndPoints(0, 100)), 50);
+  EXPECT_EQ(tracker.GetActiveTimePs(Timespan::FromEndPoints(50, 70)), 0);
+  EXPECT_EQ(tracker.GetActiveTimePs(Timespan::FromEndPoints(45, 75)), 10);
+  EXPECT_EQ(tracker.GetActiveTimePs(Timespan::FromEndPoints(90, 100)), 0);
+}
+
 void BM_DutyCycleTracker_AddInterval(::testing::benchmark::State& state) {
   std::vector<Timespan> timespans;
   timespans.reserve(state.range(0));
@@ -98,7 +121,8 @@ void BM_DutyCycleTracker_AddInterval(::testing::benchmark::State& state) {
   state.SetItemsProcessed(state.iterations() * timespans.size());
 }
 
-BENCHMARK(BM_DutyCycleTracker_AddInterval)->Range(1 << 15, 1 << 21);
+BENCHMARK(BM_DutyCycleTracker_AddInterval)  // NOLINT(misc-include-cleaner)
+    ->Range(1 << 15, 1 << 21);
 
 void BM_DutyCycleTracker_AddInterval_Merge(::testing::benchmark::State& state) {
   std::vector<Timespan> timespans;
@@ -115,7 +139,9 @@ void BM_DutyCycleTracker_AddInterval_Merge(::testing::benchmark::State& state) {
   state.SetItemsProcessed(state.iterations() * timespans.size());
 }
 
-BENCHMARK(BM_DutyCycleTracker_AddInterval_Merge)->Range(1 << 15, 1 << 21);
+BENCHMARK(  // NOLINT(misc-include-cleaner)
+    BM_DutyCycleTracker_AddInterval_Merge)
+    ->Range(1 << 15, 1 << 21);
 
 void BM_DutyCycleTracker_Union(::testing::benchmark::State& state) {
   DCHECK_GT(state.range(1), 1);
@@ -138,7 +164,8 @@ void BM_DutyCycleTracker_Union(::testing::benchmark::State& state) {
                           (state.range(0) + state.range(0) / merge_rate));
 }
 
-BENCHMARK(BM_DutyCycleTracker_Union)->RangePair(1 << 10, 1 << 16, 2, 10);
+BENCHMARK(BM_DutyCycleTracker_Union)  // NOLINT(misc-include-cleaner)
+    ->RangePair(1 << 10, 1 << 16, 2, 10);
 
 }  // namespace
 }  // namespace profiler
