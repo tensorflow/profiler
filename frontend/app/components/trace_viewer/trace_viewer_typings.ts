@@ -191,6 +191,7 @@ export declare interface SelectedEvent {
   hloOpName?: string;
   graphViewerLinkHtml?: string;
   hloOpStatsLinkHtml?: string;
+  kernelViewerLinkHtml?: string;
   stepGroupLinkHtml?: string;
   /**
    * The event as returned by the backend event details response, rendered as
