@@ -1,6 +1,8 @@
 import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
 import {MatButtonModule} from '@angular/material/button';
+import {MatButtonToggleModule} from '@angular/material/button-toggle';
+import {MatChipsModule} from '@angular/material/chips';
 import {MatIconModule} from '@angular/material/icon';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatTooltipModule} from '@angular/material/tooltip';
@@ -20,6 +22,8 @@ import {StaticKernelViewer} from './static_kernel_viewer';
     KernelSelectionPanel,
     KernelViewerTour,
     MatButtonModule,
+    MatButtonToggleModule,
+    MatChipsModule,
     MatIconModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
