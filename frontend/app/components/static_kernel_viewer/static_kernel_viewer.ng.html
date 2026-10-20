@@ -256,6 +256,7 @@
       `traceViewerModule.loadTraceData` from this component instead.
     -->
     <trace-viewer-container
+      [class.trace-loaded]="hasLoadedTrace"
       [traceViewerModule]="traceViewerModule"
       [useTraceViewerV2]="true"
       [customDrawerOpen]="isSelectionPanelOpen"

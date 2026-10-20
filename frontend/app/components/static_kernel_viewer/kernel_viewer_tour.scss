@@ -59,7 +59,7 @@ $minimap-loop: 7200ms;
   transition: opacity 260ms var(--motion-easing-standard);
 
   @include motion {
-    animation: fade-in 320ms var(--motion-easing-standard) backwards;
+    animation: fade-in 360ms var(--motion-easing-standard) backwards;
   }
 
   .closing & {
@@ -426,7 +426,7 @@ $minimap-loop: 7200ms;
     opacity 140ms linear;
 
   @include motion {
-    animation: card-in 480ms var(--motion-easing-emphasized-decelerate)
+    animation: card-in 480ms var(--motion-easing-emphasized-decelerate) 60ms
       backwards;
   }
 
@@ -574,6 +574,10 @@ $minimap-loop: 7200ms;
 
   &[data-direction='backward'] {
     --slide-distance: -18px;
+  }
+
+  .welcome &[data-direction='forward'] {
+    --slide-distance: 0px;
   }
 
   > * {
@@ -2654,13 +2658,14 @@ $minimap-loop: 7200ms;
 @keyframes fade-in {
   from {
     opacity: 0;
+    backdrop-filter: blur(0) saturate(100%);
   }
 }
 
 @keyframes card-in {
   from {
     opacity: 0;
-    transform: translateY(10px) scale(0.94);
+    transform: translateY(14px) scale(0.94);
     filter: blur(6px);
   }
 }

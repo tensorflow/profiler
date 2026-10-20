@@ -2520,6 +2520,11 @@ export class KernelViewerTour implements OnInit, OnDestroy {
     if (placeCardNow) {
       this.layout();
       this.card.snap();
+      if (!this.holeBox) {
+        this.spotlight.snap();
+        this.spotlightCorners.snap();
+      }
+      this.render();
     }
     this.focusPrimaryButton();
     this.shouldOpenPanel = step.visual === 'panel' || step.visual === 'region';

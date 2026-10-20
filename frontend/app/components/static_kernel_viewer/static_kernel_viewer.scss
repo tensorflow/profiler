@@ -644,6 +644,16 @@ $card-width: 320px;
   isolation: isolate;
 }
 
+trace-viewer-container.trace-loaded {
+  animation: trace-loaded-reveal 260ms var(--motion-easing-emphasized-decelerate);
+}
+
+@keyframes trace-loaded-reveal {
+  from {
+    opacity: 0.72;
+  }
+}
+
 .kernel-bar {
   display: flex;
   flex: none;
@@ -1320,7 +1330,8 @@ $card-width: 320px;
   .context-menu-item,
   .unit-fill,
   .tour-button,
-  .tour-button.pulsing {
+  .tour-button.pulsing,
+  trace-viewer-container.trace-loaded {
     transition: none;
     animation: none;
   }
