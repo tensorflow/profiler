@@ -76,12 +76,19 @@ export interface InstructionOutput {
   readonly memorySpace?: string;
   readonly metadata?: string;
   readonly throughput?: string;
+  readonly extraBadges?: readonly string[];
 }
 
 /** An input operand of an instruction, with its 0-based operand index. */
 export interface OperandItem {
   readonly index: number;
   readonly text: string;
+}
+
+/** A deduplicated consumer instruction mnemonic with its multiplicity count. */
+export interface ConsumerGroup {
+  readonly name: string;
+  readonly count: number;
 }
 
 /**
@@ -131,6 +138,8 @@ export interface HoveredEvent {
   readonly vectorSpills?: number;
   /** Vector register fills occurring in the hovered bundle or region. */
   readonly vectorFills?: number;
+  /** Rendered CSS hex color (`#rrggbb`) of the event slice on the canvas. */
+  readonly color?: string;
 }
 
 /** What the tooltip shows for a hovered event or track point. */
@@ -143,6 +152,8 @@ export interface KernelEventTooltipContent {
   readonly unit?: FunctionalUnit;
   /** Accent color of the top bar of the card. */
   readonly accentColor: string;
+  /** Rendered color of the hovered event slice on the timeline canvas. */
+  readonly eventColor: string;
   /** `Bundle`, or `Bundles` if the event spans several bundles. */
   readonly bundlesLabel: string;
   /** Bundle or range of bundles of the event, e.g. `1,024–1,056`. */
@@ -163,6 +174,8 @@ export interface KernelEventTooltipContent {
   readonly operands?: readonly OperandItem[];
   /** Consumer instructions of an instruction's result. */
   readonly consumers?: readonly string[];
+  /** Deduplicated consumer instructions with multiplicity counts (e.g. `vmul.f32 ×14`). */
+  readonly consumerGroups?: readonly ConsumerGroup[];
   /** Formatted vector register spills/fills summary when present, e.g. `2 spills · 1 fill`. */
   readonly spillsLabel?: string;
   /** True when the hovered bundle or region has at least one vector spill. */
@@ -202,6 +215,34 @@ const UTILIZATION_SUFFIX = ' utilization';
 
 /** Default accent color for regions and whole-kernel process tracks. */
 export const DEFAULT_ACCENT_COLOR = '#1a73e8';
+
+/** Default Trace Viewer v2 slice palette used when WASM does not report a color. */
+export const DEFAULT_TRACE_COLORS: readonly string[] = [
+  '#c597ff',
+  '#80da88',
+  '#a1c9ff',
+  '#ffe07c',
+  '#ffb683',
+  '#ff7dd2',
+  '#00bbdf',
+];
+
+function defaultEventColorForName(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = (Math.imul(31, hash) + name.charCodeAt(i)) | 0;
+  }
+  const index = Math.abs(hash) % DEFAULT_TRACE_COLORS.length;
+  return DEFAULT_TRACE_COLORS[index]!;
+}
+
+function readCssHexColor(value: unknown): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return /^#[0-9a-fA-F]{6}$/.test(trimmed) ? trimmed.toLowerCase() : undefined;
+}
 
 /** Functional units in the Static Kernel Viewer timeline. */
 export const FUNCTIONAL_UNITS: readonly FunctionalUnit[] = [
@@ -355,6 +396,20 @@ export function classifyRegister(
   return 'other';
 }
 
+/** Deduplicates consumer instructions while preserving first-seen order. */
+export function buildConsumerGroups(
+  consumers: readonly string[] | undefined,
+): readonly ConsumerGroup[] | undefined {
+  if (!consumers || consumers.length === 0) {
+    return undefined;
+  }
+  const counts = new Map<string, number>();
+  for (const consumer of consumers) {
+    counts.set(consumer, (counts.get(consumer) ?? 0) + 1);
+  }
+  return Array.from(counts, ([name, count]) => ({name, count}));
+}
+
 function buildInstructionOutput(
   event: HoveredEvent,
 ): InstructionOutput | undefined {
@@ -365,7 +420,47 @@ function buildInstructionOutput(
     event.throughput !== undefined && event.throughput > 0
       ? `${BUNDLE_FORMAT.format(event.throughput)} ${event.throughput === 1 ? 'cycle' : 'cycles'}`
       : undefined;
-  if (!register && !memorySpace && !metadata && !throughput) {
+  const extraBadges: string[] = [];
+  const args = event.args;
+  if (args) {
+    const unitId = readNonEmptyString(args['unit_id'], args['unitId']);
+    if (unitId) {
+      extraBadges.push(`Unit ${unitId}`);
+    }
+    const scalarConst = readNonEmptyString(
+      args['scalar_const'],
+      args['scalarConst'],
+    );
+    if (scalarConst) {
+      extraBadges.push(`Const ${scalarConst}`);
+    }
+    const xmr = readNonEmptyString(args['xmr']);
+    if (xmr) {
+      extraBadges.push(`XMR ${xmr}`);
+    }
+    const msr = readNonEmptyString(args['msr']);
+    if (msr) {
+      extraBadges.push(`MSR ${msr}`);
+    }
+    const mrbAddr = readNonEmptyString(
+      args['result_buffer_addr'],
+      args['mrb_addr'],
+    );
+    if (mrbAddr) {
+      extraBadges.push(`MRB ${mrbAddr}`);
+    }
+    const sourceBus = readNonEmptyString(args['source_bus']);
+    if (sourceBus) {
+      extraBadges.push(`Bus ${sourceBus}`);
+    }
+  }
+  if (
+    !register &&
+    !memorySpace &&
+    !metadata &&
+    !throughput &&
+    extraBadges.length === 0
+  ) {
     return undefined;
   }
   return {
@@ -374,6 +469,7 @@ function buildInstructionOutput(
     ...(memorySpace ? {memorySpace} : {}),
     ...(metadata ? {metadata} : {}),
     ...(throughput ? {throughput} : {}),
+    ...(extraBadges.length > 0 ? {extraBadges} : {}),
   };
 }
 
@@ -620,6 +716,7 @@ export function readHoveredEvent(detail: unknown): HoveredEvent | undefined {
     args?.['vector_fills'],
     args?.['vectorFills'],
   );
+  const color = readCssHexColor(fields['color']);
 
   const hovered: HoveredEvent = {
     name,
@@ -647,6 +744,7 @@ export function readHoveredEvent(detail: unknown): HoveredEvent | undefined {
     ...(consumers ? {consumers} : {}),
     ...(vectorSpills !== undefined && vectorSpills > 0 ? {vectorSpills} : {}),
     ...(vectorFills !== undefined && vectorFills > 0 ? {vectorFills} : {}),
+    ...(color ? {color} : {}),
   };
   const bundleCounts = readNumberRecord(fields['bundleCounts']);
   const utilization = readNumberRecord(fields['utilization']);
@@ -701,6 +799,11 @@ export function buildKernelEventTooltip(
   const accentColor = isCounter
     ? accentColorForCounterTrack(event.trackName, unit)
     : (unit?.color ?? DEFAULT_ACCENT_COLOR);
+  const eventColor =
+    event.color ??
+    (isCounter || isProcess
+      ? accentColor
+      : defaultEventColorForName(event.name));
 
   let description: string | undefined = undefined;
   if (isCounter) {
@@ -777,6 +880,7 @@ export function buildKernelEventTooltip(
     kind === 'instruction' && event.consumers && event.consumers.length > 0
       ? event.consumers
       : undefined;
+  const consumerGroups = buildConsumerGroups(consumers);
   const spillsLabel = formatSpillsLabel(event.vectorSpills, event.vectorFills);
   const hasSpills = (event.vectorSpills ?? 0) > 0;
 
@@ -882,6 +986,7 @@ export function buildKernelEventTooltip(
     isCode: kind === 'instruction' && unit !== undefined,
     unit,
     accentColor,
+    eventColor,
     bundlesLabel,
     bundles,
     ...(length ? {length} : {}),
@@ -892,6 +997,7 @@ export function buildKernelEventTooltip(
     ...(output ? {output} : {}),
     ...(operands ? {operands} : {}),
     ...(consumers ? {consumers} : {}),
+    ...(consumerGroups ? {consumerGroups} : {}),
     ...(spillsLabel ? {spillsLabel, hasSpills} : {}),
     ...(bundleStrip ? {bundleStrip} : {}),
     ...(!isRegion && utilizationBars ? {utilizationBars} : {}),
@@ -1018,6 +1124,10 @@ export class KernelEventTooltip implements AfterViewInit, OnDestroy {
     this.host.style.setProperty(
       '--accent-color',
       this.content?.accentColor ?? DEFAULT_ACCENT_COLOR,
+    );
+    this.host.style.setProperty(
+      '--event-color',
+      this.content?.eventColor ?? DEFAULT_ACCENT_COLOR,
     );
     this.changeDetectorRef.detectChanges();
     if (this.content) {

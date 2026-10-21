@@ -486,6 +486,10 @@ void Timeline::PopulateHoverScheduleDetails(int group_index, int event_index,
   }
 
   const size_t event_idx = static_cast<size_t>(event_index);
+  if (event_idx < timeline_data_.entry_names.size()) {
+    event_data.try_emplace("color",
+                           FormatCssHexColor(GetEventColor(event_index)));
+  }
   if (timeline_data_.HasEntryArgs(event_idx)) {
     const auto raw_args = timeline_data_.GetEntryArgs(event_idx);
     EventData args_data;

@@ -6953,6 +6953,8 @@ TEST_F(RealTimelineImGuiFixture,
 
   EXPECT_EQ(std::any_cast<int>(hovered_event.at(kEventSelectedIndex)), 2);
   EXPECT_EQ(std::any_cast<std::string>(hovered_event.at("trackName")), "MXU");
+  EXPECT_THAT(std::any_cast<std::string>(hovered_event.at("color")),
+              ::testing::MatchesRegex("^#[0-9a-f]{6}$"));
   EXPECT_DOUBLE_EQ(std::any_cast<double>(hovered_event.at("totalBundles")),
                    100.0);
   const auto& instr_counts =

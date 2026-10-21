@@ -1034,7 +1034,7 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
    * Whether to show the Angular kernel event tooltip on the timeline. The
    * built-in Trace Viewer event tooltip is always off (see onInitializeWasm).
    */
-  enableEventTooltip = false;
+  enableEventTooltip = true;
 
   traceViewerModule: TraceViewerV2Module | null = null;
   isSelectionPanelOpen = false;
