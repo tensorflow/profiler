@@ -4065,7 +4065,8 @@ void Timeline::DrawRulerUI(const TickInfo& info, Pixel timeline_width) {
         draw_list->AddLine(ImVec2(x, pos.y), ImVec2(x, line_y),
                            ruler_line_color);
 
-        const std::string time_label_text = FormatRulerLabel(t_relative);
+        const std::string time_label_text =
+            FormatRulerLabel(t_relative, tick_interval);
         ImGui::PushFont(fonts::label_small);
         draw_list->AddText(ImVec2(x + kRulerTextPadding, pos.y),
                            ruler_text_color, time_label_text.c_str());
@@ -4090,7 +4091,8 @@ void Timeline::DrawRulerUI(const TickInfo& info, Pixel timeline_width) {
   }
 }
 
-std::string Timeline::FormatRulerLabel(Microseconds time_relative) const {
+std::string Timeline::FormatRulerLabel(Microseconds time_relative,
+                                       Microseconds tick_interval) const {
   switch (time_axis_unit_) {
     case TimeAxisUnit::kUnitless:
       // Show the absolute position as a plain integer (e.g. a bundle number),
@@ -4100,7 +4102,7 @@ std::string Timeline::FormatRulerLabel(Microseconds time_relative) const {
     case TimeAxisUnit::kTime:
       break;
   }
-  return FormatTime(time_relative);
+  return FormatRulerTime(time_relative, tick_interval);
 }
 
 // Draws vertical grid lines that extend from the ruler down across all tracks.

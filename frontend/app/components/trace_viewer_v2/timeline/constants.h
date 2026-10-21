@@ -359,10 +359,15 @@ inline constexpr float kZoomSpeed = 1.5f;
 // picosecond). This limits the maximum zoom-in level: time range duration
 // cannot shrink below this value when zooming in.
 inline constexpr Microseconds kMinDurationMicros = 1e-6;
-// The minimum duration of a fetch request in microseconds.
-// This is to prevent fetching too small chunks of data when the user
-// zooms in very deep.
-inline constexpr Microseconds kMinFetchDurationMicros = 1000.0;
+// The minimum duration of a fetch request in microseconds (= 1 microsecond).
+// Every fetch asks the backend for the same number of resolution bins (see
+// `updateUrlWithResolution` in main.ts), so the fetch window sets the shortest
+// event that survives backend downsampling, e.g. window / 6680 at 1920px. Keep
+// this floor well below the shortest events users zoom into, or zooming in
+// stops loading more detail. 1 us gives ~0.15ns bins at 1920px, under one TPU
+// cycle (e.g. LLO instruction traces), and still guards against zero-length
+// fetch windows when zoomed in to kMinDurationMicros.
+inline constexpr Microseconds kMinFetchDurationMicros = 1.0;
 // The ratio of the viewport width to fetch data for.
 inline constexpr float kFetchRatio = 3.0f;
 // The ratio of the viewport width to keep data loaded for.

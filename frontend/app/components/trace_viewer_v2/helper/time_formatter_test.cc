@@ -43,6 +43,48 @@ TEST(TimeFormatterTest, FormatTimeNotFiniteOrNegative) {
   EXPECT_EQ(FormatTime(-100.0), "-");
 }
 
+TEST(TimeFormatterTest, FormatRulerTimeKeepsCoarseTickLabels) {
+  // Ticks that FormatTime() already tells apart keep the same text.
+  EXPECT_EQ(FormatRulerTime(1500.0, 500.0), TimeWithUnit("1.5", "ms"));
+  EXPECT_EQ(FormatRulerTime(2000.0, 500.0), TimeWithUnit("2", "ms"));
+  EXPECT_EQ(FormatRulerTime(150.0, 50.0), TimeWithUnit("150", "us"));
+  EXPECT_EQ(FormatRulerTime(0.5, 0.5), TimeWithUnit("500", "ns"));
+  EXPECT_EQ(FormatRulerTime(60000000.0, 10000000.0), TimeWithUnit("60", "s"));
+}
+
+TEST(TimeFormatterTest, FormatRulerTimeTellsFineTicksApartFarFromStart) {
+  // 2us ticks 4.84s into a trace, which FormatTime() prints as "4.841 s".
+  EXPECT_EQ(FormatRulerTime(4840942.0, 2.0), TimeWithUnit("4.840942", "s"));
+  EXPECT_EQ(FormatRulerTime(4840944.0, 2.0), TimeWithUnit("4.840944", "s"));
+  EXPECT_EQ(FormatRulerTime(4840942.2, 0.2), TimeWithUnit("4.8409422", "s"));
+  // Trailing zeros are dropped.
+  EXPECT_EQ(FormatRulerTime(4840950.0, 5.0), TimeWithUnit("4.84095", "s"));
+  // An interval that is an exact power of 10 does not add a digit.
+  EXPECT_EQ(FormatRulerTime(1234567.0, 1.0), TimeWithUnit("1.234567", "s"));
+  EXPECT_EQ(FormatRulerTime(1234500.0, 500.0), TimeWithUnit("1.2345", "s"));
+  EXPECT_EQ(FormatRulerTime(0.12345, 0.00005), TimeWithUnit("123.45", "ns"));
+}
+
+TEST(TimeFormatterTest, FormatRulerTimeCapsDecimalPlaces) {
+  // 1ps ticks in seconds are shown with at most nanosecond precision.
+  EXPECT_EQ(FormatRulerTime(4840942.000001, 0.000001),
+            TimeWithUnit("4.840942", "s"));
+  EXPECT_EQ(FormatRulerTime(4840942.001, 0.000001),
+            TimeWithUnit("4.840942001", "s"));
+}
+
+TEST(TimeFormatterTest, FormatRulerTimeFallsBackToFormatTime) {
+  EXPECT_EQ(FormatRulerTime(0.0, 2.0), "0");
+  EXPECT_EQ(FormatRulerTime(-2.0, 2.0), "-");
+  EXPECT_EQ(FormatRulerTime(std::numeric_limits<double>::quiet_NaN(), 2.0),
+            "-");
+  EXPECT_EQ(FormatRulerTime(4840942.0, 0.0), FormatTime(4840942.0));
+  EXPECT_EQ(FormatRulerTime(4840942.0, -1.0), FormatTime(4840942.0));
+  EXPECT_EQ(
+      FormatRulerTime(4840942.0, std::numeric_limits<double>::quiet_NaN()),
+      FormatTime(4840942.0));
+}
+
 TEST(TimeFormatterTest, FormatDurationOnTimeAxisMatchesFormatTime) {
   EXPECT_EQ(FormatDuration(1234.567, TimeAxisUnit::kTime),
             TimeWithUnit("1.235", "ms"));

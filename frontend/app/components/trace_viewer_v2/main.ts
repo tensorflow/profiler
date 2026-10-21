@@ -20,6 +20,15 @@ export const ZOOM_RATIO = 8;
 export const FETCH_RATIO = 3.0;
 
 /**
+ * The minimum duration of a fetch request in milliseconds (= 1 microsecond).
+ *
+ * The initial fetch for a URL time range must cover the same window that the
+ * WASM timeline records as fetched; otherwise the timeline assumes it already
+ * has data that was never requested and does not fetch it on pan or zoom.
+ */
+export const MIN_FETCH_DURATION_MS = 0.001;
+
+/**
  * The width of the left-side label column in the trace viewer in pixels.
  *
  * This corresponds to the `label_width_` in `timeline.h`.
@@ -802,13 +811,16 @@ function getTimeRangeFromUrl(urlObj: URL): [number, number] | undefined {
 }
 
 /**
- * Expands the time range of the given URL using the pre-defined FETCH_RATIO.
+ * Expands the time range of the given URL using the pre-defined FETCH_RATIO,
+ * with a minimum of MIN_FETCH_DURATION_MS. This must match the window that
+ * `Timeline::InitializeLastFetchRequestRange` records as fetched.
  */
 function expandUrlTimeRange(urlObj: URL, timeRange: [number, number]): void {
   const center = (timeRange[0] + timeRange[1]) / 2;
   const duration = timeRange[1] - timeRange[0];
-  const expandedStart = Math.max(0, center - (duration * FETCH_RATIO) / 2);
-  const expandedEnd = center + (duration * FETCH_RATIO) / 2;
+  const fetchDuration = Math.max(duration * FETCH_RATIO, MIN_FETCH_DURATION_MS);
+  const expandedStart = Math.max(0, center - fetchDuration / 2);
+  const expandedEnd = center + fetchDuration / 2;
 
   urlObj.searchParams.set(
     TRACE_VIEW_OPTION.START_TIME_MS,
