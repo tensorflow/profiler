@@ -10,6 +10,14 @@ namespace traceviewer {
 
 std::string FormatTime(Microseconds time_us);
 
+// Formats a ruler tick like FormatTime(), but with enough decimal places that
+// ticks `tick_interval_us` apart get distinct labels even far from the trace
+// start (e.g. "4.840942 s" for 2us ticks, where FormatTime() gives "4.841 s").
+// Trailing zeros are dropped. Falls back to FormatTime() if `tick_interval_us`
+// is not positive.
+std::string FormatRulerTime(Microseconds time_us,
+                            Microseconds tick_interval_us);
+
 // Formats a duration along the x-axis: FormatTime() on a time axis, a count
 // of positions ("1 bundle", "32 bundles") on a unitless one.
 std::string FormatDuration(Microseconds duration, TimeAxisUnit unit);

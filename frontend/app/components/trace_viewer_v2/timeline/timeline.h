@@ -765,8 +765,11 @@ class Timeline {
 
   // Formats the label for a major ruler tick at `time_relative` (relative to
   // the trace start). Returns a time string (e.g. "1.5 ms") normally, or the
-  // absolute position as a plain integer (e.g. "40") on a unitless axis.
-  std::string FormatRulerLabel(Microseconds time_relative) const;
+  // absolute position as a plain integer (e.g. "40") on a unitless axis. A
+  // positive `tick_interval` (the spacing between major ticks) sets the
+  // precision of time strings so that adjacent ticks get distinct labels.
+  std::string FormatRulerLabel(Microseconds time_relative,
+                               Microseconds tick_interval = 0.0) const;
 
   // Calculates the control points for a cubic Bezier curve used to draw flows.
   static void CalculateBezierControlPoints(float start_x, float start_y,

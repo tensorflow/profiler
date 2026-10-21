@@ -1,5 +1,6 @@
 #include "frontend/app/components/trace_viewer_v2/helper/time_formatter.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <string>
@@ -34,6 +35,10 @@ constexpr absl::string_view kUnitlessPlural = "bundles";
 constexpr absl::string_view kUnitlessPositionLabel = "Bundle";
 constexpr absl::string_view kTimePositionLabel = "Time";
 
+// The most decimal places a ruler label shows (nanoseconds when the label is in
+// seconds). This keeps labels narrower than the minimum major tick spacing.
+constexpr int kMaxRulerLabelDecimals = 9;
+
 }  // namespace
 
 std::string FormatTime(Microseconds time_us) {
@@ -56,6 +61,48 @@ std::string FormatTime(Microseconds time_us) {
   } else {  // >= 1 second
     return absl::StrFormat(kSecondsFormat, time_us / kMicrosPerSecond);
   }
+}
+
+std::string FormatRulerTime(Microseconds time_us,
+                            Microseconds tick_interval_us) {
+  if (!std::isfinite(tick_interval_us) || tick_interval_us <= 0 ||
+      !std::isfinite(time_us) || time_us <= 0) {
+    return FormatTime(time_us);
+  }
+
+  // Use the same unit as FormatTime().
+  double micros_per_unit = kMicrosPerSecond;
+  absl::string_view unit = "s";
+  if (time_us < 1 / kNanosPerMicro) {
+    micros_per_unit = 1 / kPicosPerMicro;
+    unit = "ps";
+  } else if (time_us < 1.0) {
+    micros_per_unit = 1 / kNanosPerMicro;
+    unit = "ns";
+  } else if (time_us < kMicrosPerMilli) {
+    micros_per_unit = 1.0;
+    unit = "us";
+  } else if (time_us < kMicrosPerSecond) {
+    micros_per_unit = kMicrosPerMilli;
+    unit = "ms";
+  }
+
+  // Show as many decimal places as the tick interval needs in that unit, e.g. 6
+  // for 2us ticks in seconds. The epsilon keeps an interval that is an exact
+  // power of 10 from getting an extra digit due to rounding in log10.
+  const int decimals = std::clamp(
+      static_cast<int>(
+          std::ceil(-std::log10(tick_interval_us / micros_per_unit) - 1e-9)),
+      0, kMaxRulerLabelDecimals);
+  std::string number =
+      absl::StrFormat("%.*f", decimals, time_us / micros_per_unit);
+  // Drop trailing zeros so that round ticks stay short ("1.50" -> "1.5",
+  // "2.000" -> "2"), as with FormatTime().
+  if (decimals > 0) {
+    number.erase(number.find_last_not_of('0') + 1);
+    if (number.back() == '.') number.pop_back();
+  }
+  return absl::StrCat(number, kNonBreakingSpace, unit);
 }
 
 std::string FormatDuration(Microseconds duration, TimeAxisUnit unit) {
