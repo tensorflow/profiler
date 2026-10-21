@@ -27,6 +27,7 @@ import {MatButtonModule} from '@angular/material/button';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import {MatIconModule} from '@angular/material/icon';
 import {MatInputModule} from '@angular/material/input';
+import {MatMenuModule} from '@angular/material/menu';
 import {MatProgressBarModule} from '@angular/material/progress-bar';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatSort, MatSortModule} from '@angular/material/sort';
@@ -272,6 +273,17 @@ export function getHloTextPreview(value: string, maxLength = 60): string {
   return `${singleLine.slice(0, maxLength).trim()} ...`;
 }
 
+/**
+ * Formats the search result counter shown in the search box, e.g. `3 of 128`.
+ * Shows the number of matches before the user steps to the first one, and
+ * `No results` when nothing matches.
+ */
+export function formatSearchResultCount(index: number, count: number): string {
+  if (count <= 0) return 'No results';
+  if (index < 0) return count === 1 ? '1 result' : `${count} results`;
+  return `${index + 1} of ${count}`;
+}
+
 /** Event name for mouse mode changes. */
 export const MOUSE_MODE_CHANGED_EVENT_NAME = 'mouse_mode_changed';
 
@@ -365,6 +377,7 @@ declare interface TfTraceViewer {
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
+    MatMenuModule,
     MatProgressSpinnerModule,
     MatSortModule,
     MatTableModule,
@@ -671,7 +684,9 @@ export class TraceViewerContainer
   @ViewChild('timingBtn') timingBtn?: ElementRef<HTMLButtonElement>;
   @ViewChild('zoomOutBtn') zoomOutBtn?: ElementRef<HTMLButtonElement>;
   @ViewChild('zoomInBtn') zoomInBtn?: ElementRef<HTMLButtonElement>;
-  @ViewChild('panActionBtn') panActionBtn?: ElementRef<HTMLButtonElement>;
+  @ViewChild('resetViewBtn') resetViewBtn?: ElementRef<HTMLButtonElement>;
+  @ViewChild('zoomToSelectionBtn')
+  zoomToSelectionBtn?: ElementRef<HTMLButtonElement>;
   @ViewChild(MatSort) set sort(matSort: MatSort | undefined) {
     if (matSort) {
       this.selectedEventPropertiesDataSource.sort = matSort;
@@ -745,6 +760,13 @@ export class TraceViewerContainer
   search$ = new Subject<string>();
   currentSearchQuery = '';
   searchResultCountText = '';
+  /**
+   * The number of events that match the current search query, or `undefined`
+   * when there is no query or the count is not known yet.
+   */
+  searchResultCount?: number;
+  /** Whether an event is selected in the timeline, for Zoom to selection. */
+  hasSelectedEvent = false;
   readonly tutorials = TUTORIALS;
   currentTutorialIndex = 0;
   tutorialSubscription?: Subscription;
@@ -773,6 +795,7 @@ export class TraceViewerContainer
           this.updateSearchResultCountText();
         } else if (!query) {
           this.searchResultCountText = '';
+          this.searchResultCount = undefined;
         }
       });
 
@@ -1098,6 +1121,7 @@ export class TraceViewerContainer
       return;
     }
     this.updateSearchResultCountText();
+    this.hasSelectedEvent = e.detail.eventIndex !== -1;
     if (e.detail.eventIndex === -1) {
       this.eventSelected.emit(null);
     } else {
@@ -1223,6 +1247,8 @@ export class TraceViewerContainer
     event?.stopPropagation();
     this.searchQuery = '';
     this.currentSearchQuery = '';
+    this.searchResultCount = undefined;
+    this.searchResultCountText = '';
     if (this.traceViewerModule) {
       this.traceViewerModule.application.instance().setSearchQuery('');
     }
@@ -1281,12 +1307,33 @@ export class TraceViewerContainer
     this.traceViewerModule?.application?.instance().zoomOut();
   }
 
-  togglePanMode(): void {
-    if (this.currentMouseMode === MouseMode.PAN) {
-      this.setMouseMode(MouseMode.SELECT);
-    } else {
-      this.setMouseMode(MouseMode.PAN);
+  /** Zooms and pans the timeline out to show the whole trace. */
+  resetView(): void {
+    this.traceViewerModule?.application?.instance().resetView?.();
+  }
+
+  /** Zooms the timeline to the selected event. */
+  zoomToSelection(): void {
+    if (!this.hasSelectedEvent) return;
+    this.traceViewerModule?.application?.instance().zoomToSelection?.();
+  }
+
+  /**
+   * Handles Escape in the search box: clears the query if there is one,
+   * otherwise moves the focus back to the timeline.
+   */
+  onSearchEscape(event?: Event): void {
+    event?.preventDefault();
+    if (this.searchQuery || this.currentSearchQuery) {
+      this.clearSearch(event);
+      return;
     }
+    this.searchBox?.nativeElement?.blur();
+  }
+
+  /** Whether the current search query is known to match no events. */
+  get hasNoSearchResults(): boolean {
+    return !!this.currentSearchQuery && this.searchResultCount === 0;
   }
 
   /**
@@ -1341,12 +1388,14 @@ export class TraceViewerContainer
   updateSearchResultCountText(): void {
     if (!this.traceViewerModule || !this.currentSearchQuery) {
       this.searchResultCountText = '';
+      this.searchResultCount = undefined;
       return;
     }
     const instance = this.traceViewerModule.application.instance();
     const count = instance.getSearchResultsCount();
     const index = instance.getCurrentSearchResultIndex();
-    this.searchResultCountText = `${index === -1 ? 0 : index + 1} / ${count}`;
+    this.searchResultCount = count;
+    this.searchResultCountText = formatSearchResultCount(index, count);
   }
 
   openCustomizationPanel(): void {

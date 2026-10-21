@@ -18,41 +18,18 @@ mat-divider {
 }
 
 .trace-viewer-header {
-  padding: 14px 24px 8px 24px;
+  padding: 4px 24px 4px 8px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
+  gap: 8px;
   flex-shrink: 0;
   user-select: none;
-
-  .header-left {
-    display: flex;
-    flex-direction: column;
-
-    h1,
-    .page-title {
-      margin: 0;
-      font-size: 22px;
-      font-weight: 600;
-      color: #202124;
-      letter-spacing: -0.5px;
-    }
-
-    p,
-    .page-description {
-      margin: 4px 0 0 0;
-      font-size: 12px;
-      color: #5f6368;
-      max-width: 768px;
-      line-height: 1.6;
-    }
-  }
 
   .header-right {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-top: 4px;
     flex-shrink: 0;
   }
 }
@@ -60,9 +37,10 @@ mat-divider {
 .filter-bar {
   display: flex;
   align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
   min-height: 40px;
   padding: 0 12px;
-  margin: 4px 16px 4px 8px;
   background: transparent;
 }
 

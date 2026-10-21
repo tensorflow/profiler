@@ -507,6 +507,24 @@ EMSCRIPTEN_BINDINGS(trace_event_parser) {
           emscripten::optional_override([](traceviewer::Application& app) {
             app.timeline().Zoom(traceviewer::kButtonZoomOutFactor);
           }))
+      // Same as the '0' key: animates the view to the whole trace.
+      .function(
+          "resetView",
+          emscripten::optional_override([](traceviewer::Application& app) {
+            traceviewer::Timeline& timeline = app.timeline();
+            timeline.SetVisibleRange(timeline.data_time_range(),
+                                     /*animate=*/true);
+          }))
+      // Same as the 'f' key: zooms to the selected event, if any.
+      .function(
+          "zoomToSelection",
+          emscripten::optional_override([](traceviewer::Application& app) {
+            traceviewer::Timeline& timeline = app.timeline();
+            const int selected_event_index = timeline.selected_event_index();
+            if (selected_event_index != -1) {
+              timeline.ZoomEvent(selected_event_index);
+            }
+          }))
       .function("selectEvent",
                 emscripten::optional_override(
                     [](traceviewer::Application& app, int event_index) {

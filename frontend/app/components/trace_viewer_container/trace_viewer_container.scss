@@ -786,274 +786,200 @@ canvas.emscripten {
   }
 }
 
+// Timeline toolbar. Follows the Material 3 floating toolbar: a pill on the
+// surface container color that holds search, the pointer mode segmented
+// control, the zoom controls and the view actions, separated by dividers.
 .search-container {
+  // Shared metrics of the toolbar controls.
+  --tv-toolbar-control-size: 36px;
+  --tv-toolbar-icon-size: 20px;
+  --tv-toolbar-state-hover: color-mix(
+    in srgb,
+    var(--mat-sys-on-surface) 8%,
+    transparent
+  );
+  --tv-toolbar-state-pressed: color-mix(
+    in srgb,
+    var(--mat-sys-on-surface) 12%,
+    transparent
+  );
+
   display: flex;
   align-items: center;
-  background-color: var(--mat-sys-surface-container);
-  border-radius: 24px;
-  height: 40px;
-  padding: 0 12px;
+  gap: 4px;
   flex: 0 0 auto;
-  margin: 8px 16px 8px 8px;
+  height: 44px;
+  margin: 6px 16px 6px 8px;
+  padding: 0 4px;
   box-sizing: border-box;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 22px;
+  container: tv-toolbar / inline-size;
+  // The container query establishes a stacking context: lift the toolbar so
+  // that its popups, such as the Measure mode callout, paint over the canvas.
+  position: relative;
+  z-index: 2;
+  font-family: 'Google Sans Text', 'Google Sans', Roboto, sans-serif;
 }
 
+// Search field.
 .search-container mat-form-field.search-form-field {
-  flex-grow: 1;
-  max-width: 500px;
+  flex: 0 1 360px;
+  min-width: 160px;
+  max-width: 480px;
   margin: 0;
   padding: 0;
+  transition: flex-basis 200ms cubic-bezier(0.2, 0, 0, 1);
+
+  &:focus-within,
+  &.has-query {
+    flex-basis: 440px;
+  }
 
   ::ng-deep {
     [class*='mat-mdc-text-field-wrapper'] {
       display: flex;
       align-items: center;
-      height: 28px;
-      background-color: var(--mat-sys-surface);
-      border-radius: 24px;
-      padding: 0 12px 0 0;
+      height: var(--tv-toolbar-control-size);
+      padding: 0 4px 0 0;
       box-sizing: border-box;
-
-      &:focus-within {
-        outline: 2px solid var(--mat-sys-primary);
-        outline-offset: 2px;
-      }
+      background-color: var(--mat-sys-surface);
+      border-radius: calc(var(--tv-toolbar-control-size) / 2);
+      transition:
+        box-shadow 150ms ease,
+        background-color 150ms ease;
     }
 
     [class*='mat-mdc-form-field-flex'] {
       display: flex;
       align-items: center;
-      height: 28px;
+      height: var(--tv-toolbar-control-size);
       width: 100%;
     }
 
     [class*='mat-mdc-form-field-infix'] {
-      padding: 0;
-      min-height: unset;
-      height: 28px;
       display: flex;
       align-items: center;
       flex: 1;
+      width: auto;
+      min-width: 0;
+      min-height: unset;
+      height: var(--tv-toolbar-control-size);
+      padding: 0;
     }
 
-    [class*='mdc-notched-outline'] {
-      display: none;
-    }
-
+    [class*='mdc-notched-outline'],
     [class*='mat-mdc-form-field-subscript-wrapper'] {
       display: none;
     }
 
     [class*='mat-mdc-form-field-icon-prefix'] {
-      padding: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 36px;
+      width: 40px;
+      padding: 0;
 
       mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
+        width: var(--tv-toolbar-icon-size);
+        height: var(--tv-toolbar-icon-size);
+        padding: 0;
+        font-size: var(--tv-toolbar-icon-size);
         color: var(--mat-sys-on-surface-variant);
       }
     }
 
-    [class*='mat-mdc-input-element'] {
+    [class*='mat-mdc-form-field-icon-suffix'] {
       padding: 0;
-      height: 28px;
-      font-size: 13px;
+    }
+
+    [class*='mat-mdc-input-element'] {
+      height: var(--tv-toolbar-control-size);
+      padding: 0;
+      font-family: inherit;
+      font-size: 14px;
+      letter-spacing: 0.1px;
       color: var(--mat-sys-on-surface);
       caret-color: var(--mat-sys-primary);
       background: transparent;
+      text-overflow: ellipsis;
+
+      &::placeholder {
+        color: var(--mat-sys-on-surface-variant);
+      }
     }
   }
-}
 
-.search-result-count {
-  display: inline-block;
-  color: var(--mat-sys-on-surface-variant);
-  font-size: 12px;
-  font-weight: 400;
-  white-space: nowrap;
-  vertical-align: middle;
-  margin-right: 4px;
+  &:hover ::ng-deep [class*='mat-mdc-text-field-wrapper'] {
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--mat-sys-shadow, #000) 15%, transparent);
+  }
+
+  &:focus-within ::ng-deep [class*='mat-mdc-text-field-wrapper'] {
+    box-shadow: inset 0 0 0 2px var(--mat-sys-primary);
+  }
 }
 
 .search-suffix {
   display: flex;
   align-items: center;
+  gap: 2px;
+  padding-right: 4px;
+}
+
+.search-shortcut-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  margin-right: 6px;
+  box-sizing: border-box;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 4px;
+  font-family: 'Google Sans Mono', 'Roboto Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--mat-sys-on-surface-variant);
+  transition: opacity 150ms ease;
+}
+
+.search-form-field:focus-within .search-shortcut-hint {
+  opacity: 0;
+}
+
+.search-result-count {
+  margin: 0 4px 0 8px;
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.1px;
+  white-space: nowrap;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.search-form-field.no-results .search-result-count {
+  color: var(--mat-sys-error);
 }
 
 .search-divider {
   width: 1px;
-  height: 16px;
-  background-color: var(--mat-sys-outline-variant);
+  height: 20px;
   margin: 0 4px;
+  background-color: var(--mat-sys-outline-variant);
 }
 
-.search-arrow-btn,
-.search-clear-btn {
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  min-width: unset;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--mat-sys-on-surface-variant);
-
-  mat-icon {
-    font-size: 16px;
-    width: 16px;
-    height: 16px;
-  }
-}
-
-.mouse-mode-container {
-  display: flex;
-  align-items: center;
-  margin-left: 12px;
-
-  button.mat-mdc-icon-button {
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    min-width: unset;
-    border-radius: 4px;
-    color: var(--mat-sys-on-surface-variant);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    ::ng-deep {
-      [class*='mat-mdc-button-persistent-ripple'],
-      [class*='mat-mdc-focus-indicator'],
-      [class*='mat-ripple'] {
-        display: none;
-      }
-    }
-
-    &:hover,
-    &:focus-visible {
-      background-color: var(--mat-sys-primary-container);
-      outline: none;
-    }
-
-    &.active {
-      background-color: var(--mat-sys-primary-container);
-      color: var(--mat-sys-primary);
-    }
-
-    mat-icon,
-    svg {
-      width: 20px;
-      height: 20px;
-      font-size: 20px;
-      vertical-align: middle;
-    }
-  }
-}
-
-.toolbar-divider {
-  width: 1px;
-  height: 16px;
-  background-color: var(--mat-sys-outline-variant, #dadce0);
-  margin: 0 8px;
-  flex-shrink: 0;
-}
-
-.navigation-actions-container {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-
-  button.toolbar-action-btn {
-    height: 32px;
-    padding: 0 6px;
-    min-width: unset;
-    border-radius: 4px;
-    color: var(--mat-sys-on-surface-variant);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0;
-    font-family: 'Google Sans Text', Roboto, sans-serif;
-    font-size: 12px;
-    font-weight: 500;
-    line-height: 1;
-
-    ::ng-deep {
-      [class*='mat-mdc-button-persistent-ripple'],
-      [class*='mat-mdc-focus-indicator'],
-      [class*='mat-ripple'],
-      .mat-mdc-button-touch-target {
-        display: none;
-      }
-
-      [class*='button__label'] {
-        display: inline-flex;
-        align-items: center;
-        gap: 0;
-      }
-    }
-
-    &:hover,
-    &:focus-visible {
-      background-color: var(--mat-sys-primary-container);
-      outline: none;
-    }
-
-    &.active {
-      background-color: var(--mat-sys-primary-container);
-      color: var(--mat-sys-primary);
-    }
-
-    mat-icon {
-      width: 18px;
-      height: 18px;
-      font-size: 18px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      vertical-align: middle;
-      color: inherit;
-      margin: 0;
-
-      svg {
-        width: 18px;
-        height: 18px;
-        display: block;
-      }
-    }
-
-    .btn-label {
-      font-size: 12px;
-      font-weight: 500;
-      color: inherit;
-      letter-spacing: 0.1px;
-      margin-left: 0;
-    }
-  }
-}
-
-@media (max-width: 900px) {
-  .navigation-actions-container button.toolbar-action-btn .btn-label {
-    display: none;
-  }
-}
-
-button.shortcuts-guide-btn {
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  min-width: unset;
-  border-radius: 4px;
-  color: var(--mat-sys-on-surface-variant);
+button.search-arrow-btn.mat-mdc-icon-button,
+button.search-clear-btn.mat-mdc-icon-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 28px;
+  height: 28px;
+  min-width: unset;
+  padding: 0;
+  border-radius: 50%;
+  color: var(--mat-sys-on-surface-variant);
 
   ::ng-deep {
     [class*='mat-mdc-button-persistent-ripple'],
@@ -1064,100 +990,246 @@ button.shortcuts-guide-btn {
     }
   }
 
-  &:hover,
-  &:focus-visible {
-    background-color: var(--mat-sys-primary-container);
-    outline: none;
+  &:hover:not([disabled]) {
+    background-color: var(--tv-toolbar-state-hover);
   }
 
-  &.active {
-    background-color: var(--mat-sys-primary-container);
-    color: var(--mat-sys-primary);
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: -2px;
+  }
+
+  &[disabled] {
+    color: color-mix(in srgb, var(--mat-sys-on-surface) 38%, transparent);
   }
 
   mat-icon {
-    width: 24px;
-    height: 24px;
-    font-size: 24px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
+    width: 20px;
+    height: 20px;
+    font-size: 20px;
+  }
+}
+
+// Dividers between the groups of the toolbar.
+.toolbar-divider {
+  flex-shrink: 0;
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background-color: var(--mat-sys-outline-variant, #dadce0);
+}
+
+// Pointer mode segmented control: a tonal track that holds one button per
+// mode. The active mode is filled with the secondary container color and
+// uses the filled variant of its icon.
+.mouse-mode-container {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 2px;
+  height: var(--tv-toolbar-control-size);
+  padding: 2px;
+  box-sizing: border-box;
+  background-color: var(--mat-sys-surface);
+  border-radius: calc(var(--tv-toolbar-control-size) / 2);
+}
+
+.timing-button-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+// Icon buttons of the toolbar: the pointer modes, the zoom controls and the
+// view actions. The Material ripple is replaced with a flat state layer so
+// that the buttons fit the 36px toolbar.
+button.mode-btn.mat-mdc-icon-button,
+button.toolbar-action-btn.mat-mdc-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: unset;
+  padding: 0;
+  border-radius: 50%;
+  color: var(--mat-sys-on-surface-variant);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+
+  ::ng-deep {
+    [class*='mat-mdc-button-persistent-ripple'],
+    [class*='mat-mdc-focus-indicator'],
+    [class*='mat-ripple'],
+    .mat-mdc-button-touch-target {
+      display: none;
+    }
+  }
+
+  &:hover:not([disabled]):not([aria-disabled='true']) {
+    background-color: var(--tv-toolbar-state-hover);
+  }
+
+  &:active:not([disabled]):not([aria-disabled='true']) {
+    background-color: var(--tv-toolbar-state-pressed);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: -2px;
+  }
+
+  &[disabled],
+  &[aria-disabled='true'] {
+    color: color-mix(in srgb, var(--mat-sys-on-surface) 38%, transparent);
+    cursor: default;
+  }
+
+  mat-icon {
+    width: var(--tv-toolbar-icon-size);
+    height: var(--tv-toolbar-icon-size);
     margin: 0;
     padding: 0;
+    font-size: var(--tv-toolbar-icon-size);
+    line-height: 1;
+    font-variation-settings:
+      'FILL' 0,
+      'wght' 400,
+      'GRAD' 0,
+      'opsz' 20;
+  }
+}
 
-    svg {
-      width: 24px;
-      height: 24px;
-      display: block;
+button.mode-btn.mat-mdc-icon-button {
+  width: 32px;
+  height: 32px;
+
+  &.active {
+    color: var(--mat-sys-on-secondary-container);
+    background-color: var(--mat-sys-secondary-container);
+
+    mat-icon {
+      font-variation-settings:
+        'FILL' 1,
+        'wght' 500,
+        'GRAD' 0,
+        'opsz' 20;
     }
   }
 }
 
+button.toolbar-action-btn.mat-mdc-icon-button {
+  width: var(--tv-toolbar-control-size);
+  height: var(--tv-toolbar-control-size);
+
+  &.active {
+    color: var(--mat-sys-on-secondary-container);
+    background-color: var(--mat-sys-secondary-container);
+  }
+}
+
+.navigation-actions-container,
+.toolbar-trailing-actions,
 .fullscreen-container {
   display: flex;
   align-items: center;
-  margin-left: 4px;
+  flex-shrink: 0;
+}
 
-  button.mat-mdc-icon-button {
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    min-width: unset;
-    border-radius: 4px;
-    color: var(--mat-sys-on-surface-variant);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    ::ng-deep {
-      [class*='mat-mdc-button-persistent-ripple'],
-      [class*='mat-mdc-focus-indicator'],
-      [class*='mat-ripple'],
-      .mat-mdc-button-touch-target {
-        display: none;
-      }
-    }
-
-    &:hover,
-    &:focus-visible {
-      background-color: var(--mat-sys-primary-container);
-      outline: none;
-    }
-
-    &.active {
-      background-color: var(--mat-sys-primary-container);
-      color: var(--mat-sys-primary);
-    }
-
-    mat-icon {
-      width: 24px;
-      height: 24px;
-      font-size: 24px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      line-height: 1;
-      margin: 0;
-      padding: 0;
-
-      svg {
-        width: 24px;
-        height: 24px;
-        display: block;
-      }
-    }
-
-    svg {
-      width: 24px;
-      height: 24px;
-      display: block;
-    }
-  }
+.navigation-actions-container {
+  gap: 2px;
 }
 
 .spacer {
   flex-grow: 1;
+  min-width: 8px;
+}
+
+// Status chip shown while more data streams in.
+.incremental-loading {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 8px;
+  height: 28px;
+  margin-right: 4px;
+  padding: 0 12px 0 10px;
+  box-sizing: border-box;
+  background-color: var(--mat-sys-surface-container-high);
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  white-space: nowrap;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+// The overflow menu holds the zoom controls when the toolbar is too narrow
+// to show them inline.
+button.overflow-menu-btn.mat-mdc-icon-button {
+  display: none;
+}
+
+@container tv-toolbar (max-width: 760px) {
+  .navigation-actions-container,
+  .navigation-actions-container + .toolbar-divider,
+  .mouse-mode-container + .toolbar-divider {
+    display: none;
+  }
+
+  button.overflow-menu-btn.mat-mdc-icon-button {
+    display: inline-flex;
+  }
+
+  .incremental-loading .loading-status {
+    display: none;
+  }
+
+  .incremental-loading {
+    padding: 0 7px;
+  }
+}
+
+@container tv-toolbar (max-width: 520px) {
+  .search-container mat-form-field.search-form-field {
+    min-width: 120px;
+  }
+
+  .search-shortcut-hint {
+    display: none;
+  }
+}
+
+::ng-deep .trace-viewer-toolbar-menu {
+  .mat-mdc-menu-item-text {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    width: 100%;
+  }
+
+  .mat-mdc-menu-item mat-icon {
+    font-variation-settings:
+      'FILL' 0,
+      'wght' 400,
+      'GRAD' 0,
+      'opsz' 24;
+  }
+
+  .menu-shortcut {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    margin-left: auto;
+    padding: 0 4px;
+    box-sizing: border-box;
+    border: 1px solid var(--mat-sys-outline-variant);
+    border-radius: 4px;
+    font-family: 'Google Sans Mono', 'Roboto Mono', monospace;
+    font-size: 11px;
+    color: var(--mat-sys-on-surface-variant);
+  }
 }
 
 .custom-drawer-container {
@@ -1563,6 +1635,10 @@ button.shortcuts-guide-btn {
 
 .loading-overlay {
   position: absolute;
+  // Covers the timeline only, so that the toolbar stays legible while the
+  // trace loads.
+  top: $search-bar-height;
+  left: 0;
   width: 100%;
   height: calc(100% - $search-bar-height);
   display: flex;
@@ -1582,75 +1658,83 @@ button.shortcuts-guide-btn {
   }
 }
 
-.spacer {
-  flex-grow: 1;
-}
-
-.incremental-loading {
-  display: flex;
-  align-items: center;
-  margin-right: 16px;
-
-  .loading-status {
-    margin-right: 8px;
-  }
-
-  mat-progress-spinner {
-    margin: 0 8px;
-  }
-}
-
-.timing-button-wrapper {
-  position: relative;
-  display: inline-block;
-}
-
+// Feature callout shown the first time Measure mode is used.
 .coach-mark-bubble {
   position: absolute;
-  top: 40px;
-  right: 0;
-  width: 250px;
-  background: var(--mat-sys-surface);
-  border: 1px solid var(--mat-sys-outline-variant);
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
-  padding: 12px;
+  top: 44px;
+  right: -12px;
   z-index: 1000;
-  font-family: Roboto, sans-serif;
+  width: 296px;
+  padding: 16px 16px 8px;
+  box-sizing: border-box;
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  border-radius: 12px;
+  box-shadow:
+    0 4px 8px 3px color-mix(in srgb, var(--mat-sys-shadow, #000) 15%, transparent),
+    0 1px 3px color-mix(in srgb, var(--mat-sys-shadow, #000) 30%, transparent);
+  font-family: 'Google Sans Text', 'Google Sans', Roboto, sans-serif;
+  text-align: left;
+  animation: coachMarkIn 200ms cubic-bezier(0.2, 0, 0, 1);
+
+  kbd {
+    display: inline-block;
+    min-width: 12px;
+    padding: 0 5px;
+    border: 1px solid color-mix(in srgb, var(--mat-sys-on-primary) 50%, transparent);
+    border-radius: 4px;
+    font-family: 'Google Sans Mono', 'Roboto Mono', monospace;
+    font-size: 11px;
+    line-height: 16px;
+    text-align: center;
+  }
+}
+
+@keyframes coachMarkIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .coach-mark-title {
-  font-size: 14px;
+  margin-bottom: 4px;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 16px;
   font-weight: 500;
-  color: var(--mat-sys-on-surface);
-  margin-bottom: 6px;
+  line-height: 24px;
 }
 
 .coach-mark-content {
-  font-size: 12px;
-  color: var(--mat-sys-on-surface-variant);
-  line-height: 1.4;
-  margin-bottom: 10px;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0.1px;
 }
 
 .coach-mark-actions {
   display: flex;
   justify-content: flex-end;
+  margin-top: 8px;
 }
 
-.coach-mark-button {
-  font-size: 12px;
+button.coach-mark-button.mat-mdc-button {
+  color: var(--mat-sys-on-primary);
+  font-weight: 500;
 }
 
 .coach-mark-arrow {
   position: absolute;
   top: -6px;
-  right: 12px;
-  width: 10px;
-  height: 10px;
-  background: var(--mat-sys-surface);
-  border-left: 1px solid var(--mat-sys-outline-variant);
-  border-top: 1px solid var(--mat-sys-outline-variant);
+  right: 24px;
+  width: 12px;
+  height: 12px;
+  background: var(--mat-sys-primary);
+  border-radius: 2px;
   transform: rotate(45deg);
 }
 

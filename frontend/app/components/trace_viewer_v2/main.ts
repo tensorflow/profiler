@@ -261,6 +261,10 @@ declare global {
       scheduleForcedRedraw(): void;
       zoomIn(): void;
       zoomOut(): void;
+      /** Animates the visible range to the full time range of the trace. */
+      resetView?(): void;
+      /** Zooms to the selected event. Does nothing if none is selected. */
+      zoomToSelection?(): void;
     };
   };
 }
