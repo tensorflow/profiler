@@ -15,47 +15,69 @@
  * limitations under the License.
  */
 
-// Canonical Typography Font Tokens & Text Utilities for Component Rack.
+// Typography Font Tokens & Text Utilities for Component Rack.
 // Standardizes font families across brand, plain, and code/monospace contexts.
 
-/// Emits canonical typography font family tokens, M3 type scale tokens, and host compatibility aliases.
+/// Emits typography font family tokens, type scale tokens, and host compatibility aliases.
 @mixin typography-tokens {
   // stylelint-disable ng-components/use-material-overrides -- Application-level Material 3 design tokens
-  // 1. Core Material 3 Font Stacks
+  // 1. Core Font Stacks
   --mat-sys-brand-font: 'Google Sans Flex', 'Google Sans', Roboto, sans-serif;
   --mat-sys-plain-font: 'Google Sans Text', Roboto, sans-serif;
   --mat-sys-code-font: 'Roboto Mono', ui-monospace, monospace;
 
-  // 2. Material 3 Type Scale Tokens (Title, Label, Body)
-  // Title Scale
-  --mat-sys-title-large-font: var(--mat-sys-brand-font);
-  --mat-sys-title-large-size: 22px;
-  --mat-sys-title-large-line-height: 28px;
-  --mat-sys-title-large-weight: 400;
-  --mat-sys-title-large-tracking: 0px;
-  --mat-sys-title-large: 400 22px / 28px var(--mat-sys-brand-font);
+  // 2. Type Scale Tokens (Headline, Title, Label, Body, Code)
+  // Headline Scale (Brand: Google Sans)
+  --mat-sys-headline-large-font: var(--mat-sys-brand-font);
+  --mat-sys-headline-large-size: 24px;
+  --mat-sys-headline-large-line-height: 32px;
+  --mat-sys-headline-large-weight: 400;
+  --mat-sys-headline-large-tracking: 0px;
+  --mat-sys-headline-large: 400 24px / 32px var(--mat-sys-brand-font);
 
-  --mat-sys-title-medium-font: var(--mat-sys-brand-font);
+  --mat-sys-headline-medium-font: var(--mat-sys-brand-font);
+  --mat-sys-headline-medium-size: 22px;
+  --mat-sys-headline-medium-line-height: 28px;
+  --mat-sys-headline-medium-weight: 400;
+  --mat-sys-headline-medium-tracking: 0px;
+  --mat-sys-headline-medium: 400 22px / 28px var(--mat-sys-brand-font);
+
+  --mat-sys-headline-small-font: var(--mat-sys-brand-font);
+  --mat-sys-headline-small-size: 20px;
+  --mat-sys-headline-small-line-height: 28px;
+  --mat-sys-headline-small-weight: 400;
+  --mat-sys-headline-small-tracking: 0px;
+  --mat-sys-headline-small: 400 20px / 28px var(--mat-sys-brand-font);
+
+  // Title Scale (TitleLarge uses Brand; TitleMedium & TitleSmall use Plain)
+  --mat-sys-title-large-font: var(--mat-sys-brand-font);
+  --mat-sys-title-large-size: 18px;
+  --mat-sys-title-large-line-height: 24px;
+  --mat-sys-title-large-weight: 500;
+  --mat-sys-title-large-tracking: 0px;
+  --mat-sys-title-large: 500 18px / 24px var(--mat-sys-brand-font);
+
+  --mat-sys-title-medium-font: var(--mat-sys-plain-font);
   --mat-sys-title-medium-size: 16px;
   --mat-sys-title-medium-line-height: 24px;
   --mat-sys-title-medium-weight: 500;
-  --mat-sys-title-medium-tracking: 0.15px;
-  --mat-sys-title-medium: 500 16px / 24px var(--mat-sys-brand-font);
+  --mat-sys-title-medium-tracking: 0px;
+  --mat-sys-title-medium: 500 16px / 24px var(--mat-sys-plain-font);
 
-  --mat-sys-title-small-font: var(--mat-sys-brand-font);
+  --mat-sys-title-small-font: var(--mat-sys-plain-font);
   --mat-sys-title-small-size: 14px;
   --mat-sys-title-small-line-height: 20px;
   --mat-sys-title-small-weight: 500;
-  --mat-sys-title-small-tracking: 0.1px;
-  --mat-sys-title-small: 500 14px / 20px var(--mat-sys-brand-font);
+  --mat-sys-title-small-tracking: 0px;
+  --mat-sys-title-small: 500 14px / 20px var(--mat-sys-plain-font);
 
-  // Label Scale (Navigation items, buttons, group headers, badges)
-  --mat-sys-label-large-font: var(--mat-sys-brand-font);
-  --mat-sys-label-large-size: 14px;
+  // Label Scale (Plain: Google Sans Text — navigation items, buttons, group headers, badges)
+  --mat-sys-label-large-font: var(--mat-sys-plain-font);
+  --mat-sys-label-large-size: 13px;
   --mat-sys-label-large-line-height: 20px;
   --mat-sys-label-large-weight: 500;
-  --mat-sys-label-large-tracking: 0.1px;
-  --mat-sys-label-large: 500 14px / 20px var(--mat-sys-brand-font);
+  --mat-sys-label-large-tracking: 0px;
+  --mat-sys-label-large: 500 13px / 20px var(--mat-sys-plain-font);
 
   --mat-sys-label-medium-font: var(--mat-sys-plain-font);
   --mat-sys-label-medium-size: 12px;
@@ -71,27 +93,49 @@
   --mat-sys-label-small-tracking: 0.1px;
   --mat-sys-label-small: 500 11px / 16px var(--mat-sys-plain-font);
 
-  // Body Scale
+  // Body Scale (Plain: Google Sans Text)
   --mat-sys-body-large-font: var(--mat-sys-plain-font);
-  --mat-sys-body-large-size: 16px;
-  --mat-sys-body-large-line-height: 24px;
+  --mat-sys-body-large-size: 14px;
+  --mat-sys-body-large-line-height: 20px;
   --mat-sys-body-large-weight: 400;
-  --mat-sys-body-large-tracking: 0.5px;
-  --mat-sys-body-large: 400 16px / 24px var(--mat-sys-plain-font);
+  --mat-sys-body-large-tracking: 0px;
+  --mat-sys-body-large: 400 14px / 20px var(--mat-sys-plain-font);
 
   --mat-sys-body-medium-font: var(--mat-sys-plain-font);
-  --mat-sys-body-medium-size: 14px;
+  --mat-sys-body-medium-size: 13px;
   --mat-sys-body-medium-line-height: 20px;
   --mat-sys-body-medium-weight: 400;
-  --mat-sys-body-medium-tracking: 0.25px;
-  --mat-sys-body-medium: 400 14px / 20px var(--mat-sys-plain-font);
+  --mat-sys-body-medium-tracking: 0px;
+  --mat-sys-body-medium: 400 13px / 20px var(--mat-sys-plain-font);
 
   --mat-sys-body-small-font: var(--mat-sys-plain-font);
   --mat-sys-body-small-size: 12px;
   --mat-sys-body-small-line-height: 16px;
   --mat-sys-body-small-weight: 400;
-  --mat-sys-body-small-tracking: 0.4px;
+  --mat-sys-body-small-tracking: 0.1px;
   --mat-sys-body-small: 400 12px / 16px var(--mat-sys-plain-font);
+
+  // Code Scale (Code blocks, source snippets)
+  --mat-sys-code-large-font: var(--mat-sys-code-font);
+  --mat-sys-code-large-size: 13px;
+  --mat-sys-code-large-line-height: 20px;
+  --mat-sys-code-large-weight: 400;
+  --mat-sys-code-large-tracking: 0px;
+  --mat-sys-code-large: 400 13px / 20px var(--mat-sys-code-font);
+
+  --mat-sys-code-medium-font: var(--mat-sys-code-font);
+  --mat-sys-code-medium-size: 12px;
+  --mat-sys-code-medium-line-height: 16px;
+  --mat-sys-code-medium-weight: 400;
+  --mat-sys-code-medium-tracking: 0px;
+  --mat-sys-code-medium: 400 12px / 16px var(--mat-sys-code-font);
+
+  --mat-sys-code-small-font: var(--mat-sys-code-font);
+  --mat-sys-code-small-size: 11px;
+  --mat-sys-code-small-line-height: 16px;
+  --mat-sys-code-small-weight: 400;
+  --mat-sys-code-small-tracking: 0px;
+  --mat-sys-code-small: 400 11px / 16px var(--mat-sys-code-font);
 
   // 3. Cross-Repository Compatibility Aliases (for host repos lacking M3 typography mixins)
   --sys-font-mono: var(--mat-sys-code-font);
