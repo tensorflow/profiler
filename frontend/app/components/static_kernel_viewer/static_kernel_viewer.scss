@@ -1194,7 +1194,8 @@ $card-width: 320px;
 }
 
 trace-viewer-container.trace-loaded {
-  animation: trace-loaded-reveal 260ms var(--motion-easing-emphasized-decelerate);
+  animation: trace-loaded-reveal 260ms
+    var(--motion-easing-emphasized-decelerate);
 }
 
 @keyframes trace-loaded-reveal {
@@ -1893,6 +1894,162 @@ trace-viewer-container.trace-loaded {
   }
 }
 
+// Toggle of the source panel in the kernel bar.
+.bar-action {
+  flex: none;
+  height: 34px;
+  padding: 0 14px 0 10px;
+  border-radius: 17px;
+  color: var(--mat-sys-on-surface-variant);
+  font: 500 13px / 1 var(--mat-sys-plain-font);
+  transition:
+    background-color 150ms var(--motion-easing-standard),
+    color 150ms var(--motion-easing-standard);
+
+  mat-icon {
+    width: 18px;
+    height: 18px;
+    margin-inline-end: 6px;
+    font-size: 18px;
+  }
+
+  &.active {
+    border-color: transparent;
+    background: var(--mat-sys-secondary-container);
+    color: var(--mat-sys-on-secondary-container);
+  }
+
+  // Narrow viewers keep the icon only.
+  @media (max-width: 1180px) {
+    min-width: 34px;
+    padding: 0 8px;
+
+    mat-icon {
+      margin-inline-end: 0;
+    }
+
+    .bar-action-label {
+      display: none;
+    }
+  }
+}
+
+// The timeline and the source panel, side by side.
+.skv-workspace {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 0;
+
+  // Keeps the canvas and the editor from taking the pointer while resizing.
+  &.resizing {
+    cursor: col-resize;
+    user-select: none;
+
+    .timeline-column,
+    .source-slot {
+      pointer-events: none;
+    }
+  }
+}
+
+.timeline-column {
+  display: flex;
+  position: relative;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-width: 0;
+}
+
+// The divider between the timeline and the source panel, with a drag handle in
+// its middle that shows that the panel can be resized.
+.source-resizer {
+  position: relative;
+  z-index: 2;
+  flex: none;
+  width: 13px;
+  margin: 0 -6px;
+  cursor: col-resize;
+  touch-action: none;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 6px;
+    width: 1px;
+    background: color-mix(
+      in srgb,
+      var(--mat-sys-outline-variant) 80%,
+      transparent
+    );
+    transition: background-color 150ms var(--motion-easing-standard);
+  }
+
+  &:hover::after,
+  &:focus-visible::after,
+  .skv-workspace.resizing &::after {
+    background: color-mix(in srgb, var(--mat-sys-primary) 50%, transparent);
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+}
+
+.resizer-grip {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 40px;
+  border-radius: 2px;
+  background: var(--mat-sys-outline);
+  // Separates the handle from the code and the timeline under it.
+  box-shadow: 0 0 0 2px var(--mat-sys-surface);
+  transform: translate(-50%, -50%);
+  transition:
+    width 150ms var(--motion-easing-standard),
+    height 150ms var(--motion-easing-standard),
+    background-color 150ms var(--motion-easing-standard);
+
+  .source-resizer:hover &,
+  .source-resizer:focus-visible & {
+    width: 6px;
+    height: 48px;
+    border-radius: 3px;
+    background: var(--mat-sys-primary);
+  }
+
+  .source-resizer:focus-visible & {
+    box-shadow:
+      0 0 0 2px var(--mat-sys-surface),
+      0 0 0 4px var(--mat-sys-primary);
+  }
+
+  .skv-workspace.resizing & {
+    width: 8px;
+    height: 56px;
+    border-radius: 4px;
+    background: var(--mat-sys-primary);
+  }
+}
+
+.source-slot {
+  flex: 0 0 auto;
+  min-width: 340px;
+  max-width: 72%;
+  animation: source-enter 220ms var(--motion-easing-emphasized-decelerate);
+}
+
+@keyframes source-enter {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .rail-slot,
   .kernel-rail,
@@ -1912,6 +2069,9 @@ trace-viewer-container.trace-loaded {
   .unit-fill,
   .tour-button,
   .tour-button.pulsing,
+  .bar-action,
+  .source-slot,
+  .resizer-grip,
   trace-viewer-container.trace-loaded {
     transition: none;
     animation: none;

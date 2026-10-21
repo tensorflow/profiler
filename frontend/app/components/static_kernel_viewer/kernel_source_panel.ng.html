@@ -1,0 +1,517 @@
+<section
+  #panel
+  class="source-panel"
+  [class.resizing-details]="isResizingDetails()"
+  (keydown)="hideHoverCard()"
+  aria-label="Kernel source"
+>
+  <header class="panel-header">
+    <span class="file-badge" aria-hidden="true">{{ fileBadge() }}</span>
+    <ng-template #fileLabel>
+      <span class="file-text">
+        <span class="file-name">{{ fileName() || 'Source' }}</span>
+        @if (fileDirectory()) {
+          <span class="file-directory">{{ fileDirectory() }}</span>
+        }
+      </span>
+    </ng-template>
+    @if (codeSearchUrl(); as url) {
+      <a
+        class="file-button file-link"
+        target="_blank"
+        rel="noopener"
+        [href]="url"
+        [matTooltip]="'Open ' + resolvedPath() + ' in Code Search'"
+        matTooltipPosition="below"
+        [attr.aria-label]="'Open ' + resolvedPath() + ' in Code Search'"
+      >
+        <ng-container [ngTemplateOutlet]="fileLabel"></ng-container>
+        <mat-icon class="file-link-icon" aria-hidden="true">open_in_new</mat-icon>
+      </a>
+    } @else {
+      <span class="file-button static" [matTooltip]="resolvedPath()" matTooltipPosition="below">
+        <ng-container [ngTemplateOutlet]="fileLabel"></ng-container>
+      </span>
+    }
+    @if (files().length > 1) {
+      <button
+        class="file-switcher"
+        type="button"
+        [matMenuTriggerFor]="fileMenu"
+        matTooltip="Choose another source file"
+        matTooltipPosition="below"
+        [attr.aria-label]="'Source file ' + resolvedPath() + ', choose another file'"
+      >
+        <span class="file-count">{{ files().length }} files</span>
+        <mat-icon class="file-menu-icon" aria-hidden="true">arrow_drop_down</mat-icon>
+      </button>
+    }
+    <mat-menu #fileMenu="matMenu" xPosition="after">
+      @for (file of files(); track file.path) {
+        <button
+          mat-menu-item
+          class="file-option"
+          [class.current]="file.path === resolvedPath()"
+          type="button"
+          (click)="selectFile(file.path)"
+        >
+          <span class="menu-file">
+            <span class="menu-file-name">{{ file.name }}</span>
+            <span class="menu-file-share">{{ shareOf(file) }}</span>
+          </span>
+          <span class="menu-file-directory">{{ file.directory }}</span>
+        </button>
+      }
+    </mat-menu>
+
+    <div class="header-actions">
+      @if (origin(); as origin) {
+        <span
+          class="origin-chip"
+          [class.local]="origin.kind === 'local'"
+          [class.workspace]="origin.kind === 'workspace'"
+        >
+          <span class="origin-main" [matTooltip]="origin.description" matTooltipPosition="below">
+            <mat-icon aria-hidden="true">{{ origin.icon }}</mat-icon>
+            <span class="origin-label">{{ origin.label }}</span>
+          </span>
+          @if (origin.kind === 'local') {
+            <button
+              class="origin-close"
+              type="button"
+              (click)="closeLocalCopy()"
+              matTooltip="Show the profiled version"
+              aria-label="Show the profiled version"
+            >
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </span>
+      }
+      <button
+        mat-icon-button
+        class="header-button"
+        type="button"
+        [matMenuTriggerFor]="moreMenu"
+        matTooltip="More options"
+        aria-label="More options"
+      >
+        <mat-icon>more_vert</mat-icon>
+      </button>
+      <button
+        mat-icon-button
+        class="header-button"
+        type="button"
+        (click)="closed.emit()"
+        matTooltip="Close source (C)"
+        aria-label="Close source"
+      >
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  </header>
+
+  <mat-menu #moreMenu="matMenu" xPosition="before">
+    @if (showsEditor() && !linesOnly()) {
+      <button mat-menu-item type="button" (click)="runEditorAction('actions.find')">
+        <mat-icon>search</mat-icon>
+        <span class="menu-row">
+          <span>Find in file</span>
+          <span class="menu-shortcut">{{ modKey }}+F</span>
+        </span>
+      </button>
+      <button mat-menu-item type="button" (click)="runEditorAction('editor.action.gotoLine')">
+        <mat-icon>numbers</mat-icon>
+        <span class="menu-row">
+          <span>Go to line</span>
+          <span class="menu-shortcut">{{ modKey }}+G</span>
+        </span>
+      </button>
+      <button mat-menu-item type="button" (click)="runEditorAction('editor.foldAll')">
+        <mat-icon>unfold_less</mat-icon>
+        <span>Fold all</span>
+      </button>
+      <button mat-menu-item type="button" (click)="runEditorAction('editor.unfoldAll')">
+        <mat-icon>unfold_more</mat-icon>
+        <span>Unfold all</span>
+      </button>
+      <mat-divider></mat-divider>
+    }
+    @if (showsEditor()) {
+      <button mat-menu-item type="button" [matMenuTriggerFor]="themeMenu">
+        <mat-icon>palette</mat-icon>
+        <span>Theme</span>
+      </button>
+      <button mat-menu-item type="button" [matMenuTriggerFor]="textSizeMenu">
+        <mat-icon>format_size</mat-icon>
+        <span>Text size</span>
+      </button>
+      @for (toggle of toggles; track toggle.option) {
+        <button
+          mat-menu-item
+          class="toggle-option"
+          type="button"
+          role="menuitemcheckbox"
+          (click)="$event.stopPropagation(); toggleOption(toggle.option)"
+          [attr.aria-checked]="options()[toggle.option]"
+        >
+          <mat-icon>{{ toggle.icon }}</mat-icon>
+          <span class="menu-row">
+            <span>{{ toggle.label }}</span>
+            <mat-icon class="menu-check" [class.on]="options()[toggle.option]" aria-hidden="true">check</mat-icon>
+          </span>
+        </button>
+      }
+      <mat-divider></mat-divider>
+    }
+    <button mat-menu-item type="button" [disabled]="!resolvedPath()" (click)="copyPath()">
+      <mat-icon>content_copy</mat-icon>
+      <span>Copy path</span>
+    </button>
+    <button mat-menu-item type="button" [disabled]="!resolvedPath()" (click)="pickLocalFile()">
+      <mat-icon>upload_file</mat-icon>
+      <span>Open local copy…</span>
+    </button>
+  </mat-menu>
+
+  <mat-menu #themeMenu="matMenu">
+    @for (theme of themes; track theme.id) {
+      <button
+        mat-menu-item
+        type="button"
+        role="menuitemradio"
+        (click)="setTheme(theme.id)"
+        [attr.aria-checked]="theme.id === options().theme"
+      >
+        <span class="menu-row">
+          <span class="theme-option">
+            <span class="theme-swatch" [style.background-color]="theme.swatch" aria-hidden="true"></span>
+            {{ theme.label }}
+          </span>
+          <mat-icon class="menu-check" [class.on]="theme.id === options().theme" aria-hidden="true">check</mat-icon>
+        </span>
+      </button>
+    }
+  </mat-menu>
+
+  <mat-menu #textSizeMenu="matMenu">
+    @for (size of textSizes; track size.fontSize) {
+      <button
+        mat-menu-item
+        type="button"
+        role="menuitemradio"
+        (click)="setFontSize(size.fontSize)"
+        [attr.aria-checked]="size.fontSize === options().fontSize"
+      >
+        <span class="menu-row">
+          <span>{{ size.label }}</span>
+          <mat-icon class="menu-check" [class.on]="size.fontSize === options().fontSize" aria-hidden="true">check</mat-icon>
+        </span>
+      </button>
+    }
+  </mat-menu>
+
+  @if (content().state === 'loading' && files().length > 0) {
+    <mat-progress-bar class="load-bar" mode="indeterminate" aria-label="Loading the source"></mat-progress-bar>
+  }
+
+  @if (contentMessage(); as message) {
+    <div class="content-banner" role="note">
+      <mat-icon aria-hidden="true">visibility_off</mat-icon>
+      <span class="banner-text">
+        <span class="banner-title">{{ message }}</span>
+        <span>Showing the {{ attributedRows().length }} lines that have instructions.</span>
+      </span>
+      <button mat-stroked-button class="banner-button" type="button" (click)="pickLocalFile()">
+        <mat-icon>upload_file</mat-icon>
+        Open local copy
+      </button>
+    </div>
+  }
+
+  <div class="code-body">
+    @switch (emptyState()) {
+      @case ('loading') {
+        <div class="empty-state" role="status">
+          <span class="skeleton-lines" aria-hidden="true">
+            @for (width of skeletonWidths; track $index) {
+              <span class="skeleton-line" [style.width.%]="width"></span>
+            }
+          </span>
+          <span class="empty-text">Mapping the schedule to source lines…</span>
+        </div>
+      }
+      @case ('unsupported') {
+        <div class="empty-state">
+          <mat-icon class="empty-icon" aria-hidden="true">code_off</mat-icon>
+          <span class="empty-title">Source attribution isn't available</span>
+          <span class="empty-text">This XProf server doesn't map kernel schedules to source lines.</span>
+        </div>
+      }
+      @case ('error') {
+        <div class="empty-state" role="alert">
+          <mat-icon class="empty-icon" aria-hidden="true">error_outline</mat-icon>
+          <span class="empty-title">Couldn't map the schedule to source</span>
+          <button mat-stroked-button type="button" (click)="retry.emit()">
+            <mat-icon>refresh</mat-icon>
+            Try again
+          </button>
+        </div>
+      }
+      @case ('no-map') {
+        <div class="empty-state">
+          <mat-icon class="empty-icon" aria-hidden="true">link_off</mat-icon>
+          <span class="empty-title">No source map for this kernel</span>
+          <span class="empty-text">
+            Pallas kernels carry a source map when they are profiled with
+            <code>--xla_xprof_register_llo_debug_info=true</code>.
+          </span>
+        </div>
+      }
+      @default {
+        @if (linesOnly()) {
+          <kernel-source-lines
+            class="code-view"
+            [rows]="attributedRows()"
+            [linesOnly]="true"
+            [selectedLine]="selectedLine()"
+            [hoveredLine]="hoveredLine()"
+            [reveal]="viewReveal()"
+            [ariaLabel]="'Lines of ' + fileName() + ' that have instructions'"
+            (lineHover)="onLineHover($event)"
+            (lineClick)="onLineClick($event)"
+            (clear)="clearSelection()"
+          ></kernel-source-lines>
+        } @else if (showsEditor()) {
+        } @else if (content().state === 'loading') {
+          <div class="empty-state" role="status">
+            <span class="skeleton-lines" aria-hidden="true">
+              @for (width of skeletonWidths; track $index) {
+                <span class="skeleton-line" [style.width.%]="width"></span>
+              }
+            </span>
+          </div>
+        } @else {
+          <kernel-source-lines
+            class="code-view"
+            [rows]="codeRows()"
+            [selectedLine]="selectedLine()"
+            [hoveredLine]="hoveredLine()"
+            [reveal]="viewReveal()"
+            [ariaLabel]="'Lines of ' + fileName()"
+            (lineHover)="onLineHover($event)"
+            (lineClick)="onLineClick($event)"
+            (clear)="clearSelection()"
+          ></kernel-source-lines>
+        }
+      }
+    }
+  </div>
+
+  @if (files().length > 0) {
+    <footer
+      #details
+      class="details"
+      [class.collapsed]="!isDetailsExpanded()"
+      [class.sized]="isDetailsExpanded() && detailsHeight() !== undefined"
+      [style.height.%]="isDetailsExpanded() ? detailsHeight() : null"
+      aria-live="polite"
+    >
+      @if (isDetailsExpanded()) {
+        <div
+          class="details-resizer"
+          tabindex="0"
+          role="separator"
+          aria-orientation="horizontal"
+          aria-label="Resize the details"
+          [attr.aria-valuenow]="detailsHeightValue()"
+          [attr.aria-valuemin]="minDetailsHeight"
+          [attr.aria-valuemax]="maxDetailsHeight"
+          (pointerdown)="onDetailsResizerPointerDown($event)"
+          (keydown)="onDetailsResizerKeydown($event)"
+          (dblclick)="resetDetailsHeight()"
+        >
+          <span class="details-grip" aria-hidden="true"></span>
+        </div>
+      }
+      <div class="details-header">
+        @if (selectedStats(); as stats) {
+          <span class="details-title">
+            <span class="selected-dot" aria-hidden="true"></span>
+            @if (codeSearchUrl(); as url) {
+              <a
+                class="details-location details-link"
+                target="_blank"
+                rel="noopener"
+                [href]="url"
+                [matTooltip]="'Open ' + resolvedPath() + ':' + stats.line + ' in Code Search'"
+              >{{ fileName() }}:{{ stats.line }}</a>
+            } @else {
+              <span class="details-location">{{ fileName() }}:{{ stats.line }}</span>
+            }
+            <span class="details-share" [matTooltip]="shareDescription" matTooltipShowDelay="400">
+              {{ selectedShare() }}
+            </span>
+          </span>
+          <span class="details-actions">
+            @if (stepLabel(); as label) {
+              <span class="stepper" role="group" aria-label="Step through the instructions of the line">
+                <button
+                  mat-icon-button
+                  class="mini-button"
+                  type="button"
+                  (click)="step.emit(-1)"
+                  matTooltip="Previous instruction (,)"
+                  aria-label="Previous instruction"
+                >
+                  <mat-icon>chevron_left</mat-icon>
+                </button>
+                <span class="step-label">{{ label }}</span>
+                <button
+                  mat-icon-button
+                  class="mini-button"
+                  type="button"
+                  (click)="step.emit(1)"
+                  matTooltip="Next instruction (.)"
+                  aria-label="Next instruction"
+                >
+                  <mat-icon>chevron_right</mat-icon>
+                </button>
+              </span>
+            }
+            <button
+              mat-icon-button
+              class="mini-button"
+              type="button"
+              (click)="zoomToSelection()"
+              matTooltip="Zoom the timeline to this line"
+              aria-label="Zoom the timeline to this line"
+            >
+              <mat-icon>zoom_in_map</mat-icon>
+            </button>
+            <button
+              mat-icon-button
+              class="mini-button"
+              type="button"
+              (click)="clearSelection()"
+              matTooltip="Clear (Esc)"
+              aria-label="Clear the selected line"
+            >
+              <mat-icon>close</mat-icon>
+            </button>
+          </span>
+        } @else {
+          <span class="details-title">
+            Hotspots
+            @if (coverage(); as coverage) {
+              <span
+                class="details-subtitle"
+                matTooltip="Share of the instructions of the kernel that the source map attributes to a line"
+                matTooltipShowDelay="400"
+              >{{ coverage }} mapped to source</span>
+            }
+          </span>
+        }
+        <button
+          mat-icon-button
+          class="mini-button expand-button"
+          type="button"
+          (click)="toggleDetails()"
+          [matTooltip]="isDetailsExpanded() ? 'Hide details' : 'Show details'"
+          [attr.aria-expanded]="isDetailsExpanded()"
+          aria-label="Details"
+        >
+          <mat-icon>{{ isDetailsExpanded() ? 'expand_more' : 'expand_less' }}</mat-icon>
+        </button>
+      </div>
+
+      @if (isDetailsExpanded()) {
+        <div class="details-body">
+          @if (selectedStats(); as stats) {
+            <kernel-line-card
+              [stats]="stats"
+              [scheduleLength]="summary()?.bundles ?? 0"
+              mode="details"
+              (zoomToBin)="zoomToBin($event)"
+              (frame)="selectFrame($event)"
+            ></kernel-line-card>
+          } @else {
+            <ol class="hotspot-list" aria-label="Lines with the largest share of the schedule">
+              @for (item of hotspotItems(); track item.key; let index = $index) {
+                <li>
+                  <button class="hotspot" type="button" (click)="selectHotspot(item)">
+                    <span class="hotspot-rank" aria-hidden="true">{{ index + 1 }}</span>
+                    <span class="hotspot-line">{{ item.label }}</span>
+                    <span class="hotspot-code">{{ item.code }}</span>
+                    <span class="hotspot-track" aria-hidden="true">
+                      <span class="hotspot-fill" [style.width.%]="item.barPercent">
+                        @for (segment of item.segments; track $index) {
+                          <span
+                            class="hotspot-segment"
+                            [style.width.%]="segment.percent"
+                            [style.background-color]="segment.color"
+                          ></span>
+                        }
+                      </span>
+                    </span>
+                    <span class="hotspot-share">{{ item.share }}</span>
+                  </button>
+                </li>
+              }
+              @if (unattributedRow(); as row) {
+                <li class="hotspot unattributed" [matTooltip]="row.tooltip" matTooltipShowDelay="400">
+                  <span class="hotspot-rank" aria-hidden="true">–</span>
+                  <span class="hotspot-line">No source line</span>
+                  <span class="hotspot-code">{{ row.description }}</span>
+                  <span class="hotspot-track" aria-hidden="true">
+                    <span class="hotspot-fill" [style.width.%]="row.barPercent"></span>
+                  </span>
+                  <span class="hotspot-share">{{ row.share }}</span>
+                </li>
+              }
+            </ol>
+            <div class="hint">
+              <kbd>N</kbd> next hotspot
+              @if (showsEditor() && !linesOnly()) {
+                <span class="hint-separator" aria-hidden="true">·</span>
+                <kbd>{{ modKey }}</kbd><kbd>F</kbd> find
+              }
+            </div>
+          }
+        </div>
+      }
+    </footer>
+  }
+
+  <input
+    #fileInput
+    class="file-input"
+    type="file"
+    tabindex="-1"
+    (change)="onLocalFile($event)"
+    aria-hidden="true"
+  />
+</section>
+
+@if (hoverCard(); as card) {
+  <kernel-line-card
+    class="hover-card"
+    [class.above]="card.bottom !== undefined"
+    [stats]="card.stats"
+    [scheduleLength]="summary()?.bundles ?? 0"
+    [selected]="selectedLine() === card.stats.line"
+    [copied]="copied() === 'location'"
+    [style.width.px]="card.width"
+    [style.--card-max-height.px]="card.maxHeight"
+    [style.left.px]="card.left"
+    [style.top.px]="card.top"
+    [style.bottom.px]="card.bottom"
+    mode="hover"
+    (mouseenter)="onCardEnter()"
+    (mouseleave)="onCardLeave()"
+    (selectLine)="onLineClick(card.stats.line)"
+    (zoomToLine)="zoomToRange(card.stats)"
+    (copyLocation)="copyLineLocation(card.stats.line)"
+    (zoomToBin)="zoomToBin($event)"
+  ></kernel-line-card>
+}
