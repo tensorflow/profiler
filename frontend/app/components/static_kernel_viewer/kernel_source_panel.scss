@@ -1,0 +1,815 @@
+@mixin focus-ring {
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: -2px;
+  }
+}
+
+// Sizes a Material icon button. The explicit padding overrides the app's
+// global icon button padding, which would push the icon off center.
+@mixin compact-icon-button($size, $icon-size) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: $size;
+  height: $size;
+  padding: 0;
+
+  mat-icon {
+    width: $icon-size;
+    height: $icon-size;
+    font-size: $icon-size;
+  }
+}
+
+$divider: 1px solid
+  color-mix(in srgb, var(--mat-sys-outline-variant) 70%, transparent);
+
+:host {
+  display: block;
+  position: relative;
+  min-width: 0;
+  height: 100%;
+  --source-hover: color-mix(in srgb, var(--mat-sys-on-surface) 5%, transparent);
+}
+
+.source-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--mat-sys-surface-container-lowest);
+  color: var(--mat-sys-on-surface);
+
+  // Keeps the editor from taking the pointer while the details resize.
+  &.resizing-details {
+    cursor: row-resize;
+    user-select: none;
+
+    .code-view {
+      pointer-events: none;
+    }
+  }
+}
+
+.panel-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--spacing-2);
+  height: 52px;
+  padding: 0 var(--spacing-1) 0 var(--spacing-3);
+  box-sizing: border-box;
+  border-bottom: $divider;
+}
+
+.file-badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 22px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  border-radius: 6px;
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+  font: 700 10.5px / 1 var(--mat-sys-plain-font);
+  letter-spacing: 0.04em;
+}
+
+.file-button {
+  @include focus-ring;
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--spacing-1);
+  min-width: 0;
+  height: 42px;
+  margin-inline-start: -4px;
+  padding: 0 var(--spacing-2);
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 140ms var(--motion-easing-standard);
+
+  &:hover:not(.static) {
+    background: var(--source-hover);
+
+    .file-name {
+      color: var(--mat-sys-primary);
+    }
+
+    .file-directory {
+      text-decoration: underline;
+    }
+  }
+
+  &:hover .file-link-icon,
+  &:focus-visible .file-link-icon {
+    opacity: 1;
+  }
+
+  &.static {
+    cursor: default;
+  }
+}
+
+// Shows that the file name opens Code Search.
+.file-link-icon {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  color: var(--mat-sys-primary);
+  font-size: 15px;
+  opacity: 0;
+  transition: opacity 140ms var(--motion-easing-standard);
+}
+
+.file-switcher {
+  @include focus-ring;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  height: 32px;
+  padding: 0 4px 0 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: background-color 140ms var(--motion-easing-standard);
+
+  &:hover {
+    background: var(--source-hover);
+  }
+}
+
+.file-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.file-name {
+  overflow: hidden;
+  font: 600 13.5px / 18px var(--mat-sys-code-font);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Long directories keep their end, which names the package, in view.
+.file-directory {
+  overflow: hidden;
+  color: var(--mat-sys-on-surface-variant);
+  font: 400 11px / 15px var(--mat-sys-code-font);
+  text-align: start;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+}
+
+.file-count {
+  flex: none;
+  padding: 1px 7px;
+  border-radius: 8px;
+  background: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface-variant);
+  font: 500 11px / 16px var(--mat-sys-plain-font);
+}
+
+.file-menu-icon {
+  flex: none;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.file-option.current {
+  background: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent);
+}
+
+.menu-file {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-4);
+}
+
+.menu-file-name {
+  font: 500 13px / 18px var(--mat-sys-code-font);
+}
+
+.menu-file-share {
+  color: var(--mat-sys-primary);
+  font: 600 12px / 18px var(--mat-sys-plain-font);
+  font-variant-numeric: tabular-nums;
+}
+
+.menu-file-directory {
+  display: block;
+  max-width: 320px;
+  overflow: hidden;
+  color: var(--mat-sys-on-surface-variant);
+  font: 400 11px / 15px var(--mat-sys-code-font);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+
+.header-button {
+  @include compact-icon-button(36px, 20px);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.origin-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 200px;
+  height: 26px;
+  margin-inline-end: var(--spacing-1);
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid
+    color-mix(in srgb, var(--mat-sys-outline-variant) 80%, transparent);
+  border-radius: 13px;
+  color: var(--mat-sys-on-surface-variant);
+
+  &.workspace {
+    border-color: color-mix(in srgb, var(--mat-sys-primary) 35%, transparent);
+    color: var(--mat-sys-primary);
+  }
+
+  &.local {
+    border-color: transparent;
+    background: var(--mat-sys-tertiary-container);
+    color: var(--mat-sys-on-tertiary-container);
+  }
+}
+
+.origin-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 0 9px 0 7px;
+  font: 500 11.5px / 1 var(--mat-sys-plain-font);
+
+  mat-icon {
+    flex: none;
+    width: 15px;
+    height: 15px;
+    font-size: 15px;
+  }
+}
+
+.origin-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.origin-close {
+  @include focus-ring;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-inline: -6px 2px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+
+  &:hover {
+    background: color-mix(in srgb, currentColor 12%, transparent);
+  }
+
+  mat-icon {
+    width: 15px;
+    height: 15px;
+    font-size: 15px;
+  }
+}
+
+// Menus are rendered in an overlay, but their items belong to this template.
+.menu-row {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-4);
+  min-width: 168px;
+}
+
+.menu-shortcut {
+  color: var(--mat-sys-on-surface-variant);
+  font: 400 12px / 1 var(--mat-sys-plain-font);
+}
+
+.menu-row .menu-check {
+  margin: 0;
+  color: var(--mat-sys-primary);
+  visibility: hidden;
+
+  &.on {
+    visibility: visible;
+  }
+}
+
+.theme-option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.theme-swatch {
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid var(--mat-sys-outline);
+  border-radius: 50%;
+}
+
+.load-bar {
+  position: relative;
+  z-index: 2;
+  flex: none;
+  height: 2px;
+  margin-bottom: -2px;
+  overflow: hidden;
+}
+
+.content-banner {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--spacing-3);
+  margin: var(--spacing-2) var(--spacing-2) 0;
+  padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-3);
+  border-radius: 12px;
+  background: var(--mat-sys-surface-container);
+  color: var(--mat-sys-on-surface-variant);
+  font: 400 12px / 17px var(--mat-sys-plain-font);
+
+  > mat-icon {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    font-size: 20px;
+  }
+}
+
+.banner-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.banner-title {
+  color: var(--mat-sys-on-surface);
+  font-weight: 500;
+}
+
+.banner-button {
+  flex: none;
+}
+
+.code-body {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.code-view {
+  position: absolute;
+  inset: 0;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-2);
+  max-width: 380px;
+  margin: 56px auto;
+  padding: 0 var(--spacing-4);
+  color: var(--mat-sys-on-surface-variant);
+  font: 400 13px / 19px var(--mat-sys-plain-font);
+  text-align: center;
+
+  code {
+    font: 500 12px / 18px var(--mat-sys-code-font);
+    overflow-wrap: anywhere;
+  }
+}
+
+.empty-icon {
+  width: 36px;
+  height: 36px;
+  color: var(--mat-sys-outline);
+  font-size: 36px;
+}
+
+.empty-title {
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-title-small);
+}
+
+.skeleton-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  width: 280px;
+  margin-bottom: var(--spacing-2);
+}
+
+.skeleton-line {
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(
+    90deg,
+    var(--mat-sys-surface-container-high) 0%,
+    var(--mat-sys-surface-container-highest) 50%,
+    var(--mat-sys-surface-container-high) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s linear infinite;
+}
+
+@keyframes skeleton-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.details {
+  display: flex;
+  position: relative;
+  flex: none;
+  flex-direction: column;
+  min-height: 44px;
+  max-height: 48%;
+  // Includes the border in the height, which the resizer measures and sets.
+  box-sizing: border-box;
+  border-top: $divider;
+  background: var(--mat-sys-surface-container-low);
+  font: 400 12.5px / 18px var(--mat-sys-plain-font);
+
+  // Resized by the user, rather than fit to the content.
+  &.sized {
+    max-height: none;
+  }
+}
+
+// The top edge of the details, with a drag handle in its middle that shows
+// that the details can be resized.
+.details-resizer {
+  position: absolute;
+  z-index: 3;
+  top: -6px;
+  inset-inline: 0;
+  height: 12px;
+  cursor: row-resize;
+  touch-action: none;
+
+  &:focus-visible {
+    outline: none;
+  }
+}
+
+.details-grip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 32px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--mat-sys-outline);
+  // Separates the handle from the code under it.
+  box-shadow: 0 0 0 2px var(--mat-sys-surface-container-low);
+  transform: translate(-50%, -50%);
+  transition:
+    width 150ms var(--motion-easing-standard),
+    height 150ms var(--motion-easing-standard),
+    background-color 150ms var(--motion-easing-standard);
+
+  .details-resizer:hover &,
+  .details-resizer:focus-visible & {
+    width: 40px;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--mat-sys-primary);
+  }
+
+  .details-resizer:focus-visible & {
+    box-shadow:
+      0 0 0 2px var(--mat-sys-surface-container-low),
+      0 0 0 4px var(--mat-sys-primary);
+  }
+
+  .resizing-details & {
+    width: 48px;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--mat-sys-primary);
+  }
+}
+
+.details-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--spacing-2);
+  min-height: 44px;
+  padding: 0 var(--spacing-1) 0 var(--spacing-3);
+}
+
+.details-title {
+  display: inline-flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--spacing-2);
+  min-width: 0;
+  overflow: hidden;
+  font: 600 13px / 18px var(--mat-sys-plain-font);
+  white-space: nowrap;
+}
+
+.details-subtitle {
+  overflow: hidden;
+  color: var(--mat-sys-on-surface-variant);
+  font: 400 11.5px / 16px var(--mat-sys-plain-font);
+  text-overflow: ellipsis;
+}
+
+.details-share {
+  flex: none;
+  padding: 0 7px;
+  border-radius: 9px;
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+  font: 600 11.5px / 18px var(--mat-sys-plain-font);
+  font-variant-numeric: tabular-nums;
+}
+
+.selected-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mat-sys-primary);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--mat-sys-primary) 20%, transparent);
+}
+
+.details-location {
+  overflow: hidden;
+  color: inherit;
+  font: 600 13px / 18px var(--mat-sys-code-font);
+  text-decoration: none;
+  text-overflow: ellipsis;
+}
+
+.details-link {
+  @include focus-ring;
+  border-radius: 4px;
+
+  &:hover {
+    color: var(--mat-sys-primary);
+    text-decoration: underline;
+  }
+}
+
+.details-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+
+.mini-button {
+  @include compact-icon-button(32px, 18px);
+  color: var(--mat-sys-on-surface-variant);
+
+  &.copied {
+    color: var(--mat-sys-primary);
+  }
+}
+
+.expand-button {
+  margin-inline-start: auto;
+}
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  margin-inline-end: 4px;
+  padding: 0 2px;
+  border: 1px solid
+    color-mix(in srgb, var(--mat-sys-outline-variant) 80%, transparent);
+  border-radius: 17px;
+  background: var(--mat-sys-surface-container-lowest);
+
+  .mini-button {
+    @include compact-icon-button(28px, 18px);
+  }
+}
+
+.step-label {
+  min-width: 64px;
+  font: 600 11.5px / 1 var(--mat-sys-plain-font);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.details-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0 var(--spacing-3) var(--spacing-3);
+  overflow: auto;
+}
+
+.hotspot-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hotspot {
+  @include focus-ring;
+  display: grid;
+  grid-template-columns: 18px auto minmax(0, 1fr) 72px 44px;
+  align-items: center;
+  gap: var(--spacing-2);
+  width: 100%;
+  height: 30px;
+  padding: 0 var(--spacing-2) 0 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: background-color 120ms var(--motion-easing-standard);
+
+  &:hover {
+    background: var(--source-hover);
+  }
+}
+
+.hotspot-rank {
+  color: var(--mat-sys-on-surface-variant);
+  font: 500 11px / 1 var(--mat-sys-plain-font);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.hotspot-line {
+  color: var(--mat-sys-primary);
+  font: 600 12px / 1.5 var(--mat-sys-code-font);
+  white-space: nowrap;
+}
+
+.hotspot-code {
+  overflow: hidden;
+  color: var(--mat-sys-on-surface-variant);
+  // A line height above 1 keeps underscores from being clipped.
+  font: 400 12px / 1.5 var(--mat-sys-code-font);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hotspot-track {
+  display: flex;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--mat-sys-on-surface) 6%, transparent);
+}
+
+.hotspot-fill {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 3px;
+}
+
+.hotspot-segment {
+  height: 100%;
+}
+
+.hotspot-share {
+  font: 600 12px / 1 var(--mat-sys-plain-font);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+// The share of the schedule without a source line, which can't be selected.
+.hotspot.unattributed {
+  color: var(--mat-sys-on-surface-variant);
+  cursor: default;
+
+  &:hover {
+    background: transparent;
+  }
+
+  .hotspot-line {
+    color: inherit;
+    font-family: var(--mat-sys-plain-font);
+    font-weight: 500;
+  }
+
+  .hotspot-fill {
+    background: var(--mat-sys-outline);
+  }
+
+  .hotspot-share {
+    font-weight: 500;
+  }
+}
+
+.hint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: var(--spacing-2);
+  padding-inline-start: 6px;
+  color: var(--mat-sys-on-surface-variant);
+  font: 400 11.5px / 18px var(--mat-sys-plain-font);
+  white-space: nowrap;
+}
+
+.hint-separator {
+  margin: 0 4px;
+}
+
+kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--mat-sys-surface-container-lowest);
+  color: var(--mat-sys-on-surface);
+  font: 600 10.5px / 1 var(--mat-sys-plain-font);
+}
+
+.hover-card {
+  position: absolute;
+  z-index: 20;
+  transform-origin: top center;
+  transition:
+    top 120ms var(--motion-easing-standard),
+    bottom 120ms var(--motion-easing-standard),
+    left 120ms var(--motion-easing-standard);
+  animation: hover-card-enter 140ms cubic-bezier(0.16, 1, 0.3, 1) both;
+
+  &.above {
+    transform-origin: bottom center;
+  }
+}
+
+@keyframes hover-card-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+.file-input {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-line,
+  .hover-card,
+  .details-grip,
+  .file-link-icon {
+    transition: none;
+    animation: none;
+  }
+}

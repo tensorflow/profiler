@@ -1,0 +1,201 @@
+:host {
+  display: block;
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.lines {
+  position: absolute;
+  inset: 0;
+  padding: 8px 0;
+  overflow: auto;
+  background: var(--mat-sys-surface-container-lowest, #fff);
+  outline: none;
+
+  &:focus-visible {
+    box-shadow: inset 0 0 0 2px var(--mat-sys-primary);
+  }
+}
+
+.row {
+  --heat-rgb: 26, 115, 232;
+
+  display: grid;
+  grid-template-columns: 92px 48px minmax(0, 1fr);
+  align-items: center;
+  min-width: max-content;
+  height: 20px;
+  cursor: default;
+
+  &.attributed {
+    cursor: pointer;
+  }
+
+  &[data-heat='1'] {
+    background: rgba(var(--heat-rgb), 0.03);
+  }
+
+  &[data-heat='2'] {
+    background: rgba(var(--heat-rgb), 0.05);
+  }
+
+  &[data-heat='3'] {
+    background: rgba(var(--heat-rgb), 0.075);
+  }
+
+  &[data-heat='4'] {
+    background: rgba(var(--heat-rgb), 0.1);
+  }
+
+  &[data-heat='5'] {
+    background: rgba(var(--heat-rgb), 0.13);
+  }
+
+  &.hovered {
+    background: rgba(var(--heat-rgb), 0.1);
+  }
+
+  &.cursor {
+    box-shadow: inset 0 0 0 1px rgba(var(--heat-rgb), 0.5);
+  }
+
+  &.selected {
+    background: rgba(var(--heat-rgb), 0.18);
+
+    .gutter {
+      box-shadow: inset 3px 0 0 rgb(var(--heat-rgb));
+      font-weight: 700;
+    }
+  }
+
+  &.flash {
+    animation: line-flash 1.6s ease-out;
+  }
+}
+
+.gutter {
+  display: grid;
+  grid-template-columns: 40px 1fr 6px;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  padding: 0 8px 0 4px;
+  box-sizing: border-box;
+  border-right: 1px solid rgba(68, 71, 70, 0.12);
+  color: var(--mat-sys-on-surface-variant);
+  font: 500 11px / 1 var(--mat-sys-code-font);
+  font-variant-numeric: tabular-nums;
+}
+
+.share-label {
+  overflow: hidden;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.share-track {
+  display: block;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: rgba(68, 71, 70, 0.1);
+}
+
+.share-bar {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+}
+
+.spill-mark {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+
+  &.visible {
+    background: #e37400;
+  }
+}
+
+.line-number {
+  padding-right: 14px;
+  color: var(--mat-sys-outline);
+  font: 400 12px / 20px var(--mat-sys-code-font);
+  text-align: right;
+}
+
+.code {
+  padding-right: 16px;
+  color: var(--mat-sys-on-surface);
+  font: 400 13px / 20px var(--mat-sys-code-font);
+  white-space: pre;
+}
+
+.placeholder {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.primitive {
+  padding: 0 6px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 6px;
+  color: var(--mat-sys-on-surface-variant);
+  font: 400 11.5px / 16px var(--mat-sys-code-font);
+}
+
+.instructions {
+  color: var(--mat-sys-on-surface-variant);
+  font: 400 12px / 20px var(--mat-sys-plain-font);
+}
+
+@keyframes line-flash {
+  0%,
+  30% {
+    background: rgba(251, 188, 4, 0.45);
+  }
+
+  100% {
+    background: transparent;
+  }
+}
+
+// Syntax highlighting of code from the source code service.
+:host ::ng-deep .code {
+  .hljs-keyword,
+  .hljs-built_in,
+  .hljs-literal {
+    color: #0b57d0;
+  }
+
+  .hljs-string {
+    color: #146c2e;
+  }
+
+  .hljs-number {
+    color: #b3261e;
+  }
+
+  .hljs-comment {
+    color: #5f6368;
+    font-style: italic;
+  }
+
+  .hljs-title,
+  .hljs-function .hljs-title,
+  .hljs-title.function_ {
+    color: #8430ce;
+  }
+
+  .hljs-meta {
+    color: #a142f4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row.flash {
+    animation: none;
+  }
+}

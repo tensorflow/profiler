@@ -1121,6 +1121,8 @@ export class KernelSelectionPanel implements AfterViewInit, OnDestroy {
   @Output() readonly selectEvent = new EventEmitter<number>();
   /** Emits a search query to highlight matching events on the timeline. */
   @Output() readonly searchQuery = new EventEmitter<string>();
+  /** Emits a source location, e.g. `foo.py:12:3`, to show in the source. */
+  @Output() readonly openSource = new EventEmitter<string>();
 
   content: KernelSelectionContent | undefined = undefined;
   /** Optional unit label filter applied to the Top Instructions / Events table. */
