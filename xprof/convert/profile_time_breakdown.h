@@ -123,12 +123,15 @@ class ProfileTimeBreakdown {
   uint64_t OnDutyTimePs() const { return profile_time_ps_ - OffDutyTimePs(); }
 
   uint64_t OffDutyTimePs() const {
-    return IdleTimePs() +
-           CategoriesTimePs(
-               {tsl::profiler::kHloInfeed, tsl::profiler::kHloOutfeed,
-                tsl::profiler::kHloHostSend, tsl::profiler::kHloHostSendDone,
-                tsl::profiler::kHloHostRecv, tsl::profiler::kHloHostRecvDone,
-                tsl::profiler::kHloMegacoreFusion});
+    uint64_t off_duty_time_ps = IdleTimePs();
+    for (const auto& [category, time_ps] : time_ps_by_category_) {
+      if (tsl::profiler::IsOffDutyOp(category)) off_duty_time_ps += time_ps;
+    }
+    return off_duty_time_ps;
+  }
+
+  uint64_t AsyncDoneTimePs() const {
+    return CategoryTimePs(tsl::profiler::kHloAsyncDone);
   }
 
   uint64_t InfeedTimePs() const {
