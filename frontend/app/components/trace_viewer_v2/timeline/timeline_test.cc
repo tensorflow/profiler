@@ -679,10 +679,12 @@ TEST(TimelineTest, CalculateTickInfoUnitlessAlignsToAbsolutePositions) {
   EXPECT_DOUBLE_EQ(info.tick_interval, 10.0);
   // First tick at absolute position floor(105 / 10) * 10 = 100.
   EXPECT_DOUBLE_EQ(info.first_tick_time, 100.0);
-  EXPECT_EQ(timeline.FormatRulerLabel(info.first_tick_time), "100");
-  EXPECT_EQ(timeline.FormatRulerLabel(info.first_tick_time +
-                                      info.tick_interval),
-            "110");
+  EXPECT_EQ(timeline.FormatRulerLabel(info.first_tick_time, info.tick_interval),
+            "100");
+  EXPECT_EQ(
+      timeline.FormatRulerLabel(info.first_tick_time + info.tick_interval,
+                                info.tick_interval),
+      "110");
 
   FlameChartTimelineData data;
   data.groups.push_back({.name = "Ops", .start_level = 0, .expanded = true});
@@ -714,10 +716,23 @@ TEST(TimelineTest, FormatRulerLabelUsesTimeByDefault) {
   Timeline timeline(palette);
   timeline.set_data_time_range({1000.0, 100000.0});
 
-  EXPECT_EQ(timeline.FormatRulerLabel(1500.0), FormatTime(1500.0));
+  EXPECT_EQ(timeline.FormatRulerLabel(1500.0, 0.0), FormatTime(1500.0));
 
   timeline.set_time_axis_unit(TimeAxisUnit::kUnitless);
-  EXPECT_EQ(timeline.FormatRulerLabel(1500.0), "1500");
+  EXPECT_EQ(timeline.FormatRulerLabel(1500.0, 0.0), "1500");
+}
+
+TEST(TimelineTest, FormatRulerLabelDistinguishesDeepZoomTicks) {
+  ColorPalette palette = ColorPalette::Default();
+  Timeline timeline(palette);
+  timeline.set_data_time_range({0.0, 10000000.0});
+
+  // At ~9.026s with 1ns (0.001us) tick spacing, adjacent ticks must not
+  // collapse to the same "9.026 s" string.
+  EXPECT_NE(timeline.FormatRulerLabel(9025941.001, 0.001),
+            timeline.FormatRulerLabel(9025941.002, 0.001));
+  EXPECT_EQ(timeline.FormatRulerLabel(9025941.001, 0.001),
+            FormatRulerTime(9025941.001, 0.001));
 }
 
 TEST(TimelineTest,
@@ -747,9 +762,9 @@ TEST(TimelineTest,
   // (3020000.0 us) reflects absolute timestamp (~3.02s) rather than relative
   // offset (2823400.0 us / ~2.82s).
   const Microseconds tick_near_event = 3020000.0;
-  EXPECT_EQ(timeline.FormatRulerLabel(tick_near_event),
+  EXPECT_EQ(timeline.FormatRulerLabel(tick_near_event, info.tick_interval),
             FormatTime(tick_near_event));
-  EXPECT_NE(timeline.FormatRulerLabel(tick_near_event),
+  EXPECT_NE(timeline.FormatRulerLabel(tick_near_event, info.tick_interval),
             FormatTime(tick_near_event - trace_start));
 
   // Verify tick screen position and event position align with absolute time.
@@ -6423,6 +6438,88 @@ TEST_F(RealTimelineImGuiFixture, DrawRulerRendersProperly) {
         << "Ticks are not consistently spaced.";
     // Ensure we actually found a reasonable spacing.
     EXPECT_GT(total_near_max, 5);
+  }
+
+  ImGui::EndFrame();
+}
+
+TEST_F(RealTimelineImGuiFixture,
+       DrawRulerAtDeepZoomRendersDistinctNonOverlappingLabels) {
+  // 1 ns (0.001 us) window around 9.025941 s (9025941.0 us).
+  timeline_.set_data_time_range({0.0, 10000000.0});
+  timeline_.SetVisibleRange({9025941.0, 9025941.001});
+  FlameChartTimelineData data;
+  data.groups.push_back({.name = "Group 1", .start_level = 0});
+  timeline_.SetTimelineData(std::move(data));
+
+  SimulateFrame();
+
+  ImGui::NewFrame();
+  timeline_.Draw();
+
+  ImGuiWindow* timeline_window = ImGui::FindWindowByName("Timeline viewer");
+  ASSERT_NE(timeline_window, nullptr);
+  ImDrawList* draw_list = timeline_window->DrawList;
+
+  const Pixel ruler_min_x = GetTimelineStartX();
+  // Major ticks start near the top of the ruler (pos.y), whereas minor ticks
+  // only start at line_y - kRulerMinorTickHeight. Find the minimum y of
+  // kRulerLineColor vertices to identify major tick X positions.
+  float min_ruler_line_y = std::numeric_limits<float>::max();
+  for (const auto& vtx : draw_list->VtxBuffer) {
+    if (vtx.col == kRulerLineColor && vtx.pos.x >= ruler_min_x) {
+      min_ruler_line_y = std::min(min_ruler_line_y, vtx.pos.y);
+    }
+  }
+
+  std::set<float> major_tick_x_set;
+  for (const auto& vtx : draw_list->VtxBuffer) {
+    if (vtx.col == kRulerLineColor && vtx.pos.x >= ruler_min_x &&
+        std::abs(vtx.pos.y - min_ruler_line_y) < 1.0f) {
+      major_tick_x_set.insert(std::round(vtx.pos.x));
+    }
+  }
+
+  std::vector<float> major_tick_xs;
+  for (float x : major_tick_x_set) {
+    if (major_tick_xs.empty() || x - major_tick_xs.back() > 5.0f) {
+      major_tick_xs.push_back(x);
+    }
+  }
+  ASSERT_GE(major_tick_xs.size(), 3);
+
+  // Group kRulerTextColor vertices into the major-tick intervals they belong to
+  // and verify that (1) no label extends past the next major tick, and (2)
+  // adjacent tick labels render distinct glyph UV sequences.
+  for (size_t i = 0; i + 1 < major_tick_xs.size(); ++i) {
+    const float tick_x = major_tick_xs[i];
+    const float next_tick_x = major_tick_xs[i + 1];
+    float label_max_x = tick_x;
+    std::vector<std::pair<float, float>> glyph_uvs;
+    for (const auto& vtx : draw_list->VtxBuffer) {
+      if (vtx.col == kRulerTextColor && vtx.pos.x >= tick_x &&
+          vtx.pos.x < next_tick_x + 20.0f) {
+        if (vtx.pos.x < next_tick_x) {
+          label_max_x = std::max(label_max_x, vtx.pos.x);
+          glyph_uvs.emplace_back(vtx.uv.x, vtx.uv.y);
+        }
+      }
+    }
+    EXPECT_GT(label_max_x, tick_x);
+    EXPECT_LT(label_max_x, next_tick_x - 1.0f)
+        << "Ruler label at tick " << i << " overlaps next major tick";
+
+    if (i > 0) {
+      std::vector<std::pair<float, float>> prev_glyph_uvs;
+      for (const auto& vtx : draw_list->VtxBuffer) {
+        if (vtx.col == kRulerTextColor && vtx.pos.x >= major_tick_xs[i - 1] &&
+            vtx.pos.x < tick_x) {
+          prev_glyph_uvs.emplace_back(vtx.uv.x, vtx.uv.y);
+        }
+      }
+      EXPECT_NE(glyph_uvs, prev_glyph_uvs)
+          << "Adjacent deep-zoom ruler ticks rendered identical labels";
+    }
   }
 
   ImGui::EndFrame();

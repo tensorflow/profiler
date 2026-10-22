@@ -43,6 +43,52 @@ TEST(TimeFormatterTest, FormatTimeNotFiniteOrNegative) {
   EXPECT_EQ(FormatTime(-100.0), "-");
 }
 
+TEST(TimeFormatterTest, FormatRulerTimeScalesPrecisionForDeepZoom) {
+  // Without a tick interval (or with a coarse interval), defaults to 4
+  // significant digits.
+  EXPECT_EQ(FormatRulerTime(9025941.0, 0.0), TimeWithUnit("9.026", "s"));
+  EXPECT_EQ(FormatRulerTime(9025941.0, 1000.0), TimeWithUnit("9.026", "s"));
+
+  // Zoomed into 10us ticks around 9.026s: adjacent ticks must be distinct and
+  // keep uniform trailing zeros.
+  EXPECT_EQ(FormatRulerTime(9026000.0, 10.0), TimeWithUnit("9.02600", "s"));
+  EXPECT_EQ(FormatRulerTime(9026010.0, 10.0), TimeWithUnit("9.02601", "s"));
+  EXPECT_EQ(FormatRulerTime(9026020.0, 10.0), TimeWithUnit("9.02602", "s"));
+
+  // Zoomed into 1us ticks around 9.026s.
+  EXPECT_EQ(FormatRulerTime(9025941.0, 1.0), TimeWithUnit("9.025941", "s"));
+  EXPECT_EQ(FormatRulerTime(9025942.0, 1.0), TimeWithUnit("9.025942", "s"));
+
+  // Zoomed into 1ns (0.001us) ticks around 9.026s.
+  EXPECT_EQ(FormatRulerTime(9025941.001, 0.001),
+            TimeWithUnit("9.025941001", "s"));
+  EXPECT_EQ(FormatRulerTime(9025941.002, 0.001),
+            TimeWithUnit("9.025941002", "s"));
+
+  // Zoomed into 50ps (5e-5us) ticks around 9.025941s: trailing zeros are
+  // preserved so adjacent ticks have uniform decimal places.
+  EXPECT_EQ(FormatRulerTime(9025941.0, 5e-5),
+            TimeWithUnit("9.02594100000", "s"));
+  EXPECT_EQ(FormatRulerTime(9025941.0 + 5e-5, 5e-5),
+            TimeWithUnit("9.02594100005", "s"));
+
+  // Zoomed into 1ps (1e-6us) ticks around 9.026s.
+  EXPECT_EQ(FormatRulerTime(9025941.001001, 1e-6),
+            TimeWithUnit("9.025941001001", "s"));
+  EXPECT_EQ(FormatRulerTime(9025941.001002, 1e-6),
+            TimeWithUnit("9.025941001002", "s"));
+
+  // Zoomed into 50fs (5e-8us) ticks at 12s (requires 16 significant digits,
+  // up to max_digits10 = 17).
+  EXPECT_NE(FormatRulerTime(12e6, 5e-8), FormatRulerTime(12e6 + 5e-8, 5e-8));
+
+  // Zoomed into 1ns ticks around 500ms.
+  EXPECT_EQ(FormatRulerTime(500000.001, 0.001),
+            TimeWithUnit("500.000001", "ms"));
+  EXPECT_EQ(FormatRulerTime(500000.002, 0.001),
+            TimeWithUnit("500.000002", "ms"));
+}
+
 TEST(TimeFormatterTest, FormatDurationOnTimeAxisMatchesFormatTime) {
   EXPECT_EQ(FormatDuration(1234.567, TimeAxisUnit::kTime),
             TimeWithUnit("1.235", "ms"));

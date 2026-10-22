@@ -11,13 +11,16 @@
 #include <optional>
 #include <string>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
 #include "absl/algorithm/container.h"
 #include "absl/base/nullability.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/container/flat_hash_set.h"
 #include "absl/container/inlined_vector.h"
+#include "absl/functional/function_ref.h"
 #include "absl/log/log.h"
 #include "absl/strings/ascii.h"
 #include "absl/strings/escaping.h"
@@ -3361,7 +3364,7 @@ EventData Timeline::CreateBaseEventData(int event_index, bool is_hover) const {
     const Microseconds start_ts = timeline_data_.entry_start_times[event_index];
     event_data.try_emplace(kEventSelectedStart, start_ts);
     event_data.try_emplace(kEventSelectedStartFormatted,
-                           FormatRulerLabel(start_ts));
+                           FormatRulerLabel(start_ts, /*tick_interval=*/0.0));
   }
   if (event_index < timeline_data_.entry_total_times.size()) {
     const Microseconds total_ts = timeline_data_.entry_total_times[event_index];
@@ -3976,6 +3979,7 @@ double Timeline::px_per_time_unit(Pixel timeline_width) const {
 // ticks are neither too crowded nor too sparse on screen.
 Timeline::TickInfo Timeline::CalculateTickInfo(
     double px_per_time_unit_val) const {
+  const Microseconds view_start = visible_range().start();
   const Microseconds min_time_interval =
       kMinTickDistancePx / px_per_time_unit_val;
   Microseconds tick_interval = CalculateNiceInterval(min_time_interval);
@@ -3985,9 +3989,26 @@ Timeline::TickInfo Timeline::CalculateTickInfo(
     // ticks are never placed at fractional positions.
     tick_interval = std::max(tick_interval, 1.0);
   }
+  if (ImGui::GetCurrentContext() != nullptr && px_per_time_unit_val > 0.0) {
+    const Microseconds sample_time =
+        std::floor(view_start / tick_interval) * tick_interval + tick_interval;
+    const std::string sample_label =
+        FormatRulerLabel(sample_time, tick_interval);
+    ImGui::PushFont(fonts::label_small);
+    const Pixel min_dist =
+        std::max(kMinTickDistancePx,
+                 ImGui::CalcTextSize(sample_label.c_str()).x +
+                     2.0f * kRulerTextPadding);
+    ImGui::PopFont();
+    if (min_dist > kMinTickDistancePx) {
+      tick_interval = CalculateNiceInterval(min_dist / px_per_time_unit_val);
+      if (unitless) {
+        tick_interval = std::max(tick_interval, 1.0);
+      }
+    }
+  }
   const Pixel major_tick_dist_px = tick_interval * px_per_time_unit_val;
 
-  const Microseconds view_start = visible_range().start();
   const Microseconds first_tick_time =
       std::floor(view_start / tick_interval) * tick_interval;
 
@@ -4035,10 +4056,15 @@ void Timeline::DrawRulerUI(const TickInfo& info, Pixel timeline_width) {
         (minor_tick_interval >= 1.0 &&
          std::floor(minor_tick_interval) == minor_tick_interval);
 
-    Microseconds t = first_tick_time;
-    Pixel x = TimeToScreenX(t, pos.x + label_width_, px_per_time_unit_val);
+    const Pixel first_tick_x = TimeToScreenX(
+        first_tick_time, pos.x + label_width_, px_per_time_unit_val);
 
-    for (;; t += tick_interval, x += major_tick_dist_px) {
+    for (int tick_idx = 0;; ++tick_idx) {
+      Microseconds t = first_tick_time + tick_idx * tick_interval;
+      if (std::isfinite(tick_interval) && tick_interval > 0.0) {
+        t = std::round(t / tick_interval) * tick_interval;
+      }
+      const Pixel x = first_tick_x + tick_idx * major_tick_dist_px;
       if (x > pos.x + label_width_ + timeline_width + kRulerScreenBuffer) {
         break;
       }
@@ -4048,7 +4074,7 @@ void Timeline::DrawRulerUI(const TickInfo& info, Pixel timeline_width) {
         draw_list->AddLine(ImVec2(x, pos.y), ImVec2(x, line_y),
                            ruler_line_color);
 
-        const std::string time_label_text = FormatRulerLabel(t);
+        const std::string time_label_text = FormatRulerLabel(t, tick_interval);
         ImGui::PushFont(fonts::label_small);
         draw_list->AddText(ImVec2(x + kRulerTextPadding, pos.y),
                            ruler_text_color, time_label_text.c_str());
@@ -4073,7 +4099,8 @@ void Timeline::DrawRulerUI(const TickInfo& info, Pixel timeline_width) {
   }
 }
 
-std::string Timeline::FormatRulerLabel(Microseconds time) const {
+std::string Timeline::FormatRulerLabel(Microseconds time,
+                                       Microseconds tick_interval) const {
   switch (time_axis_unit_) {
     case TimeAxisUnit::kUnitless:
       // Show the absolute position as a plain integer (e.g. a bundle number),
@@ -4082,7 +4109,7 @@ std::string Timeline::FormatRulerLabel(Microseconds time) const {
     case TimeAxisUnit::kTime:
       break;
   }
-  return FormatTime(time);
+  return FormatRulerTime(time, tick_interval);
 }
 
 // Draws vertical grid lines that extend from the ruler down across all tracks.
@@ -7433,6 +7460,8 @@ void Timeline::DrawBookmarks(Pixel timeline_width,
   const Pixel screen_x_offset = timeline_area.Min.x;
   ImDrawList* draw_list = ImGui::GetForegroundDrawList();
   std::optional<Microseconds> bookmark_to_delete;
+  const Microseconds tick_interval =
+      CalculateTickInfo(px_per_time_unit_val).tick_interval;
 
   for (const Microseconds time : bookmarks_) {
     const Pixel x = TimeToScreenX(time, screen_x_offset, px_per_time_unit_val);
@@ -7447,8 +7476,9 @@ void Timeline::DrawBookmarks(Pixel timeline_width,
     // Draw label (timestamp)
     const std::string label =
         time_axis_unit_ == TimeAxisUnit::kUnitless
-            ? absl::StrCat("Bundle ", FormatRulerLabel(std::floor(time)))
-            : FormatTime(time);
+            ? absl::StrCat("Bundle ",
+                           FormatRulerLabel(std::floor(time), tick_interval))
+            : FormatRulerLabel(time, tick_interval);
     ImGui::PushFont(fonts::label_small);
     const ImVec2 label_size = ImGui::CalcTextSize(label.c_str());
     const ImVec2 label_pos = ImVec2(

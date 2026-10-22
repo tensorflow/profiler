@@ -761,10 +761,13 @@ class Timeline {
   // Calculates tick information based on current zoom level (px_per_time_unit).
   TickInfo CalculateTickInfo(double px_per_time_unit_val) const;
 
-  // Formats the label for a major ruler tick at absolute `time`. Returns a
-  // time string (e.g. "1.5 ms") normally, or the absolute position as a plain
-  // integer (e.g. "40") on a unitless axis.
-  std::string FormatRulerLabel(Microseconds time) const;
+  // Formats the label for a major ruler tick at absolute `time`. When
+  // `tick_interval > 0` on a time axis, increases precision as needed so
+  // adjacent ticks have distinct labels at deep zoom. Returns a time string
+  // (e.g. "1.5 ms") normally, or the absolute position as a plain integer
+  // (e.g. "40") on a unitless axis.
+  std::string FormatRulerLabel(Microseconds time,
+                               Microseconds tick_interval) const;
 
   // Calculates the control points for a cubic Bezier curve used to draw flows.
   static void CalculateBezierControlPoints(float start_x, float start_y,

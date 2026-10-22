@@ -10,6 +10,13 @@ namespace traceviewer {
 
 std::string FormatTime(Microseconds time_us);
 
+// Formats `time_us` for a ruler tick given the major `tick_interval_us`,
+// increasing precision beyond the default 4 significant digits (up to IEEE-754
+// double precision limits) when needed so adjacent ticks at deep zoom levels
+// produce distinct labels.
+std::string FormatRulerTime(Microseconds time_us,
+                            Microseconds tick_interval_us);
+
 // Formats a duration along the x-axis: FormatTime() on a time axis, a count
 // of positions ("1 bundle", "32 bundles") on a unitless one.
 std::string FormatDuration(Microseconds duration, TimeAxisUnit unit);
