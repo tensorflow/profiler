@@ -684,6 +684,61 @@ class GetOverviewToolTest(absltest.TestCase):
     self.assertNotIn("step_time_warning", perf)
     self.assertNotIn("per_host_step_time_ms", perf)
 
+  def test_get_overview_active_step_time_fields(self):
+    """Verifies active step time fields are extracted into performance_summary."""
+    overview_data = [
+        {
+            "p": {
+                "device_type": "TPU v5p",
+            }
+        },
+        {
+            "p": {
+                "steptime_ms_average": "50.00",
+                "active_steptime_ms_average": "22.50",
+                "tc_active_ms_average": "20.00",
+                "sc_active_ms_average": "22.50",
+            }
+        },
+    ]
+    self.mock_client.fetch.return_value = (
+        81,
+        json.dumps(overview_data).encode("utf-8"),
+    )
+    result_json = json.loads(get_overview_tool.get_overview("session_active"))
+    perf = result_json["performance_summary"]
+    self.assertEqual(perf["steptime_ms_average"], "50.00")
+    self.assertEqual(perf["active_steptime_ms_average"], "22.50")
+    self.assertEqual(perf["tc_active_ms_average"], "20.00")
+    self.assertEqual(perf["sc_active_ms_average"], "22.50")
+
+    tc_only_data = [
+        {
+            "p": {
+                "device_type": "TPU v4",
+            }
+        },
+        {
+            "p": {
+                "steptime_ms_average": "40.00",
+                "active_steptime_ms_average": "18.00",
+                "tc_active_ms_average": "18.00",
+            }
+        },
+    ]
+    self.mock_client.fetch.return_value = (
+        81,
+        json.dumps(tc_only_data).encode("utf-8"),
+    )
+    tc_only_result = json.loads(
+        get_overview_tool.get_overview("session_tc_only")
+    )
+    perf_tc_only = tc_only_result["performance_summary"]
+    self.assertEqual(perf_tc_only["steptime_ms_average"], "40.00")
+    self.assertEqual(perf_tc_only["active_steptime_ms_average"], "18.00")
+    self.assertEqual(perf_tc_only["tc_active_ms_average"], "18.00")
+    self.assertNotIn("sc_active_ms_average", perf_tc_only)
+
 
 if __name__ == "__main__":
   absltest.main()
