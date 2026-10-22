@@ -221,6 +221,17 @@ declare global {
     dataSize: number,
     timeRangeFromUrl?: [number, number],
   ): void;
+  beginIncrementalTraceEvents?(timeRangeFromUrl?: [number, number]): void;
+  hasCachedTraceEventsIncremental?(): boolean;
+  shouldEnqueueCompressedFrameIncremental?(): boolean;
+  appendCompressedTraceEventsIncremental?(
+    dataPtr: number,
+    dataSize: number,
+  ): void;
+  stepIncrementalTraceEvents?(maxEventsPerStep: number): boolean;
+  finishIncrementalTraceEvents?(): boolean | void;
+  cancelIncrementalTraceEvents?(): void;
+  restoreFullTraceOverviewIfAvailable?(): boolean;
   /**
    * Passes Perfetto trace events from a memory buffer in the WASM heap.
    * @param dataPtr A pointer to the memory address in the WASM heap where
@@ -914,6 +925,193 @@ function isFetchDataEvent(
   );
 }
 
+const INCREMENTAL_EVENTS_PER_STEP = 131072;
+
+function supportsIncrementalTraceEvents(
+  module: TraceViewerV2Module,
+): module is TraceViewerV2Module & {
+  beginIncrementalTraceEvents: (timeRangeFromUrl?: [number, number]) => void;
+  appendCompressedTraceEventsIncremental: (
+    dataPtr: number,
+    dataSize: number,
+  ) => void;
+  stepIncrementalTraceEvents: (maxEventsPerStep: number) => boolean;
+  finishIncrementalTraceEvents: () => boolean | void;
+} {
+  return (
+    typeof module.beginIncrementalTraceEvents === 'function' &&
+    typeof module.appendCompressedTraceEventsIncremental === 'function' &&
+    typeof module.stepIncrementalTraceEvents === 'function' &&
+    typeof module.finishIncrementalTraceEvents === 'function'
+  );
+}
+
+function yieldToBrowserForNextSlice(): Promise<void> {
+  return new Promise((resolve) => {
+    if (
+      typeof requestAnimationFrame === 'function' &&
+      typeof document !== 'undefined' &&
+      document.visibilityState !== 'hidden'
+    ) {
+      requestAnimationFrame(() => {
+        setTimeout(resolve, 0);
+      });
+    } else {
+      setTimeout(resolve, 0);
+    }
+  });
+}
+
+async function fetchAndProcessCompressedTraceDataIncremental({
+  urlObj,
+  traceviewerModule,
+  isAbortRequested,
+  timeRange,
+  isRefetch = false,
+}: {
+  urlObj: URL;
+  traceviewerModule: TraceViewerV2Module & {
+    beginIncrementalTraceEvents: (timeRangeFromUrl?: [number, number]) => void;
+    hasCachedTraceEventsIncremental?: () => boolean;
+    shouldEnqueueCompressedFrameIncremental?: () => boolean;
+    appendCompressedTraceEventsIncremental: (
+      dataPtr: number,
+      dataSize: number,
+    ) => void;
+    stepIncrementalTraceEvents: (maxEventsPerStep: number) => boolean;
+    finishIncrementalTraceEvents: () => boolean | void;
+    cancelIncrementalTraceEvents?: () => void;
+    restoreFullTraceOverviewIfAvailable?: () => boolean;
+  };
+  isAbortRequested: () => boolean;
+  timeRange?: [number, number];
+  isRefetch?: boolean;
+}): Promise<boolean> {
+  const hasInMemoryBlockCache =
+    typeof traceviewerModule.hasCachedTraceEventsIncremental === 'function' &&
+    traceviewerModule.hasCachedTraceEventsIncremental();
+
+  let effectiveTimeRange = timeRange;
+  if (isRefetch && effectiveTimeRange && effectiveTimeRange.length === 2) {
+    const requestedDurationMs = effectiveTimeRange[1] - effectiveTimeRange[0];
+    const minWindowMs = hasInMemoryBlockCache ? 1500 : 2000;
+    if (requestedDurationMs < minWindowMs) {
+      const mid = 0.5 * (effectiveTimeRange[0] + effectiveTimeRange[1]);
+      const halfWindow = 0.5 * minWindowMs;
+      effectiveTimeRange = [Math.max(0, mid - halfWindow), mid + halfWindow];
+    } else if (!hasInMemoryBlockCache && requestedDurationMs > 4200) {
+      effectiveTimeRange = undefined;
+    }
+  }
+
+  const yieldBetweenSlices = () => {
+    if (isRefetch) {
+      return new Promise<void>((resolve) => {
+        setTimeout(resolve, 0);
+      });
+    }
+    return yieldToBrowserForNextSlice();
+  };
+
+  if (isRefetch) {
+    await yieldBetweenSlices();
+    if (isAbortRequested()) {
+      traceviewerModule.cancelIncrementalTraceEvents?.();
+      return false;
+    }
+  }
+
+  if (
+    isRefetch &&
+    effectiveTimeRange === undefined &&
+    typeof traceviewerModule.restoreFullTraceOverviewIfAvailable === 'function'
+  ) {
+    performance.mark('traceProcessStart');
+    if (traceviewerModule.restoreFullTraceOverviewIfAvailable()) {
+      return false;
+    }
+  }
+
+  if (isRefetch && hasInMemoryBlockCache) {
+    performance.mark('traceProcessStart');
+    traceviewerModule.beginIncrementalTraceEvents(effectiveTimeRange);
+    while (
+      !isAbortRequested() &&
+      traceviewerModule.stepIncrementalTraceEvents(
+        INCREMENTAL_EVENTS_PER_STEP * 4,
+      )
+    ) {
+      await yieldBetweenSlices();
+    }
+    if (isAbortRequested()) {
+      traceviewerModule.cancelIncrementalTraceEvents?.();
+      return false;
+    }
+    const fullLoaded = traceviewerModule.finishIncrementalTraceEvents();
+    return typeof fullLoaded === 'boolean' ? fullLoaded : false;
+  }
+
+  const buffer = await loadCompressedTraceDataInternal(urlObj.toString());
+  if (isAbortRequested()) {
+    return false;
+  }
+
+  window.dispatchEvent(
+    new CustomEvent(LOADING_STATUS_UPDATE_EVENT_NAME, {
+      detail: {status: TraceViewerV2LoadingStatus.PROCESSING_DATA},
+    }),
+  );
+
+  // Yield to the event loop so the UI can display 'Processing data' before
+  // starting the incremental processing pipeline.
+  await new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+
+  if (isAbortRequested()) {
+    return false;
+  }
+
+  performance.mark('traceProcessStart');
+  traceviewerModule.beginIncrementalTraceEvents(effectiveTimeRange);
+
+  const frame = new Uint8Array(buffer);
+  if (frame.byteLength > 0) {
+    let dataPtr: number | undefined;
+    try {
+      dataPtr = traceviewerModule._malloc(frame.byteLength);
+      if (!dataPtr) {
+        throw new Error('Failed to allocate WASM memory buffer');
+      }
+      traceviewerModule.HEAPU8.set(frame, dataPtr);
+      traceviewerModule.appendCompressedTraceEventsIncremental(
+        dataPtr,
+        frame.byteLength,
+      );
+    } finally {
+      if (dataPtr !== undefined && dataPtr !== 0) {
+        traceviewerModule._free(dataPtr);
+      }
+    }
+  }
+
+  const stepBudget = isRefetch
+    ? INCREMENTAL_EVENTS_PER_STEP
+    : INCREMENTAL_EVENTS_PER_STEP * 2;
+  while (
+    !isAbortRequested() &&
+    traceviewerModule.stepIncrementalTraceEvents(stepBudget)
+  ) {
+    await yieldBetweenSlices();
+  }
+  if (isAbortRequested()) {
+    traceviewerModule.cancelIncrementalTraceEvents?.();
+    return false;
+  }
+  const fullLoaded = traceviewerModule.finishIncrementalTraceEvents();
+  return typeof fullLoaded === 'boolean' ? fullLoaded : !isRefetch;
+}
+
 /**
  * Fetches and processes trace data (either .pb or .json) from the given URL.
  * Handles status dispatches, yielding to event loop, and latency measurement.
@@ -923,19 +1121,25 @@ async function fetchAndProcessTraceData({
   traceviewerModule,
   isAbortRequested,
   timeRange,
+  isRefetch = false,
   errorContext,
+  onFullTraceLoaded,
 }: {
   urlObj: URL;
   traceviewerModule: TraceViewerV2Module;
   isAbortRequested: () => boolean;
   timeRange?: [number, number];
+  isRefetch?: boolean;
   errorContext: string;
+  onFullTraceLoaded?: () => void;
 }) {
-  window.dispatchEvent(
-    new CustomEvent(LOADING_STATUS_UPDATE_EVENT_NAME, {
-      detail: {status: TraceViewerV2LoadingStatus.LOADING_DATA},
-    }),
-  );
+  if (!isRefetch) {
+    window.dispatchEvent(
+      new CustomEvent(LOADING_STATUS_UPDATE_EVENT_NAME, {
+        detail: {status: TraceViewerV2LoadingStatus.LOADING_DATA},
+      }),
+    );
+  }
 
   updateUrlWithResolution(urlObj, traceviewerModule.canvas);
 
@@ -944,41 +1148,55 @@ async function fetchAndProcessTraceData({
       urlObj.pathname.endsWith('.pb') ||
       urlObj.searchParams.get('format') === 'pb'
     ) {
-      const buffer = await loadCompressedTraceDataInternal(urlObj.toString());
-      if (isAbortRequested()) return;
-
-      window.dispatchEvent(
-        new CustomEvent(LOADING_STATUS_UPDATE_EVENT_NAME, {
-          detail: {status: TraceViewerV2LoadingStatus.PROCESSING_DATA},
-        }),
-      );
-
-      // Yield to the event loop to allow the UI to re-render and display
-      // the 'Processing data' status before the potentially long-running
-      // processCompressedTraceEvents call.
-      await new Promise((resolve) => {
-        setTimeout(resolve, 0);
-      });
-
-      if (isAbortRequested()) return;
-
-      performance.mark('traceProcessStart');
-
-      let dataPtr: number | undefined;
-      try {
-        dataPtr = traceviewerModule._malloc(buffer.byteLength);
-        if (!dataPtr) {
-          throw new Error('Failed to allocate WASM memory buffer');
-        }
-        traceviewerModule.HEAPU8.set(new Uint8Array(buffer), dataPtr);
-        traceviewerModule.processCompressedTraceEvents(
-          dataPtr,
-          buffer.byteLength,
+      if (supportsIncrementalTraceEvents(traceviewerModule)) {
+        const fullLoaded = await fetchAndProcessCompressedTraceDataIncremental({
+          urlObj,
+          traceviewerModule,
+          isAbortRequested,
           timeRange,
+          isRefetch,
+        });
+        if (isAbortRequested()) return;
+        if (fullLoaded) {
+          onFullTraceLoaded?.();
+        }
+      } else {
+        const buffer = await loadCompressedTraceDataInternal(urlObj.toString());
+        if (isAbortRequested()) return;
+
+        window.dispatchEvent(
+          new CustomEvent(LOADING_STATUS_UPDATE_EVENT_NAME, {
+            detail: {status: TraceViewerV2LoadingStatus.PROCESSING_DATA},
+          }),
         );
-      } finally {
-        if (dataPtr !== undefined && dataPtr !== 0) {
-          traceviewerModule._free(dataPtr);
+
+        // Yield to the event loop to allow the UI to re-render and display
+        // the 'Processing data' status before the potentially long-running
+        // processCompressedTraceEvents call.
+        await new Promise((resolve) => {
+          setTimeout(resolve, 0);
+        });
+
+        if (isAbortRequested()) return;
+
+        performance.mark('traceProcessStart');
+
+        let dataPtr: number | undefined;
+        try {
+          dataPtr = traceviewerModule._malloc(buffer.byteLength);
+          if (!dataPtr) {
+            throw new Error('Failed to allocate WASM memory buffer');
+          }
+          traceviewerModule.HEAPU8.set(new Uint8Array(buffer), dataPtr);
+          traceviewerModule.processCompressedTraceEvents(
+            dataPtr,
+            buffer.byteLength,
+            timeRange,
+          );
+        } finally {
+          if (dataPtr !== undefined && dataPtr !== 0) {
+            traceviewerModule._free(dataPtr);
+          }
         }
       }
     } else {
@@ -1056,8 +1274,14 @@ async function handleFetchDataEvent(
   event: Event,
   getCurrentDataUrl: () => string | null,
   traceviewerModule: TraceViewerV2Module | null,
+  isFullTraceLoaded: () => boolean = () => false,
+  isCurrentlyLoading: () => boolean = () => false,
+  isRefetchSuperseded: () => boolean = () => false,
 ) {
   if (!isFetchDataEvent(event)) {
+    return;
+  }
+  if (isFullTraceLoaded() || isCurrentlyLoading()) {
     return;
   }
   const detail = event.detail;
@@ -1087,8 +1311,10 @@ async function handleFetchDataEvent(
   await fetchAndProcessTraceData({
     urlObj,
     traceviewerModule,
-    isAbortRequested: () => initialDataUrl !== getCurrentDataUrl(),
+    isAbortRequested: () =>
+      initialDataUrl !== getCurrentDataUrl() || isRefetchSuperseded(),
     timeRange: [detail.start_time_ms, detail.end_time_ms],
+    isRefetch: true,
     errorContext: 'fetching new data',
   });
 }
@@ -1144,6 +1370,8 @@ export async function traceViewerV2Main(
   let traceviewerModule: TraceViewerV2Module | null = null;
   let currentDataUrl: string | null = null;
   let currentLoadingPromise: Promise<void> | null = null;
+  let fullTraceLoaded = false;
+  let activeRefetchId = 0;
 
   try {
     traceviewerModule = await initGpuAndStartWasmApp();
@@ -1165,6 +1393,8 @@ export async function traceViewerV2Main(
 
   setupFileInputHandler(traceviewerModule, () => {
     currentDataUrl = null;
+    fullTraceLoaded = false;
+    ++activeRefetchId;
     if (options?.onFileUploadedToXprof) {
       options.onFileUploadedToXprof();
     }
@@ -1195,6 +1425,8 @@ export async function traceViewerV2Main(
       return currentLoadingPromise;
     }
     currentDataUrl = url;
+    fullTraceLoaded = false;
+    ++activeRefetchId;
     if (!traceviewerModule) return;
 
     currentLoadingPromise = (async () => {
@@ -1228,6 +1460,9 @@ export async function traceViewerV2Main(
           isAbortRequested: () => url !== currentDataUrl,
           timeRange: timeRangeFromUrl,
           errorContext: 'loading data',
+          onFullTraceLoaded: () => {
+            fullTraceLoaded = true;
+          },
         });
       } finally {
         if (url === currentDataUrl) {
@@ -1281,7 +1516,15 @@ export async function traceViewerV2Main(
   };
 
   registerWindowListener(FETCH_DATA_EVENT_NAME, (event: Event) => {
-    handleFetchDataEvent(event, () => currentDataUrl, traceviewerModule);
+    const refetchId = ++activeRefetchId;
+    handleFetchDataEvent(
+      event,
+      () => currentDataUrl,
+      traceviewerModule,
+      () => fullTraceLoaded,
+      () => currentLoadingPromise !== null,
+      () => refetchId !== activeRefetchId,
+    );
   });
 
   return traceviewerModule;
