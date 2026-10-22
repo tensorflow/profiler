@@ -13,12 +13,17 @@
 // limitations under the License.
 //
 #include "xprof/convert/op_stats_to_overview_page.h"
+
+#include <cstdint>
 #include <memory>
 
 #include <gtest/gtest.h>
 #include "xprof/convert/data_table_utils.h"
+#include "plugin/xprof/protobuf/hardware_types.pb.h"
 #include "plugin/xprof/protobuf/op_stats.pb.h"
 #include "plugin/xprof/protobuf/overview_page.pb.h"
+#include "plugin/xprof/protobuf/steps_db.pb.h"
+#include "xprof/utils/op_metrics_db_utils.h"
 
 namespace tensorflow {
 namespace profiler {
@@ -110,6 +115,53 @@ TEST(OpStatsToOverviewPageTest, HighConfidenceZeroTimeTest) {
   EXPECT_DOUBLE_EQ(
       overview_page.analysis().device_duty_cycle_high_confidence_percent(),
       0.0);
+}
+
+TEST(OpStatsToOverviewPageTest, TpuActiveTimesAndSparseCoreStepAverages) {
+  constexpr uint64_t kPicosPerMilli = 1000000000;
+  OpStats op_stats;
+  op_stats.mutable_run_environment()->set_device_type("TPU");
+  op_stats.mutable_run_environment()->set_hardware_type(TPU);
+  PerCoreStepInfo& per_core_step_info =
+      *op_stats.mutable_step_db()->add_step_sequence();
+  per_core_step_info.set_step_num(1);
+  auto& step_info_per_core = *per_core_step_info.mutable_step_info_per_core();
+
+  StepInfoResult& tc_step_info = step_info_per_core[/*core_id=*/1];
+  tc_step_info.set_step_num(1);
+  tc_step_info.set_duration_ps(1000 * kPicosPerMilli);
+  TpuStepBreakdown tc_breakdown;
+  tc_breakdown.set_tc_busy_ps(600 * kPicosPerMilli);
+  tc_step_info.mutable_step_breakdown()->PackFrom(tc_breakdown);
+
+  StepInfoResult& sc_step_info =
+      step_info_per_core[/*core_id=*/kSparseCoreIndexStart + 1];
+  sc_step_info.set_step_num(1);
+  sc_step_info.set_duration_ps(1000 * kPicosPerMilli);
+  SparseCoreStepBreakdown sc_breakdown;
+  sc_breakdown.set_sc_busy_ps(700 * kPicosPerMilli);
+  sc_breakdown.set_sc_infeed_ps(100 * kPicosPerMilli);
+  sc_breakdown.set_sc_idle_ps(200 * kPicosPerMilli);
+  sc_step_info.mutable_step_breakdown()->PackFrom(sc_breakdown);
+
+  OverviewPage overview_page = ConvertOpStatsToOverviewPage(op_stats);
+
+  const OverviewPageAnalysis& analysis = overview_page.analysis();
+  EXPECT_DOUBLE_EQ(analysis.tc_active_time_ms_average(), 600.0);
+  EXPECT_DOUBLE_EQ(analysis.sc_active_time_ms_average(), 700.0);
+  EXPECT_DOUBLE_EQ(analysis.active_step_time_ms_average(), 700.0);
+  EXPECT_DOUBLE_EQ(analysis.sc_step_time_ms_average(), 1000.0);
+  EXPECT_DOUBLE_EQ(analysis.sc_infeed_time_ms_avg(), 100.0);
+  EXPECT_DOUBLE_EQ(analysis.sc_outfeed_time_ms_avg(), 0.0);
+  EXPECT_DOUBLE_EQ(analysis.sc_idle_time_ms_avg(), 200.0);
+
+  auto data_table = GenerateAnalysisResultDataTable(overview_page);
+  ASSERT_NE(data_table, nullptr);
+  const auto& properties = data_table->GetCustomProperties();
+  EXPECT_EQ(properties.at("tc_active_ms_average"), "600.00");
+  EXPECT_EQ(properties.at("sc_active_ms_average"), "700.00");
+  EXPECT_EQ(properties.at("active_steptime_ms_average"), "700.00");
+  EXPECT_EQ(properties.at("sc_steptime_average"), "1000.0");
 }
 TEST(OpStatsToOverviewPageTest, RooflineMetrics) {
   OpStats op_stats;

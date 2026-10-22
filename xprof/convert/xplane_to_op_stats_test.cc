@@ -23,9 +23,9 @@ limitations under the License.
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include "xla/hlo/ir/hlo_opcode.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "xla/hlo/ir/hlo_opcode.h"
 #include "xla/tsl/profiler/convert/xla_op_utils.h"
 #include "xla/tsl/profiler/utils/math_utils.h"
 #include "xla/tsl/profiler/utils/tf_xplane_visitor.h"
@@ -35,6 +35,7 @@ limitations under the License.
 #include "tsl/profiler/protobuf/xplane.pb.h"
 #include "xprof/convert/duty_cycle_tracker.h"
 #include "xprof/convert/multi_xplanes_to_op_stats.h"
+#include "xprof/convert/op_stats_to_input_pipeline_analysis.h"
 #include "xprof/convert/repository.h"
 #include "xprof/convert/step_events_to_steps_db.h"
 #include "plugin/xprof/protobuf/diagnostics.pb.h"
@@ -42,6 +43,7 @@ limitations under the License.
 #include "plugin/xprof/protobuf/op_stats.pb.h"
 #include "plugin/xprof/protobuf/steps_db.pb.h"
 #include "plugin/xprof/protobuf/tf_function.pb.h"
+#include "plugin/xprof/protobuf/tpu_input_pipeline.pb.h"
 #include "xprof/utils/hlo_proto_map.h"
 #include "xprof/utils/op_metrics_db_utils.h"
 
@@ -2143,6 +2145,112 @@ TEST(ConvertXPlaneToOpStats,
   EXPECT_EQ(sc_breakdown.category_ps().at(kIdle), 500);
 }
 
+TEST(ConvertXPlaneToOpStats,
+     SparseCoreStepDbUnionsTecLinesAndExcludesSyncWait) {
+  XSpace space;
+  constexpr int64_t kStep1 = 1;
+  constexpr int64_t kStep2 = 2;
+
+  // TC Plane 0: Step 1 [0, 100) and Step 2 [100, 200)
+  XPlaneBuilder tc_plane_builder(
+      GetOrCreateTpuXPlane(&space, /*device_ordinal=*/0, "TPU v5p", 0, 0));
+  tc_plane_builder.SetId(0);
+  XLineBuilder tc_step_line = tc_plane_builder.GetOrCreateLine(0);
+  tc_step_line.SetName(tsl::profiler::kStepLineName);
+  CreateXEvent(&tc_plane_builder, &tc_step_line, "Step 1", /*offset_ps=*/0,
+               /*duration_ps=*/100, {{StatType::kGroupId, kStep1}});
+  CreateXEvent(&tc_plane_builder, &tc_step_line, "Step 2", /*offset_ps=*/100,
+               /*duration_ps=*/100, {{StatType::kGroupId, kStep2}});
+  XLineBuilder tc_op_line = tc_plane_builder.GetOrCreateLine(1);
+  tc_op_line.SetName(kXlaOpLineName);
+  CreateXEventMetadata(&tc_plane_builder, "tc_dot",
+                       {{StatType::kHloCategory, "dot"}});
+  CreateXEvent(&tc_plane_builder, &tc_op_line, "tc_dot", /*offset_ps=*/0,
+               /*duration_ps=*/40, {{StatType::kGroupId, kStep1}});
+  CreateXEvent(&tc_plane_builder, &tc_op_line, "tc_dot", /*offset_ps=*/100,
+               /*duration_ps=*/80, {{StatType::kGroupId, kStep2}});
+
+  // SC Plane 1: No Sparse Core Steps line; activity in Step 1 across Sparse
+  // Core Ops and TEC 0 / TEC 1 with overlapping intervals and an off-duty
+  // call-done wait, and idle (only a sync wait) in Step 2.
+  XPlaneBuilder sc_plane_builder(
+      GetOrCreateTpuXPlane(&space, /*device_ordinal=*/1, "TPU v5p", 0, 0));
+  sc_plane_builder.SetId(1);
+  sc_plane_builder.SetName("/device:TPU:0 SparseCore 0");
+  XLineBuilder sc_op_line = sc_plane_builder.GetOrCreateLine(0);
+  sc_op_line.SetName(kSparseCoreOpLineName);
+  // Active SC op [10, 40) (30ps) in Step 1
+  CreateXEvent(&sc_plane_builder, &sc_op_line, "sc_active_op", /*offset_ps=*/10,
+               /*duration_ps=*/30, {{StatType::kGroupId, kStep1}});
+  // Off-duty SC sync wait [40, 80) (40ps, excluded) in Step 1
+  CreateXEvent(&sc_plane_builder, &sc_op_line, "call-done.sc", /*offset_ps=*/40,
+               /*duration_ps=*/40, {{StatType::kGroupId, kStep1}});
+  // Off-duty SC sync wait [110, 150) (40ps, excluded) in Step 2
+  CreateXEvent(&sc_plane_builder, &sc_op_line, "call-done.sc",
+               /*offset_ps=*/110, /*duration_ps=*/40,
+               {{StatType::kGroupId, kStep2}});
+
+  // TEC 0 line: active task [20, 60) (overlaps [20, 40) with sc_active_op,
+  // extends union to [10, 60) = 50ps)
+  XLineBuilder tec0_line = sc_plane_builder.GetOrCreateLine(1);
+  tec0_line.SetName("TEC 0");
+  CreateXEvent(&sc_plane_builder, &tec0_line, "tec_task_0", /*offset_ps=*/20,
+               /*duration_ps=*/40);
+
+  // TEC 1 line: active task [30, 70) (extends union to [10, 70) = 60ps)
+  XLineBuilder tec1_line = sc_plane_builder.GetOrCreateLine(2);
+  tec1_line.SetName("TEC 1");
+  CreateXEvent(&sc_plane_builder, &tec1_line, "tec_task_1", /*offset_ps=*/30,
+               /*duration_ps=*/40);
+
+  ASSERT_OK_AND_ASSIGN(OpStats op_stats,
+                       ConvertXSpaceToOpStats(
+                           space, OpStatsOptions{.generate_op_metrics_db = true,
+                                                 .generate_step_db = true}));
+  ASSERT_EQ(op_stats.step_db().step_sequence_size(), 2);
+  uint32_t sc_core_id = kSparseCoreIndexStart + 1;
+  // Step 1: union of [10, 40), [20, 60), [30, 70) = [10, 70) = 60ps active,
+  // 40ps idle.
+  {
+    const auto& step_info_per_core =
+        op_stats.step_db().step_sequence(0).step_info_per_core();
+    ASSERT_TRUE(step_info_per_core.contains(sc_core_id));
+    SparseCoreStepBreakdown sc_breakdown;
+    ASSERT_TRUE(step_info_per_core.at(sc_core_id)
+                    .step_breakdown()
+                    .UnpackTo(&sc_breakdown));
+    EXPECT_EQ(sc_breakdown.sc_compute_ps(), 60);
+    EXPECT_EQ(sc_breakdown.sc_busy_ps(), 60);
+    EXPECT_EQ(sc_breakdown.sc_idle_ps(), 40);
+    PerTpuStepDetails step_details = ComputeTpuPerStepDataAcrossCores(
+        op_stats.step_db().step_sequence(0), op_stats.core_id_to_details());
+    EXPECT_DOUBLE_EQ(step_details.sc_compute_time_ms(),
+                     tsl::profiler::PicoToMilli(60));
+    EXPECT_DOUBLE_EQ(step_details.sc_active_time_ms(),
+                     tsl::profiler::PicoToMilli(60));
+  }
+  // Step 2: 0ps active, 100ps idle on the active SparseCore.
+  {
+    const auto& step_info_per_core =
+        op_stats.step_db().step_sequence(1).step_info_per_core();
+    ASSERT_TRUE(step_info_per_core.contains(sc_core_id));
+    SparseCoreStepBreakdown sc_breakdown;
+    ASSERT_TRUE(step_info_per_core.at(sc_core_id)
+                    .step_breakdown()
+                    .UnpackTo(&sc_breakdown));
+    EXPECT_EQ(sc_breakdown.sc_compute_ps(), 0);
+    EXPECT_EQ(sc_breakdown.sc_busy_ps(), 0);
+    EXPECT_EQ(sc_breakdown.sc_idle_ps(), 100);
+    PerTpuStepDetails step_details = ComputeTpuPerStepDataAcrossCores(
+        op_stats.step_db().step_sequence(1), op_stats.core_id_to_details());
+    EXPECT_DOUBLE_EQ(step_details.sc_compute_time_ms(), 0.0);
+    EXPECT_DOUBLE_EQ(step_details.sc_active_time_ms(), 0.0);
+    EXPECT_DOUBLE_EQ(step_details.sc_idle_time_ms(),
+                     tsl::profiler::PicoToMilli(100));
+    EXPECT_DOUBLE_EQ(step_details.sc_step_time_ms(),
+                     tsl::profiler::PicoToMilli(100));
+  }
+}
 }  // namespace
 }  // namespace profiler
 }  // namespace tensorflow

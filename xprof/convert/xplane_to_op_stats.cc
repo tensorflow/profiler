@@ -937,9 +937,22 @@ absl::StatusOr<OpStats> ConvertXSpaceToOpStats(const XSpace& space,
       // A SparseCore step's idle time is the part of the step that is neither
       // active, per the SparseCore duty cycle, nor infeed or outfeed. Its other
       // off-duty categories, such as sync waits, become idle time.
+      // A SparseCore without its own step line gets a step with the
+      // TensorCore step span, if it was active during the trace.
       GenericStepBreakdown generic;
+      SparseCoreStepBreakdown sc_breakdown;
       for (PerCoreStepInfo& per_core_step_info :
            *op_stats.mutable_step_db()->mutable_step_sequence()) {
+        // Every TensorCore gets the step's longest device step marker as its
+        // span, so this union is that span.
+        tsl::profiler::Timespan tc_step_span;
+        for (const auto& [core_id, step_info] :
+             per_core_step_info.step_info_per_core()) {
+          if (core_id < kSparseCoreIndexStart && step_info.duration_ps() > 0) {
+            tc_step_span.ExpandToInclude(tsl::profiler::Timespan(
+                step_info.begin_ps(), step_info.duration_ps()));
+          }
+        }
         auto& step_info_map = *per_core_step_info.mutable_step_info_per_core();
         auto step_events_it = step_events.find(per_core_step_info.step_num());
         for (size_t i = 0; i < device_planes.size(); ++i) {
@@ -950,18 +963,42 @@ absl::StatusOr<OpStats> ConvertXSpaceToOpStats(const XSpace& space,
           uint32_t sc_core_id = kSparseCoreIndexStart + device_planes[i]->id();
           auto it = step_info_map.find(sc_core_id);
           if (it == step_info_map.end()) {
-            if (step_events_it == step_events.end()) continue;
-            tsl::profiler::Timespan marker_span =
-                step_events_it->second.StepTimeOnCore(sc_core_id);
-            if (marker_span.Empty()) continue;
-            StepInfoResult sc_step_info;
-            sc_step_info.set_step_num(per_core_step_info.step_num());
-            sc_step_info.set_begin_ps(marker_span.begin_ps());
-            sc_step_info.set_duration_ps(marker_span.duration_ps());
-            generic.Clear();
-            sc_step_info.mutable_step_breakdown()->PackFrom(generic);
-            it = step_info_map.emplace(sc_core_id, std::move(sc_step_info))
-                     .first;
+            tsl::profiler::Timespan marker_span;
+            if (step_events_it != step_events.end()) {
+              marker_span = step_events_it->second.StepTimeOnCore(sc_core_id);
+            }
+            if (!marker_span.Empty()) {
+              StepInfoResult sc_step_info;
+              sc_step_info.set_step_num(per_core_step_info.step_num());
+              sc_step_info.set_begin_ps(marker_span.begin_ps());
+              sc_step_info.set_duration_ps(marker_span.duration_ps());
+              generic.Clear();
+              sc_step_info.mutable_step_breakdown()->PackFrom(generic);
+              it = step_info_map.emplace(sc_core_id, std::move(sc_step_info))
+                       .first;
+            } else {
+              if (tc_step_span.Empty() ||
+                  device_trace_results[i]
+                          .duty_cycle_tracker.GetActiveTimePs() == 0) {
+                continue;
+              }
+              uint64_t sc_active_ps = std::min(
+                  tc_step_span.duration_ps(),
+                  device_trace_results[i].duty_cycle_tracker.GetActiveTimePs(
+                      tc_step_span));
+              StepInfoResult sc_step_info;
+              sc_step_info.set_step_num(per_core_step_info.step_num());
+              sc_step_info.set_begin_ps(tc_step_span.begin_ps());
+              sc_step_info.set_duration_ps(tc_step_span.duration_ps());
+              sc_breakdown.Clear();
+              sc_breakdown.set_sc_compute_ps(sc_active_ps);
+              sc_breakdown.set_sc_busy_ps(sc_active_ps);
+              sc_breakdown.set_sc_idle_ps(tc_step_span.duration_ps() -
+                                          sc_active_ps);
+              sc_step_info.mutable_step_breakdown()->PackFrom(sc_breakdown);
+              step_info_map[sc_core_id] = std::move(sc_step_info);
+              continue;
+            }
           }
           StepInfoResult& sc_step_info = it->second;
           generic.Clear();

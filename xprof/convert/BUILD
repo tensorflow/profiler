@@ -1373,7 +1373,6 @@ cc_library(
         ":op_metrics_db_combiner",
         ":op_metrics_to_record",
         ":op_stats_to_input_pipeline_analysis",
-        "//plugin/xprof/protobuf:flat_op_metrics_proto_cc",
         "//plugin/xprof/protobuf:hardware_types_proto_cc",
         "//plugin/xprof/protobuf:input_pipeline_proto_cc",
         "//plugin/xprof/protobuf:kernel_stats_proto_cc",
@@ -1394,7 +1393,6 @@ cc_library(
         "@org_xprof//xprof/utils:kernel_stats_utils",
         "@org_xprof//xprof/utils:op_metrics_db_utils",
         "@tsl//tsl/profiler/protobuf:xplane_proto_cc",
-        "@xla//xla/tsl/platform:types",
         "@xla//xla/tsl/profiler/convert:xla_op_utils",
         "@xla//xla/tsl/profiler/utils:format_utils",
         "@xla//xla/tsl/profiler/utils:math_utils",
@@ -1408,9 +1406,12 @@ cc_test(
     deps = [
         ":data_table_utils",
         ":op_stats_to_overview_page",
+        "//plugin/xprof/protobuf:hardware_types_proto_cc",
         "//plugin/xprof/protobuf:op_stats_proto_cc",
         "//plugin/xprof/protobuf:overview_page_proto_cc",
+        "//plugin/xprof/protobuf:steps_db_proto_cc",
         "@com_google_googletest//:gtest_main",
+        "@org_xprof//xprof/utils:op_metrics_db_utils",
     ],
 )
 
@@ -1550,7 +1551,10 @@ cc_test(
     name = "op_stats_to_input_pipeline_analysis_test",
     srcs = ["op_stats_to_input_pipeline_analysis_test.cc"],
     deps = [
+        ":data_table_utils",
         ":op_stats_to_input_pipeline_analysis",
+        "//plugin/xprof/protobuf:hardware_types_proto_cc",
+        "//plugin/xprof/protobuf:input_pipeline_proto_cc",
         "//plugin/xprof/protobuf:op_stats_proto_cc",
         "//plugin/xprof/protobuf:steps_db_proto_cc",
         "//plugin/xprof/protobuf:tpu_input_pipeline_proto_cc",
@@ -1783,6 +1787,7 @@ cc_test(
     deps = [
         ":duty_cycle_tracker",
         ":multi_xplanes_to_op_stats",
+        ":op_stats_to_input_pipeline_analysis",
         ":repository",
         ":step_events_to_steps_db",
         ":xplane_to_op_stats",
@@ -1791,6 +1796,7 @@ cc_test(
         "//plugin/xprof/protobuf:op_stats_proto_cc",
         "//plugin/xprof/protobuf:steps_db_proto_cc",
         "//plugin/xprof/protobuf:tf_function_proto_cc",
+        "//plugin/xprof/protobuf:tpu_input_pipeline_proto_cc",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",
