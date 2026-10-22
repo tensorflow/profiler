@@ -1457,9 +1457,8 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
         // The kernel backend ignores time ranges and always returns the whole
         // kernel, so incremental refetching would only re-download it.
         this.traceViewerModule?.SetIncrementalFetchEnabled?.(false);
-        // The built-in event tooltip reads `name (duration)`, but kernel
-        // events are measured in bundles, not time, and already show their
-        // name. The counter tooltip (utilization values) is unaffected.
+        // Disable built-in WASM ImGui tooltips because Static Kernel Viewer
+        // renders its own Angular `<kernel-event-tooltip>` overlay.
         this.traceViewerModule?.SetEventTooltipEnabled?.(false);
         this.lastLoadedUrl = '';
         this.lastLoadFailed = false;

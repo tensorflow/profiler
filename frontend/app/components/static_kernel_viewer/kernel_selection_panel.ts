@@ -15,6 +15,7 @@ import {MatIconModule} from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {
   accentColorForCounterTrack,
+  buildBundleStrip,
   buildInstructionMix,
   buildKernelEventTooltip,
   buildUtilizationBars,
@@ -808,17 +809,19 @@ export function buildKernelSelectionFromEvent(
   }
 
   const bundleEvents = readBundleEvents(detail['bundleEvents']);
-  const activeLanes = tooltip.bundleStrip
-    ? tooltip.bundleStrip.filter((cell) => cell.active).length
+  const bundleStrip =
+    tooltip.bundleStrip ?? buildBundleStrip(hovered.bundleCounts);
+  const activeLanes = bundleStrip
+    ? bundleStrip.filter((cell) => cell.active).length
     : 0;
   const hasLargeBundleCounts =
-    tooltip.bundleStrip?.some((cell) => cell.count >= 10) ?? false;
-  const totalOpsInBundle = tooltip.bundleStrip
-    ? tooltip.bundleStrip.reduce((sum, cell) => sum + cell.count, 0)
+    bundleStrip?.some((cell) => cell.count >= 10) ?? false;
+  const totalOpsInBundle = bundleStrip
+    ? bundleStrip.reduce((sum, cell) => sum + cell.count, 0)
     : (bundleEvents?.length ?? 0);
   const activeLanesSummary =
-    totalOpsInBundle > 0 && tooltip.bundleStrip
-      ? `${BUNDLE_FORMAT.format(totalOpsInBundle)} ${totalOpsInBundle === 1 ? 'op' : 'ops'} · ${activeLanes}/${tooltip.bundleStrip.length} lanes active`
+    totalOpsInBundle > 0 && bundleStrip
+      ? `${BUNDLE_FORMAT.format(totalOpsInBundle)} ${totalOpsInBundle === 1 ? 'op' : 'ops'} · ${activeLanes}/${bundleStrip.length} lanes active`
       : undefined;
 
   const utilizationBars =
@@ -835,9 +838,16 @@ export function buildKernelSelectionFromEvent(
     detail['totalInstructions'] > 0
       ? Math.round(detail['totalInstructions'])
       : mixResult.totalInstructions;
+  const regions =
+    tooltip.regions ??
+    (hovered.regions && hovered.regions.length > 0
+      ? hovered.regions
+      : undefined);
+  const regionRowLabel =
+    tooltip.regionRowLabel ?? (isRegion ? 'Parent regions' : 'Regions');
   const regionAncestors = readChildRegions(detail['regionAncestors']);
   const regionBreadcrumbs = buildRegionBreadcrumbs(
-    tooltip.regions,
+    regions,
     regionAncestors,
   );
   const parentRegion =
@@ -849,6 +859,25 @@ export function buildKernelSelectionFromEvent(
     detail['topInstructions'],
     totalInstructions,
   );
+  const schedulePosition: SchedulePosition | undefined =
+    !isRegion && hovered.totalBundles !== undefined && hovered.totalBundles > 0
+      ? (() => {
+          const percent = Math.max(
+            0,
+            Math.min(
+              100,
+              Math.round((hovered.start / hovered.totalBundles) * 100),
+            ),
+          );
+          return {
+            percent,
+            formattedPercent: `${percent}%`,
+            totalBundles: BUNDLE_FORMAT.format(
+              Math.floor(hovered.totalBundles),
+            ),
+          };
+        })()
+      : undefined;
   const counterDetails =
     tooltip.kind === 'counter'
       ? buildCounterSelectionDetails(
@@ -905,7 +934,7 @@ export function buildKernelSelectionFromEvent(
     ...(sourceInfo ? {sourceInfo} : {}),
     ...(sourceStack ? {sourceStack} : {}),
     ...(extraAttributes.length > 0 ? {extraAttributes} : {}),
-    ...(tooltip.bundleStrip ? {bundleStrip: tooltip.bundleStrip} : {}),
+    ...(bundleStrip ? {bundleStrip} : {}),
     ...(hasLargeBundleCounts ? {hasLargeBundleCounts: true} : {}),
     ...(activeLanesSummary ? {activeLanesSummary} : {}),
     ...(bundleEvents ? {bundleEvents} : {}),
@@ -913,14 +942,10 @@ export function buildKernelSelectionFromEvent(
     ...(peakUtilizationLabel ? {peakUtilizationLabel} : {}),
     ...(tooltip.counterGauge ? {counterGauge: tooltip.counterGauge} : {}),
     ...(counterDetails ? {counterDetails} : {}),
-    ...(tooltip.regions
-      ? {regions: tooltip.regions, regionRowLabel: tooltip.regionRowLabel}
-      : {}),
+    ...(regions ? {regions, regionRowLabel} : {}),
     ...(regionBreadcrumbs ? {regionBreadcrumbs} : {}),
     ...(parentRegion && parentRegion.eventIndex >= 0 ? {parentRegion} : {}),
-    ...(tooltip.schedulePosition
-      ? {schedulePosition: tooltip.schedulePosition}
-      : {}),
+    ...(schedulePosition ? {schedulePosition} : {}),
     ...(tooltip.instructionMix ? {instructionMix: tooltip.instructionMix} : {}),
     totalInstructions,
     ...(tooltip.meanUtilization

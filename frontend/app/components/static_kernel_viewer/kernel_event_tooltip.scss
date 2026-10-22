@@ -9,7 +9,6 @@
   left: 0;
   z-index: 3;
   box-sizing: border-box;
-  min-width: 176px;
   max-width: 340px;
   color: var(--mat-sys-on-surface);
   font: 400 11.5px / 1.35 var(--mat-sys-plain-font);
@@ -397,10 +396,4 @@
 
 .crumb-sep {
   color: var(--mat-sys-outline);
-}
-
-.position-pill {
-  flex: none;
-  color: var(--mat-sys-on-surface-variant);
-  font-size: 10px;
 }

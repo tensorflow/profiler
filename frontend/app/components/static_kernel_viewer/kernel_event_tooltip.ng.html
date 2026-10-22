@@ -14,13 +14,15 @@
           }
           <span class="name" [class.code]="tooltip.isCode">{{ tooltip.name }}</span>
         </div>
-        <span class="bundles">
-          {{ tooltip.bundlesLabel }}
-          <span class="code tabular">{{ tooltip.bundles }}</span>
-          @if (!tooltip.subtitleChips && tooltip.length) {
-            · {{ tooltip.length }}
-          }
-        </span>
+        @if (!tooltip.counterGauge) {
+          <span class="bundles">
+            {{ tooltip.bundlesLabel }}
+            <span class="code tabular">{{ tooltip.bundles }}</span>
+            @if (!tooltip.subtitleChips && tooltip.length) {
+              · {{ tooltip.length }}
+            }
+          </span>
+        }
       </div>
       @if (tooltip.subtitleChips; as chips) {
         <div class="subtitle-chips tabular">
@@ -39,6 +41,10 @@
           }
           @if (tooltip.counterGauge; as gauge) {
             <span class="code tabular gauge-text">{{ gauge.formattedValue }}</span>
+            <span class="bundles">
+              {{ tooltip.bundlesLabel }}
+              <span class="code tabular">{{ tooltip.bundles }}</span>
+            </span>
           }
           @if (tooltip.ordinalLabel || tooltip.hexBundle) {
             <div class="header-meta code tabular">
@@ -152,9 +158,6 @@
                 }
               }
             </div>
-            @if (tooltip.schedulePosition; as pos) {
-              <span class="position-pill code tabular">{{ pos.formattedPercent }}</span>
-            }
           </div>
         }
       </div>

@@ -190,8 +190,6 @@ export interface KernelEventTooltipContent {
   readonly regions?: readonly string[];
   /** Label for the region row (`Region` for bundle hover, `Inside` for region hover). */
   readonly regionRowLabel?: string;
-  /** Position of the bundle in the full static schedule. */
-  readonly schedulePosition?: SchedulePosition;
   /** Instruction mix breakdown across functional units inside a region. */
   readonly instructionMix?: readonly InstructionMixItem[];
   /** Mean unit utilization and bottleneck hint inside a region. */
@@ -215,6 +213,9 @@ const UTILIZATION_SUFFIX = ' utilization';
 
 /** Default accent color for regions and whole-kernel process tracks. */
 export const DEFAULT_ACCENT_COLOR = '#1a73e8';
+
+/** Counter track bar color in Trace Viewer v2 (`kBlue80`). */
+export const COUNTER_TRACK_COLOR = '#a1c9ff';
 
 /** Default Trace Viewer v2 slice palette used when WASM does not report a color. */
 export const DEFAULT_TRACE_COLORS: readonly string[] = [
@@ -526,30 +527,12 @@ export function formatCounterTrackValue(
   return `${clampPercent(value * 100)}%`;
 }
 
-/** Returns the accent color for a counter track. */
+/** Returns the accent color for a counter track, matching Trace Viewer v2's counter bar color. */
 export function accentColorForCounterTrack(
-  trackName: string,
-  unit?: FunctionalUnit,
+  _trackName?: string,
+  _unit?: FunctionalUnit,
 ): string {
-  if (unit) {
-    return unit.color;
-  }
-  if (/spill/i.test(trackName)) {
-    return '#d93025';
-  }
-  if (classifyCounterTrack(trackName) === 'bytes') {
-    return '#00a3bf';
-  }
-  if (/scalar/i.test(trackName)) {
-    return '#1e8e3e';
-  }
-  if (/predicate/i.test(trackName)) {
-    return '#f29900';
-  }
-  if (/mask/i.test(trackName)) {
-    return '#7c4dff';
-  }
-  return DEFAULT_ACCENT_COLOR;
+  return COUNTER_TRACK_COLOR;
 }
 
 function clampPercent(percent: number): number {
@@ -790,32 +773,25 @@ export function buildKernelEventTooltip(
         ? 'region'
         : 'instruction';
 
-  const unit = isCounter
-    ? unitForCounterTrack(event.trackName)
-    : FUNCTIONAL_UNITS_BY_LANE.get(event.trackName);
+  const unit =
+    !isCounter && !isProcess
+      ? FUNCTIONAL_UNITS_BY_LANE.get(event.trackName)
+      : undefined;
   const counterKind = isCounter
     ? classifyCounterTrack(event.trackName)
     : undefined;
-  const accentColor = isCounter
-    ? accentColorForCounterTrack(event.trackName, unit)
-    : (unit?.color ?? DEFAULT_ACCENT_COLOR);
   const eventColor =
     event.color ??
     (isCounter || isProcess
-      ? accentColor
+      ? COUNTER_TRACK_COLOR
       : defaultEventColorForName(event.name));
+  const accentColor =
+    isCounter || isProcess
+      ? eventColor
+      : (unit?.color ?? DEFAULT_ACCENT_COLOR);
 
   let description: string | undefined = undefined;
-  if (isCounter) {
-    description =
-      counterKind === 'bytes'
-        ? 'Static memory footprint'
-        : counterKind === 'registers'
-          ? 'Live register pressure'
-          : 'Static unit utilization';
-  } else if (isProcess) {
-    description = 'Bundle activity across all functional unit lanes';
-  } else if (!unit && !isRegion && event.trackName) {
+  if (!isCounter && !isProcess && !unit && !isRegion && event.trackName) {
     // Names the lane of an event that is neither an instruction nor a region.
     description = event.trackName;
   }
@@ -842,14 +818,14 @@ export function buildKernelEventTooltip(
     event.vectorSpills !== undefined ||
     event.vectorFills !== undefined;
   const hexBundle =
-    !isRegion &&
+    kind === 'instruction' &&
     isSingleBundle &&
     event.start >= 0 &&
     hasRichScheduleOrLloContext
       ? `<0x${Math.floor(event.start).toString(16)}>`
       : undefined;
   const ordinalLabel =
-    !isRegion && event.ordinal !== undefined && event.ordinal >= 0
+    kind === 'instruction' && event.ordinal !== undefined && event.ordinal >= 0
       ? `Ord #${BUNDLE_FORMAT.format(event.ordinal)}`
       : undefined;
 
@@ -881,13 +857,21 @@ export function buildKernelEventTooltip(
       ? event.consumers
       : undefined;
   const consumerGroups = buildConsumerGroups(consumers);
-  const spillsLabel = formatSpillsLabel(event.vectorSpills, event.vectorFills);
+  const spillsLabel =
+    kind === 'instruction' || isRegion
+      ? formatSpillsLabel(event.vectorSpills, event.vectorFills)
+      : undefined;
   const hasSpills = (event.vectorSpills ?? 0) > 0;
 
-  const bundleStrip = !isRegion
+  const bundleStrip =
+    kind === 'instruction' ? buildBundleStrip(event.bundleCounts) : undefined;
+  const processBundleStrip = isProcess
     ? buildBundleStrip(event.bundleCounts)
     : undefined;
-  const utilizationBars = buildUtilizationBars(event.utilization);
+  const utilizationBars =
+    kind === 'instruction' || isRegion
+      ? buildUtilizationBars(event.utilization)
+      : undefined;
 
   let counterGauge: CounterGauge | undefined = undefined;
   if (isCounter && event.counterValue !== undefined) {
@@ -911,16 +895,16 @@ export function buildKernelEventTooltip(
       color: accentColor,
     };
   } else if (isProcess) {
-    const activeOps = bundleStrip
-      ? bundleStrip.reduce((sum, cell) => sum + cell.count, 0)
+    const activeOps = processBundleStrip
+      ? processBundleStrip.reduce((sum, cell) => sum + cell.count, 0)
       : event.counterValue !== undefined
         ? Math.round(event.counterValue)
         : undefined;
     if (activeOps !== undefined) {
-      const activeLanes = bundleStrip
-        ? bundleStrip.filter((cell) => cell.active).length
+      const activeLanes = processBundleStrip
+        ? processBundleStrip.filter((cell) => cell.active).length
         : 0;
-      const percent = bundleStrip
+      const percent = processBundleStrip
         ? clampPercent((activeLanes / BUNDLE_STRIP_UNITS.length) * 100)
         : clampPercent((activeOps / BUNDLE_STRIP_UNITS.length) * 100);
       counterGauge = {
@@ -933,16 +917,6 @@ export function buildKernelEventTooltip(
         color: accentColor,
       };
     }
-  }
-
-  let schedulePosition: SchedulePosition | undefined = undefined;
-  if (!isRegion && event.totalBundles !== undefined && event.totalBundles > 0) {
-    const percent = clampPercent((event.start / event.totalBundles) * 100);
-    schedulePosition = {
-      percent,
-      formattedPercent: `${percent}%`,
-      totalBundles: BUNDLE_FORMAT.format(event.totalBundles),
-    };
   }
 
   let instructionMix: readonly InstructionMixItem[] | undefined = undefined;
@@ -962,7 +936,11 @@ export function buildKernelEventTooltip(
   }
 
   const regions =
-    event.regions && event.regions.length > 0 ? event.regions : undefined;
+    (kind === 'instruction' || isRegion) &&
+    event.regions &&
+    event.regions.length > 0
+      ? event.regions
+      : undefined;
   const regionRowLabel = regions ? (isRegion ? 'Inside' : 'Region') : undefined;
 
   const hasBodyRows = Boolean(
@@ -970,14 +948,12 @@ export function buildKernelEventTooltip(
       operands ||
       consumers ||
       spillsLabel ||
-      counterGauge ||
       bundleStrip ||
       (!isRegion && utilizationBars) ||
       instructionMix ||
       meanUtilization ||
       density ||
-      regions ||
-      schedulePosition,
+      regions,
   );
 
   return {
@@ -1003,7 +979,6 @@ export function buildKernelEventTooltip(
     ...(!isRegion && utilizationBars ? {utilizationBars} : {}),
     ...(counterGauge ? {counterGauge} : {}),
     ...(regions ? {regions, regionRowLabel} : {}),
-    ...(schedulePosition ? {schedulePosition} : {}),
     ...(instructionMix ? {instructionMix} : {}),
     ...(meanUtilization ? {meanUtilization} : {}),
     ...(density ? {density} : {}),

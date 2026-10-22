@@ -588,12 +588,10 @@ class Timeline {
   }
   bool minimap_enabled() const { return minimap_enabled_; }
 
-  // Whether hovering a flame-chart event shows the built-in tooltip
-  // (`name (duration)`). Hosts that draw their own tooltip, or that already
-  // paint everything the tooltip would say on the event itself, turn it off.
-  // Hover highlighting, the `eventhovered` callback and click selection are
-  // unaffected, and counter-track tooltips are separate. On by default and
-  // kept by ResetForNewDataset().
+  // Whether hovering a flame-chart event, counter track, or process utilization
+  // chart shows the built-in ImGui tooltip. Hosts that draw their own tooltip
+  // turn it off. Hover highlighting, the `eventhovered` callback and click
+  // selection are unaffected. On by default and kept by ResetForNewDataset().
   void set_event_tooltip_enabled(bool enabled) {
     if (event_tooltip_enabled_ != enabled) {
       event_tooltip_enabled_ = enabled;

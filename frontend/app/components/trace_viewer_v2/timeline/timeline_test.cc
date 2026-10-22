@@ -7006,7 +7006,7 @@ TEST_F(RealTimelineImGuiFixture,
 }
 
 TEST_F(RealTimelineImGuiFixture,
-       HoverCounterTrackShowsTooltipWhenEventTooltipDisabled) {
+       HoverCounterTrackHidesTooltipWhenEventTooltipDisabled) {
   FlameChartTimelineData data;
   data.groups.push_back({.type = Group::Type::kCounter,
                          .name = "MXU utilization",
@@ -7039,7 +7039,7 @@ TEST_F(RealTimelineImGuiFixture,
   ImGui::NewFrame();
   timeline_.Draw();
 
-  EXPECT_TRUE(IsTooltipShown());
+  EXPECT_FALSE(IsTooltipShown());
 
   ImGui::EndFrame();
 }
@@ -7183,7 +7183,7 @@ TEST_F(RealTimelineImGuiFixture,
   EXPECT_NEAR(std::any_cast<double>(region_util.at("MXU utilization")), 0.8,
               1e-5);
 
-  // 3. Hover over counter track at t = 25: ImGui tooltip is shown and emits
+  // 3. Hover over counter track at t = 25: ImGui tooltip is hidden and emits
   // counter hover.
   ImGuiWindow* counter_win =
       find_child_window("TimelineChild_MXU utilization_4");
@@ -7193,7 +7193,7 @@ TEST_F(RealTimelineImGuiFixture,
              counter_win->Pos.y + counter_win->Size.y * 0.5f);
   ImGui::NewFrame();
   timeline_.Draw();
-  EXPECT_TRUE(IsTooltipShown());
+  EXPECT_FALSE(IsTooltipShown());
   ImGui::EndFrame();
 
   EXPECT_EQ(std::any_cast<int>(hovered_event.at(kEventSelectedIndex)), -1);
@@ -7201,6 +7201,7 @@ TEST_F(RealTimelineImGuiFixture,
             "counter");
   EXPECT_EQ(std::any_cast<std::string>(hovered_event.at("trackName")),
             "MXU utilization");
+  EXPECT_EQ(std::any_cast<std::string>(hovered_event.at("color")), "#a1c9ff");
   EXPECT_NEAR(std::any_cast<double>(hovered_event.at("counterValue")), 0.8,
               1e-5);
 }

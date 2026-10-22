@@ -350,6 +350,8 @@ void Timeline::PopulateEventHoveredScheduleDetails(
                            static_cast<double>(hovered_bundle_));
     event_data.try_emplace(kEventSelectedDuration, 1.0);
     event_data.try_emplace("counterValue", hovered_counter_value_);
+    event_data.try_emplace(
+        "color", FormatCssHexColor(GetGroupAccentColor(hovered_group_index_)));
     const Microseconds total_bundles = GetScheduleEndBundle();
     if (total_bundles > 0.0) {
       event_data.try_emplace("totalBundles", total_bundles);

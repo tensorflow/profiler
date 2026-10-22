@@ -4843,12 +4843,13 @@ void Timeline::DrawCounterTooltip(int group_index, const CounterData& data,
     draw_list->AddCircleFilled(ImVec2(x, y), kPointRadius, kWhiteColor);
     draw_list->AddCircle(ImVec2(x, y), kPointRadius, kBlackColor);
 
-    // Draw tooltip for current counter point's value and timestamp
-    ImGui::SetTooltip(
-        "%s", FormatCounterTooltip(time_axis_unit_, mouse_time, val, data.unit)
-                  .c_str());
-    if (!event_tooltip_enabled_ && hovered_event_index_ == -1 &&
-        mouse_time >= 0.0) {
+    if (event_tooltip_enabled_) {
+      // Draw tooltip for current counter point's value and timestamp
+      ImGui::SetTooltip(
+          "%s",
+          FormatCounterTooltip(time_axis_unit_, mouse_time, val, data.unit)
+              .c_str());
+    } else if (hovered_event_index_ == -1 && mouse_time >= 0.0) {
       hovered_group_index_ = group_index;
       hovered_bundle_ = static_cast<int64_t>(std::floor(mouse_time));
       hovered_counter_value_ = val;
@@ -5568,9 +5569,11 @@ void Timeline::DrawUtilizationAreaChart(int group_index, int start_level,
       const int bin_idx = static_cast<int>(mouse_pos.x - pos.x);
       if (bin_idx >= 0 && bin_idx < num_bins) {
         float val = utilization_bins_[bin_idx];
-        ImGui::SetTooltip(
-            "Utilization: %.2f\n(Chart height represents event density)", val);
-        if (!event_tooltip_enabled_ && hovered_event_index_ == -1) {
+        if (event_tooltip_enabled_) {
+          ImGui::SetTooltip(
+              "Utilization: %.2f\n(Chart height represents event density)",
+              val);
+        } else if (hovered_event_index_ == -1) {
           const double mouse_time =
               PixelToTime(mouse_pos.x - pos.x, px_per_time_unit_val);
           if (mouse_time >= 0.0) {
