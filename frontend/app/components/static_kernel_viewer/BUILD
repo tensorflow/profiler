@@ -69,6 +69,7 @@ xprof_ng_module(
         "kernel_source_lines.ts",
         "kernel_source_model.ts",
         "kernel_source_panel.ts",
+        "kernel_viewer_cache.ts",
         "kernel_viewer_tour.ts",
         "kernel_viewer_tour_demo.ts",
         "static_kernel_viewer.ts",
