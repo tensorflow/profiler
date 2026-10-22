@@ -6,6 +6,7 @@ import {
   Component,
   ElementRef,
   inject,
+  NgZone,
   OnDestroy,
   OnInit,
   ViewChild,
@@ -13,11 +14,27 @@ import {
 import {ActivatedRoute, Params} from '@angular/router';
 import {Store} from '@ngrx/store';
 import {DEFAULT_HOST} from 'org_xprof/frontend/app/common/constants/constants';
+import {readHoveredEvent} from 'org_xprof/frontend/app/components/static_kernel_viewer/kernel_event_tooltip';
 import {
   KernelMinimap,
   MinimapRegionMarker,
 } from 'org_xprof/frontend/app/components/static_kernel_viewer/kernel_minimap';
 import {KernelSelectionPanel} from 'org_xprof/frontend/app/components/static_kernel_viewer/kernel_selection_panel';
+import {
+  type KernelSourceSummary,
+  parseKernelSourceSummary,
+  parseRunEnvironment,
+  parseSourceLocation,
+  type RunEnvironment,
+} from 'org_xprof/frontend/app/components/static_kernel_viewer/kernel_source_model';
+import {
+  type BundleRange,
+  KernelSourcePanel,
+  type SearchPosition,
+  type SourceRevealRequest,
+  type SourceSelection,
+  type SummaryState,
+} from 'org_xprof/frontend/app/components/static_kernel_viewer/kernel_source_panel';
 import {
   DetailsKind,
   hasSeenKernelViewerTour,
@@ -25,6 +42,7 @@ import {
   KernelViewerTourSummary,
   TourKernel,
 } from 'org_xprof/frontend/app/components/static_kernel_viewer/kernel_viewer_tour';
+import {EVENT_SELECTED_EVENT_NAME} from 'org_xprof/frontend/app/components/trace_viewer_container/trace_viewer_container';
 import {
   LOADING_STATUS_UPDATE_EVENT_NAME,
   shutdownTraceViewerV2,
@@ -358,6 +376,17 @@ const CONTEXT_MENU_HEIGHT = 44;
 
 /** How long the tour button pulses as the tour closes; see the stylesheet. */
 const TOUR_BUTTON_PULSE_MS = 1100;
+
+/** Local storage key of the width of the source panel. */
+const SOURCE_WIDTH_STORAGE_KEY = 'xprof_static_kernel_viewer_source_width';
+
+/** Width of the source panel, in percent of the timeline and the panel. */
+const DEFAULT_SOURCE_WIDTH_PERCENT = 42;
+const MIN_SOURCE_WIDTH_PERCENT = 24;
+const MAX_SOURCE_WIDTH_PERCENT = 70;
+
+/** How far the arrow keys move the source panel resizer, in percent. */
+const SOURCE_WIDTH_KEY_STEP_PERCENT = 2;
 
 /** Keys that only modify other keys. */
 const MODIFIER_KEYS = new Set(['Alt', 'Control', 'Meta', 'Shift']);
@@ -934,6 +963,37 @@ function writeRailPinned(pinned: boolean) {
   }
 }
 
+function readStoredValue(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    // Storage can be unavailable, e.g. in sandboxed iframes.
+    return null;
+  }
+}
+
+function writeStoredValue(key: string, value: string) {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Storage can be unavailable, e.g. in sandboxed iframes.
+  }
+}
+
+function clampSourceWidth(percent: number): number {
+  return Math.min(
+    MAX_SOURCE_WIDTH_PERCENT,
+    Math.max(MIN_SOURCE_WIDTH_PERCENT, percent),
+  );
+}
+
+function readSourceWidth(): number {
+  const stored = Number(readStoredValue(SOURCE_WIDTH_STORAGE_KEY));
+  return Number.isFinite(stored) && stored > 0
+    ? clampSourceWidth(stored)
+    : DEFAULT_SOURCE_WIDTH_PERCENT;
+}
+
 /**
  * Component for the Static Kernel Viewer tool page.
  *
@@ -1048,10 +1108,33 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
   /** Whether a kernel trace of the current profile has finished loading. */
   hasLoadedTrace = false;
 
+  /**
+   * Whether the source panel is open next to the timeline. It starts closed on
+   * every visit, until the user opens it.
+   */
+  isSourceOpen = false;
+  /** Width of the source panel, in percent of the timeline and the panel. */
+  sourceWidthPercent = readSourceWidth();
+  readonly minSourceWidthPercent = MIN_SOURCE_WIDTH_PERCENT;
+  readonly maxSourceWidthPercent = MAX_SOURCE_WIDTH_PERCENT;
+  /** Whether the user is dragging the source panel resizer. */
+  isResizingSource = false;
+  /** Which version of the code the profile was built from, if recorded. */
+  runEnvironment: RunEnvironment | undefined = undefined;
+  /** Source attribution of the selected kernel. */
+  sourceSummary: KernelSourceSummary | undefined = undefined;
+  sourceState: SummaryState = 'loading';
+  /** Asks the source panel to reveal the line of a timeline selection. */
+  sourceReveal: SourceRevealRequest | undefined = undefined;
+  /** Position of the highlighted instruction of the selected source line. */
+  searchPosition: SearchPosition | undefined = undefined;
+
   @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
   @ViewChild(KernelSelectionPanel) selectionPanel?: KernelSelectionPanel;
   @ViewChild(KernelMinimap) minimap?: KernelMinimap;
   @ViewChild(KernelViewerTour) tour?: KernelViewerTour;
+  @ViewChild(KernelSourcePanel) sourcePanel?: KernelSourcePanel;
+  @ViewChild('workspace') workspace?: ElementRef<HTMLElement>;
   @ViewChild('tourButton', {read: ElementRef})
   tourButton?: ElementRef<HTMLElement>;
 
@@ -1099,6 +1182,17 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
   private isLoadingTrace = false;
   private traceLoadingStatus: TraceViewerV2LoadingStatus =
     TraceViewerV2LoadingStatus.IDLE;
+  /** Session and kernel that `sourceSummary` belongs to. */
+  private sourceKey = '';
+  private sourceRequestId = 0;
+  private revealNonce = 0;
+  /** The selected source line, which lights up on the timeline. */
+  private sourceSelection: SourceSelection | undefined = undefined;
+  /** The search query that the source panel set on the timeline. */
+  private sourceQuery = '';
+  private canvasPointerDown: {x: number; y: number} | undefined = undefined;
+  private resizeStartX = 0;
+  private resizeStartPercent = 0;
 
   private readonly loadingStatusUpdateListener = (event: Event) => {
     const status = (event as CustomEvent<{status?: unknown}>).detail?.status;
@@ -1121,12 +1215,38 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
         this.hasLoadedTrace = true;
         this.considerTour();
       }
+      this.onTraceLoaded();
     }
+  };
+
+  /** Reveals the source line of the selected timeline event. */
+  private readonly eventSelectedListener = (event: Event) => {
+    const detail = event instanceof CustomEvent ? event.detail : undefined;
+    const source = readHoveredEvent(detail)?.args?.['source'];
+    const location = source ? parseSourceLocation(source) : undefined;
+    if (!this.isSourceOpen) {
+      return;
+    }
+    this.ngZone.run(() => {
+      this.clearSourceSelection();
+      if (location) {
+        this.sourceReveal = {location, nonce: ++this.revealNonce};
+      }
+      this.changeDetectorRef.markForCheck();
+    });
+  };
+
+  private readonly resizeMoveListener = (event: PointerEvent) => {
+    this.onResizerPointerMove(event);
+  };
+  private readonly resizeEndListener = () => {
+    this.endSourceResize();
   };
 
   private readonly dataService: DataServiceV2Interface = inject(
     DATA_SERVICE_INTERFACE_TOKEN,
   );
+  private readonly ngZone = inject(NgZone);
   private readonly location = inject(Location, {optional: true});
   private readonly changeDetectorRef = inject(ChangeDetectorRef);
   private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -1269,6 +1389,12 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
       LOADING_STATUS_UPDATE_EVENT_NAME,
       this.loadingStatusUpdateListener,
     );
+    this.ngZone.runOutsideAngular(() => {
+      window.addEventListener(
+        EVENT_SELECTED_EVENT_NAME,
+        this.eventSelectedListener,
+      );
+    });
 
     combineLatest([this.route.params, this.route.queryParams])
       .pipe(takeUntil(this.destroyed))
@@ -1304,6 +1430,11 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
       LOADING_STATUS_UPDATE_EVENT_NAME,
       this.loadingStatusUpdateListener,
     );
+    window.removeEventListener(
+      EVENT_SELECTED_EVENT_NAME,
+      this.eventSelectedListener,
+    );
+    this.stopSourceResizeListeners();
     if (this.traceViewerModule !== null) {
       shutdownTraceViewerV2();
       this.traceViewerModule = null;
@@ -1352,6 +1483,7 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
     this.loadFailed = false;
     this.hasLoadedTrace = false;
     let groups: KernelGroup[] = [];
+    let runEnvironment: RunEnvironment | undefined = undefined;
     let failed = false;
     try {
       const response: unknown = await firstValueFrom(
@@ -1363,6 +1495,7 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
         ),
       );
       groups = buildKernelGroups(response);
+      runEnvironment = parseRunEnvironment(response);
     } catch (error) {
       console.error('Failed to fetch kernel list:', error);
       failed = true;
@@ -1372,6 +1505,8 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
     }
     this.loadingKernels = false;
     this.loadFailed = failed;
+    this.runEnvironment = runEnvironment;
+    this.sourceKey = '';
     this.setKernelGroups(groups);
     this.changeDetectorRef.markForCheck();
   }
@@ -2163,6 +2298,9 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onSearchTimelineQuery(query: string): void {
+    // The query replaces the highlight of the selected source line.
+    this.sourceQuery = '';
+    this.searchPosition = undefined;
     this.traceViewerModule?.application?.instance?.()?.setSearchQuery?.(query);
   }
 
@@ -2171,10 +2309,266 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
       ?.instance?.()
       ?.setVisibleRange?.(range.startUs, range.endUs);
   }
+
+  /** Opens or closes the source panel. */
+  toggleSource(): void {
+    this.setSourceOpen(!this.isSourceOpen);
+  }
+
+  setSourceOpen(open: boolean): void {
+    if (this.isSourceOpen === open) {
+      return;
+    }
+    this.isSourceOpen = open;
+    if (open) {
+      void this.loadSourceSummary();
+    } else {
+      this.sourceSelection = undefined;
+      this.clearSourceHighlight();
+    }
+    this.notifyResize();
+  }
+
+  /** Opens the source panel at a location, e.g. of a timeline selection. */
+  onOpenSource(rawLocation: string): void {
+    const location = parseSourceLocation(rawLocation);
+    this.setSourceOpen(true);
+    if (location) {
+      this.sourceReveal = {location, nonce: ++this.revealNonce};
+    }
+  }
+
+  /** Lights up the instructions of the selected source line. */
+  onSourceSelectionChange(selection: SourceSelection | undefined): void {
+    this.sourceSelection = selection;
+    this.applySourceHighlight();
+  }
+
+  onSourceZoom(range: BundleRange): void {
+    this.traceViewerModule?.application
+      ?.instance?.()
+      ?.setVisibleRange?.(range.start, range.end);
+  }
+
+  /** Highlights the next (1) or previous (-1) instruction of the line. */
+  onSourceStep(delta: number): void {
+    const instance = this.traceViewerModule?.application?.instance?.();
+    if (!instance || !this.sourceQuery) {
+      return;
+    }
+    if (delta > 0) {
+      instance.navigateToNextSearchResult();
+    } else {
+      instance.navigateToPrevSearchResult();
+    }
+    this.updateSearchPosition();
+  }
+
+  /** Loads the source attribution of the selected kernel again. */
+  onSourceRetry(): void {
+    this.sourceKey = '';
+    void this.loadSourceSummary();
+  }
+
+  onTimelinePointerDown(event: PointerEvent): void {
+    this.canvasPointerDown = {x: event.clientX, y: event.clientY};
+  }
+
+  /** Clears the lit-up source line when the timeline canvas is clicked. */
+  onTimelineClick(event: MouseEvent): void {
+    const start = this.canvasPointerDown;
+    this.canvasPointerDown = undefined;
+    if (!(event.target instanceof HTMLCanvasElement)) {
+      return;
+    }
+    if (
+      start &&
+      (Math.abs(event.clientX - start.x) > 4 ||
+        Math.abs(event.clientY - start.y) > 4)
+    ) {
+      return;
+    }
+    this.clearSourceSelection();
+  }
+
+  onResizerPointerDown(event: PointerEvent): void {
+    if (event.button !== 0 || !this.workspace) {
+      return;
+    }
+    event.preventDefault();
+    this.isResizingSource = true;
+    this.resizeStartX = event.clientX;
+    this.resizeStartPercent = this.sourceWidthPercent;
+    window.addEventListener('pointermove', this.resizeMoveListener);
+    window.addEventListener('pointerup', this.resizeEndListener);
+    window.addEventListener('pointercancel', this.resizeEndListener);
+  }
+
+  /** Resizes the source panel with the arrow keys, like a slider. */
+  onResizerKeydown(event: KeyboardEvent): void {
+    const step = SOURCE_WIDTH_KEY_STEP_PERCENT;
+    const widths: Record<string, number> = {
+      'ArrowLeft': this.sourceWidthPercent + step,
+      'ArrowRight': this.sourceWidthPercent - step,
+      'Home': MAX_SOURCE_WIDTH_PERCENT,
+      'End': MIN_SOURCE_WIDTH_PERCENT,
+    };
+    const width = widths[event.key];
+    if (width === undefined) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    this.sourceWidthPercent = clampSourceWidth(width);
+    writeStoredValue(SOURCE_WIDTH_STORAGE_KEY, String(this.sourceWidthPercent));
+    this.notifyResize();
+  }
+
+  /** Puts the source panel back to its default width. */
+  resetSourceWidth(): void {
+    this.sourceWidthPercent = DEFAULT_SOURCE_WIDTH_PERCENT;
+    writeStoredValue(SOURCE_WIDTH_STORAGE_KEY, String(this.sourceWidthPercent));
+    this.notifyResize();
+  }
+
+  private onResizerPointerMove(event: PointerEvent): void {
+    const width =
+      this.workspace?.nativeElement.getBoundingClientRect().width ?? 0;
+    if (!this.isResizingSource || width <= 0) {
+      return;
+    }
+    const delta = ((this.resizeStartX - event.clientX) / width) * 100;
+    this.sourceWidthPercent = clampSourceWidth(this.resizeStartPercent + delta);
+    this.changeDetectorRef.markForCheck();
+  }
+
+  private endSourceResize(): void {
+    if (!this.isResizingSource) {
+      return;
+    }
+    this.isResizingSource = false;
+    this.stopSourceResizeListeners();
+    writeStoredValue(
+      SOURCE_WIDTH_STORAGE_KEY,
+      String(Math.round(this.sourceWidthPercent * 10) / 10),
+    );
+    this.notifyResize();
+    this.changeDetectorRef.markForCheck();
+  }
+
+  private stopSourceResizeListeners(): void {
+    window.removeEventListener('pointermove', this.resizeMoveListener);
+    window.removeEventListener('pointerup', this.resizeEndListener);
+    window.removeEventListener('pointercancel', this.resizeEndListener);
+  }
+
+  /** Lights up the selected source line again once a trace has loaded. */
+  private onTraceLoaded(): void {
+    // Loading a trace clears the search of the timeline.
+    this.sourceQuery = '';
+    this.applySourceHighlight();
+    this.changeDetectorRef.markForCheck();
+  }
+
+  /** Highlights the selected source line on the timeline, if there is one. */
+  private applySourceHighlight(): void {
+    const query = this.sourceSelection?.query ?? '';
+    if (!query) {
+      this.clearSourceHighlight();
+      return;
+    }
+    if (query !== this.sourceQuery) {
+      this.traceViewerModule?.application
+        ?.instance?.()
+        ?.setSearchQuery?.(query);
+      this.sourceQuery = query;
+    }
+    this.updateSearchPosition();
+  }
+
+  private clearSourceSelection(): void {
+    this.sourcePanel?.clearSelection();
+    if (this.sourceSelection || this.sourceQuery) {
+      this.sourceSelection = undefined;
+      this.clearSourceHighlight();
+    }
+  }
+
+  private clearSourceHighlight(): void {
+    if (this.sourceQuery) {
+      this.traceViewerModule?.application?.instance?.()?.setSearchQuery?.('');
+      this.sourceQuery = '';
+    }
+    this.searchPosition = undefined;
+  }
+
+  private updateSearchPosition(): void {
+    const instance = this.traceViewerModule?.application?.instance?.();
+    if (!instance || !this.sourceQuery) {
+      this.searchPosition = undefined;
+      return;
+    }
+    this.searchPosition = {
+      index: instance.getCurrentSearchResultIndex?.() ?? -1,
+      count: instance.getSearchResultsCount?.() ?? 0,
+    };
+  }
+
+  /** Loads the source attribution of the selected kernel, once. */
+  private async loadSourceSummary(): Promise<void> {
+    const entry = this.selectedEntry;
+    if (!entry || !this.sessionId) {
+      return;
+    }
+    const key = `${this.sessionId}\u0000${entry.module}\u0000${entry.kernel}`;
+    if (key === this.sourceKey) {
+      return;
+    }
+    this.sourceKey = key;
+    const requestId = ++this.sourceRequestId;
+    this.sourceSummary = undefined;
+    this.sourceState = 'loading';
+    const parameters = new Map<string, string>([
+      ['request_type', 'source'],
+      ['kernel_name', entry.kernel],
+    ]);
+    // Kernel names are only unique within a module.
+    if (entry.module) {
+      parameters.set('hlo_module', entry.module);
+    }
+    let summary: KernelSourceSummary | undefined = undefined;
+    let state: SummaryState = 'error';
+    try {
+      const response: unknown = await firstValueFrom(
+        this.dataService.getData(
+          this.sessionId,
+          this.tool,
+          this.host,
+          parameters,
+        ),
+      );
+      summary = parseKernelSourceSummary(response);
+      // Backends without source attribution answer with the kernel list.
+      state = summary ? 'ready' : 'unsupported';
+    } catch (error) {
+      console.error('Failed to fetch the source of the kernel:', error);
+      // Fetches the summary again when the kernel is shown next time.
+      this.sourceKey = '';
+    }
+    if (this.isDestroyed || requestId !== this.sourceRequestId) {
+      return;
+    }
+    this.sourceSummary = summary;
+    this.sourceState = state;
+    this.changeDetectorRef.markForCheck();
+  }
+
   /** Loads the trace of `entry` into the timeline. */
   private showEntry(entry: KernelEntry): void {
     this.selectionPanel?.close();
     this.collapsedSections.delete(this.sectionIdOf(entry));
+    this.sourceSelection = undefined;
+    this.clearSourceHighlight();
     this.updateUrlQueryParams();
     const queryParamsMap = new Map<string, string>([
       ['request_type', 'trace'],
@@ -2192,6 +2586,9 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
     );
     this.loadKernelTrace(this.url);
     this.scrollIntoView('.kernel-row.active', '.kernel-tab.active');
+    if (this.isSourceOpen) {
+      void this.loadSourceSummary();
+    }
   }
 
   /**
@@ -2783,8 +3180,22 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
       event.preventDefault();
       this.focusSearch();
       this.changeDetectorRef.markForCheck();
+    } else if ((event.key === 'c' || event.key === 'C') && this.selectedEntry) {
+      event.preventDefault();
+      this.toggleSource();
+      this.changeDetectorRef.markForCheck();
+    } else if ((event.key === 'n' || event.key === 'N') && this.sourcePanel) {
+      event.preventDefault();
+      this.sourcePanel.stepHotspot(event.shiftKey ? -1 : 1);
+      this.changeDetectorRef.markForCheck();
     } else if (event.key === 'Escape' && this.isSelectionPanelOpen) {
       this.selectionPanel?.close();
+      this.changeDetectorRef.markForCheck();
+    } else if (
+      event.key === 'Escape' &&
+      this.sourcePanel?.selectedLine() !== undefined
+    ) {
+      this.sourcePanel?.clearSelection();
       this.changeDetectorRef.markForCheck();
     }
   }

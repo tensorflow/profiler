@@ -1,0 +1,59 @@
+<div
+  #list
+  class="lines"
+  [class.lines-only]="linesOnly()"
+  tabindex="0"
+  role="listbox"
+  (keydown)="onKeydown($event)"
+  (mouseleave)="onListLeave()"
+  (scroll)="onListLeave()"
+  [attr.aria-activedescendant]="cursorLine() ? 'source-line-' + cursorLine() : null"
+  [attr.aria-label]="ariaLabel()"
+>
+  @for (row of rows(); track row.line) {
+    <div
+      class="row"
+      [class.attributed]="!!row.gutter"
+      [class.selected]="row.line === selectedLine()"
+      [class.hovered]="row.line === hoveredLine() && row.line !== selectedLine()"
+      [class.cursor]="row.line === cursorLine()"
+      [class.flash]="row.line === flashLine()"
+      [id]="'source-line-' + row.line"
+      role="option"
+      [attr.data-heat]="row.gutter?.heat ?? null"
+      [attr.data-line]="row.line"
+      (mousemove)="onRowMove(row, $event)"
+      (click)="onRowClick(row)"
+      [attr.aria-label]="rowLabel(row)"
+      [attr.aria-selected]="row.line === selectedLine()"
+    >
+      <span class="gutter" aria-hidden="true">
+        @if (row.gutter; as gutter) {
+          <span class="share-label">{{ gutter.shareLabel }}</span>
+          <span class="share-track">
+            <span
+              class="share-bar"
+              [style.width.%]="gutter.barPercent"
+              [style.background-color]="gutter.color"
+            ></span>
+          </span>
+          <span class="spill-mark" [class.visible]="gutter.hasSpills"></span>
+        }
+      </span>
+      <span class="line-number" aria-hidden="true">{{ row.line }}</span>
+      @if (linesOnly()) {
+        <span class="code placeholder">
+          @for (primitive of row.primitives ?? []; track primitive) {
+            <span class="primitive">{{ primitive }}</span>
+          } @empty {
+            @if (row.instructions) {
+              <span class="instructions">{{ formatCountOf(row.instructions, 'instruction') }}</span>
+            }
+          }
+        </span>
+      } @else {
+        <span class="code" [innerHTML]="row.html"></span>
+      }
+    </div>
+  }
+</div>

@@ -408,6 +408,20 @@
         </button>
       </div>
       <button
+        mat-stroked-button
+        class="bar-action source-action"
+        [class.active]="isSourceOpen"
+        type="button"
+        [disabled]="!selectedEntry"
+        (click)="toggleSource()"
+        [matTooltip]="isSourceOpen ? 'Hide source (C)' : 'Show source (C)'"
+        [attr.aria-pressed]="isSourceOpen"
+        aria-label="Source"
+      >
+        <mat-icon>code</mat-icon>
+        <span class="bar-action-label">Source</span>
+      </button>
+      <button
         *ngIf="canCopyLink"
         mat-icon-button
         class="copy-link-button"
@@ -434,35 +448,83 @@
       </button>
     </div>
 
-    <!--
-      `url` is intentionally not bound: it is the `src` of the container's
-      legacy (v1) iframe, which stays in the DOM (hidden) under v2 and would
-      download the whole trace a second time. The WASM viewer is fed via
-      `traceViewerModule.loadTraceData` from this component instead.
-    -->
-    <trace-viewer-container
-      [class.trace-loaded]="hasLoadedTrace"
-      [traceViewerModule]="traceViewerModule"
-      [useTraceViewerV2]="true"
-      [customDrawerOpen]="isSelectionPanelOpen"
-      (initializeWasm)="onInitializeWasm()"
+    <div
+      #workspace
+      class="skv-workspace"
+      [class.with-source]="isSourceOpen && !!selectedEntry"
+      [class.resizing]="isResizingSource"
     >
-      <kernel-minimap
-        canvasTopBar
-        (visibleRangeChange)="onVisibleRangeChange($event)"
-        (selectEvent)="onSelectTimelineEvent($event)"
-      ></kernel-minimap>
-      <kernel-event-tooltip
-        *ngIf="enableEventTooltip"
-        canvasOverlay
-      ></kernel-event-tooltip>
-      <kernel-selection-panel
-        drawerOverlay
-        (openChange)="onSelectionPanelOpenChange($event)"
-        (selectEvent)="onSelectTimelineEvent($event)"
-        (searchQuery)="onSearchTimelineQuery($event)"
-      ></kernel-selection-panel>
-    </trace-viewer-container>
+      <div
+        class="timeline-column"
+        (pointerdown)="onTimelinePointerDown($event)"
+        (click)="onTimelineClick($event)"
+      >
+        <!--
+          `url` is intentionally not bound: it is the `src` of the container's
+          legacy (v1) iframe, which stays in the DOM (hidden) under v2 and would
+          download the whole trace a second time. The WASM viewer is fed via
+          `traceViewerModule.loadTraceData` from this component instead.
+        -->
+        <trace-viewer-container
+          [class.trace-loaded]="hasLoadedTrace"
+          [traceViewerModule]="traceViewerModule"
+          [useTraceViewerV2]="true"
+          [customDrawerOpen]="isSelectionPanelOpen"
+          (initializeWasm)="onInitializeWasm()"
+        >
+          <kernel-minimap
+            canvasTopBar
+            (visibleRangeChange)="onVisibleRangeChange($event)"
+            (selectEvent)="onSelectTimelineEvent($event)"
+          ></kernel-minimap>
+          <kernel-event-tooltip
+            *ngIf="enableEventTooltip"
+            canvasOverlay
+          ></kernel-event-tooltip>
+          <kernel-selection-panel
+            drawerOverlay
+            (openChange)="onSelectionPanelOpenChange($event)"
+            (selectEvent)="onSelectTimelineEvent($event)"
+            (searchQuery)="onSearchTimelineQuery($event)"
+            (openSource)="onOpenSource($event)"
+          ></kernel-selection-panel>
+        </trace-viewer-container>
+      </div>
+
+      <ng-container *ngIf="isSourceOpen && selectedEntry as entry">
+        <div
+          class="source-resizer"
+          tabindex="0"
+          role="separator"
+          aria-orientation="vertical"
+          [attr.aria-valuenow]="sourceWidthPercent | number: '1.0-0'"
+          [attr.aria-valuemin]="minSourceWidthPercent"
+          [attr.aria-valuemax]="maxSourceWidthPercent"
+          (pointerdown)="onResizerPointerDown($event)"
+          (keydown)="onResizerKeydown($event)"
+          (dblclick)="resetSourceWidth()"
+          aria-label="Resize the source panel"
+        >
+          <span class="resizer-grip" aria-hidden="true"></span>
+        </div>
+        <kernel-source-panel
+          class="source-slot"
+          [style.flex-basis.%]="sourceWidthPercent"
+          [sessionId]="sessionId"
+          [kernelKey]="entry.module + '/' + entry.kernel"
+          [summary]="sourceSummary"
+          [summaryState]="sourceState"
+          [runEnvironment]="runEnvironment"
+          [reveal]="sourceReveal"
+          [searchPosition]="searchPosition"
+          (selectionChange)="onSourceSelectionChange($event)"
+          (zoom)="onSourceZoom($event)"
+          (step)="onSourceStep($event)"
+          (retry)="onSourceRetry()"
+          (closed)="setSourceOpen(false)"
+        ></kernel-source-panel>
+      </ng-container>
+    </div>
   </div>
 
   <div
