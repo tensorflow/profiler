@@ -139,6 +139,23 @@ declare global {
   }
 }
 
+/**
+ * Keeps the raw responses of trace data requests, e.g. across page loads, so
+ * that a trace loads again without fetching it.
+ */
+export declare interface TraceDataCache {
+  /** Returns the response saved under `key`, if any. */
+  get(key: string): Promise<ArrayBuffer | undefined>;
+  /** Saves `data` under `key`. */
+  set(key: string, data: ArrayBuffer): void;
+}
+
+/** Options of `TraceViewerV2Module.loadTraceData`. */
+export declare interface LoadTraceDataOptions {
+  /** Reads the trace data from, and saves it into, this cache. */
+  readonly cache?: TraceDataCache;
+}
+
   export declare interface TraceViewerV2Module extends EmscriptenModule {
   HEAPU8: Uint8Array;
   _malloc(size: number): number;
@@ -231,7 +248,12 @@ declare global {
   getAllFlowCategories(): Array<{id: number; name: string}>;
   setCompressedSearchResultsInWasm(data: Uint8Array): void;
   setSearchResultsInWasm(data: TraceData): void;
-  loadTraceData?(url: string): Promise<void>;
+  /**
+   * Loads the trace data at `url`. With `options.cache`, it reads the data
+   * from the cache instead of the server if the cache has it, and saves the
+   * data that it fetches into the cache.
+   */
+  loadTraceData?(url: string, options?: LoadTraceDataOptions): Promise<void>;
   loadSearchResults?(url: string): Promise<void>;
   StringVector: {
     size(): number;
@@ -865,6 +887,29 @@ async function loadCompressedTraceDataInternal(
   }
 }
 
+/**
+ * Returns the raw trace data that `cache` saved under `key`, or fetches it
+ * from `url` and saves it into `cache`.
+ */
+async function loadCachedTraceData(
+  url: string,
+  cache: TraceDataCache,
+  key: string,
+): Promise<ArrayBuffer> {
+  let cached: ArrayBuffer | undefined = undefined;
+  try {
+    cached = await cache.get(key);
+  } catch (e) {
+    console.warn('Failed to read cached trace data:', e);
+  }
+  if (cached) {
+    return cached;
+  }
+  const buffer = await loadCompressedTraceDataInternal(url);
+  cache.set(key, buffer);
+  return buffer;
+}
+
 declare interface FetchDataEventDetail {
   start_time_ms: number;
   end_time_ms: number;
@@ -912,12 +957,15 @@ async function fetchAndProcessTraceData({
   isAbortRequested,
   timeRange,
   errorContext,
+  cache,
 }: {
   urlObj: URL;
   traceviewerModule: TraceViewerV2Module;
   isAbortRequested: () => boolean;
   timeRange?: [number, number];
   errorContext: string;
+  /** Reads the trace data from, and saves it into, `store` under `key`. */
+  cache?: {store: TraceDataCache; key: string};
 }) {
   window.dispatchEvent(
     new CustomEvent(LOADING_STATUS_UPDATE_EVENT_NAME, {
@@ -932,7 +980,9 @@ async function fetchAndProcessTraceData({
       urlObj.pathname.endsWith('.pb') ||
       urlObj.searchParams.get('format') === 'pb'
     ) {
-      const buffer = await loadCompressedTraceDataInternal(urlObj.toString());
+      const buffer = cache
+        ? await loadCachedTraceData(urlObj.toString(), cache.store, cache.key)
+        : await loadCompressedTraceDataInternal(urlObj.toString());
       if (isAbortRequested()) return;
 
       window.dispatchEvent(
@@ -970,7 +1020,17 @@ async function fetchAndProcessTraceData({
         }
       }
     } else {
-      const jsonData = await loadJsonDataInternal(urlObj.toString());
+      const jsonData = cache
+        ? (JSON.parse(
+            new TextDecoder('utf-8').decode(
+              await loadCachedTraceData(
+                urlObj.toString(),
+                cache.store,
+                cache.key,
+              ),
+            ),
+          ) as unknown)
+        : await loadJsonDataInternal(urlObj.toString());
       if (isAbortRequested()) return;
 
       if (!isTraceData(jsonData)) {
@@ -1178,7 +1238,10 @@ export async function traceViewerV2Main(
   // it's tied to the canvas element.
 
   // Add a method to the module to load data from a URL
-  traceviewerModule.loadTraceData = async (url: string) => {
+  traceviewerModule.loadTraceData = async (
+    url: string,
+    options?: LoadTraceDataOptions,
+  ) => {
     if (url === currentDataUrl && currentLoadingPromise) {
       return currentLoadingPromise;
     }
@@ -1216,6 +1279,9 @@ export async function traceViewerV2Main(
           isAbortRequested: () => url !== currentDataUrl,
           timeRange: timeRangeFromUrl,
           errorContext: 'loading data',
+          // The resolution that the request adds depends on the size of the
+          // canvas, so the data is cached under the URL that was asked for.
+          ...(options?.cache ? {cache: {store: options.cache, key: url}} : {}),
         });
       } finally {
         if (url === currentDataUrl) {

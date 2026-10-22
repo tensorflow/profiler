@@ -16,8 +16,11 @@ export class Address {
    * @throws {Error} If the input parameters are invalid.
    */
   constructor(
-      readonly fileName: string, readonly lineNumber: number,
-      readonly linesBefore: number, readonly linesAfter: number) {
+    readonly fileName: string,
+    readonly lineNumber: number,
+    readonly linesBefore: number,
+    readonly linesAfter: number,
+  ) {
     if (lineNumber <= 0) {
       throw new Error(`lineNumber (${lineNumber}) must be > 0`);
     }
@@ -53,16 +56,34 @@ export class Address {
  */
 export class Content {
   constructor(
-      readonly address: Address, readonly lines: readonly string[],
-      readonly metrics: readonly LineMetric[]) {
+    readonly address: Address,
+    readonly lines: readonly string[],
+    readonly metrics: readonly LineMetric[],
+  ) {
     if (lines.length <= address.lineNumber - address.firstLine) {
       throw new Error(
-          `The input 'lines' has only ${lines.length} lines. Since the first ` +
+        `The input 'lines' has only ${lines.length} lines. Since the first ` +
           `line number is ${address.firstLine}, the input lines does not ` +
           `contain the requested line number in the address ` +
-          `${address.lineNumber}.`);
+          `${address.lineNumber}.`,
+      );
     }
   }
+}
+
+/**
+ * Version of the code, e.g. the version that a profile was built from.
+ *
+ * Passing the version lets the server fetch a file without first looking the
+ * version up in the profile.
+ */
+export interface SourceCodeVersion {
+  /** Changelist that the binary was built at. */
+  readonly changeList?: number;
+  /** CitC workspace that the binary was built in, e.g. `user/workspace`. */
+  readonly workspaceId?: string;
+  /** Snapshot of `workspaceId` that the binary was built at. */
+  readonly snapshot?: number;
 }
 
 /**
@@ -83,6 +104,25 @@ export interface SourceCodeServiceInterface {
   loadContent(sessionId: string, address: Address): Observable<Content>;
 
   /**
+   * Loads the plain text of a whole file, without syntax highlighting or line
+   * metrics, e.g. for an editor that highlights the code itself.
+   *
+   * Implementations without a faster way to load plain text can leave this
+   * out, and callers fall back to `loadContent`.
+   *
+   * @param sessionId XProf session ID.
+   * @param fileName The file name.
+   * @param version The version of the code to load, e.g. the version that the
+   *     profile was built from. Leave it out to load the latest version.
+   * @return The content of the file.
+   */
+  loadText?(
+    sessionId: string,
+    fileName: string,
+    version?: SourceCodeVersion,
+  ): Observable<string>;
+
+  /**
    * Returns a link to the code search for the given address.
    *
    * The return value is a promise because the implementation might need to
@@ -94,11 +134,11 @@ export interface SourceCodeServiceInterface {
    * @return A link to the code search.
    */
   codeSearchLink(
-      sessionId: string,
-      fileName: string,
-      lineNumber: number,
-      pathPrefix: string,
-      ): Observable<string>;
+    sessionId: string,
+    fileName: string,
+    lineNumber: number,
+    pathPrefix: string,
+  ): Observable<string>;
 
   /**
    * Returns true if the source code service is available.
@@ -121,6 +161,4 @@ export interface SourceCodeServiceInterface {
 
 /** Injection token for the source code service interface. */
 export const SOURCE_CODE_SERVICE_INTERFACE_TOKEN =
-    new InjectionToken<SourceCodeServiceInterface>(
-        'SourceCodeServiceInterface',
-    );
+  new InjectionToken<SourceCodeServiceInterface>('SourceCodeServiceInterface');

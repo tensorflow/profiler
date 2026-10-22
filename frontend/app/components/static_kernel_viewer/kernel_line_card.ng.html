@@ -1,0 +1,163 @@
+@if (mode() === 'hover') {
+  <div class="card-header">
+    <div class="card-title">
+      <div class="line-heading">
+        <span class="line-label">Line {{ stats().line }}</span>
+        @if (primitivesLabel()) {
+          <span class="primitives" matTooltip="Pallas primitives of the line">{{ primitivesLabel() }}</span>
+        }
+      </div>
+      <span class="counts">{{ countsLabel() }}</span>
+    </div>
+    <div class="share" [matTooltip]="shareDescription" matTooltipShowDelay="400">
+      <span class="share-value">{{ shareLabel() }}</span>
+      <span class="share-caption">of the schedule</span>
+    </div>
+  </div>
+} @else {
+  <dl class="stats">
+    <div class="stat">
+      <dt>Instructions</dt>
+      <dd>{{ instructionsLabel() }}</dd>
+    </div>
+    <div class="stat">
+      <dt>Busy bundles</dt>
+      <dd>{{ bundlesLabel() }}</dd>
+    </div>
+    <div class="stat">
+      <dt>Bundle range</dt>
+      <dd>{{ rangeLabel() }}</dd>
+    </div>
+  </dl>
+}
+
+<div class="card-body">
+  @if (stats().units.length > 0) {
+    <section class="section">
+      @if (mode() === 'details') {
+        <span class="section-label">Units</span>
+      }
+      <div class="section-body">
+        <div class="unit-bar" aria-hidden="true">
+          @for (unit of stats().units; track unit.unit.label) {
+            <span
+              class="unit-segment"
+              [style.flex-grow]="unit.fraction"
+              [style.background-color]="unit.unit.color"
+            ></span>
+          }
+        </div>
+        <div class="unit-legend">
+          @for (unit of stats().units; track unit.unit.label) {
+            <span class="unit-item">
+              <span class="unit-dot" [style.background-color]="unit.unit.color"></span>
+              {{ unit.unit.label }}
+              <b>{{ formatFraction(unit.fraction) }}</b>
+            </span>
+          }
+        </div>
+      </div>
+    </section>
+  }
+
+  <section class="section">
+    @if (mode() === 'details') {
+      <span class="section-label">Timeline</span>
+    }
+    <div class="section-body">
+      <div class="footprint" role="group" aria-label="Where the line runs in the schedule">
+        @for (bin of footprint(); track bin.index) {
+          <button
+            class="bin"
+            [class.empty]="bin.count === 0"
+            type="button"
+            [disabled]="bin.count === 0"
+            (click)="onBinClick(bin.index, bin.count)"
+            [matTooltip]="binLabel(bin.count, bin.index) + ' · click to zoom'"
+            matTooltipShowDelay="300"
+            [attr.aria-label]="binLabel(bin.count, bin.index) + ', zoom the timeline to it'"
+          >
+            <span class="bin-fill" [style.height.%]="bin.height"></span>
+          </button>
+        }
+      </div>
+      @if (scheduleLength() > 0) {
+        <div class="footprint-axis" aria-hidden="true">
+          <span>0</span>
+          <span>{{ formatCount(scheduleLength()) }} bundles</span>
+        </div>
+      }
+    </div>
+  </section>
+
+  @if (mode() === 'details' && stats().primitives.length > 0) {
+    <section class="section">
+      <span class="section-label">Pallas</span>
+      <div class="section-body chips">
+        @for (primitive of stats().primitives; track primitive) {
+          <span class="chip">{{ primitive }}</span>
+        }
+      </div>
+    </section>
+  }
+
+  @if (mode() === 'details' && stack().length > 1) {
+    <section class="section">
+      <span class="section-label">Call stack</span>
+      <div class="section-body stack">
+        @for (frame of stack(); track $index; let last = $last) {
+          <button
+            class="stack-frame"
+            [class.current]="frame.isCurrent"
+            type="button"
+            [disabled]="frame.isCurrent || !frame.line"
+            (click)="onFrameClick(frame)"
+            [matTooltip]="frame.raw"
+          >
+            {{ frame.label }}
+          </button>
+          @if (!last) {
+            <mat-icon class="stack-separator" aria-hidden="true">chevron_right</mat-icon>
+          }
+        }
+      </div>
+    </section>
+  }
+
+  @if (spillNote()) {
+    <div class="spill-note" role="note">
+      <mat-icon aria-hidden="true">warning</mat-icon>
+      <span>{{ spillNote() }}</span>
+    </div>
+  }
+</div>
+
+@if (mode() === 'hover') {
+  <div class="card-footer" [class.selected]="selected()">
+    <button class="select-button" type="button" (click)="selectLine.emit()">
+      <mat-icon aria-hidden="true">{{ selected() ? 'check_circle' : 'ads_click' }}</mat-icon>
+      <span>{{ selected() ? 'Lit up on the timeline · Clear' : 'Light up on the timeline' }}</span>
+    </button>
+    <span class="card-actions">
+      <button
+        class="card-action"
+        type="button"
+        (click)="zoomToLine.emit()"
+        matTooltip="Zoom the timeline to this line"
+        aria-label="Zoom the timeline to this line"
+      >
+        <mat-icon>zoom_in_map</mat-icon>
+      </button>
+      <button
+        class="card-action"
+        [class.copied]="copied()"
+        type="button"
+        (click)="copyLocation.emit()"
+        [matTooltip]="copied() ? 'Copied' : 'Copy location'"
+        [attr.aria-label]="copied() ? 'Copied' : 'Copy location'"
+      >
+        <mat-icon>{{ copied() ? 'check' : 'content_copy' }}</mat-icon>
+      </button>
+    </span>
+  </div>
+}

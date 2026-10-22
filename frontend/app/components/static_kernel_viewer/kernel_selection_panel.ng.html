@@ -349,15 +349,18 @@
 
             <div *ngIf="c.sourceInfo as src" class="dataflow-row">
               <span class="dataflow-label">Source</span>
-              <div
-                class="source-pill"
-                [matTooltip]="src.raw"
+              <button
+                class="source-pill interactive-pill"
+                type="button"
+                (click)="openSource.emit(src.raw)"
+                [matTooltip]="src.raw + ' · Show in source'"
                 matTooltipPosition="above"
+                [attr.aria-label]="'Show ' + src.shortLocation + ' in source'"
               >
                 <mat-icon class="source-pill-icon" aria-hidden="true">code</mat-icon>
                 <span class="source-pill-file">{{ src.shortLocation }}</span>
                 <span *ngIf="src.directory" class="source-pill-dir">{{ src.directory }}</span>
-              </div>
+              </button>
             </div>
 
             <div *ngIf="c.sourceStack as stack" class="dataflow-row">

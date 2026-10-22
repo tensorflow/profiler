@@ -1,0 +1,438 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: var(--mat-sys-on-surface);
+  font: 400 12px / 16px var(--mat-sys-plain-font);
+}
+
+// Matches the hover cards of the kernel rail and tabs.
+:host(.hover-mode) {
+  width: 300px;
+  max-width: calc(100vw - 32px);
+  max-height: var(--card-max-height, calc(100vh - 24px));
+  padding: 12px 14px 0;
+  box-sizing: border-box;
+  border: 1px solid
+    color-mix(in srgb, var(--mat-sys-outline-variant) 75%, transparent);
+  border-radius: 14px;
+  background: var(--mat-sys-surface-container-lowest, #fff);
+  box-shadow:
+    0 14px 34px -4px color-mix(in srgb, var(--mat-sys-shadow) 18%, transparent),
+    0 4px 12px -2px color-mix(in srgb, var(--mat-sys-shadow) 10%, transparent);
+  pointer-events: auto;
+
+  // Bridges the gap between the hovered line and the card so the pointer can
+  // cross into the card without dismissing it.
+  &::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: -10px;
+    height: 10px;
+  }
+
+  &.above::before {
+    top: auto;
+    bottom: -10px;
+  }
+}
+
+.card-header {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+
+  > * {
+    flex: none;
+  }
+}
+
+.card-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.line-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.line-label {
+  flex: none;
+  font: 500 14px / 20px var(--mat-sys-plain-font);
+}
+
+.primitives {
+  min-width: 0;
+  padding: 0 6px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--mat-sys-surface-container);
+  color: var(--mat-sys-on-surface-variant);
+  font: 400 11px / 18px var(--mat-sys-code-font);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.counts {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.share {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.share-value {
+  color: var(--mat-sys-primary);
+  font: 500 20px / 24px var(--mat-sys-plain-font);
+  font-variant-numeric: tabular-nums;
+}
+
+.share-caption {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 11px;
+  line-height: 14px;
+}
+
+// Counts of the selected line, in a row without boxes.
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 0;
+  margin: 0;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  padding: 0 16px;
+
+  &:first-child {
+    padding-inline-start: 0;
+  }
+
+  & + & {
+    border-inline-start: 1px solid
+      color-mix(in srgb, var(--mat-sys-outline-variant) 70%, transparent);
+  }
+
+  dt {
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 11px;
+    line-height: 14px;
+    white-space: nowrap;
+  }
+
+  dd {
+    margin: 0;
+    font: 500 13px / 18px var(--mat-sys-plain-font);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+}
+
+:host(.details-mode) .section {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+}
+
+.section-label {
+  padding-top: 1px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.section-body {
+  min-width: 0;
+}
+
+.unit-bar {
+  display: flex;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--mat-sys-surface-container-high);
+  gap: 1px;
+}
+
+.unit-segment {
+  min-width: 2px;
+}
+
+.unit-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  margin-top: 5px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 11.5px;
+
+  b {
+    color: var(--mat-sys-on-surface);
+    font-weight: 500;
+  }
+}
+
+.unit-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.unit-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.footprint {
+  display: flex;
+  align-items: flex-end;
+  height: 24px;
+  gap: 1px;
+}
+
+.bin {
+  display: flex;
+  flex: 1 1 0;
+  align-items: flex-end;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 1px;
+  background: var(--mat-sys-surface-container-high);
+  color: inherit;
+  font: inherit;
+
+  &.empty {
+    background: var(--mat-sys-surface-container);
+  }
+}
+
+button.bin {
+  cursor: pointer;
+
+  &:hover:not(:disabled) .bin-fill,
+  &:focus-visible .bin-fill {
+    background: var(--mat-sys-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: 1px;
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.bin-fill {
+  display: block;
+  width: 100%;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--mat-sys-primary) 70%, transparent);
+}
+
+.footprint-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 3px;
+  color: var(--mat-sys-on-surface-variant);
+  font: 400 10.5px / 12px var(--mat-sys-plain-font);
+  font-variant-numeric: tabular-nums;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.chip {
+  padding: 1px 7px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 6px;
+  color: var(--mat-sys-on-surface-variant);
+  font: 400 11.5px / 16px var(--mat-sys-code-font);
+}
+
+.stack {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+}
+
+.stack-frame {
+  padding: 1px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--mat-sys-primary);
+  font: 400 11.5px / 18px var(--mat-sys-code-font);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary);
+  }
+
+  &:disabled {
+    color: var(--mat-sys-on-surface);
+    font-weight: 500;
+    cursor: default;
+  }
+}
+
+.stack-separator {
+  width: 14px;
+  height: 14px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 14px;
+}
+
+.spill-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: color-mix(in srgb, #e37400 10%, transparent);
+  color: #b06000;
+  font-size: 11.5px;
+
+  mat-icon {
+    flex: none;
+    width: 15px;
+    height: 15px;
+    font-size: 15px;
+  }
+}
+
+// Lights up the line, and holds the zoom and copy actions.
+.card-footer {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  margin: 0 -14px;
+  padding: 4px 6px;
+  border-top: 1px solid
+    color-mix(in srgb, var(--mat-sys-outline-variant) 75%, transparent);
+  border-radius: 0 0 13px 13px;
+
+  &.selected {
+    background: color-mix(in srgb, var(--mat-sys-primary) 6%, transparent);
+  }
+}
+
+.select-button {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--mat-sys-primary);
+  font: 500 11.5px / 16px var(--mat-sys-plain-font);
+  text-align: start;
+  cursor: pointer;
+
+  &:hover {
+    background: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: -2px;
+  }
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  mat-icon {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+  }
+}
+
+.card-actions {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+
+.card-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--mat-sys-on-surface-variant);
+  cursor: pointer;
+
+  &:hover {
+    background: color-mix(in srgb, var(--mat-sys-on-surface) 8%, transparent);
+    color: var(--mat-sys-on-surface);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: -2px;
+  }
+
+  &.copied {
+    color: var(--mat-sys-primary);
+  }
+
+  mat-icon {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+  }
+}

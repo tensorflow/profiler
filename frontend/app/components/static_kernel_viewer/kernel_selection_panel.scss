@@ -846,6 +846,26 @@
   font-size: 10px;
   box-sizing: border-box;
   overflow: hidden;
+  color: inherit;
+  text-align: start;
+
+  // Opens the line in the source panel.
+  &.interactive-pill {
+    cursor: pointer;
+    transition:
+      background-color 120ms ease,
+      border-color 120ms ease;
+
+    &:hover {
+      background: color-mix(in srgb, var(--accent-color) 20%, transparent);
+      border-color: color-mix(in srgb, var(--accent-color) 48%, transparent);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--mat-sys-primary);
+      outline-offset: 1px;
+    }
+  }
 }
 
 .source-pill-icon {
@@ -860,6 +880,8 @@
 .source-pill-file {
   color: var(--mat-sys-on-surface, #1f1f1f);
   font-weight: 700;
+  // Leaves room for underscores, which the overflow would clip otherwise.
+  line-height: 16px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -870,6 +892,7 @@
 .source-pill-dir {
   color: var(--mat-sys-on-surface-variant, #5f6368);
   font-size: 9.5px;
+  line-height: 16px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
