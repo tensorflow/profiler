@@ -36,17 +36,3 @@ ts_library(
         "//:node_modules/@types/google.visualization",
     ],
 )
-
-ts_library(
-    name = "tests",
-    testonly = True,
-    srcs = [
-        "diff_utils_test.ts",
-        "utils_test.ts",
-    ],
-    deps = [
-        ":utils",
-        "//javascript/angular2/testing/catalyst/fake_async",
-        "//third_party/javascript/typings/jasmine",
-    ],
-)

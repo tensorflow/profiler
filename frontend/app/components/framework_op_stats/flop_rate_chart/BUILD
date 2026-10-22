@@ -24,22 +24,6 @@ xprof_ng_module(
     ],
 )
 
-xprof_ng_module(
-    name = "tests",
-    testonly = True,
-    srcs = [
-        "flop_rate_chart_test.ts",
-    ],
-    deps = [
-        ":flop_rate_chart",
-        "//:node_modules/@angular/core",
-        "//javascript/angular2/testing/catalyst/fake_async",
-        "//third_party/javascript/typings/jasmine",
-        "@org_xprof//frontend/app/common/angular:angular_platform-browser_animation",
-        "@org_xprof//frontend/app/components/chart:chart_options",
-    ],
-)
-
 sass_binary(
     name = "flop_rate_chart_css",
     src = "flop_rate_chart.scss",

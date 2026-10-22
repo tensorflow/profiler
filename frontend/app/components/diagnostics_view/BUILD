@@ -20,24 +20,6 @@ xprof_ng_module(
     ],
 )
 
-xprof_ng_module(
-    name = "tests",
-    testonly = True,
-    srcs = [
-        "diagnostics_view_test.ts",
-    ],
-    deps = [
-        ":diagnostics_view",
-        "//:node_modules/@angular/core",
-        "//:node_modules/@angular/core_testing",
-        "//javascript/angular2/testing/catalyst/fake_async",
-        "//third_party/javascript/typings/jasmine",
-        "@org_xprof//frontend/app/common/angular:angular_platform-browser_animation",
-        "@org_xprof//frontend/app/common/interfaces",
-        "@org_xprof//frontend/app/common/utils:testing",
-    ],
-)
-
 sass_binary(
     name = "diagnostics_view_css",
     src = "diagnostics_view.scss",

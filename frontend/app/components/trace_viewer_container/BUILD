@@ -42,29 +42,6 @@ xprof_ng_module(
     ],
 )
 
-xprof_ng_module(
-    name = "trace_viewer_container_tests",
-    testonly = True,
-    srcs = [
-        "hlo_pretty_printer_test.ts",
-        "trace_viewer_container_test.ts",
-        "trace_viewer_utils_test.ts",
-    ],
-    deps = [
-        ":trace_viewer_container",
-        "//javascript/angular2/testing/catalyst/fake_async",
-        # ksf,
-        "//:node_modules/@angular/platform-browser",
-        "@org_xprof//frontend/app/common/angular:angular_platform-browser_animation",
-        "//:node_modules/@angular/router",
-        "//:node_modules/rxjs",
-        "//third_party/javascript/typings/jasmine",
-        "@org_xprof//frontend/app/components/static_kernel_viewer:kernel_minimap",
-        "@org_xprof//frontend/app/components/timeline_player",
-        "@org_xprof//frontend/app/components/trace_viewer_v2:app_bundle_ts",
-    ],
-)
-
 sass_binary(
     name = "trace_viewer_container_css",
     src = "trace_viewer_container.scss",

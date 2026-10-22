@@ -27,25 +27,6 @@ xprof_ng_module(
     ],
 )
 
-xprof_ng_module(
-    name = "tests",
-    testonly = True,
-    srcs = ["download_hlo_test.ts"],
-    deps = [
-        ":download_hlo",
-        "//:node_modules/@angular/router",
-        "//:node_modules/@angular/router_testing",
-        "//:node_modules/rxjs",
-        "//javascript/angular2/testing/catalyst/fake_async",
-        "//third_party/javascript/angular_components:cdk_testing_catalyst",
-        "//third_party/javascript/typings/jasmine",
-        "@org_xprof//frontend/app/common/angular:angular_material_menu_testing",
-        "@org_xprof//frontend/app/common/angular:angular_platform-browser_animation",
-        "@org_xprof//frontend/app/common/constants",
-        "@org_xprof//frontend/app/services/data_service_v2:data_service_v2_interface",
-    ],
-)
-
 sass_binary(
     name = "download_hlo_css",
     src = "download_hlo.scss",

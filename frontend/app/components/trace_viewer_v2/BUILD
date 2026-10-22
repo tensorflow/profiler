@@ -209,23 +209,6 @@ ts_library(
     ],
 )
 
-ts_library(
-    name = "tests",
-    testonly = True,
-    srcs = [
-        "customization_panel_test.ts",
-        "feature_flags_test.ts",
-        "help_dialog_test.ts",
-        "main_test.ts",
-    ],
-    deps = [
-        ":app_bundle_ts",
-        # ksf,
-        "//third_party/javascript/typings/jasmine",
-        "//:node_modules/@webgpu/types",
-    ],
-)
-
 JS_COMPILER_FLAGS = []
 
 rollup_bundle(

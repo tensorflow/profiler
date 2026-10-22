@@ -54,60 +54,6 @@ xprof_ng_module(
     ],
 )
 
-xprof_ng_module(
-    name = "tests",
-    testonly = True,
-    srcs = [
-        "graph_viewer_test.ts",
-    ],
-    assets = [
-        ":graph_viewer_css",
-        "graph_viewer.ng.html",
-    ],
-    deps = [
-        ":graph_viewer",
-        "//:node_modules/@angular/core",
-        "//:node_modules/@angular/router",
-        "//:node_modules/rxjs",
-        "//javascript/angular2/testing/catalyst/fake_async",
-        "//third_party/javascript/typings/jasmine",
-        "@org_xprof//frontend/app/common/angular:angular_platform-browser_animation",
-        "@org_xprof//frontend/app/common/constants",
-        "@org_xprof//frontend/app/common/interfaces",
-        "@org_xprof//frontend/app/common/interfaces:op_profile_proto_defs",
-        "@org_xprof//frontend/app/common/utils:testing",
-        "@org_xprof//frontend/app/services/data_service_v2:data_service_v2_interface",
-        "@org_xprof//frontend/app/store",
-    ],
-)
-
-xprof_ng_module(
-    name = "screenshot_tests",
-    testonly = True,
-    srcs = [
-        "graph_viewer_screenshot_test.ts",
-    ],
-    tags = ["requires-net:external"],
-    deps = [
-        ":graph_viewer",
-        "//javascript/angular2/testing/catalyst/async",
-        "//learning/brain/mobile/lite/tooling/model_graph_visualizer",
-        # ksf,
-        "//:node_modules/@angular/core",
-        "@org_xprof//frontend/app/common/angular:angular_platform-browser_animation",
-        "//:node_modules/@angular/router",
-        "//:node_modules/rxjs",
-        "//:node_modules/safevalues",
-        "//third_party/javascript/safevalues/dom",
-        "//third_party/javascript/typings/jasmine",
-        "@org_xprof//frontend/app/common/constants",
-        "@org_xprof//frontend/app/common/interfaces",
-        "@org_xprof//frontend/app/common/utils:testing",
-        "@org_xprof//frontend/app/services/data_service_v2:data_service_v2_interface",
-        "@org_xprof//frontend/app/store",
-    ],
-)
-
 sass_binary(
     name = "graph_viewer_css",
     src = "graph_viewer.scss",

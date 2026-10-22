@@ -50,19 +50,3 @@ xprof_ng_module(
         "@org_xprof//frontend/app/store",
     ],
 )
-
-xprof_ng_module(
-    name = "tests",
-    testonly = True,
-    srcs = [
-        "source_code_service_interface_test.ts",
-        "syntax_highlight_service_test.ts",
-    ],
-    deps = [
-        ":source_code_service_interface",
-        ":syntax_highlighter",
-        "//:node_modules/@angular/core_testing",
-        "//third_party/javascript/highlightjs:highlightjs_raw",
-        "//third_party/javascript/typings/jasmine",
-    ],
-)

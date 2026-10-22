@@ -23,24 +23,6 @@ xprof_ng_module(
     ],
 )
 
-xprof_ng_module(
-    name = "tests",
-    testonly = True,
-    srcs = [
-        "kernel_stats_table_test.ts",
-    ],
-    deps = [
-        ":kernel_stats_table",
-        "//:node_modules/@angular/core",
-        "//javascript/angular2/testing/catalyst/fake_async",
-        "//third_party/javascript/angular_components:cdk_testing_catalyst",
-        "//third_party/javascript/typings/jasmine",
-        "@org_xprof//frontend/app/common/angular:angular_material_input_testing",
-        "@org_xprof//frontend/app/common/angular:angular_platform-browser_animation",
-        "@org_xprof//frontend/app/common/utils:testing",
-    ],
-)
-
 sass_binary(
     name = "kernel_stats_table_css",
     src = "kernel_stats_table.scss",

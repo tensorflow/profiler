@@ -33,22 +33,3 @@ ts_library(
         "//:node_modules/@ngrx/store",
     ],
 )
-
-xprof_ng_module(
-    name = "tests",
-    testonly = True,
-    srcs = [
-        "reducers_test.ts",
-        "selectors_test.ts",
-    ],
-    deps = [
-        ":store",
-        "//:node_modules/@ngrx/store",
-        "//:node_modules/rxjs",
-        "//javascript/angular2/testing/catalyst/fake_async",
-        "//third_party/javascript/typings/jasmine",
-        "@org_xprof//frontend/app/common/constants",
-        "@org_xprof//frontend/app/common/interfaces",
-        "@org_xprof//frontend/app/common/interfaces:op_profile_proto_defs",
-    ],
-)

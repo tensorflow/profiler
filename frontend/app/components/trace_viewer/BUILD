@@ -50,36 +50,6 @@ xprof_ng_module(
     ],
 )
 
-xprof_ng_module(
-    name = "tests",
-    testonly = True,
-    srcs = [
-        "filter_input_test.ts",
-        "trace_viewer_test.ts",
-        "utils_test.ts",
-    ],
-    deps = [
-        ":trace_viewer",
-        "//javascript/angular2/testing/catalyst/fake_async",
-        # ksf,
-        "//:node_modules/@angular/common",
-        "@org_xprof//frontend/app/common/angular:angular_platform-browser_animation",
-        "//:node_modules/@angular/router",
-        "//third_party/javascript/angular_components:cdk_testing_catalyst",
-        "@org_xprof//frontend/app/common/angular:angular_material_core_testing",
-        "@org_xprof//frontend/app/common/angular:angular_material_dialog",
-        "@org_xprof//frontend/app/common/angular:angular_material_menu_testing",
-        "//:node_modules/@ngrx/store",
-        "//:node_modules/rxjs",
-        "//third_party/javascript/typings/jasmine",
-        "@org_xprof//frontend/app/common/interfaces",
-        "@org_xprof//frontend/app/components/trace_viewer_container",
-        "@org_xprof//frontend/app/components/trace_viewer_v2:app_bundle_ts",
-        "@org_xprof//frontend/app/services/data_service_v2",
-        "@org_xprof//frontend/app/store",
-    ],
-)
-
 sass_binary(
     name = "trace_viewer_css",
     src = "trace_viewer.scss",

@@ -27,29 +27,6 @@ xprof_ng_module(
     ],
 )
 
-xprof_ng_module(
-    name = "tests",
-    testonly = True,
-    srcs = ["memory_viewer_control_test.ts"],
-    deps = [
-        ":memory_viewer_control",
-        "//:node_modules/@angular/core_testing",
-        "//:node_modules/@angular/platform-browser",
-        "//:node_modules/@angular/router",
-        "//:node_modules/rxjs",
-        "//javascript/angular2/testing/catalyst/fake_async",
-        "//third_party/javascript/angular_components:cdk_testing",
-        "//third_party/javascript/angular_components:cdk_testing_catalyst",
-        "//third_party/javascript/angular_components:cdk_testing_catalyst_async",
-        "//third_party/javascript/angular_components:cdk_testing_testbed",
-        "//third_party/javascript/typings/jasmine",
-        "@org_xprof//frontend/app/common/angular:angular_material_input_testing",
-        "@org_xprof//frontend/app/common/angular:angular_material_select_testing",
-        "@org_xprof//frontend/app/common/angular:angular_platform-browser_animation",
-        "@org_xprof//frontend/app/services/data_service_v2:data_service_v2_interface",
-    ],
-)
-
 sass_binary(
     name = "memory_viewer_control_css",
     src = "memory_viewer_control.scss",

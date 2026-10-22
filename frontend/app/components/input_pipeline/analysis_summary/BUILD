@@ -18,22 +18,6 @@ xprof_ng_module(
     ],
 )
 
-xprof_ng_module(
-    name = "tests",
-    testonly = True,
-    srcs = [
-        "analysis_summary_test.ts",
-    ],
-    deps = [
-        ":analysis_summary",
-        "//:node_modules/@angular/core",
-        "//javascript/angular2/testing/catalyst/fake_async",
-        "//third_party/javascript/typings/jasmine",
-        "@org_xprof//frontend/app/common/angular:angular_platform-browser_animation",
-        "@org_xprof//frontend/app/common/interfaces",
-    ],
-)
-
 sass_binary(
     name = "analysis_summary_css",
     src = "analysis_summary.scss",

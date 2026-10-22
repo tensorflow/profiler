@@ -24,22 +24,6 @@ xprof_ng_module(
     ],
 )
 
-xprof_ng_module(
-    name = "tests",
-    testonly = True,
-    srcs = [
-        "navigation_test.ts",
-    ],
-    deps = [
-        ":navigation",
-        "//javascript/angular2/testing/catalyst/fake_async",
-        # ksf,
-        "//:node_modules/@angular/core",
-        "@org_xprof//frontend/app/common/angular:angular_platform-browser_animation",
-        "//third_party/javascript/typings/jasmine",
-    ],
-)
-
 sass_binary(
     name = "navigation_drawer_css",
     src = "navigation_drawer.scss",

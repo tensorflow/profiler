@@ -67,31 +67,3 @@ sass_binary(
     # stack = True,
     sourcemap = False,
 )
-
-xprof_ng_module(
-    name = "tests",
-    testonly = True,
-    srcs = [
-        "memory_analysis_test.ts",
-    ],
-    deps = [
-        ":memory_analysis",
-        "//:node_modules/@angular/common",
-        "//:node_modules/@angular/core_testing",
-        "//:node_modules/@angular/router",
-        "//:node_modules/@ngrx/store",
-        "//:node_modules/rxjs",
-        "//javascript/angular2/testing/catalyst/fake_async",
-        "//third_party/javascript/angular_components:cdk_testing",
-        "//third_party/javascript/angular_components:cdk_testing_testbed",
-        "//third_party/javascript/typings/jasmine",
-        "@org_xprof//frontend/app/common/angular:angular_material_button_testing",
-        "@org_xprof//frontend/app/common/angular:angular_material_card_testing",
-        "@org_xprof//frontend/app/common/angular:angular_material_input_testing",
-        "@org_xprof//frontend/app/common/angular:angular_material_select_testing",
-        "@org_xprof//frontend/app/common/angular:angular_platform-browser_animation",
-        "@org_xprof//frontend/app/common/interfaces",
-        "@org_xprof//frontend/app/services/data_service_v2:data_service_v2_interface",
-        "@org_xprof//frontend/app/store",
-    ],
-)

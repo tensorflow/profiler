@@ -54,33 +54,6 @@ xprof_ng_module(
     ],
 )
 
-xprof_ng_module(
-    name = "tests",
-    testonly = True,
-    srcs = [
-        "main_page_test.ts",
-    ],
-    deps = [
-        ":main_page",
-        "//javascript/angular2/testing/catalyst/fake_async",
-        # ksf,
-        "//:node_modules/@angular/common",
-        "@org_xprof//frontend/app/common/angular:angular_platform-browser_animation",
-        "//:node_modules/@angular/router",
-        "//third_party/javascript/angular_components:cdk_testing",
-        "//third_party/javascript/angular_components:cdk_testing_catalyst",
-        "@org_xprof//frontend/app/common/angular:angular_material_sidenav_testing",
-        "//:node_modules/@ngrx/store",
-        "//:node_modules/rxjs",
-        "//third_party/javascript/typings/jasmine",
-        "@org_xprof//frontend/app/common/constants",
-        "@org_xprof//frontend/app/services/communication_service",
-        "@org_xprof//frontend/app/services/data_service_v2",
-        "@org_xprof//frontend/app/services/data_service_v2:data_service_v2_interface",
-        "@org_xprof//frontend/app/store",
-    ],
-)
-
 sass_binary(
     name = "main_page_css",
     src = "main_page.scss",

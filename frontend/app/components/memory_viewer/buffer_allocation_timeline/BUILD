@@ -26,18 +26,3 @@ sass_binary(
     src = "buffer_allocation_timeline.scss",
     sourcemap = False,
 )
-
-xprof_ng_module(
-    name = "tests",
-    testonly = True,
-    srcs = [
-        "buffer_allocation_timeline_test.ts",
-    ],
-    deps = [
-        ":buffer_allocation_timeline",
-        "//javascript/angular2/testing/catalyst/fake_async",
-        "//third_party/javascript/typings/jasmine",
-        "@org_xprof//frontend/app/common/angular:angular_platform-browser_animation",
-        "@org_xprof//frontend/app/common/interfaces",
-    ],
-)

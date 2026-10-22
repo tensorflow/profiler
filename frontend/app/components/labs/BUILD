@@ -43,31 +43,3 @@ sass_binary(
     # stack = True,
     sourcemap = False,
 )
-
-xprof_ng_module(
-    name = "tests",
-    testonly = True,
-    srcs = [
-        "curated_tools_service_test.ts",
-        "labs_test.ts",
-    ],
-    deps = [
-        ":labs",
-        "//:node_modules/@angular/core",
-        "//:node_modules/@angular/core_testing",
-        "//:node_modules/@angular/router",
-        "//:node_modules/@ngrx/store",
-        "//:node_modules/rxjs",
-        "//:node_modules/safevalues",
-        "//javascript/angular2/testing/catalyst/fake_async",
-        "//third_party/javascript/angular_components:cdk_testing_catalyst",
-        "//third_party/javascript/safevalues/dom",
-        "//third_party/javascript/typings/jasmine",
-        "@org_xprof//frontend/app/common/angular:angular_common_http",
-        "@org_xprof//frontend/app/common/angular:angular_common_http_testing",
-        "@org_xprof//frontend/app/common/angular:angular_material_input_testing",
-        "@org_xprof//frontend/app/common/angular:angular_material_snack_bar",
-        "@org_xprof//frontend/app/common/angular:angular_platform-browser_animation",
-        "@org_xprof//frontend/app/store",
-    ],
-)
