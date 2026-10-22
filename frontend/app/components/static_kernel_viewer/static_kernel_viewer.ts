@@ -1,4 +1,4 @@
-import {Location} from '@angular/common';
+import {CommonModule, Location} from '@angular/common';
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
@@ -11,10 +11,19 @@ import {
   OnInit,
   ViewChild,
 } from '@angular/core';
+import {MatButtonModule} from '@angular/material/button';
+import {MatButtonToggleModule} from '@angular/material/button-toggle';
+import {MatChipsModule} from '@angular/material/chips';
+import {MatIconModule} from '@angular/material/icon';
+import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
+import {MatTooltipModule} from '@angular/material/tooltip';
 import {ActivatedRoute, Params} from '@angular/router';
 import {Store} from '@ngrx/store';
 import {DEFAULT_HOST} from 'org_xprof/frontend/app/common/constants/constants';
-import {readHoveredEvent} from 'org_xprof/frontend/app/components/static_kernel_viewer/kernel_event_tooltip';
+import {
+  KernelEventTooltip,
+  readHoveredEvent,
+} from 'org_xprof/frontend/app/components/static_kernel_viewer/kernel_event_tooltip';
 import {
   KernelMinimap,
   MinimapRegionMarker,
@@ -42,7 +51,10 @@ import {
   KernelViewerTourSummary,
   TourKernel,
 } from 'org_xprof/frontend/app/components/static_kernel_viewer/kernel_viewer_tour';
-import {EVENT_SELECTED_EVENT_NAME} from 'org_xprof/frontend/app/components/trace_viewer_container/trace_viewer_container';
+import {
+  EVENT_SELECTED_EVENT_NAME,
+  TraceViewerContainer,
+} from 'org_xprof/frontend/app/components/trace_viewer_container/trace_viewer_container';
 import {
   LOADING_STATUS_UPDATE_EVENT_NAME,
   shutdownTraceViewerV2,
@@ -1007,8 +1019,23 @@ function readSourceWidth(): number {
  * spills, and can sort and group them differently.
  */
 @Component({
-  changeDetection: ChangeDetectionStrategy.Default,
-  standalone: false,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    CommonModule,
+    KernelEventTooltip,
+    KernelMinimap,
+    KernelSelectionPanel,
+    KernelSourcePanel,
+    KernelViewerTour,
+    MatButtonModule,
+    MatButtonToggleModule,
+    MatChipsModule,
+    MatIconModule,
+    MatProgressSpinnerModule,
+    MatTooltipModule,
+    TraceViewerContainer,
+  ],
   selector: 'static-kernel-viewer',
   templateUrl: './static_kernel_viewer.ng.html',
   styleUrls: ['./static_kernel_viewer.scss'],
@@ -1400,6 +1427,7 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
       .pipe(takeUntil(this.destroyed))
       .subscribe(([params, queryParams]: [Params, Params]) => {
         this.onRouteChange(params, queryParams);
+        this.changeDetectorRef.markForCheck();
       });
   }
 
@@ -1525,6 +1553,7 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
     }
     this.activeTab.entry = entry;
     this.activeTab.lastUsed = ++this.tabClock;
+    this.tabs = [...this.tabs];
     this.showEntry(entry);
   }
 
@@ -1551,7 +1580,11 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
         activeIndex + 1 + this.backgroundTabCount,
         this.tabs.length,
       );
-      this.tabs.splice(index, 0, tab);
+      this.tabs = [
+        ...this.tabs.slice(0, index),
+        tab,
+        ...this.tabs.slice(index),
+      ];
       if (background) {
         this.backgroundTabCount++;
       }
@@ -1585,7 +1618,7 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
     }
     this.hideCard();
     this.closeContextMenu();
-    this.tabs.splice(index, 1);
+    this.tabs = this.tabs.filter((_, i) => i !== index);
     if (tab === this.activeTab) {
       this.activeTab = undefined;
       this.activateTab(this.tabs[index] ?? this.tabs[index - 1]);
