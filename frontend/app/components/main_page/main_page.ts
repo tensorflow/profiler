@@ -168,11 +168,13 @@ export class MainPage implements OnDestroy {
           'pod_viewer',
           'megascale_stats',
         ];
-        this.isSideNavOpen =
-          navigationEvent.firstLoad ||
-          toolsWithSideNav.filter((tool) =>
-            navigationEvent?.tag?.startsWith(tool),
-          ).length > 0;
+        if (!this.isNewNavEnabled) {
+          this.isSideNavOpen =
+            navigationEvent.firstLoad ||
+            toolsWithSideNav.filter((tool) =>
+              navigationEvent?.tag?.startsWith(tool),
+            ).length > 0;
+        }
       });
     this.dataService
       .getPluginVersion()
@@ -246,6 +248,30 @@ export class MainPage implements OnDestroy {
   @HostListener('window:resize')
   onResize() {
     this.isSmallScreen = window.innerWidth < 960;
+  }
+
+  get sideNavMode(): 'over' | 'side' {
+    return !this.isNewNavEnabled && this.isSmallScreen ? 'over' : 'side';
+  }
+
+  get sideNavWidthPx(): number | null {
+    if (!this.isNewNavEnabled) {
+      return null;
+    }
+    return this.isSideNavOpen ? 240 : 64;
+  }
+
+  get contentMarginLeftPx(): number {
+    if (this.isNewNavEnabled) {
+      return this.isSideNavOpen ? 240 : 64;
+    }
+    return this.sideNavMode === 'side' && this.isSideNavOpen ? 340 : 0;
+  }
+
+  onSideNavOpenedChange(opened: boolean) {
+    if (!this.isNewNavEnabled) {
+      this.isSideNavOpen = opened;
+    }
   }
 
   isCategoryExpanded(category: string): boolean {

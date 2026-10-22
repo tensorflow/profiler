@@ -17,10 +17,12 @@
 <!-- toolbar has a height of 64px, adding inline style to overwrite the fullscreen styles -->
 <mat-sidenav-container fullscreen style="top:64px;">
   <mat-sidenav
-    [mode]="isNewNavEnabled ? 'side' : (isSmallScreen ? 'over' : 'side')"
+    [class.new-nav-sidenav]="isNewNavEnabled"
+    [disableClose]="isNewNavEnabled"
+    [mode]="sideNavMode"
     [opened]="isNewNavEnabled ? true : isSideNavOpen"
-    (openedChange)="isSideNavOpen = $event"
-    [style.width.px]="isNewNavEnabled ? (isSideNavOpen ? 240 : 64) : null">
+    (openedChange)="onSideNavOpenedChange($event)"
+    [style.width.px]="sideNavWidthPx">
     @if (isNewNavEnabled) {
       <rack-navigation-drawer [collapsed]="!isSideNavOpen">
         @for (group of getCategorizedTools(); track group.category) {
@@ -46,7 +48,7 @@
   </mat-sidenav>
   <mat-sidenav-content
     [class.new-nav-content]="isNewNavEnabled"
-    [style.margin-left.px]="isNewNavEnabled ? (isSideNavOpen ? 240 : 64) : null">
+    [style.margin-left.px]="contentMarginLeftPx">
     <diagnostics-view [diagnostics]="diagnostics"></diagnostics-view>
     <div class="progress-container" *ngIf="loading">
       <div class="loading-message">{{loadingMessage}}</div>
