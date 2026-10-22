@@ -3,7 +3,7 @@
   class="selection-panel"
   [style.--accent-color]="c.accentColor"
   role="region"
-  aria-label="Selected kernel event details"
+  aria-label="Selected HLO op event details"
 >
   <div class="panel-header">
     <div class="header-main">
@@ -215,11 +215,11 @@
               <span class="kpi-value">{{ cd.formattedCurrent }}</span>
             </div>
             <div *ngIf="cd.formattedMean" class="counter-kpi-box">
-              <span class="kpi-label">Kernel Mean</span>
+              <span class="kpi-label">Op Mean</span>
               <span class="kpi-value">{{ cd.formattedMean }}</span>
             </div>
             <div *ngIf="cd.formattedPeak" class="counter-kpi-box">
-              <span class="kpi-label">Kernel Peak</span>
+              <span class="kpi-label">Op Peak</span>
               <span class="kpi-value">
                 {{ cd.formattedPeak }}
                 <span *ngIf="cd.peakBundleLabel" class="kpi-sub">{{ cd.peakBundleLabel }}</span>
@@ -229,7 +229,7 @@
 
           <div class="counter-comparison-gauge">
             <div class="comparison-gauge-header">
-              <span class="comparison-gauge-caption">Bundle vs. Kernel Range</span>
+              <span class="comparison-gauge-caption">Bundle vs. Op Range</span>
               <span *ngIf="cd.formattedMin && cd.formattedPeak" class="comparison-gauge-bounds">
                 {{ cd.formattedMin }} – {{ cd.formattedPeak }}
               </span>
@@ -244,7 +244,7 @@
                 *ngIf="cd.meanPercentOfPeak !== undefined"
                 class="comparison-mean-marker"
                 [style.left.%]="cd.meanPercentOfPeak"
-                [matTooltip]="'Kernel Mean: ' + (cd.formattedMean ?? '')"
+                [matTooltip]="'Op Mean: ' + (cd.formattedMean ?? '')"
                 matTooltipPosition="above"
               ></span>
             </span>

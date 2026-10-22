@@ -8,7 +8,7 @@
       (mouseleave)="onRailMouseLeave()"
       (focusin)="onRailFocusIn($event)"
       (focusout)="onRailFocusOut($event)"
-      aria-label="Kernels"
+      aria-label="HLO Ops"
     >
       <div class="rail-header">
         <button
@@ -16,14 +16,14 @@
           class="pin-button"
           type="button"
           (click)="togglePin()"
-          [matTooltip]="isRailPinned ? 'Collapse kernel list' : 'Keep kernel list open'"
+          [matTooltip]="isRailPinned ? 'Collapse HLO op list' : 'Keep HLO op list open'"
           matTooltipPosition="below"
-          [attr.aria-label]="isRailPinned ? 'Collapse kernel list' : 'Keep kernel list open'"
+          [attr.aria-label]="isRailPinned ? 'Collapse HLO op list' : 'Keep HLO op list open'"
           [attr.aria-pressed]="isRailPinned"
         >
           <mat-icon>{{ isRailPinned ? 'left_panel_close' : 'left_panel_open' }}</mat-icon>
         </button>
-        <span class="rail-title">Kernels</span>
+        <span class="rail-title">HLO Ops</span>
         <span *ngIf="entries.length > 0" class="rail-count">
           {{ isFiltering ? visibleCount + ' of ' + entries.length : entries.length }}
         </span>
@@ -38,13 +38,13 @@
             type="text"
             autocomplete="off"
             spellcheck="false"
-            placeholder="Search kernels or modules"
+            placeholder="Search HLO ops or modules"
             [value]="filterQuery"
             (input)="onFilterChange(searchInput.value)"
             (keydown)="onSearchKeydown($event)"
             (focus)="onSearchFocusChange()"
             (blur)="onSearchFocusChange()"
-            aria-label="Search kernels or modules"
+            aria-label="Search HLO ops or modules"
             aria-controls="skv-kernel-list"
             [attr.aria-activedescendant]="isSearchFocused && cursorEntry ? rowId(cursorEntry) : null"
           />
@@ -87,7 +87,7 @@
                 class="segmented kind-filter"
                 appearance="standard"
                 hideSingleSelectionIndicator
-                aria-label="Kind of kernel"
+                aria-label="Kind of HLO op"
                 [value]="kindFilter"
                 (change)="setKindFilter($event.value)"
               >
@@ -111,9 +111,9 @@
                 [class.active]="isFilterPanelOpen || panelFilterCount > 0"
                 [class.labeled]="!hasKindFilter"
                 (click)="toggleFilterPanel()"
-                [matTooltip]="isFilterPanelOpen ? 'Hide filters' : 'Filter, sort and group kernels'"
+                [matTooltip]="isFilterPanelOpen ? 'Hide filters' : 'Filter, sort and group HLO ops'"
                 matTooltipPosition="below"
-                [attr.aria-label]="hasKindFilter ? 'Filter, sort and group kernels' : null"
+                [attr.aria-label]="hasKindFilter ? 'Filter, sort and group HLO ops' : null"
                 aria-controls="skv-filter-panel"
                 [attr.aria-expanded]="isFilterPanelOpen"
               >
@@ -128,7 +128,7 @@
               id="skv-filter-panel"
               class="filter-panel"
               role="group"
-              aria-label="Filter, sort and group kernels"
+              aria-label="Filter, sort and group HLO ops"
             >
               <div *ngIf="unitOptions.length > 0" class="filter-row">
                 <span id="skv-unit-filter-label" class="filter-label">Busiest unit</span>
@@ -225,24 +225,24 @@
       <div id="skv-kernel-list" class="rail-body" (scroll)="onRailScroll()">
         <div *ngIf="loadingKernels" class="rail-state" role="status">
           <mat-spinner diameter="20"></mat-spinner>
-          <span class="rail-state-text">Loading kernels…</span>
+          <span class="rail-state-text">Loading HLO ops…</span>
         </div>
         <div *ngIf="!loadingKernels && loadFailed" class="rail-state error" role="alert">
           <mat-icon>error_outline</mat-icon>
-          <span class="rail-state-text">Couldn't load kernels</span>
+          <span class="rail-state-text">Couldn't load HLO ops</span>
         </div>
         <div
           *ngIf="!loadingKernels && !loadFailed && entries.length === 0"
           class="rail-state"
         >
           <mat-icon>memory</mat-icon>
-          <span class="rail-state-text">No kernels in this profile</span>
+          <span class="rail-state-text">No HLO ops in this profile</span>
         </div>
         <div *ngIf="isFiltering && visibleCount === 0 && entries.length > 0" class="rail-state no-matches">
           <mat-icon>search_off</mat-icon>
           <span class="rail-state-text">
-            <ng-container *ngIf="hasQuery; else noFilterMatches">No kernels match "{{ filterQuery.trim() }}"</ng-container>
-            <ng-template #noFilterMatches>No kernels match the filters</ng-template>
+            <ng-container *ngIf="hasQuery; else noFilterMatches">No HLO ops match "{{ filterQuery.trim() }}"</ng-container>
+            <ng-template #noFilterMatches>No HLO ops match the filters</ng-template>
           </span>
         </div>
         <button
@@ -267,7 +267,7 @@
             [class.collapsed]="!isGroupExpanded(section)"
             (click)="toggleGroup(section)"
             [attr.aria-expanded]="isGroupExpanded(section)"
-            [attr.aria-label]="section.label + ', ' + section.entries.length + ' kernels'"
+            [attr.aria-label]="section.label + ', ' + section.entries.length + ' HLO ops'"
           >
             <span class="group-marker" aria-hidden="true"></span>
             <mat-icon class="group-chevron" aria-hidden="true">expand_more</mat-icon>
@@ -324,7 +324,7 @@
   <div class="skv-main">
     <div class="kernel-bar">
       <div *ngIf="activeTab; else kernelStatus" class="tab-strip">
-        <div class="tab-list" role="list" aria-label="Open kernels" (scroll)="onTabListScroll()">
+        <div class="tab-list" role="list" aria-label="Open HLO ops" (scroll)="onTabListScroll()">
           <div
             *ngFor="let tab of tabs; trackBy: trackByTab"
             class="kernel-tab"
@@ -369,20 +369,20 @@
           class="new-tab-button"
           type="button"
           (click)="focusSearch()"
-          matTooltip="Open a kernel (K)"
-          aria-label="Open a kernel"
+          matTooltip="Open an HLO op (K)"
+          aria-label="Open an HLO op"
         >
           <mat-icon>add</mat-icon>
         </button>
       </div>
       <ng-template #kernelStatus>
         <span class="kernel-bar-status">
-          {{ loadingKernels ? 'Loading kernels…' : loadFailed ? "Couldn't load kernels" : 'No kernel selected' }}
+          {{ loadingKernels ? 'Loading HLO ops…' : loadFailed ? "Couldn't load HLO ops" : 'No HLO op selected' }}
         </span>
       </ng-template>
       <span class="visually-hidden" role="status">{{ selectedEntry?.kernel }}</span>
 
-      <div class="kernel-stepper" role="group" aria-label="Step through kernels">
+      <div class="kernel-stepper" role="group" aria-label="Step through HLO ops">
         <button
           mat-icon-button
           class="step-button"
@@ -429,8 +429,8 @@
         [class.copied]="linkCopied"
         [disabled]="!selectedEntry"
         (click)="copyKernelLink()"
-        [matTooltip]="linkCopied ? 'Link copied' : 'Copy link to this kernel'"
-        [attr.aria-label]="linkCopied ? 'Link copied' : 'Copy link to this kernel'"
+        [matTooltip]="linkCopied ? 'Link copied' : 'Copy link to this HLO op'"
+        [attr.aria-label]="linkCopied ? 'Link copied' : 'Copy link to this HLO op'"
       >
         <mat-icon>{{ linkCopied ? 'check' : 'link' }}</mat-icon>
       </button>
@@ -583,7 +583,7 @@
     *ngIf="contextMenu as menu"
     class="kernel-context-menu"
     role="menu"
-    aria-label="Kernel actions"
+    aria-label="HLO op actions"
     [style.left.px]="menu.left"
     [style.top.px]="menu.top"
     (contextmenu)="$event.preventDefault()"
@@ -595,7 +595,7 @@
       (click)="copyKernelName(menu.entry)"
     >
       <mat-icon aria-hidden="true">content_copy</mat-icon>
-      <span>Copy kernel name</span>
+      <span>Copy op name</span>
     </button>
   </div>
 

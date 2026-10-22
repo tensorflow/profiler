@@ -586,9 +586,9 @@ function instructionMetrics(
       label: 'Schedule position',
       value: content?.schedulePosition?.formattedPercent ?? '',
       color: DEFAULT_ACCENT_COLOR,
-      meaning: 'How far into the kernel this bundle is',
+      meaning: 'How far into the HLO op this bundle is',
       selector: `${panelCard('single', 3)} .card-section-footer`,
-      caption: 'Where it sits in the kernel',
+      caption: 'Where it sits in the HLO op',
     });
   }
   return metrics.slice(0, MAX_PANEL_METRICS);
@@ -708,23 +708,23 @@ function counterMetrics(content: KernelSelectionContent): PanelMetric[] {
     let next = `${kpi}.primary-kpi + .counter-kpi-box`;
     if (details.formattedMean) {
       metrics.push({
-        label: 'Kernel mean',
+        label: 'Op mean',
         value: details.formattedMean,
         color,
-        meaning: 'Its average over the whole kernel',
+        meaning: 'Its average over the whole HLO op',
         selector: next,
-        caption: 'Its kernel-wide average',
+        caption: 'Its op-wide average',
       });
       next = `${next} + .counter-kpi-box`;
     }
     if (details.formattedPeak) {
       metrics.push({
-        label: 'Kernel peak',
+        label: 'Op peak',
         value: details.formattedPeak,
         color,
-        meaning: 'Its highest value in the kernel, and where',
+        meaning: 'Its highest value in the HLO op, and where',
         selector: next,
-        caption: 'Its kernel-wide peak',
+        caption: 'Its op-wide peak',
       });
     }
     metrics.push({
@@ -1298,7 +1298,7 @@ interface CheatsheetItem {
 }
 
 const CHEATSHEET: readonly CheatsheetItem[] = [
-  {keys: ['K'], label: 'Find kernels'},
+  {keys: ['K'], label: 'Find HLO ops'},
   {keys: ['[', ']'], label: 'Switch tabs'},
   {keys: ['W', 'A', 'S', 'D'], label: 'Zoom & pan'},
   {keys: ['←', '→'], label: 'Step along a lane'},
@@ -1318,7 +1318,7 @@ export function buildKernelViewerTourSteps(
 ): TourStep[] {
   let profile = '';
   if (summary.kernelCount > 0) {
-    const kernels = plural(summary.kernelCount, 'kernel');
+    const kernels = plural(summary.kernelCount, 'HLO op');
     const modules = plural(summary.moduleCount, 'HLO module');
     profile =
       summary.moduleCount > 0
@@ -1329,9 +1329,9 @@ export function buildKernelViewerTourSteps(
     {
       id: 'welcome',
       eyebrow: 'Kernel Viewer',
-      title: 'See how your kernel was scheduled',
+      title: 'See how your HLO ops are scheduled',
       body:
-        `${profile}Take a quick tour to find the kernels worth optimizing, ` +
+        `${profile}Take a quick tour to find the HLO ops worth optimizing, ` +
         'read their schedules bundle by bundle, and share what you find.',
       visual: 'welcome',
       spotlight: [],
@@ -1339,10 +1339,10 @@ export function buildKernelViewerTourSteps(
     },
     {
       id: 'rail',
-      eyebrow: 'Kernels',
-      title: 'The biggest kernels come first',
+      eyebrow: 'HLO Ops',
+      title: 'The biggest HLO ops come first',
       body:
-        'Kernels are grouped by HLO module and sorted by schedule length. ' +
+        'HLO ops are grouped by HLO module and sorted by schedule length. ' +
         'Each row shows its busiest unit and its length in bundles. Click ' +
         'one to open it.',
       visual: 'rail',
@@ -1353,9 +1353,9 @@ export function buildKernelViewerTourSteps(
     {
       id: 'search',
       eyebrow: 'Search',
-      title: 'Jump to any kernel',
+      title: 'Jump to any HLO op',
       body:
-        'Press K anywhere to search kernels and modules. Enter opens the ' +
+        'Press K anywhere to search HLO ops and modules. Enter opens the ' +
         'top match.',
       visual: 'search',
       spotlight: ['.kernel-rail'],
@@ -1372,9 +1372,9 @@ export function buildKernelViewerTourSteps(
     {
       id: 'tabs',
       eyebrow: 'Tabs',
-      title: 'Keep kernels side by side',
+      title: 'Keep HLO ops side by side',
       body:
-        `${summary.backgroundClickKey}-click or middle-click a kernel to ` +
+        `${summary.backgroundClickKey}-click or middle-click an HLO op to ` +
         'open it in a background tab, then press [ and ] to flip between ' +
         'tabs.',
       visual: 'tabs',
@@ -1388,8 +1388,8 @@ export function buildKernelViewerTourSteps(
           eyebrow: 'Step & share',
           title: 'Walk the ranking, then share',
           body:
-            'The arrows step through kernels in ranked order. The link ' +
-            'button copies a URL that reopens this exact kernel for a ' +
+            'The arrows step through HLO ops in ranked order. The link ' +
+            'button copies a URL that reopens this exact HLO op for a ' +
             'teammate.',
           visual: 'share',
           spotlight: [
@@ -1404,7 +1404,7 @@ export function buildKernelViewerTourSteps(
           eyebrow: 'Step through',
           title: 'Walk the ranking',
           body:
-            'The arrows step through kernels in ranked order, from the ' +
+            'The arrows step through HLO ops in ranked order, from the ' +
             'biggest schedule to the smallest.',
           visual: 'share',
           spotlight: ['.kernel-bar .kernel-stepper'],
@@ -1418,7 +1418,7 @@ export function buildKernelViewerTourSteps(
       body:
         'The ruler counts bundles, not microseconds. Rows run from scopes ' +
         'down to a lane per unit; Memory and Utilization sit collapsed ' +
-        'below. Click a point on those to compare it with the kernel’s ' +
+        'below. Click a point on those to compare it with the HLO op’s ' +
         'mean and peak.',
       visual: 'legend',
       spotlight: [CANVAS_SELECTOR],
@@ -1516,7 +1516,7 @@ export function buildKernelViewerTourSteps(
       eyebrow: 'Minimap',
       title: 'See the whole schedule at once',
       body:
-        'The minimap shows the whole kernel: how busy each stretch is, its ' +
+        'The minimap shows the whole HLO op: how busy each stretch is, its ' +
         'regions, and a lane per unit. The lens frames what the timeline ' +
         'shows. Drag it to pan, drag its edges to zoom, and double-click to ' +
         'see it all.',

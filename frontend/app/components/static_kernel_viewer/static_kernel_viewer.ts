@@ -104,13 +104,13 @@ export interface KernelFact {
   readonly warning: boolean;
 }
 
-/** How a kind of kernel, e.g. Pallas, is presented. */
+/** How a kind of kernel, e.g. custom-call, is presented. */
 export interface KernelKind {
   /** Kind reported by the backend, e.g. `pallas`. */
   readonly id: string;
-  /** Label of the kind, e.g. `Pallas`. */
+  /** Label of the kind, e.g. `Custom-call`. */
   readonly label: string;
-  /** Label of one kernel of the kind, e.g. `Pallas kernel`. */
+  /** Label of one kernel of the kind, e.g. `custom-call`. */
   readonly noun: string;
   /** Material icon of the kind. */
   readonly icon: string;
@@ -178,7 +178,7 @@ export interface KernelEntry {
   readonly color: string;
   /** Statistics of the kernel's schedule, if the backend reports them. */
   readonly stats?: KernelStats;
-  /** Kind of the kernel, e.g. Pallas, if the backend reports it. */
+  /** Kind of the kernel, e.g. custom-call, if the backend reports it. */
   readonly kind?: KernelKind;
   /** Compact schedule length, e.g. `38.4K`, or '' without statistics. */
   readonly bundlesLabel: string;
@@ -297,8 +297,8 @@ const KERNEL_KINDS: ReadonlyMap<string, KernelKind> = new Map([
     'pallas',
     {
       id: 'pallas',
-      label: 'Pallas',
-      noun: 'Pallas kernel',
+      label: 'Custom-call',
+      noun: 'custom-call',
       icon: 'function',
       color: '#8430ce',
       order: 0,
@@ -309,7 +309,7 @@ const KERNEL_KINDS: ReadonlyMap<string, KernelKind> = new Map([
     {
       id: 'other',
       label: 'Other',
-      noun: 'other kernel',
+      noun: 'other HLO op',
       icon: 'extension',
       color: '#b06000',
       order: 1,
@@ -509,7 +509,7 @@ export function parseKernelKind(summary: unknown): KernelKind | undefined {
   return {
     id,
     label,
-    noun: `${label} kernel`,
+    noun: `${label} op`,
     icon: OTHER_KIND_ICON,
     color: OTHER_KIND_COLOR,
     order: KERNEL_KINDS.size,
@@ -1002,8 +1002,8 @@ function readSourceWidth(): number {
  * timeline gets most of the width; it expands over the timeline on hover and
  * can be pinned open. Kernels open in tabs above the timeline.
  *
- * The rail narrows down the kernels by search terms, by kind (e.g. Pallas
- * or other kernels), by busiest functional unit and by vector register
+ * The rail narrows down the kernels by search terms, by kind (e.g. custom-calls
+ * or other HLO ops), by busiest functional unit and by vector register
  * spills, and can sort and group them differently.
  */
 @Component({
@@ -1323,7 +1323,7 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
     }
     const count = this.visibleCount;
     return `${count} of ${this.entries.length} ${
-      this.entries.length === 1 ? 'kernel' : 'kernels'
+      this.entries.length === 1 ? 'HLO op' : 'HLO ops'
     } shown`;
   }
 
@@ -1372,15 +1372,15 @@ export class StaticKernelViewer implements OnInit, AfterViewInit, OnDestroy {
     return this.kinds.find((option) => option.id === this.kindFilter);
   }
 
-  /** What the stepper steps through, e.g. `Pallas kernel`. */
+  /** What the stepper steps through, e.g. `custom-call`. */
   get stepNoun(): string {
     if (!this.isFiltering) {
-      return 'kernel';
+      return 'HLO op';
     }
     const kind = this.selectedKind;
     return kind && !this.hasQuery && this.panelFilterCount === 0
       ? kind.noun
-      : 'matching kernel';
+      : 'matching HLO op';
   }
 
   ngOnInit(): void {

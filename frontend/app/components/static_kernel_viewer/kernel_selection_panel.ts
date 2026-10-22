@@ -575,7 +575,7 @@ function buildCounterSelectionDetails(
 
   let deltaFromMeanLabel: string | undefined = undefined;
   if (isAtPeak) {
-    deltaFromMeanLabel = 'At Kernel Peak';
+    deltaFromMeanLabel = 'At Op Peak';
   } else if (meanVal !== undefined) {
     if (kind === 'utilization') {
       const diffPct = Math.round((currentVal - meanVal) * 100);
@@ -1326,11 +1326,11 @@ export class KernelSelectionPanel implements AfterViewInit, OnDestroy {
     if (c.counterDetails) {
       lines.push(`Value: ${c.counterDetails.formattedCurrent}`);
       if (c.counterDetails.formattedMean) {
-        lines.push(`Kernel Mean: ${c.counterDetails.formattedMean}`);
+        lines.push(`Op Mean: ${c.counterDetails.formattedMean}`);
       }
       if (c.counterDetails.formattedPeak) {
         lines.push(
-          `Kernel Peak: ${c.counterDetails.formattedPeak}${c.counterDetails.peakBundleLabel ? ' ' + c.counterDetails.peakBundleLabel : ''}`,
+          `Op Peak: ${c.counterDetails.formattedPeak}${c.counterDetails.peakBundleLabel ? ' ' + c.counterDetails.peakBundleLabel : ''}`,
         );
       }
     }
