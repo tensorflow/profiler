@@ -1063,16 +1063,35 @@ TEST(TimelineTest, InitializeLastFetchRequestRange_ExpandsToMinDuration) {
   timeline.set_fetched_data_time_range({0.0, 10000000.0});
   timeline.set_is_incremental_loading(false);
 
-  TimeRange visible = {5000000.0, 5000100.0};  // 100us duration
+  TimeRange visible = {5000000.0, 5000000.25};  // 250ns duration
   timeline.SetVisibleRange(visible);
   timeline.InitializeLastFetchRequestRange(visible);
 
-  // Unscaled fetch would be [5e6, 5e6+100]
-  // Scaled 3.0: center 5000050, duration 300
-  // Expands to kMinFetchDurationMicros (1000us)
+  // Scaled 3.0: center 5000000.125, duration 0.75us.
+  // Expands to kMinFetchDurationMicros (1us).
   // Constrained to data_time_range_ [0.0, 10000000.0]
-  EXPECT_EQ(timeline.last_fetch_request_range().start(), 4999550.0);
-  EXPECT_EQ(timeline.last_fetch_request_range().end(), 5000550.0);
+  EXPECT_DOUBLE_EQ(timeline.last_fetch_request_range().start(), 4999999.625);
+  EXPECT_DOUBLE_EQ(timeline.last_fetch_request_range().end(), 5000000.625);
+}
+
+TEST(TimelineTest,
+     InitializeLastFetchRequestRange_DoesNotExpandSubMillisecondView) {
+  ColorPalette palette = ColorPalette::Default();
+  Timeline timeline(palette);
+  timeline.set_data_time_range({0.0, 10000000.0});
+  timeline.set_fetched_data_time_range({0.0, 10000000.0});
+  timeline.set_is_incremental_loading(false);
+
+  // A 34us view, as opened from a deep-zoom URL. The recorded window must be
+  // exactly what main.ts `expandUrlTimeRange` requests (3x the view), not a
+  // wider one, or MaybeRequestData would skip fetching data that was never
+  // loaded.
+  TimeRange visible = {5000000.0, 5000034.0};
+  timeline.SetVisibleRange(visible);
+  timeline.InitializeLastFetchRequestRange(visible);
+
+  EXPECT_DOUBLE_EQ(timeline.last_fetch_request_range().start(), 4999966.0);
+  EXPECT_DOUBLE_EQ(timeline.last_fetch_request_range().end(), 5000068.0);
 }
 
 TEST(TimelineTest, InitializeLastFetchRequestRange_SetsCorrectRange) {
@@ -1115,9 +1134,9 @@ TEST(TimelineTest, MaybeRequestDataDoesNotRefetchWhenZoomAtBoundary) {
 TEST(TimelineTest, MaybeRequestDataExpandsToMinDuration) {
   ColorPalette palette = ColorPalette::Default();
   Timeline timeline(palette);
-  // Scenario: Visible range is very small (100us).
-  // Fetch calculated (Scale 3.0) would be 300us.
-  // Must expand to kMinFetchDurationMicros (1000us = 1ms).
+  // Scenario: Visible range is very small (250ns).
+  // Fetch calculated (Scale 3.0) would be 750ns.
+  // Must expand to kMinFetchDurationMicros (1us).
   // Data range large enough to not constrain.
 
   timeline.set_data_time_range({0.0, 20000000.0});
@@ -1134,21 +1153,20 @@ TEST(TimelineTest, MaybeRequestDataExpandsToMinDuration) {
         }
       });
 
-  // Visible: [5s, 5.0001s] (100us). Center 5.00005s.
-  // Expanded Fetch: 1000us.
-  // Center 5.00005s. Half duration 500us (0.0005s).
-  // Start: 5.00005s - 0.0005s = 4.99955s = 4999550.0.
-  // End: 5.00005s + 0.0005s = 5.00055s = 5000550.0.
-  timeline.SetVisibleRange({5000000.0, 5000100.0});
+  // Visible: [5000000us, 5000000.25us] (250ns). Center 5000000.125us.
+  // Expanded Fetch: 1us. Half duration 0.5us.
+  // Start: 5000000.125us - 0.5us = 4999999.625us.
+  // End: 5000000.125us + 0.5us = 5000000.625us.
+  timeline.SetVisibleRange({5000000.0, 5000000.25});
   timeline.MaybeRequestData();
 
   ASSERT_TRUE(request_triggered);
   EXPECT_DOUBLE_EQ(
       std::any_cast<double>(received_data.at(std::string(kFetchDataStart))),
-      MicrosToMillis(4999550.0));
+      MicrosToMillis(4999999.625));
   EXPECT_DOUBLE_EQ(
       std::any_cast<double>(received_data.at(std::string(kFetchDataEnd))),
-      MicrosToMillis(5000550.0));
+      MicrosToMillis(5000000.625));
 }
 
 TEST(TimelineTest, MaybeRequestDataFetchesConstrainedRange) {
@@ -1158,7 +1176,7 @@ TEST(TimelineTest, MaybeRequestDataFetchesConstrainedRange) {
   // Fetched range: [0, 2s] = 2,000,000.
   // Visible range: [9s, 10s] = [9,000,000, 10,000,000]. Duration 1s.
   // Fetch (Scale 3.0): Center 9.5s, Duration 3s. Range [8s, 11s].
-  // MinDuration 100ms << 3s. No expansion.
+  // kMinFetchDurationMicros (1us) << 3s. No expansion.
   // Constrain [8s, 11s] to data range [0s, 10s].
   // Since 11s > 10s, shift left by 11s - 10s = 1s.
   // Shifted range: [8s - 1s, 11s - 1s] = [7s, 10s].
@@ -1485,9 +1503,9 @@ TEST(TimelineTest, MaybeRequestDataRefetchWhenZoomedIn) {
   Timeline timeline(palette);
   // Scenario: Focus on zoom-in logic WITHOUT triggering MinFetchDuration
   // expansion.
-  // We need Fetch duration > kMinFetchDurationMicros (1ms).
+  // We need Fetch duration > kMinFetchDurationMicros (1us).
   // Let Visible = 400ms.
-  // Fetch (Scale 3.0) = 1.2s > 1s. (No expansion).
+  // Fetch (Scale 3.0) = 1.2s > 1us. (No expansion).
   // Fetched Data must be large enough to trigger ratio > 8.
   // Fetched > 8 * 1.2s = 9.6s. Let's use 10s.
 
@@ -1538,8 +1556,8 @@ TEST(TimelineTest, MaybeRequestDataRefetchesWhenZoomedInDespiteRangeCoverage) {
 
   // Step 3: Zoom IN heavily.
   // Visible: [5s, 5.0002s] (200us).
-  // Fetch (Scale 3): 600us -> Expands to kMinFetchDurationMicros (20000000us).
-  // Fetched (200s) / Fetch (20s) = 10 > kRefetchZoomRatio (8).
+  // Fetch (Scale 3): 600us, above kMinFetchDurationMicros (no expansion).
+  // Fetched (200s) / Fetch (600us) > kRefetchZoomRatio (8).
   // last_fetch ([0, 200s]) CONTAINS preserve.
 
   bool request_triggered = false;
@@ -1553,7 +1571,7 @@ TEST(TimelineTest, MaybeRequestDataRefetchesWhenZoomedInDespiteRangeCoverage) {
       });
 
   // Visible: 200us centered at 5.0001s.
-  // Fetch: 1000us centered at 5.0001s.
+  // Fetch: 600us centered at 5.0001s.
   // Constrained to data_time_range_ [0.0, 200000000.0].
   timeline.SetVisibleRange({5000000.0, 5000200.0});
   timeline.MaybeRequestData();
@@ -1561,10 +1579,10 @@ TEST(TimelineTest, MaybeRequestDataRefetchesWhenZoomedInDespiteRangeCoverage) {
   ASSERT_TRUE(request_triggered);
   EXPECT_DOUBLE_EQ(
       std::any_cast<double>(received_data.at(std::string(kFetchDataStart))),
-      MicrosToMillis(4999600.0));
+      MicrosToMillis(4999800.0));
   EXPECT_DOUBLE_EQ(
       std::any_cast<double>(received_data.at(std::string(kFetchDataEnd))),
-      MicrosToMillis(5000600.0));
+      MicrosToMillis(5000400.0));
 }
 
 TEST(TimelineTest, MaybeRequestDataSetsIsLoadingToTrue) {
@@ -1623,12 +1641,13 @@ TEST(TimelineTest, MaybeRequestDataSkipsFetchIfRangeAlreadyRequested) {
       });
 
   // Step 3: Pan to right edge of what we have.
-  // Visible=[2400, 2500]. Duration 100.
-  // Preserve (2x) = [2350, 2550].
-  // Fetched ([0, 2500]) DOES NOT contain Preserve (end 2550 > 2500).
+  // Visible=[2300, 2500]. Duration 200.
+  // Preserve (2x) = [2200, 2600].
+  // Fetched ([500, 2500]) DOES NOT contain Preserve (end 2600 > 2500).
   // normally this WOULD trigger refetch.
-  // But last_fetch ([0, 3000]) DOES contain Preserve.
-  timeline.SetVisibleRange({2400.0, 2500.0});
+  // But last_fetch ([0, 3000]) DOES contain Preserve, and the zoom ratio
+  // (last_fetch 3000 / Fetch 600 = 5) is below kRefetchZoomRatio.
+  timeline.SetVisibleRange({2300.0, 2500.0});
   timeline.MaybeRequestData();
 
   EXPECT_FALSE(request_triggered);
@@ -1637,17 +1656,17 @@ TEST(TimelineTest, MaybeRequestDataSkipsFetchIfRangeAlreadyRequested) {
 TEST(TimelineTest, MaybeRequestDataSuppressesRedundantFetchWithExpandedRange) {
   ColorPalette palette = ColorPalette::Default();
   Timeline timeline(palette);
-  // Scenario: Visible 100us -> Expanded Fetch 1000us (1ms).
-  // last_fetch and fetched cover this 1000us.
-  // Zoom ratio is low (fetched is small).
+  // Scenario: Visible 100ns -> Expanded Fetch 1us (kMinFetchDurationMicros).
+  // last_fetch and fetched cover this 1us.
+  // Zoom ratio is low (last_fetch is small).
   // Result: NO Refetch.
 
   timeline.set_data_time_range({0.0, 20000000.0});
   timeline.set_is_incremental_loading(false);
 
   // Step 1: Trigger initial fetch to set last_fetch_request_range_.
-  // We want fetched size < 8 * 1000us = 8000us.
-  // Use Visible 400us. Fetch 1200us.
+  // We want last_fetch size < 8 * 1us = 8us.
+  // Use Visible 400ns. Fetch 1.2us.
   timeline.set_fetched_data_time_range({-1.0, -1.0});  // Trigger
 
   bool request_triggered = false;
@@ -1658,32 +1677,132 @@ TEST(TimelineTest, MaybeRequestDataSuppressesRedundantFetchWithExpandedRange) {
         }
       });
 
-  // Visible [5.0s, 5.0004s].
-  timeline.SetVisibleRange({5000000.0, 5000400.0});
+  // Visible [5000000us, 5000000.4us].
+  timeline.SetVisibleRange({5000000.0, 5000000.4});
   timeline.MaybeRequestData();
 
   ASSERT_TRUE(request_triggered);
-  // last_fetch approx [4.9996s, 5.0008s] (Duration 1200us > 1000us Min).
+  // last_fetch approx [4999999.6us, 5000000.8us] (Duration 1.2us > 1us Min).
 
   // Step 2: Simulate data arrival.
   // We can just set fetched to something covering the next preserve.
-  // Next preserve will be for Visible 100us -> 200us wide.
-  // [5.0s, 5.0001s]. Preserve [4.99995s, 5.00015s].
+  // Next preserve will be for Visible 100ns -> 200ns wide.
+  // [5000000us, 5000000.1us]. Preserve [4999999.95us, 5000000.15us].
   // last_fetch covers this.
   // fetched must cover preserve.
-  // 4995us to 5005us.
-  const double center = 5000000.0 + 200.0;
-  timeline.set_fetched_data_time_range({center - 2000.0, center + 2000.0});
+  // 4999998.2us to 5000002.2us.
+  const double center = 5000000.0 + 0.2;
+  timeline.set_fetched_data_time_range({center - 2.0, center + 2.0});
   timeline.set_is_incremental_loading(false);
   request_triggered = false;
 
-  // Step 3: Zoom to 100us.
-  // Visible [5.0s, 5.0001s].
-  // Fetch -> Expanded 1000us.
-  // Ratio: Fetched (4000us) / Fetch (1000us) = 4.0 < 8.
-  timeline.SetVisibleRange({5000000.0, 5000100.0});
+  // Step 3: Zoom to 100ns.
+  // Visible [5000000us, 5000000.1us].
+  // Fetch -> Expanded 1us.
+  // Ratio: last_fetch (1.2us) / Fetch (1us) = 1.2 < 8.
+  timeline.SetVisibleRange({5000000.0, 5000000.1});
+  timeline.MaybeRequestData();
 
   EXPECT_FALSE(request_triggered);
+}
+
+// Collects the [start, end] window, in microseconds, of each fetch_data event.
+Timeline::EventCallback RecordFetchWindows(std::vector<TimeRange>& fetches) {
+  return [&fetches](absl::string_view type, const EventData& detail) {
+    if (type != kFetchData) return;
+    fetches.push_back({MillisToMicros(std::any_cast<double>(
+                           detail.at(std::string(kFetchDataStart)))),
+                       MillisToMicros(std::any_cast<double>(
+                           detail.at(std::string(kFetchDataEnd))))});
+  };
+}
+
+// Zooming into sub-nanosecond events (e.g. LLO instruction traces) must keep
+// refetching. The backend returns a fixed number of resolution bins per fetch,
+// so each >kRefetchZoomRatio zoom-in has to request a window of
+// kFetchRatio * viewport for the bins, and thus the shortest loaded event, to
+// keep shrinking. A 1ms minimum fetch window used to stop this below ~333us.
+TEST(TimelineTest, MaybeRequestDataKeepsRefetchingWhenZoomingBelowOneMs) {
+  ColorPalette palette = ColorPalette::Default();
+  Timeline timeline(palette);
+  timeline.set_data_time_range({0.0, 5000000.0});  // 5s trace.
+  // Initial overview load of the full trace.
+  timeline.InitializeLastFetchRequestRange(timeline.data_time_range());
+  timeline.set_is_incremental_loading(false);
+
+  std::vector<TimeRange> fetches;
+  timeline.set_event_callback(RecordFetchWindows(fetches));
+
+  constexpr Microseconds kCenter = 2500000.0;
+  // Zoom in 10x per step, from a 50ms view down to a 500ns view.
+  for (const Microseconds viewport : {50000.0, 5000.0, 500.0, 50.0, 5.0, 0.5}) {
+    SCOPED_TRACE(absl::StrCat("viewport=", viewport, "us"));
+    fetches.clear();
+    timeline.SetVisibleRange({kCenter - viewport / 2, kCenter + viewport / 2});
+    timeline.MaybeRequestData();
+
+    ASSERT_EQ(fetches.size(), 1);
+    EXPECT_NEAR(fetches[0].duration(), viewport * kFetchRatio, viewport * 1e-6);
+    EXPECT_NEAR(fetches[0].center(), kCenter, viewport * 1e-6);
+    // Simulate the response arriving so the next zoom can fetch again.
+    timeline.set_is_incremental_loading(false);
+  }
+
+  // Below kMinFetchDurationMicros / kFetchRatio the fetch window stops
+  // shrinking. The 1.5us window held already resolves ~0.2ns per bin, so a
+  // further 10x zoom-in does not refetch.
+  fetches.clear();
+  timeline.SetVisibleRange({kCenter - 0.025, kCenter + 0.025});
+  timeline.MaybeRequestData();
+  EXPECT_TRUE(fetches.empty());
+}
+
+// Opening a deep-zoom URL (34us view) fetches 3x the view (102us), and the
+// timeline must record exactly that window. Zooming in 8.5x from there then has
+// to refetch at a higher resolution.
+TEST(TimelineTest, MaybeRequestDataRefetchesWhenZoomingInFromUrlRange) {
+  ColorPalette palette = ColorPalette::Default();
+  Timeline timeline(palette);
+  timeline.set_data_time_range({0.0, 10000000.0});
+  const TimeRange url_visible = {5000000.0, 5000034.0};
+  timeline.SetVisibleRange(url_visible);
+  timeline.InitializeLastFetchRequestRange(url_visible);
+  timeline.set_is_incremental_loading(false);
+
+  std::vector<TimeRange> fetches;
+  timeline.set_event_callback(RecordFetchWindows(fetches));
+
+  // 4us view centered in the URL view: last_fetch (102us) / fetch (12us) = 8.5.
+  timeline.SetVisibleRange({5000015.0, 5000019.0});
+  timeline.MaybeRequestData();
+
+  ASSERT_EQ(fetches.size(), 1);
+  EXPECT_NEAR(fetches[0].start(), 5000011.0, 1e-6);
+  EXPECT_NEAR(fetches[0].end(), 5000023.0, 1e-6);
+}
+
+// After opening a deep-zoom URL (34us view, 102us fetched), panning by one
+// viewport leaves the fetched window and must fetch. The timeline used to
+// record a 1ms window instead, so it never fetched the area panned into.
+TEST(TimelineTest, MaybeRequestDataFetchesWhenPanningOutsideUrlRange) {
+  ColorPalette palette = ColorPalette::Default();
+  Timeline timeline(palette);
+  timeline.set_data_time_range({0.0, 10000000.0});
+  const TimeRange url_visible = {5000000.0, 5000034.0};
+  timeline.SetVisibleRange(url_visible);
+  timeline.InitializeLastFetchRequestRange(url_visible);
+  timeline.set_is_incremental_loading(false);
+
+  std::vector<TimeRange> fetches;
+  timeline.set_event_callback(RecordFetchWindows(fetches));
+
+  // Preserve range [5000017, 5000085] extends past the fetched 5000068.
+  timeline.SetVisibleRange({5000034.0, 5000068.0});
+  timeline.MaybeRequestData();
+
+  ASSERT_EQ(fetches.size(), 1);
+  EXPECT_NEAR(fetches[0].start(), 5000000.0, 1e-6);
+  EXPECT_NEAR(fetches[0].end(), 5000102.0, 1e-6);
 }
 
 // Test fixture for tests that require an ImGui context.
