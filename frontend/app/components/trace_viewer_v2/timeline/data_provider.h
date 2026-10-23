@@ -1,6 +1,7 @@
 #ifndef THIRD_PARTY_XPROF_FRONTEND_APP_COMPONENTS_TRACE_VIEWER_V2_TIMELINE_DATA_PROVIDER_H_
 #define THIRD_PARTY_XPROF_FRONTEND_APP_COMPONENTS_TRACE_VIEWER_V2_TIMELINE_DATA_PROVIDER_H_
 
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -15,8 +16,21 @@
 
 namespace traceviewer {
 
+enum class TimelineFlushMode {
+  kAutoFlush,
+  kDeferFlush,
+};
+
 class DataProvider {
  public:
+  using TimelineFlushMode = ::traceviewer::TimelineFlushMode;
+
+  DataProvider();
+  ~DataProvider();
+
+  DataProvider(DataProvider&&) noexcept;
+  DataProvider& operator=(DataProvider&&) noexcept;
+
   // Returns a list of flow categories present in the trace.
   const std::vector<int>& GetFlowCategories() const;
 
@@ -27,6 +41,27 @@ class DataProvider {
   void ProcessTraceEvents(const ParsedTraceEvents& parsed_events,
                           Timeline& timeline);
 
+  // Prepares incremental loading state for a new fetch while keeping
+  // persistent track registries across zoom/pan refetches.
+  void BeginIncrementalLoad(Timeline& timeline);
+
+  // Incrementally appends a batch of parsed trace events and updates the
+  // timeline using per-track packed event caching.
+  void AppendTraceEventsIncremental(
+      ParsedTraceEvents parsed_events, Timeline& timeline,
+      TimelineFlushMode flush_mode = TimelineFlushMode::kAutoFlush);
+
+  // Releases temporary incremental batch buffers after all chunks of a fetch
+  // have been processed.
+  void FinishIncrementalLoad();
+
+  // Marks that the incremental load is finishing so any deferred refetch
+  // timeline update is flushed.
+  void MarkFinishingIncrementalLoad();
+
+  // Returns true if a refetch is still waiting to flush its timeline update.
+  bool HasPendingRefetchUpdate() const;
+
   // Clears persistent session metadata and track registries.
   void Reset();
 
@@ -34,6 +69,8 @@ class DataProvider {
   bool HasKnownTracks() const;
 
  private:
+  struct IncrementalState;
+
   std::vector<int> present_flow_categories_;
   absl::flat_hash_map<ProcessId, std::string> process_names_;
   absl::btree_map<std::pair<ProcessId, ThreadId>, std::string> thread_names_;
@@ -46,6 +83,7 @@ class DataProvider {
   absl::btree_map<ProcessId, absl::btree_set<std::string>> known_async_tracks_;
   absl::flat_hash_set<ProcessId> known_async_processes_;
   absl::btree_map<ProcessId, absl::btree_set<std::string>> known_counters_;
+  std::unique_ptr<IncrementalState> incremental_state_;
 };
 
 namespace internal {

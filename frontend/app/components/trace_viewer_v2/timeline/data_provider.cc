@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <iterator>
 #include <limits>
 #include <map>
@@ -50,6 +51,8 @@ namespace {
 constexpr uint32_t kMpmdUnrankedSortIndexBase = 1u << 30;
 
 constexpr ThreadId kSyntheticOpenSpanTidBit = 0x80000000;
+constexpr size_t kMaxIncrementalFlowEvents = 16384;
+
 bool GetExpandedState(int nesting_level, absl::string_view name,
                       absl::string_view parent_name, bool default_expanded,
                       const absl::btree_map<GroupKey, bool>& expanded_states) {
@@ -103,6 +106,7 @@ struct CachedThreadTrack {
   // tid, in which case `tid` is used instead. `entry_tids` only materializes
   // (matching the size of events) when a different `tid` is encountered.
   std::vector<ThreadId> entry_tids;
+  std::vector<Microseconds> prefix_max_end_times;
 
   size_t size() const { return entries.entry_start_times.size(); }
   bool empty() const { return entries.entry_start_times.empty(); }
@@ -615,6 +619,17 @@ absl::string_view LookupTrackSpanAtTimestamp(
   return default_name;
 }
 
+// Formats `hlo_module_name` by appending `(<id>)` if `hlo_module_name` does not
+// already end with that suffix.
+std::string FormatHloModuleWithId(absl::string_view hlo_module_name,
+                                  absl::string_view id) {
+  const std::string suffix = absl::StrCat("(", id, ")");
+  if (absl::EndsWith(hlo_module_name, suffix)) {
+    return std::string(hlo_module_name);
+  }
+  return absl::StrCat(hlo_module_name, suffix);
+}
+
 void AppendEventToTimelineData(
     const TraceEvent* event, int level, FlameChartTimelineData& data,
     TimeBounds& bounds, const TraceInformation& trace_info,
@@ -683,8 +698,19 @@ void AppendEventToTimelineData(
     return;
   }
 
-  data.entry_serials.push_back(0);
-  data.entry_arg_flags.push_back(0);
+  uint8_t raw_flags = 0;
+  if (event->has_serial) raw_flags |= FlameChartTimelineData::kEntryArgHasUid;
+  if (event->args.contains(*kHloOpStr)) {
+    raw_flags |= FlameChartTimelineData::kEntryArgHadRawHloOp;
+  }
+  if (event->args.contains(*kHloModuleStr)) {
+    raw_flags |= FlameChartTimelineData::kEntryArgHadRawHloModule;
+  }
+  if (event->has_group_id) {
+    data.sparse_entry_group_ids[entry_idx] = event->group_id;
+  }
+  data.entry_serials.push_back(event->serial);
+  data.entry_arg_flags.push_back(raw_flags);
   data.entry_hlo_module_ids.push_back(0);
 
   auto cur_args = event->args;
@@ -724,17 +750,17 @@ void AppendEventToTimelineData(
       auto it_program_id = event->args.find(*kProgramIdStr);
       if (it_hlo_module_id != event->args.end()) {
         hlo_module_str =
-            absl::StrCat(hlo_module_name, "(", it_hlo_module_id->second, ")");
+            FormatHloModuleWithId(hlo_module_name, it_hlo_module_id->second);
       } else if (it_program_id != event->args.end()) {
         hlo_module_str =
-            absl::StrCat(hlo_module_name, "(", it_program_id->second, ")");
+            FormatHloModuleWithId(hlo_module_name, it_program_id->second);
       } else {
         auto it_kernel_details = event->args.find(*kKernelDetailsStr);
         if (it_kernel_details != event->args.end()) {
           std::string module_id;
           if (RE2::PartialMatch(it_kernel_details->second, *kModuleRe,
                                 &module_id)) {
-            hlo_module_str = absl::StrCat(hlo_module_name, "(", module_id, ")");
+            hlo_module_str = FormatHloModuleWithId(hlo_module_name, module_id);
           } else {
             hlo_module_str = hlo_module_name;
           }
@@ -920,6 +946,43 @@ void AppendToCachedThreadTrack(CachedThreadTrack& cached,
     cached.entry_name_ids.push_back(it->second);
   }
   cached.entries.entry_names.clear();
+
+  cached.prefix_max_end_times.reserve(new_size);
+  Microseconds running_max = cached.prefix_max_end_times.empty()
+                                 ? std::numeric_limits<Microseconds>::lowest()
+                                 : cached.prefix_max_end_times.back();
+  for (size_t i = base_idx; i < new_size; ++i) {
+    running_max =
+        std::max(running_max, cached.entries.entry_start_times[i] +
+                                  cached.entries.entry_total_times[i]);
+    cached.prefix_max_end_times.push_back(running_max);
+  }
+}
+
+template <typename T>
+void ResizeVector(std::vector<T>& vec, size_t new_size, bool shrink) {
+  vec.resize(new_size);
+  if (shrink && vec.capacity() > new_size * 2) {
+    vec.shrink_to_fit();
+  }
+}
+
+void ResizeCachedTrackArrays(CachedThreadTrack& cached, size_t new_size,
+                             bool shrink) {
+  FlameChartTimelineData& e = cached.entries;
+  ResizeVector(e.entry_start_times, new_size, shrink);
+  ResizeVector(e.entry_total_times, new_size, shrink);
+  ResizeVector(e.entry_self_times, new_size, shrink);
+  ResizeVector(e.entry_levels, new_size, shrink);
+  ResizeVector(e.entry_event_ids, new_size, shrink);
+  ResizeVector(e.entry_serials, new_size, shrink);
+  ResizeVector(e.entry_arg_flags, new_size, shrink);
+  ResizeVector(e.entry_hlo_module_ids, new_size, shrink);
+  ResizeVector(cached.entry_name_ids, new_size, shrink);
+  if (!cached.entry_tids.empty()) {
+    ResizeVector(cached.entry_tids, new_size, shrink);
+  }
+  ResizeVector(cached.prefix_max_end_times, new_size, shrink);
 }
 
 CachedThreadTrack BuildCachedThreadTrack(
@@ -993,6 +1056,177 @@ void AppendCachedThreadTrackToTimelineData(CachedThreadTrack& cached,
   } else {
     for (const auto& [rel_idx, args] : src.sparse_entry_args) {
       data.sparse_entry_args[base_entry_idx + rel_idx] = args;
+    }
+  }
+}
+
+// Returns the length of the longest prefix `[0, split_idx)` of `cached` that
+// can be retained intact without repacking when merging a sorted batch of new
+// events whose first event starts at `min_new_ts` with duration
+// `first_new_dur`.
+//
+// Uses `cached.prefix_max_end_times` (where `prefix_max_end_times[k]` is the
+// monotonically non-decreasing maximum of `ts + dur` across `0..k`) to binary
+// search for the first cached entry whose end time (or an ancestor's end time)
+// extends past `min_new_ts`, and then rewinds across any cached entries at
+// `ts == min_new_ts` with `dur < first_new_dur` so `(ts ascending, dur
+// descending)` sort order is preserved across the boundary.
+size_t FindNonOverlappingPrefixSplitIndex(const CachedThreadTrack& cached,
+                                          Microseconds min_new_ts,
+                                          Microseconds first_new_dur) {
+  if (cached.empty()) return 0;
+  const auto& starts = cached.entries.entry_start_times;
+  const auto& durs = cached.entries.entry_total_times;
+  auto it = std::upper_bound(cached.prefix_max_end_times.begin(),
+                             cached.prefix_max_end_times.end(), min_new_ts);
+  size_t split_idx =
+      static_cast<size_t>(it - cached.prefix_max_end_times.begin());
+  while (split_idx > 0) {
+    const size_t prev = split_idx - 1;
+    if (starts[prev] < min_new_ts ||
+        (starts[prev] == min_new_ts && durs[prev] >= first_new_dur)) {
+      break;
+    }
+    --split_idx;
+  }
+  return split_idx;
+}
+
+TraceEvent ReconstructCachedTraceEvent(const CachedThreadTrack& cached,
+                                       size_t i, bool is_async) {
+  const FlameChartTimelineData& e = cached.entries;
+  const uint8_t flags = e.entry_arg_flags[i];
+  TraceEvent ev{
+      .ph = Phase::kComplete,
+      .event_id = e.entry_event_ids[i],
+      .pid = cached.pid,
+      .tid = cached.tid_at(i),
+      .name = cached.unique_names[cached.entry_name_ids[i]],
+      .ts = e.entry_start_times[i],
+      .dur = e.entry_total_times[i],
+      .serial = e.entry_serials[i],
+      .has_serial = (flags & FlameChartTimelineData::kEntryArgHasUid) != 0,
+      .is_async = is_async,
+  };
+  if (const auto it = e.sparse_entry_group_ids.find(i);
+      it != e.sparse_entry_group_ids.end()) {
+    ev.group_id = it->second;
+    ev.has_group_id = true;
+  }
+  if (const auto it = e.sparse_entry_args.find(i);
+      it != e.sparse_entry_args.end()) {
+    ev.args = it->second;
+    if (ev.has_serial) ev.args.erase("uid");
+    if (ev.has_group_id) ev.args.erase("group_id");
+    if ((flags & FlameChartTimelineData::kEntryArgHadRawHloOp) == 0) {
+      ev.args.erase(kHloOp);
+    }
+    if ((flags & FlameChartTimelineData::kEntryArgHadRawHloModule) == 0) {
+      ev.args.erase(kHloModule);
+    }
+  }
+  return ev;
+}
+
+// Reconstructs `TraceEvent` objects for the suffix `[start_idx, cached.size())`
+// of `cached` and truncates `cached` in-place to the non-overlapping prefix
+// `[0, start_idx)`, updating `bounds` and `max_relative_level` to match the
+// retained prefix.
+std::vector<TraceEvent> RestoreAndTruncateCachedTrackFrom(
+    CachedThreadTrack& cached, size_t start_idx, bool is_async) {
+  const size_t n = cached.size();
+  FlameChartTimelineData& e = cached.entries;
+  std::vector<TraceEvent> restored;
+  restored.reserve(n - start_idx);
+  for (size_t i = start_idx; i < n; ++i) {
+    restored.push_back(ReconstructCachedTraceEvent(cached, i, is_async));
+    e.sparse_entry_group_ids.erase(i);
+    e.sparse_entry_args.erase(i);
+  }
+  if (start_idx == 0) {
+    cached = CachedThreadTrack{};
+    return restored;
+  }
+  ResizeCachedTrackArrays(cached, start_idx, /*shrink=*/false);
+  cached.bounds.min = e.entry_start_times.front();
+  cached.bounds.max = cached.prefix_max_end_times.back();
+  cached.max_relative_level =
+      e.entry_levels.empty() ? 0 : *absl::c_max_element(e.entry_levels);
+  return restored;
+}
+
+void UpdateCachedTrackIncremental(CachedThreadTrack& cached, bool is_async,
+                                  std::vector<const TraceEvent*>& new_events,
+                                  const TraceInformation& trace_info,
+                                  absl::string_view thread_group_name) {
+  if (new_events.empty()) return;
+  auto cmp_events = [](const TraceEvent* a, const TraceEvent* b) {
+    return a->ts != b->ts ? a->ts < b->ts : a->dur > b->dur;
+  };
+  if (!std::is_sorted(new_events.begin(), new_events.end(), cmp_events)) {
+    absl::c_stable_sort(new_events, cmp_events);
+  }
+  const size_t split_idx = FindNonOverlappingPrefixSplitIndex(
+      cached, new_events.front()->ts, new_events.front()->dur);
+  if (split_idx == cached.size()) {
+    AppendToCachedThreadTrack(cached, new_events, trace_info,
+                              thread_group_name);
+    return;
+  }
+  const std::vector<TraceEvent> restored =
+      RestoreAndTruncateCachedTrackFrom(cached, split_idx, is_async);
+  std::vector<const TraceEvent*> merged_events;
+  merged_events.reserve(restored.size() + new_events.size());
+  for (const TraceEvent& ev : restored) merged_events.push_back(&ev);
+  merged_events.insert(merged_events.end(), new_events.begin(),
+                       new_events.end());
+  std::inplace_merge(
+      merged_events.begin(),
+      merged_events.begin() + static_cast<ptrdiff_t>(restored.size()),
+      merged_events.end(), cmp_events);
+  AppendToCachedThreadTrack(cached, merged_events, trace_info,
+                            thread_group_name);
+}
+
+// Re-evaluates HLO module associations for cached entries in `cached` starting
+// at or after `min_dirty_xla_ts` when the process's `XLA Modules` track is
+// modified by a later incremental batch. Entries whose original `TraceEvent`
+// explicitly specified `kHloModule` in `args` (`kEntryArgHadRawHloModule`) are
+// left unchanged.
+void RefreshCachedTrackHloModules(CachedThreadTrack& cached,
+                                  const TraceInformation& trace_info,
+                                  absl::string_view thread_name,
+                                  Microseconds min_dirty_xla_ts) {
+  const bool is_xla_ops_thread = thread_name == kXlaOps;
+  const bool is_data_motion_layer = thread_name == kComputeUtilization ||
+                                    thread_name == kDataMotionLayersUtilization;
+  if (!is_xla_ops_thread && !is_data_motion_layer) return;
+
+  const size_t n = cached.size();
+  if (n == 0) return;
+  FlameChartTimelineData& e = cached.entries;
+  auto it_start = std::lower_bound(e.entry_start_times.begin(),
+                                   e.entry_start_times.end(), min_dirty_xla_ts);
+  const size_t start_i =
+      static_cast<size_t>(it_start - e.entry_start_times.begin());
+  if (start_i >= n) return;
+
+  const TrackSpanSource module_src = ResolveTrackSpanSource(
+      cached.pid, trace_info.xla_modules_tids, trace_info);
+  size_t module_cursor = 0;
+  Microseconds last_module_lookup_ts =
+      std::numeric_limits<Microseconds>::lowest();
+  for (size_t i = start_i; i < n; ++i) {
+    const absl::string_view module_name = LookupTrackSpanAtTimestamp(
+        module_src, module_cursor, last_module_lookup_ts,
+        e.entry_start_times[i]);
+    if (auto it_args = e.sparse_entry_args.find(i);
+        it_args == e.sparse_entry_args.end()) {
+      e.entry_hlo_module_ids[i] =
+          InternHloModuleName(e.hlo_module_names, module_name);
+    } else if ((e.entry_arg_flags[i] &
+                FlameChartTimelineData::kEntryArgHadRawHloModule) == 0) {
+      it_args->second[std::string(kHloModule)] = std::string(module_name);
     }
   }
 }
@@ -1701,14 +1935,323 @@ void UpdateTimelineTimeRanges(
 
 }  // namespace
 
+struct DataProvider::IncrementalState {
+  struct EventBatch {
+    absl::flat_hash_map<std::pair<ProcessId, ThreadId>,
+                        std::vector<const TraceEvent*>>
+        sync_events;
+    absl::flat_hash_map<std::pair<ProcessId, std::string>,
+                        std::vector<const TraceEvent*>>
+        async_events;
+    absl::flat_hash_map<ProcessId, Microseconds> dirty_xla_module_min_ts;
+  };
+
+  std::deque<TraceEvent> flow_events;
+  std::deque<CounterEvent> counter_events;
+  bool has_any_events = false;
+  bool is_refetch = false;
+  bool is_finishing = false;
+  bool emitted_timeline_data = false;
+  bool has_unflushed_updates = false;
+  TraceInformation trace_info;
+  absl::btree_map<int, int> flow_category_counts;
+  absl::flat_hash_map<std::pair<ProcessId, ThreadId>, CachedThreadTrack>
+      cached_sync_tracks;
+  absl::flat_hash_map<std::pair<ProcessId, std::string>, CachedThreadTrack>
+      cached_async_tracks;
+  absl::btree_map<GroupKey, bool> base_expanded_states;
+  absl::btree_map<GroupKey, bool> last_emitted_expanded_states;
+  std::optional<std::pair<Milliseconds, Milliseconds>> full_timespan;
+  std::optional<std::pair<Milliseconds, Milliseconds>> visible_range_from_url;
+  TimeRange initial_data_time_range = TimeRange::Zero();
+  TimeRange last_auto_visible_range = TimeRange::Zero();
+  TimeBounds observed_time_bounds;
+  size_t total_ingested_events = 0;
+  size_t last_flushed_events = 0;
+  size_t last_flushed_processes = 0;
+
+  void CopyMetadataFromProvider(const DataProvider& provider) {
+    trace_info.process_names = provider.process_names_;
+    trace_info.thread_names = provider.thread_names_;
+    trace_info.process_sort_indices = provider.process_sort_indices_;
+    trace_info.thread_sort_indices = provider.thread_sort_indices_;
+    trace_info.xla_modules_tids = provider.xla_modules_tids_;
+    trace_info.async_processes_by_events = provider.known_async_processes_;
+  }
+
+  void CopyMetadataToProvider(DataProvider& provider) const {
+    provider.process_names_ = trace_info.process_names;
+    provider.thread_names_ = trace_info.thread_names;
+    provider.process_sort_indices_ = trace_info.process_sort_indices;
+    provider.thread_sort_indices_ = trace_info.thread_sort_indices;
+    provider.xla_modules_tids_ = trace_info.xla_modules_tids;
+    provider.known_async_processes_ = trace_info.async_processes_by_events;
+  }
+
+  EventBatch PartitionFlameEvents(absl::Span<const TraceEvent> flame_events,
+                                  DataProvider& provider) {
+    EventBatch batch;
+    std::pair<ProcessId, ThreadId> last_sync_key{0, 0};
+    std::vector<const TraceEvent*>* last_sync_vec = nullptr;
+
+    for (const TraceEvent& stored : flame_events) {
+      switch (stored.ph) {
+        case Phase::kMetadata: {
+          const auto old_it = trace_info.xla_modules_tids.find(stored.pid);
+          const std::optional<ThreadId> old_tid =
+              old_it != trace_info.xla_modules_tids.end()
+                  ? std::make_optional(old_it->second)
+                  : std::nullopt;
+          HandleMetadataEvent(stored, trace_info);
+          if (const auto new_it = trace_info.xla_modules_tids.find(stored.pid);
+              new_it != trace_info.xla_modules_tids.end() &&
+              new_it->second != old_tid) {
+            batch.dirty_xla_module_min_ts[stored.pid] =
+                std::numeric_limits<Microseconds>::lowest();
+          }
+          break;
+        }
+        case Phase::kComplete:
+        case Phase::kInstant:
+        case Phase::kInstantDeprecated: {
+          if (stored.is_async) {
+            batch.async_events[{stored.pid, stored.name}].push_back(&stored);
+            provider.known_async_tracks_[stored.pid].insert(stored.name);
+            trace_info.async_processes_by_events.insert(stored.pid);
+          } else {
+            const std::pair<ProcessId, ThreadId> sync_key{stored.pid,
+                                                          stored.tid};
+            if (last_sync_vec == nullptr || sync_key != last_sync_key) {
+              last_sync_key = sync_key;
+              last_sync_vec = &batch.sync_events[sync_key];
+            }
+            last_sync_vec->push_back(&stored);
+          }
+          break;
+        }
+        default:
+          break;
+      }
+    }
+
+    MergeProcessSortIndices(trace_info);
+    for (const auto& [sync_key, _] : batch.sync_events) {
+      provider.known_threads_.insert(sync_key);
+    }
+    return batch;
+  }
+
+  void IngestFlowAndCounterEvents(ParsedTraceEvents& parsed_events,
+                                  DataProvider& provider) {
+    absl::flat_hash_set<std::string> dirty_flow_ids;
+    for (TraceEvent& event : parsed_events.flow_events) {
+      if (event.tid < kSyntheticOpenSpanTidBit) {
+        provider.known_threads_.insert({event.pid, event.tid});
+      }
+      trace_info.events_by_pid_tid[event.pid].try_emplace(event.tid);
+      if (flow_events.size() >= kMaxIncrementalFlowEvents &&
+          !trace_info.flow_events_by_id.contains(event.id)) {
+        ++flow_category_counts[static_cast<int>(event.category)];
+        continue;
+      }
+      event.name.clear();
+      event.args.clear();
+      flow_events.push_back(std::move(event));
+      const TraceEvent& stored = flow_events.back();
+      HandleFlowEvent(stored, trace_info, flow_category_counts);
+      dirty_flow_ids.insert(stored.id);
+    }
+    UpdateFlowCategories(flow_category_counts,
+                         provider.present_flow_categories_);
+    for (const std::string& flow_id : dirty_flow_ids) {
+      SortFlowEvents(trace_info.flow_events_by_id[flow_id]);
+    }
+
+    absl::flat_hash_set<std::pair<ProcessId, std::string>> dirty_counters;
+    for (CounterEvent& event : parsed_events.counter_events) {
+      counter_events.push_back(std::move(event));
+      const CounterEvent& stored = counter_events.back();
+      HandleCounterEvent(stored, trace_info);
+      dirty_counters.insert({stored.pid, stored.name});
+      provider.known_counters_[stored.pid].insert(stored.name);
+    }
+    for (const auto& [pid, name] : dirty_counters) {
+      SortCounterEvents(trace_info.counters_by_pid_name[pid][name]);
+    }
+  }
+
+  void UpdateCachedTracks(EventBatch& batch) {
+    auto get_sync_thread_name = [&](ProcessId pid, ThreadId tid) {
+      const auto it = trace_info.thread_names.find({pid, tid});
+      return it == trace_info.thread_names.end() ? GetDefaultThreadName(tid)
+                                                 : it->second;
+    };
+
+    // Pass 1: Update XLA Modules tracks first so dependent tracks (such as XLA
+    // Ops) see the newly appended XLA Module spans when looking up HLO modules.
+    for (auto& [pid_tid, events] : batch.sync_events) {
+      const auto xla_it = trace_info.xla_modules_tids.find(pid_tid.first);
+      if (xla_it == trace_info.xla_modules_tids.end() ||
+          xla_it->second != pid_tid.second || events.empty()) {
+        continue;
+      }
+      Microseconds min_ts = events.front()->ts;
+      for (const TraceEvent* ev : events) min_ts = std::min(min_ts, ev->ts);
+      auto [it_min, inserted] =
+          batch.dirty_xla_module_min_ts.try_emplace(pid_tid.first, min_ts);
+      if (!inserted) it_min->second = std::min(it_min->second, min_ts);
+      UpdateCachedTrackIncremental(
+          cached_sync_tracks[pid_tid], /*is_async=*/false, events, trace_info,
+          get_sync_thread_name(pid_tid.first, pid_tid.second));
+      events.clear();
+    }
+
+    // Refresh HLO module IDs on any existing cached entries that overlap newly
+    // added or modified XLA Modules tracks.
+    if (!batch.dirty_xla_module_min_ts.empty()) {
+      for (auto& [pid_tid, cached] : cached_sync_tracks) {
+        const auto it_min = batch.dirty_xla_module_min_ts.find(pid_tid.first);
+        if (it_min == batch.dirty_xla_module_min_ts.end()) continue;
+        RefreshCachedTrackHloModules(
+            cached, trace_info,
+            get_sync_thread_name(pid_tid.first, pid_tid.second),
+            it_min->second);
+      }
+    }
+
+    // Pass 2: Update all remaining sync tracks incrementally.
+    for (auto& [pid_tid, events] : batch.sync_events) {
+      if (events.empty()) continue;
+      UpdateCachedTrackIncremental(
+          cached_sync_tracks[pid_tid], /*is_async=*/false, events, trace_info,
+          get_sync_thread_name(pid_tid.first, pid_tid.second));
+      events.clear();
+    }
+
+    // Pass 3: Update all async tracks incrementally.
+    for (auto& [pid_name, events] : batch.async_events) {
+      if (events.empty()) continue;
+      UpdateCachedTrackIncremental(cached_async_tracks[pid_name],
+                                   /*is_async=*/true, events, trace_info,
+                                   pid_name.second);
+      events.clear();
+    }
+  }
+
+  bool ShouldFlushTimeline(TimelineFlushMode flush_mode) const {
+    if (is_finishing) return true;
+    if (is_refetch || flush_mode == TimelineFlushMode::kDeferFlush) {
+      return false;
+    }
+    const bool has_new_process =
+        trace_info.process_names.size() != last_flushed_processes;
+    const size_t min_events_between_flushes =
+        has_new_process ? 200000 : 1500000;
+    const bool should_throttle_flush =
+        emitted_timeline_data && last_flushed_events > 250000 &&
+        (total_ingested_events - last_flushed_events) <
+            min_events_between_flushes;
+    return !should_throttle_flush;
+  }
+
+  void UpdateTimeRanges(Timeline& timeline, const TimeBounds& batch_bounds,
+                        bool has_known_tracks) {
+    const bool has_valid_bounds =
+        batch_bounds.min < std::numeric_limits<Microseconds>::max();
+    if (has_valid_bounds) {
+      observed_time_bounds.min =
+          std::min(observed_time_bounds.min, batch_bounds.min);
+      observed_time_bounds.max =
+          std::max(observed_time_bounds.max, batch_bounds.max);
+    }
+    const TimeBounds& effective_bounds =
+        has_valid_bounds ? observed_time_bounds : batch_bounds;
+    const bool was_visible_zero =
+        (timeline.visible_range() == TimeRange::Zero());
+
+    UpdateTimelineTimeRanges(timeline, effective_bounds, has_known_tracks,
+                             visible_range_from_url, full_timespan);
+
+    if (has_valid_bounds) {
+      if (was_visible_zero) {
+        last_auto_visible_range = timeline.visible_range();
+      } else if (!visible_range_from_url.has_value() &&
+                 timeline.visible_range() == last_auto_visible_range) {
+        const TimeRange candidate_range{effective_bounds.min,
+                                        effective_bounds.max};
+        const Microseconds old_dur = last_auto_visible_range.duration();
+        const Microseconds new_dur = candidate_range.duration();
+        if (is_finishing || old_dur < 1000000.0 || new_dur > old_dur * 1.15) {
+          timeline.SetVisibleRange(candidate_range);
+          last_auto_visible_range = timeline.visible_range();
+        }
+      }
+    }
+    if (!full_timespan.has_value() &&
+        initial_data_time_range != TimeRange::Zero()) {
+      timeline.set_data_time_range(
+          {std::min(initial_data_time_range.start(),
+                    timeline.fetched_data_time_range().start()),
+           std::max(initial_data_time_range.end(),
+                    timeline.fetched_data_time_range().end())});
+    }
+  }
+
+  void FlushTimeline(Timeline& timeline, DataProvider& provider) {
+    for (const auto& [key, expanded] :
+         GetRestoredExpandedStates(timeline.timeline_data().groups)) {
+      const auto it_last = last_emitted_expanded_states.find(key);
+      if (it_last == last_emitted_expanded_states.end() ||
+          it_last->second != expanded) {
+        base_expanded_states[key] = expanded;
+      }
+    }
+
+    TimeBounds time_bounds;
+    const std::vector<ProcessId> sorted_pids = GetSortedProcessIds(
+        trace_info, provider.known_threads_, provider.known_counters_,
+        provider.known_async_tracks_);
+
+    timeline.UpdateTimelineData([&]() {
+      trace_info.consume_cached_tracks = is_finishing;
+      FlameChartTimelineData new_timeline_data = CreateTimelineData(
+          trace_info, sorted_pids, GetTop5FlowCategories(flow_category_counts),
+          time_bounds, base_expanded_states, timeline.GetPalette(),
+          provider.max_observed_levels_, provider.known_threads_,
+          provider.known_counters_, provider.known_async_tracks_);
+      if (is_finishing) {
+        cached_sync_tracks = {};
+        cached_async_tracks = {};
+        trace_info.flow_events_by_id.clear();
+        trace_info.counters_by_pid_name.clear();
+        flow_events = {};
+        counter_events = {};
+      }
+      return new_timeline_data;
+    });
+    emitted_timeline_data = true;
+    has_unflushed_updates = false;
+    last_flushed_events = total_ingested_events;
+    last_flushed_processes = trace_info.process_names.size();
+    last_emitted_expanded_states =
+        GetRestoredExpandedStates(timeline.timeline_data().groups);
+
+    UpdateTimeRanges(timeline, time_bounds, provider.HasKnownTracks());
+  }
+};
+
+DataProvider::DataProvider() = default;
+DataProvider::~DataProvider() = default;
+DataProvider::DataProvider(DataProvider&&) noexcept = default;
+DataProvider& DataProvider::operator=(DataProvider&&) noexcept = default;
+
 bool DataProvider::HasKnownTracks() const {
   return !known_threads_.empty() || !known_counters_.empty() ||
          !known_async_tracks_.empty();
 }
 
-// Processes a vector of TraceEvent structs.
-// This function is independent of Emscripten types.
 void DataProvider::Reset() {
+  incremental_state_.reset();
   present_flow_categories_.clear();
   process_names_.clear();
   thread_names_.clear();
@@ -1722,10 +2265,91 @@ void DataProvider::Reset() {
   known_counters_.clear();
 }
 
+void DataProvider::BeginIncrementalLoad(Timeline& timeline) {
+  incremental_state_ = std::make_unique<IncrementalState>();
+  incremental_state_->is_refetch =
+      HasKnownTracks() && timeline.visible_range() != TimeRange::Zero();
+  if (!incremental_state_->is_refetch) {
+    timeline.ClearSavedFullOverview();
+  }
+  incremental_state_->initial_data_time_range = timeline.data_time_range();
+  incremental_state_->CopyMetadataFromProvider(*this);
+  incremental_state_->trace_info.cached_sync_tracks =
+      &incremental_state_->cached_sync_tracks;
+  incremental_state_->trace_info.cached_async_tracks =
+      &incremental_state_->cached_async_tracks;
+  incremental_state_->base_expanded_states =
+      GetRestoredExpandedStates(timeline.timeline_data().groups);
+  incremental_state_->last_emitted_expanded_states =
+      incremental_state_->base_expanded_states;
+}
+
+void DataProvider::MarkFinishingIncrementalLoad() {
+  if (incremental_state_) {
+    incremental_state_->is_finishing = true;
+  }
+}
+
+bool DataProvider::HasPendingRefetchUpdate() const {
+  return incremental_state_ && (incremental_state_->has_unflushed_updates ||
+                                (incremental_state_->is_refetch &&
+                                 !incremental_state_->emitted_timeline_data));
+}
+
+void DataProvider::AppendTraceEventsIncremental(ParsedTraceEvents parsed_events,
+                                                Timeline& timeline,
+                                                TimelineFlushMode flush_mode) {
+  if (!incremental_state_) {
+    BeginIncrementalLoad(timeline);
+  }
+  IncrementalState& state = *incremental_state_;
+  if (parsed_events.mpmd_pipeline_view) {
+    state.trace_info.is_mpmd = true;
+  }
+  timeline.set_mpmd_pipeline_view_enabled(state.trace_info.is_mpmd);
+  timeline.set_time_axis_unit(parsed_events.time_axis_unit);
+
+  if (parsed_events.full_timespan.has_value()) {
+    state.full_timespan = parsed_events.full_timespan;
+  }
+  if (parsed_events.visible_range_from_url.has_value()) {
+    state.visible_range_from_url = parsed_events.visible_range_from_url;
+  }
+
+  const size_t batch_events = parsed_events.flame_events.size() +
+                              parsed_events.flow_events.size() +
+                              parsed_events.counter_events.size();
+  if (batch_events > 0) {
+    state.has_any_events = true;
+    state.has_unflushed_updates = true;
+    state.total_ingested_events += batch_events;
+  }
+
+  IncrementalState::EventBatch batch =
+      state.PartitionFlameEvents(parsed_events.flame_events, *this);
+  state.IngestFlowAndCounterEvents(parsed_events, *this);
+  state.CopyMetadataToProvider(*this);
+
+  if (!state.has_any_events && !HasKnownTracks()) {
+    timeline.SetTimelineData({});
+    timeline.set_fetched_data_time_range(TimeRange::Zero());
+    timeline.SetVisibleRange(TimeRange::Zero());
+    return;
+  }
+
+  state.UpdateCachedTracks(batch);
+  if (state.ShouldFlushTimeline(flush_mode)) {
+    state.FlushTimeline(timeline, *this);
+  }
+}
+
+void DataProvider::FinishIncrementalLoad() { incremental_state_.reset(); }
+
 // Processes a vector of TraceEvent structs.
 // This function is independent of Emscripten types.
 void DataProvider::ProcessTraceEvents(const ParsedTraceEvents& parsed_events,
                                       Timeline& timeline) {
+  incremental_state_.reset();
   timeline.set_mpmd_pipeline_view_enabled(parsed_events.mpmd_pipeline_view);
   timeline.set_time_axis_unit(parsed_events.time_axis_unit);
   if (parsed_events.flame_events.empty() &&
