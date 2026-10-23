@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <iterator>
 #include <limits>
 #include <map>
@@ -50,6 +51,16 @@ namespace {
 constexpr uint32_t kMpmdUnrankedSortIndexBase = 1u << 30;
 
 constexpr ThreadId kSyntheticOpenSpanTidBit = 0x80000000;
+constexpr size_t kDefaultMaxTrackEvents = 262144;
+constexpr size_t kDefaultTargetTrackEvents = 131072;
+constexpr size_t kDefaultTailKeepEvents = 2048;
+constexpr size_t kMinLevelCompactionThreshold = 2048;
+constexpr size_t kMinLevelBudget = 512;
+constexpr size_t kMaxGlobalCachedEvents = 600000;
+constexpr size_t kTargetGlobalCachedEvents = 350000;
+constexpr size_t kMinTrackEventsForGlobalCompaction = 1024;
+constexpr size_t kMaxIncrementalFlowEvents = 16384;
+
 bool GetExpandedState(int nesting_level, absl::string_view name,
                       absl::string_view parent_name, bool default_expanded,
                       const absl::btree_map<GroupKey, bool>& expanded_states) {
@@ -103,6 +114,16 @@ struct CachedThreadTrack {
   // tid, in which case `tid` is used instead. `entry_tids` only materializes
   // (matching the size of events) when a different `tid` is encountered.
   std::vector<ThreadId> entry_tids;
+  std::vector<Microseconds> prefix_max_end_times;
+
+  struct OpenSpan {
+    size_t entry_idx = 0;
+    uint32_t name_id = 0;
+    Microseconds start_ts = 0.0;
+    Microseconds current_end_ts = 0.0;
+    int relative_level = 0;
+  };
+  std::vector<OpenSpan> open_spans;
 
   size_t size() const { return entries.entry_start_times.size(); }
   bool empty() const { return entries.entry_start_times.empty(); }
@@ -615,6 +636,17 @@ absl::string_view LookupTrackSpanAtTimestamp(
   return default_name;
 }
 
+// Formats `hlo_module_name` by appending `(<id>)` if `hlo_module_name` does not
+// already end with that suffix.
+std::string FormatHloModuleWithId(absl::string_view hlo_module_name,
+                                  absl::string_view id) {
+  const std::string suffix = absl::StrCat("(", id, ")");
+  if (absl::EndsWith(hlo_module_name, suffix)) {
+    return std::string(hlo_module_name);
+  }
+  return absl::StrCat(hlo_module_name, suffix);
+}
+
 void AppendEventToTimelineData(
     const TraceEvent* event, int level, FlameChartTimelineData& data,
     TimeBounds& bounds, const TraceInformation& trace_info,
@@ -683,8 +715,19 @@ void AppendEventToTimelineData(
     return;
   }
 
-  data.entry_serials.push_back(0);
-  data.entry_arg_flags.push_back(0);
+  uint8_t raw_flags = 0;
+  if (event->has_serial) raw_flags |= FlameChartTimelineData::kEntryArgHasUid;
+  if (event->args.contains(*kHloOpStr)) {
+    raw_flags |= FlameChartTimelineData::kEntryArgHadRawHloOp;
+  }
+  if (event->args.contains(*kHloModuleStr)) {
+    raw_flags |= FlameChartTimelineData::kEntryArgHadRawHloModule;
+  }
+  if (event->has_group_id) {
+    data.sparse_entry_group_ids[entry_idx] = event->group_id;
+  }
+  data.entry_serials.push_back(event->serial);
+  data.entry_arg_flags.push_back(raw_flags);
   data.entry_hlo_module_ids.push_back(0);
 
   auto cur_args = event->args;
@@ -724,17 +767,17 @@ void AppendEventToTimelineData(
       auto it_program_id = event->args.find(*kProgramIdStr);
       if (it_hlo_module_id != event->args.end()) {
         hlo_module_str =
-            absl::StrCat(hlo_module_name, "(", it_hlo_module_id->second, ")");
+            FormatHloModuleWithId(hlo_module_name, it_hlo_module_id->second);
       } else if (it_program_id != event->args.end()) {
         hlo_module_str =
-            absl::StrCat(hlo_module_name, "(", it_program_id->second, ")");
+            FormatHloModuleWithId(hlo_module_name, it_program_id->second);
       } else {
         auto it_kernel_details = event->args.find(*kKernelDetailsStr);
         if (it_kernel_details != event->args.end()) {
           std::string module_id;
           if (RE2::PartialMatch(it_kernel_details->second, *kModuleRe,
                                 &module_id)) {
-            hlo_module_str = absl::StrCat(hlo_module_name, "(", module_id, ")");
+            hlo_module_str = FormatHloModuleWithId(hlo_module_name, module_id);
           } else {
             hlo_module_str = hlo_module_name;
           }
@@ -764,26 +807,34 @@ void PopulateThreadTrackEvents(
     absl::Span<const TraceEvent* const> events, int start_level, int& max_level,
     FlameChartTimelineData& data, TimeBounds& bounds,
     const TraceInformation& trace_info, absl::string_view thread_group_name,
+    std::vector<CachedThreadTrack::OpenSpan>* open_spans_out = nullptr,
+    absl::Span<const int> proxy_fixed_levels = {},
+    std::vector<Microseconds>* proxy_self_times_out = nullptr,
     ProcessId* emitted_pid_out = nullptr,
     std::vector<ThreadId>* emitted_tids_out = nullptr) {
   if (events.empty()) return;
 
+  const size_t num_proxies = proxy_fixed_levels.size();
   auto cmp_events = [](const TraceEvent* a, const TraceEvent* b) {
-    return a->ts != b->ts ? a->ts < b->ts : a->dur > b->dur;
+    if (a->ts != b->ts) return a->ts < b->ts;
+    if (a->dur != b->dur) return a->dur > b->dur;
+    return a->ph != b->ph && a->ph == Phase::kDurationEnd;
   };
 
   std::vector<const TraceEvent*> sorted_storage;
   absl::Span<const TraceEvent* const> sorted_events = events;
-  for (size_t i = 0; i < events.size(); ++i) {
-    if (events[i] == nullptr || (i > 0 && events[i - 1] != nullptr &&
-                                 cmp_events(events[i], events[i - 1]))) {
-      sorted_storage.reserve(events.size());
-      for (const TraceEvent* event : events) {
-        if (event != nullptr) sorted_storage.push_back(event);
+  if (num_proxies == 0) {
+    for (size_t i = 0; i < events.size(); ++i) {
+      if (events[i] == nullptr || (i > 0 && events[i - 1] != nullptr &&
+                                   cmp_events(events[i], events[i - 1]))) {
+        sorted_storage.reserve(events.size());
+        for (const TraceEvent* event : events) {
+          if (event != nullptr) sorted_storage.push_back(event);
+        }
+        std::sort(sorted_storage.begin(), sorted_storage.end(), cmp_events);
+        sorted_events = sorted_storage;
+        break;
       }
-      std::sort(sorted_storage.begin(), sorted_storage.end(), cmp_events);
-      sorted_events = sorted_storage;
-      break;
     }
   }
 
@@ -796,6 +847,12 @@ void PopulateThreadTrackEvents(
   parent_stack.reserve(16);
   std::vector<Microseconds> row_end_times;
   row_end_times.reserve(16);
+  for (int fixed_lvl : proxy_fixed_levels) {
+    if (fixed_lvl >= static_cast<int>(row_end_times.size())) {
+      row_end_times.resize(fixed_lvl + 1,
+                           std::numeric_limits<Microseconds>::lowest());
+    }
+  }
 
   for (size_t i = 0; i < n; ++i) {
     const TraceEvent* ev = sorted_events[i];
@@ -820,44 +877,61 @@ void PopulateThreadTrackEvents(
     }
 
     int assigned_row = -1;
-    for (size_t r = 0; r < row_end_times.size(); ++r) {
-      if (row_end_times[r] <= ev->ts) {
-        assigned_row = static_cast<int>(r);
-        break;
+    if (i < num_proxies) {
+      assigned_row = proxy_fixed_levels[i];
+      if (assigned_row >= static_cast<int>(row_end_times.size())) {
+        row_end_times.resize(assigned_row + 1,
+                             std::numeric_limits<Microseconds>::lowest());
       }
-    }
-    if (assigned_row != -1) {
-      row_end_times[assigned_row] = end_time;
+      row_end_times[assigned_row] =
+          std::max(row_end_times[assigned_row], end_time);
     } else {
-      assigned_row = static_cast<int>(row_end_times.size());
-      row_end_times.push_back(end_time);
+      for (size_t r = 0; r < row_end_times.size(); ++r) {
+        if (row_end_times[r] <= ev->ts) {
+          assigned_row = static_cast<int>(r);
+          break;
+        }
+      }
+      if (assigned_row != -1) {
+        row_end_times[assigned_row] = end_time;
+      } else {
+        assigned_row = static_cast<int>(row_end_times.size());
+        row_end_times.push_back(end_time);
+      }
     }
     relative_levels[i] = assigned_row;
   }
 
-  const ProcessId pid = sorted_events.front()->pid;
+  if (proxy_self_times_out != nullptr) {
+    proxy_self_times_out->assign(self_times.begin(),
+                                 self_times.begin() + num_proxies);
+  }
+  if (n <= num_proxies) return;
+
+  const ProcessId pid = sorted_events[num_proxies]->pid;
   if (emitted_pid_out != nullptr) *emitted_pid_out = pid;
   const TrackSpanSource module_src =
       ResolveTrackSpanSource(pid, trace_info.xla_modules_tids, trace_info);
 
-  const size_t new_total = data.entry_start_times.size() + n;
+  const size_t emit_count = n - num_proxies;
+  const size_t new_total = data.entry_start_times.size() + emit_count;
   data.entry_start_times.reserve(new_total);
   data.entry_total_times.reserve(new_total);
   data.entry_self_times.reserve(new_total);
   data.entry_levels.reserve(new_total);
-  data.entry_names.reserve(new_total);
+  data.entry_names.reserve(data.entry_names.size() + emit_count);
   data.entry_event_ids.reserve(new_total);
   data.entry_serials.reserve(new_total);
   data.entry_arg_flags.reserve(new_total);
   data.entry_hlo_module_ids.reserve(new_total);
   if (emitted_tids_out != nullptr) {
-    emitted_tids_out->reserve(emitted_tids_out->size() + n);
+    emitted_tids_out->reserve(emitted_tids_out->size() + emit_count);
   }
 
   size_t module_cursor = 0;
   Microseconds last_module_lookup_ts =
       std::numeric_limits<Microseconds>::lowest();
-  for (size_t i = 0; i < n; ++i) {
+  for (size_t i = num_proxies; i < n; ++i) {
     const int absolute_level = start_level + relative_levels[i];
     max_level = std::max(max_level, absolute_level);
     const size_t prev_size = data.entry_start_times.size();
@@ -865,26 +939,39 @@ void PopulateThreadTrackEvents(
                               trace_info, thread_group_name, module_src,
                               module_cursor, last_module_lookup_ts,
                               self_times[i]);
-    if (data.entry_start_times.size() > prev_size &&
-        emitted_tids_out != nullptr) {
-      emitted_tids_out->push_back(sorted_events[i]->tid);
+    if (data.entry_start_times.size() > prev_size) {
+      if (emitted_tids_out != nullptr) {
+        emitted_tids_out->push_back(sorted_events[i]->tid);
+      }
+      if (open_spans_out != nullptr &&
+          sorted_events[i]->ph == Phase::kDurationBegin) {
+        open_spans_out->push_back(CachedThreadTrack::OpenSpan{
+            .entry_idx = prev_size,
+            .start_ts = sorted_events[i]->ts,
+            .current_end_ts = sorted_events[i]->ts + sorted_events[i]->dur,
+            .relative_level = relative_levels[i],
+        });
+      }
     }
   }
 }
 
-void AppendToCachedThreadTrack(CachedThreadTrack& cached,
-                               absl::Span<const TraceEvent* const> events,
-                               const TraceInformation& trace_info,
-                               absl::string_view thread_group_name) {
+void AppendToCachedThreadTrack(
+    CachedThreadTrack& cached, absl::Span<const TraceEvent* const> events,
+    const TraceInformation& trace_info, absl::string_view thread_group_name,
+    absl::Span<const int> proxy_fixed_levels = {},
+    std::vector<Microseconds>* proxy_self_times_out = nullptr) {
   if (events.empty()) return;
 
   const size_t base_idx = cached.size();
   int max_relative_level = cached.max_relative_level;
+  const size_t open_spans_base = cached.open_spans.size();
   ProcessId emitted_pid = 0;
   std::vector<ThreadId> emitted_tids;
-  PopulateThreadTrackEvents(events, /*start_level=*/0, max_relative_level,
-                            cached.entries, cached.bounds, trace_info,
-                            thread_group_name, &emitted_pid, &emitted_tids);
+  PopulateThreadTrackEvents(
+      events, /*start_level=*/0, max_relative_level, cached.entries,
+      cached.bounds, trace_info, thread_group_name, &cached.open_spans,
+      proxy_fixed_levels, proxy_self_times_out, &emitted_pid, &emitted_tids);
   const size_t new_size = cached.size();
   if (new_size == base_idx) return;
 
@@ -920,6 +1007,178 @@ void AppendToCachedThreadTrack(CachedThreadTrack& cached,
     cached.entry_name_ids.push_back(it->second);
   }
   cached.entries.entry_names.clear();
+
+  for (size_t s = open_spans_base; s < cached.open_spans.size(); ++s) {
+    cached.open_spans[s].name_id =
+        cached.entry_name_ids[cached.open_spans[s].entry_idx];
+  }
+
+  cached.prefix_max_end_times.reserve(new_size);
+  Microseconds running_max = cached.prefix_max_end_times.empty()
+                                 ? std::numeric_limits<Microseconds>::lowest()
+                                 : cached.prefix_max_end_times.back();
+  for (size_t i = base_idx; i < new_size; ++i) {
+    running_max =
+        std::max(running_max, cached.entries.entry_start_times[i] +
+                                  cached.entries.entry_total_times[i]);
+    cached.prefix_max_end_times.push_back(running_max);
+  }
+}
+
+template <typename T>
+void ResizeVector(std::vector<T>& vec, size_t new_size, bool shrink) {
+  vec.resize(new_size);
+  if (shrink && vec.capacity() > new_size * 2) {
+    vec.shrink_to_fit();
+  }
+}
+
+void ResizeCachedTrackArrays(CachedThreadTrack& cached, size_t new_size,
+                             bool shrink) {
+  FlameChartTimelineData& e = cached.entries;
+  ResizeVector(e.entry_start_times, new_size, shrink);
+  ResizeVector(e.entry_total_times, new_size, shrink);
+  ResizeVector(e.entry_self_times, new_size, shrink);
+  ResizeVector(e.entry_levels, new_size, shrink);
+  ResizeVector(e.entry_event_ids, new_size, shrink);
+  ResizeVector(e.entry_serials, new_size, shrink);
+  ResizeVector(e.entry_arg_flags, new_size, shrink);
+  ResizeVector(e.entry_hlo_module_ids, new_size, shrink);
+  ResizeVector(cached.entry_name_ids, new_size, shrink);
+  if (!cached.entry_tids.empty()) {
+    ResizeVector(cached.entry_tids, new_size, shrink);
+  }
+  ResizeVector(cached.prefix_max_end_times, new_size, shrink);
+}
+
+bool CompactCachedThreadTrackIfNeeded(
+    CachedThreadTrack& cached, size_t max_cached_events = 0,
+    size_t target_compacted_events = 0,
+    size_t tail_keep_count = kDefaultTailKeepEvents) {
+  if (max_cached_events == 0) max_cached_events = kDefaultMaxTrackEvents;
+  if (target_compacted_events == 0) {
+    target_compacted_events = kDefaultTargetTrackEvents;
+  }
+  const size_t n = cached.size();
+  if (n <= max_cached_events) return false;
+
+  FlameChartTimelineData& e = cached.entries;
+  std::vector<uint8_t> keep(n, 0);
+  // Always preserve open spans and the recent tail at full resolution.
+  for (const auto& open_span : cached.open_spans) {
+    if (open_span.entry_idx < n) keep[open_span.entry_idx] = 1;
+  }
+  for (size_t i = n > tail_keep_count ? (n - tail_keep_count) : 0; i < n; ++i) {
+    keep[i] = 1;
+  }
+
+  std::vector<std::vector<int>> events_by_level(cached.max_relative_level + 1);
+  for (size_t i = 0; i < n; ++i) {
+    events_by_level[e.entry_levels[i]].push_back(static_cast<int>(i));
+  }
+  auto cmp_idx = [&](int a, int b) {
+    return e.entry_start_times[a] != e.entry_start_times[b]
+               ? e.entry_start_times[a] < e.entry_start_times[b]
+               : e.entry_total_times[a] > e.entry_total_times[b];
+  };
+
+  const size_t head_budget = target_compacted_events > tail_keep_count
+                                 ? (target_compacted_events - tail_keep_count)
+                                 : target_compacted_events;
+  for (auto& level_vec : events_by_level) {
+    if (level_vec.empty()) continue;
+    if (!std::is_sorted(level_vec.begin(), level_vec.end(), cmp_idx)) {
+      std::stable_sort(level_vec.begin(), level_vec.end(), cmp_idx);
+    }
+    const size_t level_budget =
+        level_vec.size() <= kMinLevelCompactionThreshold
+            ? level_vec.size()
+            : std::max<size_t>(kMinLevelBudget,
+                               (head_budget * level_vec.size()) / n);
+    if (level_vec.size() <= level_budget) {
+      for (const int idx : level_vec) keep[idx] = 1;
+      continue;
+    }
+    const Microseconds min_ts = e.entry_start_times[level_vec.front()];
+    const Microseconds max_ts =
+        std::max(min_ts + 1.0, e.entry_start_times[level_vec.back()] +
+                                   e.entry_total_times[level_vec.back()]);
+    const Microseconds bucket_width =
+        (max_ts - min_ts) / static_cast<double>(level_budget);
+    size_t current_bucket = std::numeric_limits<size_t>::max();
+    int best_idx = -1;
+    Microseconds best_dur = -1.0;
+    for (const int idx : level_vec) {
+      const Microseconds ts = e.entry_start_times[idx];
+      const Microseconds dur = e.entry_total_times[idx];
+      const size_t b =
+          bucket_width > 0.0
+              ? static_cast<size_t>(std::max(0.0, (ts - min_ts) / bucket_width))
+              : 0;
+      if (b != current_bucket) {
+        if (best_idx >= 0) keep[best_idx] = 1;
+        current_bucket = b;
+        best_idx = idx;
+        best_dur = dur;
+      } else if (dur > best_dur) {
+        best_dur = dur;
+        best_idx = idx;
+      }
+    }
+    if (best_idx >= 0) keep[best_idx] = 1;
+  }
+
+  constexpr uint32_t kDropped = std::numeric_limits<uint32_t>::max();
+  std::vector<uint32_t> old_to_new(n, kDropped);
+  size_t out_idx = 0;
+  Microseconds running_max = std::numeric_limits<Microseconds>::lowest();
+  for (size_t i = 0; i < n; ++i) {
+    if (!keep[i]) continue;
+    old_to_new[i] = static_cast<uint32_t>(out_idx);
+    if (out_idx != i) {
+      e.entry_start_times[out_idx] = e.entry_start_times[i];
+      e.entry_total_times[out_idx] = e.entry_total_times[i];
+      e.entry_self_times[out_idx] = e.entry_self_times[i];
+      e.entry_levels[out_idx] = e.entry_levels[i];
+      cached.entry_name_ids[out_idx] = cached.entry_name_ids[i];
+      e.entry_event_ids[out_idx] = e.entry_event_ids[i];
+      if (!cached.entry_tids.empty()) {
+        cached.entry_tids[out_idx] = cached.entry_tids[i];
+      }
+      e.entry_serials[out_idx] = e.entry_serials[i];
+      e.entry_arg_flags[out_idx] = e.entry_arg_flags[i];
+      e.entry_hlo_module_ids[out_idx] = e.entry_hlo_module_ids[i];
+    }
+    running_max = std::max(running_max, e.entry_start_times[out_idx] +
+                                            e.entry_total_times[out_idx]);
+    cached.prefix_max_end_times[out_idx] = running_max;
+    ++out_idx;
+  }
+
+  ResizeCachedTrackArrays(cached, out_idx, /*shrink=*/true);
+
+  for (auto& open_span : cached.open_spans) {
+    if (open_span.entry_idx < n &&
+        old_to_new[open_span.entry_idx] != kDropped) {
+      open_span.entry_idx = old_to_new[open_span.entry_idx];
+    }
+  }
+
+  auto remap_sparse_map = [&](auto& sparse_map) {
+    if (sparse_map.empty()) return;
+    std::decay_t<decltype(sparse_map)> remapped;
+    remapped.reserve(sparse_map.size());
+    for (auto& [old_i, val] : sparse_map) {
+      if (old_i < n && old_to_new[old_i] != kDropped) {
+        remapped[old_to_new[old_i]] = std::move(val);
+      }
+    }
+    sparse_map = std::move(remapped);
+  };
+  remap_sparse_map(e.sparse_entry_group_ids);
+  remap_sparse_map(e.sparse_entry_args);
+
+  return out_idx < n;
 }
 
 CachedThreadTrack BuildCachedThreadTrack(
@@ -927,6 +1186,7 @@ CachedThreadTrack BuildCachedThreadTrack(
     const TraceInformation& trace_info, absl::string_view thread_group_name) {
   CachedThreadTrack cached;
   AppendToCachedThreadTrack(cached, events, trace_info, thread_group_name);
+  CompactCachedThreadTrackIfNeeded(cached);
   return cached;
 }
 
@@ -993,6 +1253,346 @@ void AppendCachedThreadTrackToTimelineData(CachedThreadTrack& cached,
   } else {
     for (const auto& [rel_idx, args] : src.sparse_entry_args) {
       data.sparse_entry_args[base_entry_idx + rel_idx] = args;
+    }
+  }
+}
+
+// Returns the length of the longest prefix `[0, split_idx)` of `cached` that
+// can be retained intact without repacking when merging a sorted batch of new
+// events whose first event starts at `min_new_ts` with duration
+// `first_new_dur`.
+//
+// Uses `cached.prefix_max_end_times` (where `prefix_max_end_times[k]` is the
+// monotonically non-decreasing maximum of `ts + dur` across `0..k`) to binary
+// search for the first cached entry whose end time (or an ancestor's end time)
+// extends past `min_new_ts`, and then rewinds across any cached entries at
+// `ts == min_new_ts` with `dur < first_new_dur` so `(ts ascending, dur
+// descending)` sort order is preserved across the boundary.
+size_t FindNonOverlappingPrefixSplitIndex(const CachedThreadTrack& cached,
+                                          Microseconds min_new_ts,
+                                          Microseconds first_new_dur) {
+  if (cached.empty()) return 0;
+  const auto& starts = cached.entries.entry_start_times;
+  const auto& durs = cached.entries.entry_total_times;
+  auto it = std::upper_bound(cached.prefix_max_end_times.begin(),
+                             cached.prefix_max_end_times.end(), min_new_ts);
+  size_t split_idx =
+      static_cast<size_t>(it - cached.prefix_max_end_times.begin());
+  while (split_idx > 0) {
+    const size_t prev = split_idx - 1;
+    if (starts[prev] < min_new_ts ||
+        (starts[prev] == min_new_ts && durs[prev] >= first_new_dur)) {
+      break;
+    }
+    --split_idx;
+  }
+  return split_idx;
+}
+
+TraceEvent ReconstructCachedTraceEvent(const CachedThreadTrack& cached,
+                                       size_t i, bool is_async) {
+  const FlameChartTimelineData& e = cached.entries;
+  const uint8_t flags = e.entry_arg_flags[i];
+  TraceEvent ev{
+      .ph = Phase::kComplete,
+      .event_id = e.entry_event_ids[i],
+      .pid = cached.pid,
+      .tid = cached.tid_at(i),
+      .name = cached.unique_names[cached.entry_name_ids[i]],
+      .ts = e.entry_start_times[i],
+      .dur = e.entry_total_times[i],
+      .serial = e.entry_serials[i],
+      .has_serial = (flags & FlameChartTimelineData::kEntryArgHasUid) != 0,
+      .is_async = is_async,
+  };
+  if (const auto it = e.sparse_entry_group_ids.find(i);
+      it != e.sparse_entry_group_ids.end()) {
+    ev.group_id = it->second;
+    ev.has_group_id = true;
+  }
+  if (const auto it = e.sparse_entry_args.find(i);
+      it != e.sparse_entry_args.end()) {
+    ev.args = it->second;
+    if (ev.has_serial) ev.args.erase("uid");
+    if (ev.has_group_id) ev.args.erase("group_id");
+    if ((flags & FlameChartTimelineData::kEntryArgHadRawHloOp) == 0) {
+      ev.args.erase(kHloOp);
+    }
+    if ((flags & FlameChartTimelineData::kEntryArgHadRawHloModule) == 0) {
+      ev.args.erase(kHloModule);
+    }
+  }
+  return ev;
+}
+
+// Reconstructs `TraceEvent` objects for the suffix `[start_idx, cached.size())`
+// of `cached` and truncates `cached` in-place to the non-overlapping prefix
+// `[0, start_idx)`, updating `bounds` and `max_relative_level` to match the
+// retained prefix.
+std::vector<TraceEvent> RestoreAndTruncateCachedTrackFrom(
+    CachedThreadTrack& cached, size_t start_idx, bool is_async) {
+  const size_t n = cached.size();
+  FlameChartTimelineData& e = cached.entries;
+  std::vector<TraceEvent> restored;
+  restored.reserve(n - start_idx);
+  for (size_t i = start_idx; i < n; ++i) {
+    restored.push_back(ReconstructCachedTraceEvent(cached, i, is_async));
+    e.sparse_entry_group_ids.erase(i);
+    e.sparse_entry_args.erase(i);
+  }
+  if (start_idx == 0) {
+    cached = CachedThreadTrack{};
+    return restored;
+  }
+  ResizeCachedTrackArrays(cached, start_idx, /*shrink=*/false);
+  cached.bounds.min = e.entry_start_times.front();
+  cached.bounds.max = cached.prefix_max_end_times.back();
+  cached.open_spans.erase(
+      std::remove_if(cached.open_spans.begin(), cached.open_spans.end(),
+                     [start_idx](const CachedThreadTrack::OpenSpan& os) {
+                       return os.entry_idx >= start_idx;
+                     }),
+      cached.open_spans.end());
+  cached.max_relative_level =
+      e.entry_levels.empty() ? 0 : *absl::c_max_element(e.entry_levels);
+  return restored;
+}
+
+void StitchOpenSpansInCachedTrack(
+    CachedThreadTrack& cached, absl::Span<const TraceEvent* const> new_events,
+    const TraceInformation& trace_info, absl::string_view thread_group_name) {
+  static constexpr Microseconds kTsEpsilon = 1e-7;
+  const size_t num_open = cached.open_spans.size();
+  std::vector<const TraceEvent*> matched_ev(num_open, nullptr);
+  std::vector<const TraceEvent*> remaining_new_events;
+  remaining_new_events.reserve(new_events.size());
+
+  for (const TraceEvent* ev : new_events) {
+    bool matched = false;
+    if (ev->ph == Phase::kDurationBegin || ev->ph == Phase::kDurationEnd) {
+      for (size_t s = 0; s < num_open; ++s) {
+        if (matched_ev[s] != nullptr) continue;
+        const auto& os = cached.open_spans[s];
+        if (std::abs(ev->ts - os.start_ts) <= kTsEpsilon &&
+            ev->name == cached.unique_names[os.name_id]) {
+          matched_ev[s] = ev;
+          matched = true;
+          break;
+        }
+      }
+    }
+    if (!matched) {
+      remaining_new_events.push_back(ev);
+    }
+  }
+
+  const Microseconds min_remaining_ts =
+      remaining_new_events.empty() ? std::numeric_limits<Microseconds>::max()
+                                   : remaining_new_events.front()->ts;
+
+  struct ActiveProxyInfo {
+    size_t entry_idx;
+    Microseconds full_dur;
+    EventId full_event_id;
+    Microseconds new_end_ts;
+  };
+  std::vector<TraceEvent> proxy_storage;
+  std::vector<int> proxy_levels;
+  std::vector<ActiveProxyInfo> active_proxies;
+  std::vector<CachedThreadTrack::OpenSpan> surviving_open_spans;
+  proxy_storage.reserve(num_open);
+  proxy_levels.reserve(num_open);
+  active_proxies.reserve(num_open);
+  surviving_open_spans.reserve(num_open);
+
+  FlameChartTimelineData& e = cached.entries;
+  for (size_t s = 0; s < num_open; ++s) {
+    auto os = cached.open_spans[s];
+    const TraceEvent* ev = matched_ev[s];
+    Microseconds full_dur = e.entry_total_times[os.entry_idx];
+    EventId full_event_id = e.entry_event_ids[os.entry_idx];
+    bool is_closed = false;
+    if (ev != nullptr) {
+      full_dur = std::max(full_dur, ev->dur);
+      full_event_id = ev->event_id;
+      is_closed = (ev->ph == Phase::kDurationEnd);
+    }
+    const Microseconds new_end_ts = os.start_ts + full_dur;
+    Microseconds proxy_start_ts = os.current_end_ts;
+    if (min_remaining_ts < proxy_start_ts && min_remaining_ts >= os.start_ts) {
+      proxy_start_ts = min_remaining_ts;
+    }
+    if (new_end_ts > proxy_start_ts) {
+      TraceEvent proxy;
+      proxy.ph = is_closed ? Phase::kDurationEnd : Phase::kDurationBegin;
+      proxy.pid = cached.pid;
+      proxy.tid = cached.tid_at(os.entry_idx);
+      proxy.ts = proxy_start_ts;
+      proxy.dur = new_end_ts - proxy_start_ts;
+      proxy_storage.push_back(std::move(proxy));
+      proxy_levels.push_back(os.relative_level);
+      active_proxies.push_back(
+          ActiveProxyInfo{os.entry_idx, full_dur, full_event_id, new_end_ts});
+    } else {
+      e.entry_total_times[os.entry_idx] = full_dur;
+      e.entry_event_ids[os.entry_idx] = full_event_id;
+      cached.bounds.max = std::max(cached.bounds.max, new_end_ts);
+      if (!cached.prefix_max_end_times.empty()) {
+        cached.prefix_max_end_times.back() =
+            std::max(cached.prefix_max_end_times.back(), new_end_ts);
+      }
+    }
+    if (!is_closed) {
+      os.current_end_ts = std::max(os.current_end_ts, new_end_ts);
+      surviving_open_spans.push_back(os);
+    }
+  }
+
+  cached.open_spans = std::move(surviving_open_spans);
+
+  std::vector<const TraceEvent*> combined_events;
+  combined_events.reserve(proxy_storage.size() + remaining_new_events.size());
+  for (const TraceEvent& proxy : proxy_storage) {
+    combined_events.push_back(&proxy);
+  }
+  combined_events.insert(combined_events.end(), remaining_new_events.begin(),
+                         remaining_new_events.end());
+
+  std::vector<Microseconds> proxy_self_times;
+  if (!combined_events.empty()) {
+    AppendToCachedThreadTrack(cached, combined_events, trace_info,
+                              thread_group_name, proxy_levels,
+                              &proxy_self_times);
+  }
+  for (size_t p = 0; p < active_proxies.size(); ++p) {
+    const auto& info = active_proxies[p];
+    const Microseconds self_time_in_chunk = p < proxy_self_times.size()
+                                                ? proxy_self_times[p]
+                                                : proxy_storage[p].dur;
+    const Microseconds chunk_children_dur =
+        proxy_storage[p].dur - self_time_in_chunk;
+    const Microseconds delta_total_time =
+        info.full_dur - e.entry_total_times[info.entry_idx];
+    e.entry_total_times[info.entry_idx] = info.full_dur;
+    e.entry_self_times[info.entry_idx] =
+        std::max(0.0, e.entry_self_times[info.entry_idx] + delta_total_time -
+                          chunk_children_dur);
+    e.entry_event_ids[info.entry_idx] = info.full_event_id;
+    cached.bounds.max = std::max(cached.bounds.max, info.new_end_ts);
+    if (!cached.prefix_max_end_times.empty()) {
+      cached.prefix_max_end_times.back() =
+          std::max(cached.prefix_max_end_times.back(), info.new_end_ts);
+    }
+  }
+  if (cached.open_spans.size() > 1) {
+    absl::c_sort(cached.open_spans, [](const CachedThreadTrack::OpenSpan& a,
+                                       const CachedThreadTrack::OpenSpan& b) {
+      return a.relative_level < b.relative_level;
+    });
+  }
+}
+
+bool UpdateCachedTrackIncremental(CachedThreadTrack& cached, bool is_async,
+                                  std::vector<const TraceEvent*>& new_events,
+                                  const TraceInformation& trace_info,
+                                  absl::string_view thread_group_name) {
+  if (new_events.empty()) return false;
+  auto cmp_events = [](const TraceEvent* a, const TraceEvent* b) {
+    if (a->ts != b->ts) return a->ts < b->ts;
+    if (a->dur != b->dur) return a->dur > b->dur;
+    return a->ph != b->ph && a->ph == Phase::kDurationEnd;
+  };
+  if (!std::is_sorted(new_events.begin(), new_events.end(), cmp_events)) {
+    absl::c_stable_sort(new_events, cmp_events);
+  }
+  if (new_events.size() > 1) {
+    size_t write_idx = 0;
+    for (const TraceEvent* ev : new_events) {
+      if (ev->ph == Phase::kDurationBegin || ev->ph == Phase::kDurationEnd) {
+        bool duplicate = false;
+        for (size_t j = write_idx; j > 0;) {
+          const TraceEvent* prev = new_events[--j];
+          if (prev->ts != ev->ts) break;
+          if ((prev->ph == Phase::kDurationBegin ||
+               prev->ph == Phase::kDurationEnd) &&
+              prev->name == ev->name) {
+            duplicate = true;
+            break;
+          }
+        }
+        if (duplicate) continue;
+      }
+      new_events[write_idx++] = ev;
+    }
+    new_events.resize(write_idx);
+  }
+  if (!cached.open_spans.empty()) {
+    StitchOpenSpansInCachedTrack(cached, new_events, trace_info,
+                                 thread_group_name);
+    return CompactCachedThreadTrackIfNeeded(cached);
+  }
+  const size_t split_idx = FindNonOverlappingPrefixSplitIndex(
+      cached, new_events.front()->ts, new_events.front()->dur);
+  if (split_idx == cached.size()) {
+    AppendToCachedThreadTrack(cached, new_events, trace_info,
+                              thread_group_name);
+    return CompactCachedThreadTrackIfNeeded(cached);
+  }
+  const std::vector<TraceEvent> restored =
+      RestoreAndTruncateCachedTrackFrom(cached, split_idx, is_async);
+  std::vector<const TraceEvent*> merged_events;
+  merged_events.reserve(restored.size() + new_events.size());
+  for (const TraceEvent& ev : restored) merged_events.push_back(&ev);
+  merged_events.insert(merged_events.end(), new_events.begin(),
+                       new_events.end());
+  std::inplace_merge(
+      merged_events.begin(),
+      merged_events.begin() + static_cast<ptrdiff_t>(restored.size()),
+      merged_events.end(), cmp_events);
+  AppendToCachedThreadTrack(cached, merged_events, trace_info,
+                            thread_group_name);
+  return CompactCachedThreadTrackIfNeeded(cached);
+}
+
+// Re-evaluates HLO module associations for cached entries in `cached` starting
+// at or after `min_dirty_xla_ts` when the process's `XLA Modules` track is
+// modified by a later incremental batch. Entries whose original `TraceEvent`
+// explicitly specified `kHloModule` in `args` (`kEntryArgHadRawHloModule`) are
+// left unchanged.
+void RefreshCachedTrackHloModules(CachedThreadTrack& cached,
+                                  const TraceInformation& trace_info,
+                                  absl::string_view thread_name,
+                                  Microseconds min_dirty_xla_ts) {
+  const bool is_xla_ops_thread = thread_name == kXlaOps;
+  const bool is_data_motion_layer = thread_name == kComputeUtilization ||
+                                    thread_name == kDataMotionLayersUtilization;
+  if (!is_xla_ops_thread && !is_data_motion_layer) return;
+
+  const size_t n = cached.size();
+  if (n == 0) return;
+  FlameChartTimelineData& e = cached.entries;
+  auto it_start = std::lower_bound(e.entry_start_times.begin(),
+                                   e.entry_start_times.end(), min_dirty_xla_ts);
+  const size_t start_i =
+      static_cast<size_t>(it_start - e.entry_start_times.begin());
+  if (start_i >= n) return;
+
+  const TrackSpanSource module_src = ResolveTrackSpanSource(
+      cached.pid, trace_info.xla_modules_tids, trace_info);
+  size_t module_cursor = 0;
+  Microseconds last_module_lookup_ts =
+      std::numeric_limits<Microseconds>::lowest();
+  for (size_t i = start_i; i < n; ++i) {
+    const absl::string_view module_name = LookupTrackSpanAtTimestamp(
+        module_src, module_cursor, last_module_lookup_ts,
+        e.entry_start_times[i]);
+    if (auto it_args = e.sparse_entry_args.find(i);
+        it_args == e.sparse_entry_args.end()) {
+      e.entry_hlo_module_ids[i] =
+          InternHloModuleName(e.hlo_module_names, module_name);
+    } else if ((e.entry_arg_flags[i] &
+                FlameChartTimelineData::kEntryArgHadRawHloModule) == 0) {
+      it_args->second[std::string(kHloModule)] = std::string(module_name);
     }
   }
 }
@@ -1636,6 +2236,23 @@ FlameChartTimelineData CreateTimelineData(
   return data;
 }
 
+template <typename TrackMap>
+bool CompactTrackMap(TrackMap& tracks, size_t total_cached_events) {
+  bool compacted = false;
+  for (auto& [_, cached] : tracks) {
+    const size_t n = cached.size();
+    if (n <= kMinTrackEventsForGlobalCompaction) continue;
+    const size_t target =
+        std::max<size_t>(kMinTrackEventsForGlobalCompaction,
+                         (n * kTargetGlobalCachedEvents) / total_cached_events);
+    if (CompactCachedThreadTrackIfNeeded(cached, target, target,
+                                         std::min<size_t>(512, target / 4))) {
+      compacted = true;
+    }
+  }
+  return compacted;
+}
+
 void SortFlowEvents(std::vector<const TraceEvent*>& events) {
   absl::c_stable_sort(events, [](const TraceEvent* a, const TraceEvent* b) {
     return a->ts < b->ts;
@@ -1701,14 +2318,352 @@ void UpdateTimelineTimeRanges(
 
 }  // namespace
 
+struct DataProvider::IncrementalState {
+  struct EventBatch {
+    absl::flat_hash_map<std::pair<ProcessId, ThreadId>,
+                        std::vector<const TraceEvent*>>
+        sync_events;
+    absl::flat_hash_map<std::pair<ProcessId, std::string>,
+                        std::vector<const TraceEvent*>>
+        async_events;
+    absl::flat_hash_map<ProcessId, Microseconds> dirty_xla_module_min_ts;
+  };
+
+  std::deque<TraceEvent> flow_events;
+  std::deque<CounterEvent> counter_events;
+  bool has_any_events = false;
+  bool is_refetch = false;
+  bool is_finishing = false;
+  bool emitted_timeline_data = false;
+  bool has_unflushed_updates = false;
+  bool was_compacted = false;
+  TraceInformation trace_info;
+  absl::btree_map<int, int> flow_category_counts;
+  absl::flat_hash_map<std::pair<ProcessId, ThreadId>, CachedThreadTrack>
+      cached_sync_tracks;
+  absl::flat_hash_map<std::pair<ProcessId, std::string>, CachedThreadTrack>
+      cached_async_tracks;
+  absl::btree_map<GroupKey, bool> base_expanded_states;
+  absl::btree_map<GroupKey, bool> last_emitted_expanded_states;
+  std::optional<std::pair<Milliseconds, Milliseconds>> full_timespan;
+  std::optional<std::pair<Milliseconds, Milliseconds>> visible_range_from_url;
+  TimeRange initial_data_time_range = TimeRange::Zero();
+  TimeRange last_auto_visible_range = TimeRange::Zero();
+  TimeBounds observed_time_bounds;
+  size_t total_ingested_events = 0;
+  size_t last_flushed_events = 0;
+  size_t last_flushed_processes = 0;
+
+  void CopyMetadataFromProvider(const DataProvider& provider) {
+    trace_info.process_names = provider.process_names_;
+    trace_info.thread_names = provider.thread_names_;
+    trace_info.process_sort_indices = provider.process_sort_indices_;
+    trace_info.thread_sort_indices = provider.thread_sort_indices_;
+    trace_info.xla_modules_tids = provider.xla_modules_tids_;
+    trace_info.async_processes_by_events = provider.known_async_processes_;
+  }
+
+  void CopyMetadataToProvider(DataProvider& provider) const {
+    provider.process_names_ = trace_info.process_names;
+    provider.thread_names_ = trace_info.thread_names;
+    provider.process_sort_indices_ = trace_info.process_sort_indices;
+    provider.thread_sort_indices_ = trace_info.thread_sort_indices;
+    provider.xla_modules_tids_ = trace_info.xla_modules_tids;
+    provider.known_async_processes_ = trace_info.async_processes_by_events;
+  }
+
+  EventBatch PartitionFlameEvents(absl::Span<const TraceEvent> flame_events,
+                                  DataProvider& provider) {
+    EventBatch batch;
+    std::pair<ProcessId, ThreadId> last_sync_key{0, 0};
+    std::vector<const TraceEvent*>* last_sync_vec = nullptr;
+
+    for (const TraceEvent& stored : flame_events) {
+      switch (stored.ph) {
+        case Phase::kMetadata: {
+          const auto old_it = trace_info.xla_modules_tids.find(stored.pid);
+          const std::optional<ThreadId> old_tid =
+              old_it != trace_info.xla_modules_tids.end()
+                  ? std::make_optional(old_it->second)
+                  : std::nullopt;
+          HandleMetadataEvent(stored, trace_info);
+          if (const auto new_it = trace_info.xla_modules_tids.find(stored.pid);
+              new_it != trace_info.xla_modules_tids.end() &&
+              new_it->second != old_tid) {
+            batch.dirty_xla_module_min_ts[stored.pid] =
+                std::numeric_limits<Microseconds>::lowest();
+          }
+          break;
+        }
+        case Phase::kComplete:
+        case Phase::kDurationBegin:
+        case Phase::kDurationEnd:
+        case Phase::kInstant:
+        case Phase::kInstantDeprecated: {
+          if (stored.is_async) {
+            batch.async_events[{stored.pid, stored.name}].push_back(&stored);
+            provider.known_async_tracks_[stored.pid].insert(stored.name);
+            trace_info.async_processes_by_events.insert(stored.pid);
+          } else {
+            const std::pair<ProcessId, ThreadId> sync_key{stored.pid,
+                                                          stored.tid};
+            if (last_sync_vec == nullptr || sync_key != last_sync_key) {
+              last_sync_key = sync_key;
+              last_sync_vec = &batch.sync_events[sync_key];
+            }
+            last_sync_vec->push_back(&stored);
+          }
+          break;
+        }
+        default:
+          break;
+      }
+    }
+
+    MergeProcessSortIndices(trace_info);
+    for (const auto& [sync_key, _] : batch.sync_events) {
+      provider.known_threads_.insert(sync_key);
+    }
+    return batch;
+  }
+
+  void IngestFlowAndCounterEvents(ParsedTraceEvents& parsed_events,
+                                  DataProvider& provider) {
+    absl::flat_hash_set<std::string> dirty_flow_ids;
+    for (TraceEvent& event : parsed_events.flow_events) {
+      if (event.tid < kSyntheticOpenSpanTidBit) {
+        provider.known_threads_.insert({event.pid, event.tid});
+      }
+      trace_info.events_by_pid_tid[event.pid].try_emplace(event.tid);
+      if (flow_events.size() >= kMaxIncrementalFlowEvents &&
+          !trace_info.flow_events_by_id.contains(event.id)) {
+        ++flow_category_counts[static_cast<int>(event.category)];
+        continue;
+      }
+      event.name.clear();
+      event.args.clear();
+      flow_events.push_back(std::move(event));
+      const TraceEvent& stored = flow_events.back();
+      HandleFlowEvent(stored, trace_info, flow_category_counts);
+      dirty_flow_ids.insert(stored.id);
+    }
+    UpdateFlowCategories(flow_category_counts,
+                         provider.present_flow_categories_);
+    for (const std::string& flow_id : dirty_flow_ids) {
+      SortFlowEvents(trace_info.flow_events_by_id[flow_id]);
+    }
+
+    absl::flat_hash_set<std::pair<ProcessId, std::string>> dirty_counters;
+    for (CounterEvent& event : parsed_events.counter_events) {
+      counter_events.push_back(std::move(event));
+      const CounterEvent& stored = counter_events.back();
+      HandleCounterEvent(stored, trace_info);
+      dirty_counters.insert({stored.pid, stored.name});
+      provider.known_counters_[stored.pid].insert(stored.name);
+    }
+    for (const auto& [pid, name] : dirty_counters) {
+      SortCounterEvents(trace_info.counters_by_pid_name[pid][name]);
+    }
+  }
+
+  void UpdateCachedTracks(EventBatch& batch) {
+    auto get_sync_thread_name = [&](ProcessId pid, ThreadId tid) {
+      const auto it = trace_info.thread_names.find({pid, tid});
+      return it == trace_info.thread_names.end() ? GetDefaultThreadName(tid)
+                                                 : it->second;
+    };
+
+    // Pass 1: Update XLA Modules tracks first so dependent tracks (such as XLA
+    // Ops) see the newly appended XLA Module spans when looking up HLO modules.
+    for (auto& [pid_tid, events] : batch.sync_events) {
+      const auto xla_it = trace_info.xla_modules_tids.find(pid_tid.first);
+      if (xla_it == trace_info.xla_modules_tids.end() ||
+          xla_it->second != pid_tid.second || events.empty()) {
+        continue;
+      }
+      Microseconds min_ts = events.front()->ts;
+      for (const TraceEvent* ev : events) min_ts = std::min(min_ts, ev->ts);
+      auto [it_min, inserted] =
+          batch.dirty_xla_module_min_ts.try_emplace(pid_tid.first, min_ts);
+      if (!inserted) it_min->second = std::min(it_min->second, min_ts);
+      if (UpdateCachedTrackIncremental(
+              cached_sync_tracks[pid_tid], /*is_async=*/false, events,
+              trace_info,
+              get_sync_thread_name(pid_tid.first, pid_tid.second))) {
+        was_compacted = true;
+      }
+      events.clear();
+    }
+
+    // Refresh HLO module IDs on any existing cached entries that overlap newly
+    // added or modified XLA Modules tracks.
+    if (!batch.dirty_xla_module_min_ts.empty()) {
+      for (auto& [pid_tid, cached] : cached_sync_tracks) {
+        const auto it_min = batch.dirty_xla_module_min_ts.find(pid_tid.first);
+        if (it_min == batch.dirty_xla_module_min_ts.end()) continue;
+        RefreshCachedTrackHloModules(
+            cached, trace_info,
+            get_sync_thread_name(pid_tid.first, pid_tid.second),
+            it_min->second);
+      }
+    }
+
+    // Pass 2: Update all remaining sync tracks incrementally.
+    for (auto& [pid_tid, events] : batch.sync_events) {
+      if (events.empty()) continue;
+      if (UpdateCachedTrackIncremental(
+              cached_sync_tracks[pid_tid], /*is_async=*/false, events,
+              trace_info,
+              get_sync_thread_name(pid_tid.first, pid_tid.second))) {
+        was_compacted = true;
+      }
+      events.clear();
+    }
+
+    // Pass 3: Update all async tracks incrementally.
+    for (auto& [pid_name, events] : batch.async_events) {
+      if (events.empty()) continue;
+      if (UpdateCachedTrackIncremental(cached_async_tracks[pid_name],
+                                       /*is_async=*/true, events, trace_info,
+                                       pid_name.second)) {
+        was_compacted = true;
+      }
+      events.clear();
+    }
+
+    // Uniform global cache budget across all tracks so full-session traces fit
+    // without device-specific PID heuristics.
+    size_t total_cached_events = 0;
+    for (const auto& [_, cached] : cached_sync_tracks) {
+      total_cached_events += cached.size();
+    }
+    for (const auto& [_, cached] : cached_async_tracks) {
+      total_cached_events += cached.size();
+    }
+    if (total_cached_events > kMaxGlobalCachedEvents) {
+      if (CompactTrackMap(cached_sync_tracks, total_cached_events)) {
+        was_compacted = true;
+      }
+      if (CompactTrackMap(cached_async_tracks, total_cached_events)) {
+        was_compacted = true;
+      }
+    }
+  }
+
+  bool ShouldFlushTimeline(TimelineFlushMode flush_mode) const {
+    if (is_finishing) return true;
+    if (is_refetch || flush_mode == TimelineFlushMode::kDeferFlush) {
+      return false;
+    }
+    const bool has_new_process =
+        trace_info.process_names.size() != last_flushed_processes;
+    const size_t min_events_between_flushes =
+        has_new_process ? 200000 : 1500000;
+    const bool should_throttle_flush =
+        emitted_timeline_data && last_flushed_events > 250000 &&
+        (total_ingested_events - last_flushed_events) <
+            min_events_between_flushes;
+    return !should_throttle_flush;
+  }
+
+  void UpdateTimeRanges(Timeline& timeline, const TimeBounds& batch_bounds,
+                        bool has_known_tracks) {
+    const bool has_valid_bounds =
+        batch_bounds.min < std::numeric_limits<Microseconds>::max();
+    if (has_valid_bounds) {
+      observed_time_bounds.min =
+          std::min(observed_time_bounds.min, batch_bounds.min);
+      observed_time_bounds.max =
+          std::max(observed_time_bounds.max, batch_bounds.max);
+    }
+    const TimeBounds& effective_bounds =
+        has_valid_bounds ? observed_time_bounds : batch_bounds;
+    const bool was_visible_zero =
+        (timeline.visible_range() == TimeRange::Zero());
+
+    UpdateTimelineTimeRanges(timeline, effective_bounds, has_known_tracks,
+                             visible_range_from_url, full_timespan);
+
+    if (has_valid_bounds) {
+      if (was_visible_zero) {
+        last_auto_visible_range = timeline.visible_range();
+      } else if (!visible_range_from_url.has_value() &&
+                 timeline.visible_range() == last_auto_visible_range) {
+        const TimeRange candidate_range{effective_bounds.min,
+                                        effective_bounds.max};
+        const Microseconds old_dur = last_auto_visible_range.duration();
+        const Microseconds new_dur = candidate_range.duration();
+        if (is_finishing || old_dur < 1000000.0 || new_dur > old_dur * 1.15) {
+          timeline.SetVisibleRange(candidate_range);
+          last_auto_visible_range = timeline.visible_range();
+        }
+      }
+    }
+    if (!full_timespan.has_value() &&
+        initial_data_time_range != TimeRange::Zero()) {
+      timeline.set_data_time_range(
+          {std::min(initial_data_time_range.start(),
+                    timeline.fetched_data_time_range().start()),
+           std::max(initial_data_time_range.end(),
+                    timeline.fetched_data_time_range().end())});
+    }
+  }
+
+  void FlushTimeline(Timeline& timeline, DataProvider& provider) {
+    for (const auto& [key, expanded] :
+         GetRestoredExpandedStates(timeline.timeline_data().groups)) {
+      const auto it_last = last_emitted_expanded_states.find(key);
+      if (it_last == last_emitted_expanded_states.end() ||
+          it_last->second != expanded) {
+        base_expanded_states[key] = expanded;
+      }
+    }
+
+    TimeBounds time_bounds;
+    const std::vector<ProcessId> sorted_pids = GetSortedProcessIds(
+        trace_info, provider.known_threads_, provider.known_counters_,
+        provider.known_async_tracks_);
+
+    timeline.UpdateTimelineData([&]() {
+      trace_info.consume_cached_tracks = is_finishing;
+      FlameChartTimelineData new_timeline_data = CreateTimelineData(
+          trace_info, sorted_pids, GetTop5FlowCategories(flow_category_counts),
+          time_bounds, base_expanded_states, timeline.GetPalette(),
+          provider.max_observed_levels_, provider.known_threads_,
+          provider.known_counters_, provider.known_async_tracks_);
+      if (is_finishing) {
+        cached_sync_tracks = {};
+        cached_async_tracks = {};
+        trace_info.flow_events_by_id.clear();
+        trace_info.counters_by_pid_name.clear();
+        flow_events = {};
+        counter_events = {};
+      }
+      return new_timeline_data;
+    });
+    emitted_timeline_data = true;
+    has_unflushed_updates = false;
+    last_flushed_events = total_ingested_events;
+    last_flushed_processes = trace_info.process_names.size();
+    last_emitted_expanded_states =
+        GetRestoredExpandedStates(timeline.timeline_data().groups);
+
+    UpdateTimeRanges(timeline, time_bounds, provider.HasKnownTracks());
+  }
+};
+
+DataProvider::DataProvider() = default;
+DataProvider::~DataProvider() = default;
+DataProvider::DataProvider(DataProvider&&) noexcept = default;
+DataProvider& DataProvider::operator=(DataProvider&&) noexcept = default;
+
 bool DataProvider::HasKnownTracks() const {
   return !known_threads_.empty() || !known_counters_.empty() ||
          !known_async_tracks_.empty();
 }
 
-// Processes a vector of TraceEvent structs.
-// This function is independent of Emscripten types.
 void DataProvider::Reset() {
+  incremental_state_.reset();
   present_flow_categories_.clear();
   process_names_.clear();
   thread_names_.clear();
@@ -1720,12 +2675,97 @@ void DataProvider::Reset() {
   known_async_tracks_.clear();
   known_async_processes_.clear();
   known_counters_.clear();
+  was_compacted_ = false;
 }
+
+void DataProvider::BeginIncrementalLoad(Timeline& timeline) {
+  incremental_state_ = std::make_unique<IncrementalState>();
+  incremental_state_->is_refetch =
+      HasKnownTracks() && timeline.visible_range() != TimeRange::Zero();
+  if (!incremental_state_->is_refetch) {
+    timeline.ClearSavedFullOverview();
+  }
+  incremental_state_->initial_data_time_range = timeline.data_time_range();
+  incremental_state_->CopyMetadataFromProvider(*this);
+  incremental_state_->trace_info.cached_sync_tracks =
+      &incremental_state_->cached_sync_tracks;
+  incremental_state_->trace_info.cached_async_tracks =
+      &incremental_state_->cached_async_tracks;
+  incremental_state_->base_expanded_states =
+      GetRestoredExpandedStates(timeline.timeline_data().groups);
+  incremental_state_->last_emitted_expanded_states =
+      incremental_state_->base_expanded_states;
+  was_compacted_ = false;
+}
+
+void DataProvider::MarkFinishingIncrementalLoad() {
+  if (incremental_state_) {
+    incremental_state_->is_finishing = true;
+  }
+}
+
+bool DataProvider::HasPendingRefetchUpdate() const {
+  return incremental_state_ && (incremental_state_->has_unflushed_updates ||
+                                (incremental_state_->is_refetch &&
+                                 !incremental_state_->emitted_timeline_data));
+}
+
+void DataProvider::AppendTraceEventsIncremental(ParsedTraceEvents parsed_events,
+                                                Timeline& timeline,
+                                                TimelineFlushMode flush_mode) {
+  if (!incremental_state_) {
+    BeginIncrementalLoad(timeline);
+  }
+  IncrementalState& state = *incremental_state_;
+  if (parsed_events.mpmd_pipeline_view) {
+    state.trace_info.is_mpmd = true;
+  }
+  timeline.set_mpmd_pipeline_view_enabled(state.trace_info.is_mpmd);
+  timeline.set_time_axis_unit(parsed_events.time_axis_unit);
+
+  if (parsed_events.full_timespan.has_value()) {
+    state.full_timespan = parsed_events.full_timespan;
+  }
+  if (parsed_events.visible_range_from_url.has_value()) {
+    state.visible_range_from_url = parsed_events.visible_range_from_url;
+  }
+
+  const size_t batch_events = parsed_events.flame_events.size() +
+                              parsed_events.flow_events.size() +
+                              parsed_events.counter_events.size();
+  if (batch_events > 0) {
+    state.has_any_events = true;
+    state.has_unflushed_updates = true;
+    state.total_ingested_events += batch_events;
+  }
+
+  IncrementalState::EventBatch batch =
+      state.PartitionFlameEvents(parsed_events.flame_events, *this);
+  state.IngestFlowAndCounterEvents(parsed_events, *this);
+  state.CopyMetadataToProvider(*this);
+
+  if (!state.has_any_events && !HasKnownTracks()) {
+    timeline.SetTimelineData({});
+    timeline.set_fetched_data_time_range(TimeRange::Zero());
+    timeline.SetVisibleRange(TimeRange::Zero());
+    return;
+  }
+
+  state.UpdateCachedTracks(batch);
+  was_compacted_ = state.was_compacted;
+  if (state.ShouldFlushTimeline(flush_mode)) {
+    state.FlushTimeline(timeline, *this);
+  }
+}
+
+void DataProvider::FinishIncrementalLoad() { incremental_state_.reset(); }
 
 // Processes a vector of TraceEvent structs.
 // This function is independent of Emscripten types.
 void DataProvider::ProcessTraceEvents(const ParsedTraceEvents& parsed_events,
                                       Timeline& timeline) {
+  incremental_state_.reset();
+  was_compacted_ = false;
   timeline.set_mpmd_pipeline_view_enabled(parsed_events.mpmd_pipeline_view);
   timeline.set_time_axis_unit(parsed_events.time_axis_unit);
   if (parsed_events.flame_events.empty() &&
@@ -1752,6 +2792,8 @@ void DataProvider::ProcessTraceEvents(const ParsedTraceEvents& parsed_events,
         HandleMetadataEvent(event, trace_info);
         break;
       case Phase::kComplete:
+      case Phase::kDurationBegin:
+      case Phase::kDurationEnd:
       case Phase::kInstant:
       case Phase::kInstantDeprecated:
         HandleCompleteEvent(event, trace_info);
