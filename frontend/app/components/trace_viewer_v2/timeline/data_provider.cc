@@ -108,6 +108,15 @@ struct CachedThreadTrack {
   std::vector<ThreadId> entry_tids;
   std::vector<Microseconds> prefix_max_end_times;
 
+  struct OpenSpan {
+    size_t entry_idx = 0;
+    uint32_t name_id = 0;
+    Microseconds start_ts = 0.0;
+    Microseconds current_end_ts = 0.0;
+    int relative_level = 0;
+  };
+  std::vector<OpenSpan> open_spans;
+
   size_t size() const { return entries.entry_start_times.size(); }
   bool empty() const { return entries.entry_start_times.empty(); }
   ThreadId tid_at(size_t i) const {
@@ -790,26 +799,34 @@ void PopulateThreadTrackEvents(
     absl::Span<const TraceEvent* const> events, int start_level, int& max_level,
     FlameChartTimelineData& data, TimeBounds& bounds,
     const TraceInformation& trace_info, absl::string_view thread_group_name,
+    std::vector<CachedThreadTrack::OpenSpan>* open_spans_out = nullptr,
+    absl::Span<const int> proxy_fixed_levels = {},
+    std::vector<Microseconds>* proxy_self_times_out = nullptr,
     ProcessId* emitted_pid_out = nullptr,
     std::vector<ThreadId>* emitted_tids_out = nullptr) {
   if (events.empty()) return;
 
+  const size_t num_proxies = proxy_fixed_levels.size();
   auto cmp_events = [](const TraceEvent* a, const TraceEvent* b) {
-    return a->ts != b->ts ? a->ts < b->ts : a->dur > b->dur;
+    if (a->ts != b->ts) return a->ts < b->ts;
+    if (a->dur != b->dur) return a->dur > b->dur;
+    return a->ph != b->ph && a->ph == Phase::kDurationEnd;
   };
 
   std::vector<const TraceEvent*> sorted_storage;
   absl::Span<const TraceEvent* const> sorted_events = events;
-  for (size_t i = 0; i < events.size(); ++i) {
-    if (events[i] == nullptr || (i > 0 && events[i - 1] != nullptr &&
-                                 cmp_events(events[i], events[i - 1]))) {
-      sorted_storage.reserve(events.size());
-      for (const TraceEvent* event : events) {
-        if (event != nullptr) sorted_storage.push_back(event);
+  if (num_proxies == 0) {
+    for (size_t i = 0; i < events.size(); ++i) {
+      if (events[i] == nullptr || (i > 0 && events[i - 1] != nullptr &&
+                                   cmp_events(events[i], events[i - 1]))) {
+        sorted_storage.reserve(events.size());
+        for (const TraceEvent* event : events) {
+          if (event != nullptr) sorted_storage.push_back(event);
+        }
+        std::sort(sorted_storage.begin(), sorted_storage.end(), cmp_events);
+        sorted_events = sorted_storage;
+        break;
       }
-      std::sort(sorted_storage.begin(), sorted_storage.end(), cmp_events);
-      sorted_events = sorted_storage;
-      break;
     }
   }
 
@@ -822,6 +839,12 @@ void PopulateThreadTrackEvents(
   parent_stack.reserve(16);
   std::vector<Microseconds> row_end_times;
   row_end_times.reserve(16);
+  for (int fixed_lvl : proxy_fixed_levels) {
+    if (fixed_lvl >= static_cast<int>(row_end_times.size())) {
+      row_end_times.resize(fixed_lvl + 1,
+                           std::numeric_limits<Microseconds>::lowest());
+    }
+  }
 
   for (size_t i = 0; i < n; ++i) {
     const TraceEvent* ev = sorted_events[i];
@@ -846,44 +869,61 @@ void PopulateThreadTrackEvents(
     }
 
     int assigned_row = -1;
-    for (size_t r = 0; r < row_end_times.size(); ++r) {
-      if (row_end_times[r] <= ev->ts) {
-        assigned_row = static_cast<int>(r);
-        break;
+    if (i < num_proxies) {
+      assigned_row = proxy_fixed_levels[i];
+      if (assigned_row >= static_cast<int>(row_end_times.size())) {
+        row_end_times.resize(assigned_row + 1,
+                             std::numeric_limits<Microseconds>::lowest());
       }
-    }
-    if (assigned_row != -1) {
-      row_end_times[assigned_row] = end_time;
+      row_end_times[assigned_row] =
+          std::max(row_end_times[assigned_row], end_time);
     } else {
-      assigned_row = static_cast<int>(row_end_times.size());
-      row_end_times.push_back(end_time);
+      for (size_t r = 0; r < row_end_times.size(); ++r) {
+        if (row_end_times[r] <= ev->ts) {
+          assigned_row = static_cast<int>(r);
+          break;
+        }
+      }
+      if (assigned_row != -1) {
+        row_end_times[assigned_row] = end_time;
+      } else {
+        assigned_row = static_cast<int>(row_end_times.size());
+        row_end_times.push_back(end_time);
+      }
     }
     relative_levels[i] = assigned_row;
   }
 
-  const ProcessId pid = sorted_events.front()->pid;
+  if (proxy_self_times_out != nullptr) {
+    proxy_self_times_out->assign(self_times.begin(),
+                                 self_times.begin() + num_proxies);
+  }
+  if (n <= num_proxies) return;
+
+  const ProcessId pid = sorted_events[num_proxies]->pid;
   if (emitted_pid_out != nullptr) *emitted_pid_out = pid;
   const TrackSpanSource module_src =
       ResolveTrackSpanSource(pid, trace_info.xla_modules_tids, trace_info);
 
-  const size_t new_total = data.entry_start_times.size() + n;
+  const size_t emit_count = n - num_proxies;
+  const size_t new_total = data.entry_start_times.size() + emit_count;
   data.entry_start_times.reserve(new_total);
   data.entry_total_times.reserve(new_total);
   data.entry_self_times.reserve(new_total);
   data.entry_levels.reserve(new_total);
-  data.entry_names.reserve(new_total);
+  data.entry_names.reserve(data.entry_names.size() + emit_count);
   data.entry_event_ids.reserve(new_total);
   data.entry_serials.reserve(new_total);
   data.entry_arg_flags.reserve(new_total);
   data.entry_hlo_module_ids.reserve(new_total);
   if (emitted_tids_out != nullptr) {
-    emitted_tids_out->reserve(emitted_tids_out->size() + n);
+    emitted_tids_out->reserve(emitted_tids_out->size() + emit_count);
   }
 
   size_t module_cursor = 0;
   Microseconds last_module_lookup_ts =
       std::numeric_limits<Microseconds>::lowest();
-  for (size_t i = 0; i < n; ++i) {
+  for (size_t i = num_proxies; i < n; ++i) {
     const int absolute_level = start_level + relative_levels[i];
     max_level = std::max(max_level, absolute_level);
     const size_t prev_size = data.entry_start_times.size();
@@ -891,26 +931,39 @@ void PopulateThreadTrackEvents(
                               trace_info, thread_group_name, module_src,
                               module_cursor, last_module_lookup_ts,
                               self_times[i]);
-    if (data.entry_start_times.size() > prev_size &&
-        emitted_tids_out != nullptr) {
-      emitted_tids_out->push_back(sorted_events[i]->tid);
+    if (data.entry_start_times.size() > prev_size) {
+      if (emitted_tids_out != nullptr) {
+        emitted_tids_out->push_back(sorted_events[i]->tid);
+      }
+      if (open_spans_out != nullptr &&
+          sorted_events[i]->ph == Phase::kDurationBegin) {
+        open_spans_out->push_back(CachedThreadTrack::OpenSpan{
+            .entry_idx = prev_size,
+            .start_ts = sorted_events[i]->ts,
+            .current_end_ts = sorted_events[i]->ts + sorted_events[i]->dur,
+            .relative_level = relative_levels[i],
+        });
+      }
     }
   }
 }
 
-void AppendToCachedThreadTrack(CachedThreadTrack& cached,
-                               absl::Span<const TraceEvent* const> events,
-                               const TraceInformation& trace_info,
-                               absl::string_view thread_group_name) {
+void AppendToCachedThreadTrack(
+    CachedThreadTrack& cached, absl::Span<const TraceEvent* const> events,
+    const TraceInformation& trace_info, absl::string_view thread_group_name,
+    absl::Span<const int> proxy_fixed_levels = {},
+    std::vector<Microseconds>* proxy_self_times_out = nullptr) {
   if (events.empty()) return;
 
   const size_t base_idx = cached.size();
   int max_relative_level = cached.max_relative_level;
+  const size_t open_spans_base = cached.open_spans.size();
   ProcessId emitted_pid = 0;
   std::vector<ThreadId> emitted_tids;
-  PopulateThreadTrackEvents(events, /*start_level=*/0, max_relative_level,
-                            cached.entries, cached.bounds, trace_info,
-                            thread_group_name, &emitted_pid, &emitted_tids);
+  PopulateThreadTrackEvents(
+      events, /*start_level=*/0, max_relative_level, cached.entries,
+      cached.bounds, trace_info, thread_group_name, &cached.open_spans,
+      proxy_fixed_levels, proxy_self_times_out, &emitted_pid, &emitted_tids);
   const size_t new_size = cached.size();
   if (new_size == base_idx) return;
 
@@ -946,6 +999,11 @@ void AppendToCachedThreadTrack(CachedThreadTrack& cached,
     cached.entry_name_ids.push_back(it->second);
   }
   cached.entries.entry_names.clear();
+
+  for (size_t s = open_spans_base; s < cached.open_spans.size(); ++s) {
+    cached.open_spans[s].name_id =
+        cached.entry_name_ids[cached.open_spans[s].entry_idx];
+  }
 
   cached.prefix_max_end_times.reserve(new_size);
   Microseconds running_max = cached.prefix_max_end_times.empty()
@@ -1150,9 +1208,149 @@ std::vector<TraceEvent> RestoreAndTruncateCachedTrackFrom(
   ResizeCachedTrackArrays(cached, start_idx, /*shrink=*/false);
   cached.bounds.min = e.entry_start_times.front();
   cached.bounds.max = cached.prefix_max_end_times.back();
+  cached.open_spans.erase(
+      std::remove_if(cached.open_spans.begin(), cached.open_spans.end(),
+                     [start_idx](const CachedThreadTrack::OpenSpan& os) {
+                       return os.entry_idx >= start_idx;
+                     }),
+      cached.open_spans.end());
   cached.max_relative_level =
       e.entry_levels.empty() ? 0 : *absl::c_max_element(e.entry_levels);
   return restored;
+}
+
+void StitchOpenSpansInCachedTrack(
+    CachedThreadTrack& cached, absl::Span<const TraceEvent* const> new_events,
+    const TraceInformation& trace_info, absl::string_view thread_group_name) {
+  static constexpr Microseconds kTsEpsilon = 1e-7;
+  const size_t num_open = cached.open_spans.size();
+  std::vector<const TraceEvent*> matched_ev(num_open, nullptr);
+  std::vector<const TraceEvent*> remaining_new_events;
+  remaining_new_events.reserve(new_events.size());
+
+  for (const TraceEvent* ev : new_events) {
+    bool matched = false;
+    if (ev->ph == Phase::kDurationBegin || ev->ph == Phase::kDurationEnd) {
+      for (size_t s = 0; s < num_open; ++s) {
+        if (matched_ev[s] != nullptr) continue;
+        const auto& os = cached.open_spans[s];
+        if (std::abs(ev->ts - os.start_ts) <= kTsEpsilon &&
+            ev->name == cached.unique_names[os.name_id]) {
+          matched_ev[s] = ev;
+          matched = true;
+          break;
+        }
+      }
+    }
+    if (!matched) {
+      remaining_new_events.push_back(ev);
+    }
+  }
+
+  const Microseconds min_remaining_ts =
+      remaining_new_events.empty() ? std::numeric_limits<Microseconds>::max()
+                                   : remaining_new_events.front()->ts;
+
+  struct ActiveProxyInfo {
+    size_t entry_idx;
+    Microseconds full_dur;
+    EventId full_event_id;
+    Microseconds new_end_ts;
+  };
+  std::vector<TraceEvent> proxy_storage;
+  std::vector<int> proxy_levels;
+  std::vector<ActiveProxyInfo> active_proxies;
+  std::vector<CachedThreadTrack::OpenSpan> surviving_open_spans;
+  proxy_storage.reserve(num_open);
+  proxy_levels.reserve(num_open);
+  active_proxies.reserve(num_open);
+  surviving_open_spans.reserve(num_open);
+
+  FlameChartTimelineData& e = cached.entries;
+  for (size_t s = 0; s < num_open; ++s) {
+    auto os = cached.open_spans[s];
+    const TraceEvent* ev = matched_ev[s];
+    Microseconds full_dur = e.entry_total_times[os.entry_idx];
+    EventId full_event_id = e.entry_event_ids[os.entry_idx];
+    bool is_closed = false;
+    if (ev != nullptr) {
+      full_dur = std::max(full_dur, ev->dur);
+      full_event_id = ev->event_id;
+      is_closed = (ev->ph == Phase::kDurationEnd);
+    }
+    const Microseconds new_end_ts = os.start_ts + full_dur;
+    Microseconds proxy_start_ts = os.current_end_ts;
+    if (min_remaining_ts < proxy_start_ts && min_remaining_ts >= os.start_ts) {
+      proxy_start_ts = min_remaining_ts;
+    }
+    if (new_end_ts > proxy_start_ts) {
+      TraceEvent proxy;
+      proxy.ph = is_closed ? Phase::kDurationEnd : Phase::kDurationBegin;
+      proxy.pid = cached.pid;
+      proxy.tid = cached.tid_at(os.entry_idx);
+      proxy.ts = proxy_start_ts;
+      proxy.dur = new_end_ts - proxy_start_ts;
+      proxy_storage.push_back(std::move(proxy));
+      proxy_levels.push_back(os.relative_level);
+      active_proxies.push_back(
+          ActiveProxyInfo{os.entry_idx, full_dur, full_event_id, new_end_ts});
+    } else {
+      e.entry_total_times[os.entry_idx] = full_dur;
+      e.entry_event_ids[os.entry_idx] = full_event_id;
+      cached.bounds.max = std::max(cached.bounds.max, new_end_ts);
+      if (!cached.prefix_max_end_times.empty()) {
+        cached.prefix_max_end_times.back() =
+            std::max(cached.prefix_max_end_times.back(), new_end_ts);
+      }
+    }
+    if (!is_closed) {
+      os.current_end_ts = std::max(os.current_end_ts, new_end_ts);
+      surviving_open_spans.push_back(os);
+    }
+  }
+
+  cached.open_spans = std::move(surviving_open_spans);
+
+  std::vector<const TraceEvent*> combined_events;
+  combined_events.reserve(proxy_storage.size() + remaining_new_events.size());
+  for (const TraceEvent& proxy : proxy_storage) {
+    combined_events.push_back(&proxy);
+  }
+  combined_events.insert(combined_events.end(), remaining_new_events.begin(),
+                         remaining_new_events.end());
+
+  std::vector<Microseconds> proxy_self_times;
+  if (!combined_events.empty()) {
+    AppendToCachedThreadTrack(cached, combined_events, trace_info,
+                              thread_group_name, proxy_levels,
+                              &proxy_self_times);
+  }
+  for (size_t p = 0; p < active_proxies.size(); ++p) {
+    const auto& info = active_proxies[p];
+    const Microseconds self_time_in_chunk = p < proxy_self_times.size()
+                                                ? proxy_self_times[p]
+                                                : proxy_storage[p].dur;
+    const Microseconds chunk_children_dur =
+        proxy_storage[p].dur - self_time_in_chunk;
+    const Microseconds delta_total_time =
+        info.full_dur - e.entry_total_times[info.entry_idx];
+    e.entry_total_times[info.entry_idx] = info.full_dur;
+    e.entry_self_times[info.entry_idx] =
+        std::max(0.0, e.entry_self_times[info.entry_idx] + delta_total_time -
+                          chunk_children_dur);
+    e.entry_event_ids[info.entry_idx] = info.full_event_id;
+    cached.bounds.max = std::max(cached.bounds.max, info.new_end_ts);
+    if (!cached.prefix_max_end_times.empty()) {
+      cached.prefix_max_end_times.back() =
+          std::max(cached.prefix_max_end_times.back(), info.new_end_ts);
+    }
+  }
+  if (cached.open_spans.size() > 1) {
+    absl::c_sort(cached.open_spans, [](const CachedThreadTrack::OpenSpan& a,
+                                       const CachedThreadTrack::OpenSpan& b) {
+      return a.relative_level < b.relative_level;
+    });
+  }
 }
 
 void UpdateCachedTrackIncremental(CachedThreadTrack& cached, bool is_async,
@@ -1161,10 +1359,38 @@ void UpdateCachedTrackIncremental(CachedThreadTrack& cached, bool is_async,
                                   absl::string_view thread_group_name) {
   if (new_events.empty()) return;
   auto cmp_events = [](const TraceEvent* a, const TraceEvent* b) {
-    return a->ts != b->ts ? a->ts < b->ts : a->dur > b->dur;
+    if (a->ts != b->ts) return a->ts < b->ts;
+    if (a->dur != b->dur) return a->dur > b->dur;
+    return a->ph != b->ph && a->ph == Phase::kDurationEnd;
   };
   if (!std::is_sorted(new_events.begin(), new_events.end(), cmp_events)) {
     absl::c_stable_sort(new_events, cmp_events);
+  }
+  if (new_events.size() > 1) {
+    size_t write_idx = 0;
+    for (const TraceEvent* ev : new_events) {
+      if (ev->ph == Phase::kDurationBegin || ev->ph == Phase::kDurationEnd) {
+        bool duplicate = false;
+        for (size_t j = write_idx; j > 0;) {
+          const TraceEvent* prev = new_events[--j];
+          if (prev->ts != ev->ts) break;
+          if ((prev->ph == Phase::kDurationBegin ||
+               prev->ph == Phase::kDurationEnd) &&
+              prev->name == ev->name) {
+            duplicate = true;
+            break;
+          }
+        }
+        if (duplicate) continue;
+      }
+      new_events[write_idx++] = ev;
+    }
+    new_events.resize(write_idx);
+  }
+  if (!cached.open_spans.empty()) {
+    StitchOpenSpansInCachedTrack(cached, new_events, trace_info,
+                                 thread_group_name);
+    return;
   }
   const size_t split_idx = FindNonOverlappingPrefixSplitIndex(
       cached, new_events.front()->ts, new_events.front()->dur);
@@ -2012,6 +2238,8 @@ struct DataProvider::IncrementalState {
           break;
         }
         case Phase::kComplete:
+        case Phase::kDurationBegin:
+        case Phase::kDurationEnd:
         case Phase::kInstant:
         case Phase::kInstantDeprecated: {
           if (stored.is_async) {
@@ -2376,6 +2604,8 @@ void DataProvider::ProcessTraceEvents(const ParsedTraceEvents& parsed_events,
         HandleMetadataEvent(event, trace_info);
         break;
       case Phase::kComplete:
+      case Phase::kDurationBegin:
+      case Phase::kDurationEnd:
       case Phase::kInstant:
       case Phase::kInstantDeprecated:
         HandleCompleteEvent(event, trace_info);

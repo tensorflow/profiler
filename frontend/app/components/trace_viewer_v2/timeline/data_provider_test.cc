@@ -6476,5 +6476,84 @@ TEST_F(DataProviderTest, OverlappingBatchPreservesFormattedHloModuleArg) {
             "jit_train(42)");
 }
 
+TEST_F(DataProviderTest,
+       AppendTraceEventsIncremental_ExtendsOpenSpansAcrossChunks) {
+  // Single-pass reference:
+  // - XLA Modules: jit_train(1) from ts=10.0, dur=290.0 (ends at 300.0)
+  // - XLA Ops:
+  //   - Level 0: while.747 from ts=10.0, dur=290.0 (ends at 300.0), id=9003
+  //   - Level 1: region.15431 from ts=10.0, dur=290.0 (ends at 300.0), id=8003
+  //   - Level 2: fusion.1 [20, 50], fusion.2 [120, 160], fusion.3 [220, 270]
+  ParsedTraceEvents single_pass;
+  single_pass.flame_events = {
+      CreateProcessEvent(1, "host:0 /device:TPU:0"),
+      CreateSortIndexMetadataEvent(kProcessSortIndex, 1, 0, "1"),
+      CreateThreadEvent(1, 1, "XLA Modules"),
+      CreateSortIndexMetadataEvent(kThreadSortIndex, 1, 1, "1"),
+      MakeSpan(Phase::kComplete, 7003, 1, 1, "jit_train(1)", 10.0, 290.0),
+      CreateThreadEvent(1, 2, "XLA Ops"),
+      CreateSortIndexMetadataEvent(kThreadSortIndex, 1, 2, "2"),
+      MakeSpan(Phase::kComplete, 9003, 1, 2, "while.747", 10.0, 290.0),
+      MakeSpan(Phase::kComplete, 8003, 1, 2, "region.15431", 10.0, 290.0),
+      MakeSpan(Phase::kComplete, 101, 1, 2, "fusion.1", 20.0, 30.0),
+      MakeSpan(Phase::kComplete, 102, 1, 2, "fusion.2", 120.0, 40.0),
+      MakeSpan(Phase::kComplete, 103, 1, 2, "fusion.3", 220.0, 50.0),
+  };
+
+  Timeline single_timeline(palette_);
+  DataProvider single_provider;
+  single_provider.ProcessTraceEvents(single_pass, single_timeline);
+
+  // Chunk 1: spans [10.0, 100.0] (open at 100.0 -> kDurationBegin with dur=90)
+  ParsedTraceEvents chunk1;
+  chunk1.flame_events = {
+      CreateProcessEvent(1, "host:0 /device:TPU:0"),
+      CreateSortIndexMetadataEvent(kProcessSortIndex, 1, 0, "1"),
+      CreateThreadEvent(1, 1, "XLA Modules"),
+      CreateSortIndexMetadataEvent(kThreadSortIndex, 1, 1, "1"),
+      MakeSpan(Phase::kDurationBegin, 7001, 1, 1, "jit_train(1)", 10.0, 90.0),
+      CreateThreadEvent(1, 2, "XLA Ops"),
+      CreateSortIndexMetadataEvent(kThreadSortIndex, 1, 2, "2"),
+      MakeSpan(Phase::kDurationBegin, 9001, 1, 2, "while.747", 10.0, 90.0),
+      MakeSpan(Phase::kDurationBegin, 8001, 1, 2, "region.15431", 10.0, 90.0),
+      MakeSpan(Phase::kComplete, 101, 1, 2, "fusion.1", 20.0, 30.0),
+  };
+
+  // Chunk 2: spans [10.0, 200.0] (still open at 200.0 -> kDurationBegin with
+  // dur=190)
+  ParsedTraceEvents chunk2;
+  chunk2.flame_events = {
+      MakeSpan(Phase::kDurationBegin, 7002, 1, 1, "jit_train(1)", 10.0, 190.0),
+      MakeSpan(Phase::kDurationBegin, 9002, 1, 2, "while.747", 10.0, 190.0),
+      MakeSpan(Phase::kDurationBegin, 8002, 1, 2, "region.15431", 10.0, 190.0),
+      MakeSpan(Phase::kComplete, 102, 1, 2, "fusion.2", 120.0, 40.0),
+  };
+
+  // Chunk 3: closes at 300.0 -> kDurationEnd with dur=290
+  ParsedTraceEvents chunk3;
+  chunk3.flame_events = {
+      MakeSpan(Phase::kDurationEnd, 7003, 1, 1, "jit_train(1)", 10.0, 290.0),
+      MakeSpan(Phase::kDurationEnd, 9003, 1, 2, "while.747", 10.0, 290.0),
+      MakeSpan(Phase::kDurationEnd, 8003, 1, 2, "region.15431", 10.0, 290.0),
+      MakeSpan(Phase::kComplete, 103, 1, 2, "fusion.3", 220.0, 50.0),
+  };
+
+  data_provider_.BeginIncrementalLoad(timeline_);
+  data_provider_.AppendTraceEventsIncremental(std::move(chunk1), timeline_);
+  // After chunk 1: 4 entries total (jit_train(1), while.747, region.15431,
+  // fusion.1).
+  EXPECT_THAT(timeline_.timeline_data().entry_names, SizeIs(4));
+
+  data_provider_.AppendTraceEventsIncremental(std::move(chunk2), timeline_);
+  // After chunk 2: open spans extended in-place, only fusion.2 added -> 5
+  // entries.
+  EXPECT_THAT(timeline_.timeline_data().entry_names, SizeIs(5));
+
+  data_provider_.AppendTraceEventsIncremental(std::move(chunk3), timeline_);
+  data_provider_.FinishIncrementalLoad();
+
+  ExpectTimelineDataMatches(timeline_.timeline_data(),
+                            single_timeline.timeline_data());
+}
 }  // namespace
 }  // namespace traceviewer
