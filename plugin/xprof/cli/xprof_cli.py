@@ -406,6 +406,7 @@ def _wrap_with_logdir(
           "instruction_name",
           "func_name",
           "kernel_name",
+          "dump_dir",
           "host_name",
           "host",
       }:
@@ -425,6 +426,7 @@ def _wrap_with_logdir(
         "instruction_name",
         "func_name",
         "kernel_name",
+        "dump_dir",
         "host_name",
         "host",
     ):
